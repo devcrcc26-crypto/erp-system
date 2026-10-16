@@ -58,7 +58,7 @@ export function formatSealCategory(
   t: TFn,
 ): string {
   if (!value?.trim()) {
-    return '—';
+    return '-';
   }
   if (isSealCategoryPreset(value)) {
     return t(`hr.sealCategory.${value}`);

@@ -61,7 +61,7 @@ const BADGE_LABEL_KEYS: Record<SidebarBadgeSource, string> = {
 
 type Surface = 'desktop' | 'drawer';
 
-/** DOM ids — focus is moved by id so no refs are read during render. */
+/** DOM ids - focus is moved by id so no refs are read during render. */
 const searchInputId = (surface: Surface): string => `${surface}-sidebar-search`;
 const searchResultsId = (surface: Surface): string => `${surface}-sidebar-results`;
 const panelId = (surface: Surface, id: string): string => `${surface}-panel-${id}`;
@@ -86,7 +86,7 @@ function focusSoon(elementId: string, select = false): void {
  * Desktop (lg+): an icon rail. A module's panel is either
  * - unpinned (default): a flyout OVERLAY beside the rail, opened by hover
  *   intent or click (`sidebar-flyout.ts`), closed by leaving it, Escape, an
- *   outside click or navigating — the page never reflows; or
+ *   outside click or navigating - the page never reflows; or
  * - pinned: docked beside the rail, following the current module and pushing
  *   the content right (the previous fixed layout).
  * The footer toggle switches between the two; the choice is stored per user.
@@ -582,7 +582,7 @@ export default function SidebarShell({
     );
   }
 
-  /** The labelled tree — used by the mobile drawer (desktop uses the rail). */
+  /** The labelled tree - used by the mobile drawer (desktop uses the rail). */
   function renderExpandedTree(surface: Surface, onNavigate?: () => void): React.ReactNode {
     const searching = query.trim().length > 0;
     const favoritesCollapsed = collapsedGroups[FAVORITES_GROUP_ID] ?? false;

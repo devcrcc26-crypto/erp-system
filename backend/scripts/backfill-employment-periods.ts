@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     }
 
     if (!args.apply) {
-      console.log('Dry run — nothing written. Re-run with --apply to create the periods.');
+      console.log('Dry run - nothing written. Re-run with --apply to create the periods.');
       return;
     }
 

@@ -117,7 +117,7 @@ export default function OvertimeRequestDetail({
       key: 'taskDescription',
       render: (value: string) => (
         <div className="min-w-[180px] whitespace-pre-wrap break-words">
-          {value?.trim() || '—'}
+          {value?.trim() || '-'}
         </div>
       ),
     },
@@ -144,7 +144,7 @@ export default function OvertimeRequestDetail({
       render: (_: unknown, row: OvertimeEntry) => (
         <AttachmentDownloadList
           documents={row.documents}
-          emptyLabel="—"
+          emptyLabel="-"
           compact
         />
       ),

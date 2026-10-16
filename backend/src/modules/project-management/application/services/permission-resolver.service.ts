@@ -228,7 +228,7 @@ export class PermissionResolverService {
 
   /**
    * Maps RBAC module flags to EPC workflow actions.
-   * Assignee-gated designer actions are always granted at Layer 1 —
+   * Assignee-gated designer actions are always granted at Layer 1 -
    * Layer 3 (discipline/subtask FKs) is the real gate for those.
    */
   async resolveGrantedActions(
@@ -317,16 +317,16 @@ export class PermissionResolverService {
     granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_RESOLVE);
-    // Reviewer / tier holders — Layer 3 enforces matching assignment
+    // Reviewer / tier holders - Layer 3 enforces matching assignment
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
-    // Discipline leader — Layer 3 enforces matching assignment
+    // Discipline leader - Layer 3 enforces matching assignment
     granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
     granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK);
-    // Any FK role on the discipline/subtask — Layer 3 enforces matching assignment
+    // Any FK role on the discipline/subtask - Layer 3 enforces matching assignment
     granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
   }

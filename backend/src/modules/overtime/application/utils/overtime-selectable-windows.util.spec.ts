@@ -36,7 +36,7 @@ const OFF = {
 };
 
 describe('computeSelectableOvertimeWindows', () => {
-  it('1 — Monday full day: 00:00–08:30 and 17:30–24:00; lunch not selectable', () => {
+  it('1 - Monday full day: 00:00–08:30 and 17:30–24:00; lunch not selectable', () => {
     expect(POLICY_DEFAULTS.lunchCountsAsOvertime).toBe(false);
     const result = computeSelectableOvertimeWindows(FULL);
     expect(result.dayKind).toBe('FULL_WORKING');
@@ -49,7 +49,7 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(false);
   });
 
-  it('2 — Saturday half day: 00:00–08:30 and 12:30–24:00 (pre-morning OT allowed)', () => {
+  it('2 - Saturday half day: 00:00–08:30 and 12:30–24:00 (pre-morning OT allowed)', () => {
     const result = computeSelectableOvertimeWindows(HALF);
     expect(result.dayKind).toBe('HALF_DAY');
     expect(result.windows).toEqual([
@@ -70,7 +70,7 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(false);
   });
 
-  it('3 — Sunday / non-working: whole day', () => {
+  it('3 - Sunday / non-working: whole day', () => {
     const result = computeSelectableOvertimeWindows(OFF);
     expect(result.dayKind).toBe('NON_WORKING');
     expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
@@ -80,7 +80,7 @@ describe('computeSelectableOvertimeWindows', () => {
   });
 
   it('Sat-off employee Saturday → NON_WORKING whole day (WEEKEND classification)', () => {
-    // Same shape as Sunday off — schedule isWorkingDay false for Saturday.
+    // Same shape as Sunday off - schedule isWorkingDay false for Saturday.
     const satOff = {
       isHoliday: false,
       isWorkingDay: false,
@@ -97,7 +97,7 @@ describe('computeSelectableOvertimeWindows', () => {
     expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
   });
 
-  it('4 — end at or before start is not inside windows', () => {
+  it('4 - end at or before start is not inside windows', () => {
     const result = computeSelectableOvertimeWindows(FULL);
     expect(
       isIntervalInsideSelectableWindows('18:00', '18:00', result.windows),
@@ -107,14 +107,14 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(false);
   });
 
-  it('9 — Tue 00:00–09:00 overlaps working hours → rejected', () => {
+  it('9 - Tue 00:00–09:00 overlaps working hours → rejected', () => {
     const result = computeSelectableOvertimeWindows(FULL);
     expect(
       isIntervalInsideSelectableWindows('00:00', '09:00', result.windows),
     ).toBe(false);
   });
 
-  it('11 — full-day leave → no windows', () => {
+  it('11 - full-day leave → no windows', () => {
     const result = computeSelectableOvertimeWindows({
       ...FULL,
       hasFullDayLeave: true,

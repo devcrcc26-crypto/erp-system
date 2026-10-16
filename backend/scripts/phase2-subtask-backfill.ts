@@ -1,5 +1,5 @@
 /**
- * Change 6 Phase 2 — backfill discipline_index, subtask_index, subtask_id.
+ * Change 6 Phase 2 - backfill discipline_index, subtask_index, subtask_id.
  * Run: npx ts-node scripts/phase2-subtask-backfill.ts
  */
 import { PrismaClient } from '@prisma/client';
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
     console.log(`  ${row.subtask_id}  (${row.package_code}: ${row.name})`);
   }
   if (samples.length === 0) {
-    console.log('  (none — no packages with overseas task number on parent task)');
+    console.log('  (none - no packages with overseas task number on parent task)');
   }
 }
 

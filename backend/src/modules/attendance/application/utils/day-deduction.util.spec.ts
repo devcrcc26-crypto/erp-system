@@ -1015,7 +1015,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(22);
   });
 
-  it('WFH scoped to one department — others still deducted without scan', () => {
+  it('WFH scoped to one department - others still deducted without scan', () => {
     const wfh = d(2026, 8, 12);
     const wfhKey = dateToYyyyMmDd(wfh);
     const daily = logsForMonth(8, 2026, fullContractStart, null, (date, key) => {
@@ -1325,7 +1325,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       [],
     );
     expect(Number(result.totalDays)).toBe(5.5);
-    expect(FULLY_ABSENT_NO_PAY_NOTE).toBe('Absent all working days — no pay.');
+    expect(FULLY_ABSENT_NO_PAY_NOTE).toBe('Absent all working days - no pay.');
   });
 
   describe('schedule-aware dayKind (Sat-off / default parity)', () => {

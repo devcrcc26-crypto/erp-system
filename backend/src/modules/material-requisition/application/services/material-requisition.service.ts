@@ -89,7 +89,7 @@ const REQUISITION_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Material requisition lifecycle — warehouse stock requests with a fixed
+ * Material requisition lifecycle - warehouse stock requests with a fixed
  * Discipline Lead → HR Officer → General Manager approval chain.
  */
 @Injectable()

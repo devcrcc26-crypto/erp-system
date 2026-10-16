@@ -250,14 +250,14 @@ export class ConsumablesRequisitionImportService {
       instructions.addRow([
         'employeeId',
         'If no email',
-        'User UUID — required when employeeEmail is blank',
+        'User UUID - required when employeeEmail is blank',
       ]);
     }
     if (input.includeHeader) {
       instructions.addRow([
         'title',
         'Yes',
-        'Requisition title — rows with the same employee+title share one DRAFT',
+        'Requisition title - rows with the same employee+title share one DRAFT',
       ]);
       instructions.addRow(['purpose', 'Yes', 'Business purpose']);
       instructions.addRow(['requiredByDate', 'No', 'YYYY-MM-DD']);

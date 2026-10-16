@@ -46,7 +46,7 @@ export class TaskAssignmentNotificationService {
       return;
     }
 
-    const subject = `Discipline leader assigned — ${input.disciplineName}`;
+    const subject = `Discipline leader assigned - ${input.disciplineName}`;
     const body = [
       `You were assigned as discipline leader on ${input.disciplineName}.`,
       `Project: ${input.projectName} (${input.projectNumber})`,
@@ -104,7 +104,7 @@ export class TaskAssignmentNotificationService {
       }
 
       const roleLabel = SUBTASK_ROLE_LABELS[assignment.roleField];
-      const subject = `Subtask role assigned — ${roleLabel}`;
+      const subject = `Subtask role assigned - ${roleLabel}`;
       const body = [
         `You were assigned as ${roleLabel} on subtask "${input.subtaskName}".`,
         `Discipline: ${input.disciplineName}`,

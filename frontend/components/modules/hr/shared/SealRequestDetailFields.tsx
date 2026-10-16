@@ -22,7 +22,7 @@ export default function SealRequestDetailFields({
         {formatSealCategory(sealCategory, t)}
       </MetaItem>
       <MetaItem label={t('hr.form.copyCount')}>
-        {copyCount != null ? String(copyCount) : '—'}
+        {copyCount != null ? String(copyCount) : '-'}
       </MetaItem>
     </>
   );

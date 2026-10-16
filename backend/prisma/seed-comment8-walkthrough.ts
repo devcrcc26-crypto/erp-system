@@ -188,7 +188,7 @@ async function patchLjzFlagshipTask(ctx: PmSeedContext): Promise<void> {
       language: 'ENGLISH',
       designStage: 'CONSTRUCTION_DRAWING_DESIGN_CD_IFC',
       remark:
-        'Comment 8 flagship task — use for task detail, My Work, exports, and subtask role walkthrough.',
+        'Comment 8 flagship task - use for task detail, My Work, exports, and subtask role walkthrough.',
       status: TaskStatus.IN_PROGRESS,
       progressPct: 58,
       updatedBy: adminUserId,
@@ -393,7 +393,7 @@ async function reinforceDisciplineLeads(ctx: PmSeedContext): Promise<void> {
 
 function printWalkthroughSummary(): void {
   console.log(
-    '\n=== Comment 8 Walkthrough — Demo Accounts (password: (from SEED_ADMIN_PASSWORD)) ===',
+    '\n=== Comment 8 Walkthrough - Demo Accounts (password: (from SEED_ADMIN_PASSWORD)) ===',
   );
   console.table([
     { account: 'admin@company.local', focus: 'Settings → Departments, Disciplines, full access' },
@@ -402,12 +402,12 @@ function printWalkthroughSummary(): void {
     { account: 'demo.seed.dispatcher@company.local', focus: 'My Work → dispatcher on LJZ flagship task' },
     { account: 'lead@company.local', focus: 'My Work → discipline lead on LJZ disciplines' },
     { account: 'reviewer@company.local', focus: 'Review inbox + subtask reviewer role' },
-    { account: 'owner@company.local', focus: 'Owner tier — PDR-2025-003; ADD dept leader' },
-    { account: 'deptchief@company.local', focus: 'Dept chief tier — DEMO-002; MTD dept leader (LJZ only)' },
+    { account: 'owner@company.local', focus: 'Owner tier - PDR-2025-003; ADD dept leader' },
+    { account: 'deptchief@company.local', focus: 'Dept chief tier - DEMO-002; MTD dept leader (LJZ only)' },
     { account: 'deputychief@company.local', focus: 'Deputy chief subtask role on LJZ packages' },
-    { account: 'demo.seed.institute@company.local', focus: 'Institute tier — LJZ; supervising chief on task' },
+    { account: 'demo.seed.institute@company.local', focus: 'Institute tier - LJZ; supervising chief on task' },
     { account: 'demo.seed.gm@company.local', focus: 'Executive portfolio + LJZ team member' },
-    { account: 'engineer@company.local', focus: 'Site PM data — RFIs, daily logs on LJZ' },
+    { account: 'engineer@company.local', focus: 'Site PM data - RFIs, daily logs on LJZ' },
     { account: 'docs@company.local', focus: 'Document control folders on LJZ' },
     { account: 'safety@company.local', focus: 'Safety inspections on demo projects' },
     { account: 'sitecoord@company.local', focus: 'Site coordination on DEMO projects' },

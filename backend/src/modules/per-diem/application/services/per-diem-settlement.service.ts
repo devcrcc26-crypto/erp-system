@@ -215,7 +215,7 @@ export class PerDiemSettlementService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'PER_DIEM_SETTLEMENT',
-        title: `Per diem settlement — ${dto.destination.trim()}`,
+        title: `Per diem settlement - ${dto.destination.trim()}`,
         formData: {
           destination: dto.destination.trim(),
           destinationCategory,

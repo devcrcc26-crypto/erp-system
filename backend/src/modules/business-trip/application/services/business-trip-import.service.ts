@@ -400,7 +400,7 @@ export class BusinessTripImportService {
       instructions.addRow([
         'submitterId',
         'If no email',
-        'User UUID — required when submitterEmail is blank',
+        'User UUID - required when submitterEmail is blank',
       ]);
     }
     if (input.includeTripHeader) {
@@ -417,7 +417,7 @@ export class BusinessTripImportService {
       instructions.addRow([
         'returnDate',
         'If ROUND_TRIP',
-        'YYYY-MM-DD — required for ROUND_TRIP',
+        'YYYY-MM-DD - required for ROUND_TRIP',
       ]);
       instructions.addRow([
         'purpose',
@@ -466,7 +466,7 @@ export class BusinessTripImportService {
     instructions.addRow([
       'passengerId',
       'If no email',
-      'User UUID — required when passengerEmail is blank',
+      'User UUID - required when passengerEmail is blank',
     ]);
     instructions.addRow([
       'passportNumber',

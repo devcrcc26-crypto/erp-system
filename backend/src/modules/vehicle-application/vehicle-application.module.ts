@@ -7,7 +7,7 @@ import { VehicleApplicationImportController } from './presentation/controllers/v
 import { VehicleApplicationController } from './presentation/controllers/vehicle-application.controller';
 
 /**
- * Vehicle application module — single-call submit with HR Officer approval
+ * Vehicle application module - single-call submit with HR Officer approval
  * tier (or direct APPROVED for HR and above). Includes release flow and the
  * Excel import that creates DRAFT applications.
  */

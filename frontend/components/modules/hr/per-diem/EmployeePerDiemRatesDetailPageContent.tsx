@@ -21,7 +21,7 @@ import {
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
- * Employee per diem rates detail — Users / employee profile chrome.
+ * Employee per diem rates detail - Users / employee profile chrome.
  */
 export default function EmployeePerDiemRatesDetailPageContent({
   employeeId,
@@ -154,7 +154,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
         <div className="erp-users-stat">
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.form.currency')}</p>
-            <p className="erp-employee-meta-value">{rate ? 'ETB' : '—'}</p>
+            <p className="erp-employee-meta-value">{rate ? 'ETB' : '-'}</p>
           </div>
         </div>
         <div className="erp-users-stat">
@@ -165,7 +165,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
             <p className="erp-employee-meta-value">
               {rate
                 ? `${activeCount}/${PER_DIEM_DESTINATION_CATEGORIES.length}`
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('common.department')}</p>
             <p className="erp-employee-meta-value">
-              {employee.department?.name ?? '—'}
+              {employee.department?.name ?? '-'}
             </p>
           </div>
         </div>

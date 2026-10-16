@@ -7,7 +7,7 @@ import type { ConsumablesRequisitionDetail } from '@/lib/api/consumables-requisi
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New consumables requisition — shared HR form banner + stepper form.
+ * New consumables requisition - shared HR form banner + stepper form.
  */
 export default function ConsumablesRequisitionFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

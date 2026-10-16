@@ -132,7 +132,7 @@ export function PunchItemFormDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -150,7 +150,7 @@ export function PunchItemFormDrawer({
           label:
             number === row.disciplineName
               ? row.disciplineName
-              : `${number} — ${row.disciplineName}`,
+              : `${number} - ${row.disciplineName}`,
         };
       }),
     [disciplinesQuery.data],
@@ -169,7 +169,7 @@ export function PunchItemFormDrawer({
     () =>
       (packagesQuery.data ?? []).map((pkg) => ({
         value: pkg.id,
-        label: `${pkg.packageCode} — ${pkg.name}`,
+        label: `${pkg.packageCode} - ${pkg.name}`,
       })),
     [packagesQuery.data],
   );
@@ -556,7 +556,7 @@ export default function PunchItemsPageContent({
         dataIndex: 'category',
         key: 'category',
         render: (value: string | null) =>
-          value ? formatPunchCategory(value) : '—',
+          value ? formatPunchCategory(value) : '-',
       },
       {
         title: 'Severity',
@@ -574,13 +574,13 @@ export default function PunchItemsPageContent({
         dataIndex: 'roomOrArea',
         key: 'roomOrArea',
         ellipsis: true,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Assigned To',
         key: 'assignedTo',
         render: (_: unknown, record: PunchItem) =>
-          resolveUserDisplay(record.assignedTo, record.assignedToName, '—'),
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',

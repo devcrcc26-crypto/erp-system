@@ -209,7 +209,7 @@ export async function uploadAllSeedFilesToMinio(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(
-      '⚠ MinIO upload failed — downloads will not work until MinIO is running (npm run db:up):',
+      '⚠ MinIO upload failed, downloads will not work until MinIO is running (npm run db:up):',
       message,
     );
   }

@@ -7,7 +7,7 @@ import type { OfficialSealDetail } from '@/lib/api/official-seal.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New official seal usage request — shared HR form banner + stepper form.
+ * New official seal usage request - shared HR form banner + stepper form.
  */
 export default function OfficialSealFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

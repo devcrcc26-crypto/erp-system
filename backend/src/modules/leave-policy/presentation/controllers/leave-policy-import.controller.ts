@@ -2,7 +2,7 @@ import { createHrImportController } from '../../../hr-shared/application/import-
 import { LeavePolicyImportService } from '../../application/services/leave-policy-import.service';
 
 /**
- * `GET/POST /hr/leave-policies/import*` — template, preview and commit.
+ * `GET/POST /hr/leave-policies/import*` - template, preview and commit.
  */
 export const LeavePolicyImportController = createHrImportController({
   route: 'hr/leave-policies/import',

@@ -32,7 +32,7 @@ export function formatAttendanceDayFlag(
   >,
 ): string {
   if (log.flag === 'NONE' && !log.flagResolved && !log.isEarlyLeave) {
-    return '—';
+    return '-';
   }
 
   const reason = log.fieldMovementEntries?.[0]?.reason as
@@ -45,11 +45,11 @@ export function formatAttendanceDayFlag(
       : log.isEarlyLeave
         ? RESOLVED_REASON_LABEL.EARLY_LEAVE
         : 'Resolved';
-    return `✅ Resolved — ${reasonLabel}`;
+    return `✅ Resolved - ${reasonLabel}`;
   }
 
   if (log.flag === 'NONE') {
-    return '—';
+    return '-';
   }
 
   const prefix =

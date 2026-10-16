@@ -50,7 +50,7 @@ export interface MyWorkItem {
 }
 
 /**
- * Comment-8 phase 6 — assigned work surfacing for discipline leaders and subtask role holders.
+ * Comment-8 phase 6 - assigned work surfacing for discipline leaders and subtask role holders.
  */
 @Injectable()
 export class MyWorkService {

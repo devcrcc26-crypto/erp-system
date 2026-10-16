@@ -93,7 +93,7 @@ function DetailSection({
 }
 
 /**
- * Material requisition detail — Users / employee profile chrome.
+ * Material requisition detail - Users / employee profile chrome.
  */
 export default function MaterialRequisitionDetailPageContent({
   requisitionId,
@@ -247,7 +247,7 @@ export default function MaterialRequisitionDetailPageContent({
         ? formatUserName(currentUser.data)
         : authUser
           ? formatUserName(authUser)
-          : '—';
+          : '-';
       exportMaterialRequisitionPdf({
         requisition,
         companyName: authUser?.companyName ?? 'Company',
@@ -310,7 +310,7 @@ export default function MaterialRequisitionDetailPageContent({
         width: 120,
         responsive: ['md'],
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {
@@ -320,7 +320,7 @@ export default function MaterialRequisitionDetailPageContent({
         ellipsis: true,
         responsive: ['lg'],
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {
@@ -563,7 +563,7 @@ export default function MaterialRequisitionDetailPageContent({
             <p className="erp-employee-meta-value">
               {requisition.requiredByDate
                 ? formatProjectDate(requisition.requiredByDate)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -573,7 +573,7 @@ export default function MaterialRequisitionDetailPageContent({
               {t('hr.form.warehouseLocation')}
             </p>
             <p className="erp-employee-meta-value truncate">
-              {requisition.warehouseLocation ?? '—'}
+              {requisition.warehouseLocation ?? '-'}
             </p>
           </div>
         </div>

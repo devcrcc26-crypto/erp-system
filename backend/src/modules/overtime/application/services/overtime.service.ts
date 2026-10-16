@@ -126,7 +126,7 @@ const EDITABLE_STATUSES: OvertimeSheetStatus[] = [
 ];
 
 /**
- * Monthly overtime sheet lifecycle — entries, totals, and approval submit.
+ * Monthly overtime sheet lifecycle - entries, totals, and approval submit.
  */
 @Injectable()
 export class OvertimeService
@@ -183,7 +183,7 @@ export class OvertimeService
     }
 
     // Soft-deleted rows still hold the unique (company, employee, month, year)
-    // key — restore them instead of inserting a duplicate.
+    // key - restore them instead of inserting a duplicate.
     const softDeleted = await this.prisma.overtimeSheet.findFirst({
       where: {
         companyId,
@@ -806,7 +806,7 @@ export class OvertimeService
     );
 
     const monthLabel = `${sheet.year}-${String(sheet.month).padStart(2, '0')}`;
-    const title = `Overtime sheet — ${monthLabel} (${Math.round(totalHours * 100) / 100}h)`;
+    const title = `Overtime sheet - ${monthLabel} (${Math.round(totalHours * 100) / 100}h)`;
 
     if (resolvedTiers.length === 0) {
       const now = new Date();
@@ -1293,7 +1293,7 @@ export class OvertimeService
     entryId: string,
     endsAtEndOfDay: boolean,
   ): Promise<void> {
-    // id is text/varchar in Postgres (Prisma String), not uuid — do not cast.
+    // id is text/varchar in Postgres (Prisma String), not uuid - do not cast.
     await tx.$executeRaw`
       UPDATE overtime_entry
       SET ends_at_end_of_day = ${endsAtEndOfDay}

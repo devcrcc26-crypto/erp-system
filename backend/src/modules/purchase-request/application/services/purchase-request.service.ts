@@ -94,7 +94,7 @@ const REQUEST_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Purchase request lifecycle — owns request/item data; delegates tier workflow to ApprovalsService.
+ * Purchase request lifecycle - owns request/item data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class PurchaseRequestService

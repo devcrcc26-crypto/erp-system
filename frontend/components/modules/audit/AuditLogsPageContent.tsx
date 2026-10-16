@@ -77,7 +77,7 @@ function AuditStat({
 }
 
 /**
- * Audit log list — Users chrome (stat bar, filter row, soft table).
+ * Audit log list - Users chrome (stat bar, filter row, soft table).
  */
 export default function AuditLogsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -444,7 +444,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
                 ellipsis: true,
                 responsive: ['lg'],
                 render: (value: string | null) => (
-                  <span className="erp-users-cell-sub">{value ?? '—'}</span>
+                  <span className="erp-users-cell-sub">{value ?? '-'}</span>
                 ),
               },
               {
@@ -472,7 +472,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
                       {value}
                     </span>
                   ) : (
-                    <span className="erp-users-cell-sub">—</span>
+                    <span className="erp-users-cell-sub">-</span>
                   ),
               },
             ]}

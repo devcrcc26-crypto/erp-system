@@ -15,7 +15,7 @@ export interface CitySelectorProps {
 }
 
 /**
- * Searchable city select — either from a static list or country-state-city.
+ * Searchable city select - either from a static list or country-state-city.
  * Falls back to a plain text input when the library has no cities for the country.
  */
 export default function CitySelector({
@@ -91,7 +91,7 @@ export default function CitySelector({
         optionFilterProp="label"
         className="w-full"
         virtual
-        notFoundContent="No cities found — type to search"
+        notFoundContent="No cities found - type to search"
         filterOption={(input, option) =>
           String(option?.label ?? '')
             .toLowerCase()

@@ -190,7 +190,7 @@ export default function ProjectDocumentsPanel({
           }
           return (
             record.disciplineName ?? (
-              <span style={{ color: tokens.colorTextSecondary }}>—</span>
+              <span style={{ color: tokens.colorTextSecondary }}>-</span>
             )
           );
         },
@@ -278,7 +278,7 @@ export default function ProjectDocumentsPanel({
     <div className={layout.pageStack}>
       <FormLayout
         title="Document browser"
-        description="Search every file attached to this project — RFIs, submittals, daily logs, discipline drawings, and the project repository — in one place."
+        description="Search every file attached to this project - RFIs, submittals, daily logs, discipline drawings, and the project repository - in one place."
         extra={
           folderId ? (
             <Upload

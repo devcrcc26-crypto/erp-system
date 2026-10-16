@@ -7,10 +7,13 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
   ValidateIf,
   ValidateNested,
@@ -27,6 +30,7 @@ import {
 } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
+import { normalisePhoneInput } from '../../../../shared/utils/ethiopian-phone.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 import {
   IsAgeBetween,
@@ -50,6 +54,7 @@ import {
   TIN_PATTERN,
   USER_NAME_MAX,
   USER_NAME_PATTERN,
+  YEARS_OF_EXPERIENCE_MAX,
   trimString,
 } from './user-field.rules';
 
@@ -83,7 +88,7 @@ export class EmergencyContactDto {
   @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   lastName!: string;
 
-  @ApiProperty({ description: 'Required — an emergency contact must be reachable' })
+  @ApiProperty({ description: 'Required - an emergency contact must be reachable' })
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()
@@ -171,13 +176,24 @@ export class CreateUserDto {
   @MinLength(8)
   password?: string;
 
-  @ApiPropertyOptional({ example: '+251 911 234 567' })
+  @ApiPropertyOptional({
+    example: '+251 911 234 567',
+    description: 'Ethiopian numbers are stored as +251 followed by 9 digits',
+  })
   @IsOptional()
   @IsOptionalText()
-  @Transform(trimString)
+  @Transform(normalisePhoneInput)
   @IsString()
   @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
   phone?: string;
+
+  @ApiPropertyOptional({ example: '+251 711 234 567' })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(normalisePhoneInput)
+  @IsString()
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
+  secondaryPhone?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -193,6 +209,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsEntityUuid()
   positionId?: string;
+
+  @ApiPropertyOptional({ description: 'Seniority level (lookup id)' })
+  @IsOptional()
+  @IsEntityUuid()
+  seniorityLevelId?: string;
 
   @ApiPropertyOptional({ description: 'Direct manager / supervisor (user id)' })
   @IsOptional()
@@ -408,13 +429,18 @@ export class CreateUserDto {
   @IsNotBeforeProperty('dateOfBirth')
   employmentDate?: string;
 
-  @ApiPropertyOptional({ example: '2015-06-01' })
+  @ApiPropertyOptional({
+    example: 6.5,
+    nullable: true,
+    description:
+      'Career experience in years, as of today. The server records the as-of ' +
+      'date when the value changes; null clears it.',
+  })
   @IsOptional()
-  @IsOptionalText()
-  @IsDateString()
-  @IsNotFutureDate()
-  @IsNotBeforeProperty('dateOfBirth')
-  experienceStartDate?: string;
+  @IsNumber({ maxDecimalPlaces: 1, allowNaN: false, allowInfinity: false })
+  @Min(0)
+  @Max(YEARS_OF_EXPERIENCE_MAX)
+  yearsOfExperience?: number | null;
 
   @ApiPropertyOptional({ type: [EmergencyContactDto], maxItems: MAX_EMERGENCY_CONTACTS })
   @IsOptional()
@@ -446,6 +472,7 @@ export class UpdateUserDto extends PartialType(
     'workScheduleId',
     'departmentId',
     'positionId',
+    'seniorityLevelId',
   ] as const),
 ) {
   @ApiPropertyOptional()
@@ -496,12 +523,18 @@ export class UpdateUserDto extends PartialType(
   @IsEntityUuid()
   positionId?: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  seniorityLevelId?: string | null;
+
   /**
-   * Approver only — excluded from HR processes. PATCH /users/:id requires
+   * Approver only - excluded from HR processes. PATCH /users/:id requires
    * users.edit, so only holders of that permission can set it. Audited.
    */
   @ApiPropertyOptional({
-    description: 'Approver only — excluded from HR processes (users.edit; audited)',
+    description: 'Approver only - excluded from HR processes (users.edit; audited)',
   })
   @IsOptional()
   @IsBoolean()

@@ -101,7 +101,7 @@ function ReviewItem({
 }
 
 /**
- * New site assignment request — v2 hero + StepperForm (details → review).
+ * New site assignment request - v2 hero + StepperForm (details → review).
  * Supports multiple non-overlapping date periods (one request each).
  */
 export default function SiteAssignmentFormContent(): React.ReactNode {
@@ -158,18 +158,18 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
 
   const projectLabel = useMemo(() => {
     if (!snapshot.projectId) {
-      return '—';
+      return '-';
     }
     return (
       projectOptions.find((option) => option.value === snapshot.projectId)
-        ?.label ?? '—'
+        ?.label ?? '-'
     );
   }, [projectOptions, snapshot.projectId]);
 
@@ -284,7 +284,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
 
   const periodsReviewValue =
     snapshot.periods.length === 0
-      ? '—'
+      ? '-'
       : snapshot.periods
           .map(
             (period) =>
@@ -459,7 +459,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.siteName')}
-                value={snapshot.siteName || '—'}
+                value={snapshot.siteName || '-'}
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.project')}
@@ -475,7 +475,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                           0,
                         ),
                       )
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -485,7 +485,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.reason')}
-                value={snapshot.reason || '—'}
+                value={snapshot.reason || '-'}
                 wide
               />
             </div>

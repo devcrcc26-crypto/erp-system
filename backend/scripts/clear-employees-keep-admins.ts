@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     });
 
     if (admins.length === 0) {
-      throw new Error('No System Administrator users found — aborting');
+      throw new Error('No System Administrator users found - aborting');
     }
 
     const adminIds = admins.map((a) => a.id);

@@ -82,7 +82,7 @@ export default function SubtaskRolesModal({
   return (
     <Modal
       open={open}
-      title={subtask ? `Edit roles — ${subtask.name}` : 'Edit subtask roles'}
+      title={subtask ? `Edit roles - ${subtask.name}` : 'Edit subtask roles'}
       centered
       onCancel={onClose}
       onOk={() => form.submit()}

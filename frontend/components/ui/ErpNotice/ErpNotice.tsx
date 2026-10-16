@@ -20,7 +20,7 @@ const TONE_ICON: Record<ErpNoticeTone, ReactNode> = {
 };
 
 /**
- * Users-chrome inline notice — guidance, warnings, and recoverable errors.
+ * Users-chrome inline notice - guidance, warnings, and recoverable errors.
  */
 export default function ErpNotice({
   tone = 'info',

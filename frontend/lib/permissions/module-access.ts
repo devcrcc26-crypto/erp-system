@@ -8,7 +8,7 @@ import type { PmModuleKey } from './pm-modules.const';
  * Whether the current user can open a PM module page on a project.
  *
  * Access is based on project readability (full / Project Admin / department
- * leadership / discipline assignee / subtask role) — never ProjectTeam
+ * leadership / discipline assignee / subtask role) - never ProjectTeam
  * membership or visibleModules.
  */
 export function useProjectModuleAccess(

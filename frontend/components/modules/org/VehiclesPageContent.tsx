@@ -62,7 +62,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
- * Company vehicles list — Users chrome (stat bar, filter row, rounded table).
+ * Company vehicles list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function VehiclesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

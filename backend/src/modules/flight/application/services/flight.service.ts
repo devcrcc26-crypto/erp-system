@@ -95,7 +95,7 @@ const FLIGHT_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Flight application lifecycle — owns flight data; delegates tier workflow to ApprovalsService.
+ * Flight application lifecycle - owns flight data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class FlightService
@@ -143,7 +143,7 @@ export class FlightService
     userId: string,
   ): Promise<unknown> {
     // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
-    // Passengers are chosen independently — the target is not added automatically.
+    // Passengers are chosen independently - the target is not added automatically.
     const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
       companyId,

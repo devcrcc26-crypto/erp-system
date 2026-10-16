@@ -45,7 +45,7 @@ const MONTH_START = utcDate(YEAR, MONTH, 1);
 const MONTH_END = utcDate(YEAR, MONTH, 31);
 const TASK =
   'Imported from HR August 2026 salary sheet';
-/** HR sheet hours exceed the short old contract window — spillover + exclude from pay compare. */
+/** HR sheet hours exceed the short old contract window - spillover + exclude from pay compare. */
 const EXCLUDE_FROM_HR_COMPARE = new Set(['CC-0024']); // Habtamu Gizaw
 const SHEET_PATH = join(
   __dirname,
@@ -151,7 +151,6 @@ interface UserMatch {
   lastName: string;
   employeeId: string | null;
   employmentDate: Date | null;
-  experienceStartDate: Date | null;
 }
 
 interface PlannedEntry {
@@ -828,7 +827,6 @@ async function main(): Promise<void> {
         lastName: true,
         employeeId: true,
         employmentDate: true,
-        experienceStartDate: true,
       },
     });
 
@@ -918,9 +916,7 @@ async function main(): Promise<void> {
       }
 
       const employment =
-        user.employmentDate ??
-        user.experienceStartDate ??
-        contracts[0]!.startDate;
+        user.employmentDate ?? contracts[0]!.startDate;
       const windows: EmployeePlan['windows'] = [];
 
       if (group.length === 1) {
@@ -1360,7 +1356,7 @@ async function main(): Promise<void> {
     } else {
       for (const f of couldNotPlace) {
         report.push(
-          `- **${f.name}** (${f.employeeId ?? '—'}) · ${f.category}: need ${f.hoursNeeded} h, capacity ${f.capacityAvailable} h — ${f.reason}`,
+          `- **${f.name}** (${f.employeeId ?? '-'}) · ${f.category}: need ${f.hoursNeeded} h, capacity ${f.capacityAvailable} h - ${f.reason}`,
         );
       }
     }
@@ -1373,7 +1369,7 @@ async function main(): Promise<void> {
     } else {
       for (const m of movedHoursList) {
         report.push(
-          `- **${m.name}** (${m.employeeId ?? '—'}) · ${m.category}: **${m.hoursMoved} h** moved from ${m.fromLabel} → ${m.toLabel}`,
+          `- **${m.name}** (${m.employeeId ?? '-'}) · ${m.category}: **${m.hoursMoved} h** moved from ${m.fromLabel} → ${m.toLabel}`,
         );
       }
     }
@@ -1426,7 +1422,7 @@ async function main(): Promise<void> {
         .filter(Boolean)
         .join(' ');
       report.push(
-        `| ${name} | ${plan.user.employeeId ?? '—'} | ${pc.computed.normalOtPay.toFixed(2)} | ${pc.hr.normalPay.toFixed(2)} | ${pc.computed.eveningOtPay.toFixed(2)} | ${pc.hr.eveningPay.toFixed(2)} | ${pc.computed.sundayOtPay.toFixed(2)} | ${pc.hr.sundayPay.toFixed(2)} | ${pc.computed.holidayOtPay.toFixed(2)} | ${pc.hr.holidayPay.toFixed(2)} | ${pc.diffs.length === 0 ? 'OK' : pc.diffs.join('; ')} |`,
+        `| ${name} | ${plan.user.employeeId ?? '-'} | ${pc.computed.normalOtPay.toFixed(2)} | ${pc.hr.normalPay.toFixed(2)} | ${pc.computed.eveningOtPay.toFixed(2)} | ${pc.hr.eveningPay.toFixed(2)} | ${pc.computed.sundayOtPay.toFixed(2)} | ${pc.hr.sundayPay.toFixed(2)} | ${pc.computed.holidayOtPay.toFixed(2)} | ${pc.hr.holidayPay.toFixed(2)} | ${pc.diffs.length === 0 ? 'OK' : pc.diffs.join('; ')} |`,
       );
     }
     report.push('');
@@ -1437,7 +1433,7 @@ async function main(): Promise<void> {
       `Pay matches (±0.05): **${payOk}** / **${compared.length}** compared (excluded ${plans.length - compared.length}).`,
     );
     report.push('');
-    report.push('_Dry-run complete — review before `--apply`._');
+    report.push('_Dry-run complete - review before `--apply`._');
 
     mkdirSync(join(__dirname, '..', 'data', 'private'), { recursive: true });
     writeFileSync(REPORT_PATH, report.join('\n'), 'utf8');

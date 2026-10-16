@@ -56,7 +56,7 @@ export default function SidebarFooter({
   account: SidebarLink | null;
   stateFor: (link: SidebarLink) => FooterLinkState;
   onNavigate?: () => void;
-  /** Desktop only — the drawer has no collapsed mode. */
+  /** Desktop only - the drawer has no collapsed mode. */
   modeToggle?: SidebarModeToggleProps;
   compact?: boolean;
 }): React.ReactNode {

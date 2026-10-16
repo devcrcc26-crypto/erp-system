@@ -35,7 +35,7 @@ export interface PlannedRow<TPayload> {
 /**
  * Base class for HR module import services.
  *
- * It owns the parts every module shares — template generation, parsing against
+ * It owns the parts every module shares - template generation, parsing against
  * the column schema, per-row validation reporting, duplicate detection within
  * a file, and the preview/commit response shapes. A module subclass supplies
  * its schema, a `planRow` mapper, and a `commitRows` writer that calls its own

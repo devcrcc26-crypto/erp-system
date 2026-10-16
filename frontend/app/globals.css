@@ -30,7 +30,7 @@
   --erp-font-scale: 1;
   --erp-font-base: 14px;
   /*
-   * Font decision (Sep 2026): stay on the system stack — no web font.
+   * Font decision (Sep 2026): stay on the system stack - no web font.
    * - Most staff use Windows. Segoe UI is native, ClearType-hinted and free;
    *   Microsoft YaHei was drawn as its CJK companion (YaHei's Latin is
    *   Segoe-based), so mixed lines like "Municipal Transportation Department
@@ -85,7 +85,7 @@ h6 {
   color: var(--color-text-primary);
 }
 
-/* Skip link — first focusable element in the shell, visible only on focus */
+/* Skip link - first focusable element in the shell, visible only on focus */
 .erp-skip-link {
   position: fixed;
   top: 8px;
@@ -432,7 +432,7 @@ main::-webkit-scrollbar,
   overflow: hidden !important;
 }
 
-/* Shell main content header — light chrome, responsive */
+/* Shell main content header - light chrome, responsive */
 .erp-shell-header {
   background: #ffffff;
   border-bottom: 1px solid var(--color-sidebar-border, #e8ebef);
@@ -650,7 +650,7 @@ main::-webkit-scrollbar,
 }
 
 /*
- * Header v2 — flush with the shell (no floating panel). Fixed at the top of
+ * Header v2 - flush with the shell (no floating panel). Fixed at the top of
  * the main column (outside the scrolling content pane).
  */
 .erp-shell-header.erp-header-v2 {
@@ -731,7 +731,7 @@ main::-webkit-scrollbar,
 }
 
 /*
- * Header dropdowns v2 — notifications and profile menus. They render in a
+ * Header dropdowns v2 - notifications and profile menus. They render in a
  * portal (outside `.erp-header-v2`), so they carry their own scope class.
  * Same panel language as the header: white, 16px radius, soft shadow, a
  * hairline ring instead of a border, 8px below the trigger.
@@ -1207,7 +1207,7 @@ main::-webkit-scrollbar,
   background: transparent;
 }
 
-/* Tables sit under card toolbars — never round the top corners */
+/* Tables sit under card toolbars - never round the top corners */
 .erp-pro-table-card-body .ant-table-container,
 .erp-pro-table-card-body .ant-table-container::before,
 .erp-pro-table-card-body .ant-table-container::after,
@@ -1723,7 +1723,7 @@ main::-webkit-scrollbar,
   background: #f6f8fa !important;
 }
 
-/* Sticky / fixed columns — Ant Design 5 (left/right) + 6 (start/end) */
+/* Sticky / fixed columns - Ant Design 5 (left/right) + 6 (start/end) */
 .erp-users-table .ant-table-cell-fix,
 .erp-users-table .ant-table-cell-fix-left,
 .erp-users-table .ant-table-cell-fix-left-first,
@@ -1921,7 +1921,7 @@ main::-webkit-scrollbar,
   color: #92400e;
 }
 
-/* Employees table — keep role tags inside the Role column */
+/* Employees table - keep role tags inside the Role column */
 .erp-users-role-cell {
   display: flex;
   align-items: center;
@@ -1990,7 +1990,7 @@ main::-webkit-scrollbar,
 }
 
 /* Review step (v2): identity card with soft fact tiles, then white section
-   cards — same language as the employee detail page. Muted text #4B5563
+   cards - same language as the employee detail page. Muted text #4B5563
    (7.6:1 on white). */
 .erp-employee-form-page .erp-review-identity {
   overflow: hidden;
@@ -3239,7 +3239,7 @@ main::-webkit-scrollbar,
   font-weight: 600;
 }
 
-/* ── My Profile — flush identity + underline tabs (scoped; HR detail unchanged) ── */
+/* ── My Profile - flush identity + underline tabs (scoped; HR detail unchanged) ── */
 
 .erp-profile-page {
   gap: 12px;
@@ -3346,7 +3346,7 @@ main::-webkit-scrollbar,
 }
 
 /*
- * My Profile tabs v2 — pill tabs (same language as the request catalogue
+ * My Profile tabs v2 - pill tabs (same language as the request catalogue
  * chips). Scoped to `.erp-profile-tabbar`, so the HR employee detail page keeps
  * its own tabs. Selected: 10% primary tint + #0F6E56 (5.3:1); idle text
  * #4B5563 (7.6:1). The row scrolls sideways when the tabs don't fit.
@@ -4359,7 +4359,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Enterprise login — soft Users chrome */
+/* Enterprise login - soft Users chrome */
 .erp-login-page {
   background: linear-gradient(165deg, #f4f6f8 0%, #e8edf2 48%, #f0f2f5 100%);
 }
@@ -4529,7 +4529,7 @@ main::-webkit-scrollbar,
   background: transparent;
 }
 
-/* Evaluation module — card grid + score chip */
+/* Evaluation module - card grid + score chip */
 .erp-evaluation-page .erp-users-stat-bar {
   margin-bottom: 16px;
 }
@@ -5241,7 +5241,7 @@ main::-webkit-scrollbar,
   opacity: 0.55;
 }
 
-/* Org structure lists — 3 status stats; departments portfolio is 6 */
+/* Org structure lists - 3 status stats; departments portfolio is 6 */
 .erp-org-positions-page .erp-users-stat-bar,
 .erp-org-disciplines-page .erp-users-stat-bar,
 .erp-org-departments-page .erp-users-stat-bar:not(.erp-org-portfolio-stats) {
@@ -5683,7 +5683,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Flight / business trip lists — 5-stat bar for HR (Needs Ticket) */
+/* Flight / business trip lists - 5-stat bar for HR (Needs Ticket) */
 .erp-flight-applications-page--hr .erp-users-stat-bar,
 .erp-business-trips-page--hr .erp-users-stat-bar {
   grid-template-columns: repeat(5, 1fr);
@@ -5792,7 +5792,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Flight application detail — four-stat meta bar */
+/* Flight application detail - four-stat meta bar */
 @media (min-width: 901px) {
   .erp-flight-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(4, 1fr);
@@ -5844,7 +5844,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Business trip detail — five-stat meta bar */
+/* Business trip detail - five-stat meta bar */
 @media (min-width: 901px) {
   .erp-business-trip-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(5, 1fr);
@@ -5909,7 +5909,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Per diem detail — four-stat meta bar */
+/* Per diem detail - four-stat meta bar */
 @media (min-width: 901px) {
   .erp-per-diem-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(4, 1fr);
@@ -5963,7 +5963,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Employee per diem rates detail — four-stat meta bar */
+/* Employee per diem rates detail - four-stat meta bar */
 @media (min-width: 901px) {
   .erp-employee-per-diem-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(4, 1fr);
@@ -6171,7 +6171,7 @@ main::-webkit-scrollbar,
   margin-top: 2px;
 }
 
-/* Inline notices — guidance / warning / error / success */
+/* Inline notices - guidance / warning / error / success */
 .erp-notice {
   display: flex;
   align-items: flex-start;
@@ -6289,7 +6289,7 @@ main::-webkit-scrollbar,
   border-radius: 8px;
 }
 
-/* Dashboard — Users chrome KPI bars + greeting */
+/* Dashboard - Users chrome KPI bars + greeting */
 .erp-dashboard-page .erp-dashboard-greeting {
   padding: 16px 20px;
 }
@@ -6440,7 +6440,7 @@ main::-webkit-scrollbar,
   transition: width 0.3s ease;
 }
 
-/* ── New Request catalogue (/approvals/new) — v2 floating panels ── */
+/* ── New Request catalogue (/approvals/new) - v2 floating panels ── */
 
 /*
  * Same panel language as the dashboard, header and sidebar: white, 16px

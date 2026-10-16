@@ -26,7 +26,7 @@ export function assertPasswordPolicy(
 
 /**
  * Generates a random temporary password (alphanumeric, length chars).
- * Never logs the result — caller must handle display securely.
+ * Never logs the result - caller must handle display securely.
  */
 export function generateTemporaryPassword(length = 12): string {
   const alphabet =

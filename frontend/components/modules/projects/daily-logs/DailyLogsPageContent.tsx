@@ -74,7 +74,7 @@ interface DailyLogFormValues {
 }
 
 /**
- * Create-daily-log drawer — project-scoped or with project selector for global page.
+ * Create-daily-log drawer - project-scoped or with project selector for global page.
  */
 export function DailyLogFormDrawer({
   open,
@@ -106,7 +106,7 @@ export function DailyLogFormDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -412,19 +412,19 @@ export default function DailyLogsPageContent({
         title: 'Shift',
         dataIndex: 'shift',
         key: 'shift',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Weather',
         dataIndex: 'weatherCondition',
         key: 'weatherCondition',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Workforce',
         key: 'workforce',
         render: (_: unknown, record: DailyLog) =>
-          record.totalWorkers || record.workforceCount || '—',
+          record.totalWorkers || record.workforceCount || '-',
       },
       {
         title: 'Incidents',
@@ -454,7 +454,7 @@ export default function DailyLogsPageContent({
         render: (_: unknown, record: DailyLog) =>
           record.supervisorId
             ? resolveUserDisplay(record.supervisorId, record.supervisorName)
-            : '—',
+            : '-',
       },
       {
         title: '',

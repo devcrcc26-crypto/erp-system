@@ -1,6 +1,6 @@
 import type { Config } from 'jest';
 
-/** Baseline (pre memory-tuning) — used only by measure-jest-peak-memory.cjs --baseline */
+/** Baseline (pre memory-tuning) - used only by measure-jest-peak-memory.cjs --baseline */
 const config: Config = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',

@@ -13,7 +13,7 @@ export function computeRequiredTiers(
   },
   instituteChiefName?: string | null,
 ): ReviewTier[] {
-  // DISCIPLINE_OWNER is intentionally never included — disciplineOwnerUserId
+  // DISCIPLINE_OWNER is intentionally never included - disciplineOwnerUserId
   // stays on DesignPackage/TaskDiscipline but is no longer an approval step.
   const included = new Set<string>([
     ReviewTier.REVIEWER,
@@ -42,6 +42,6 @@ export function computeRequiredTiers(
     included.delete(ReviewTier.INSTITUTE_CHIEF);
   }
 
-  // DISCIPLINE_LEAD is never removed — always in the result
+  // DISCIPLINE_LEAD is never removed - always in the result
   return REVIEW_TIER_ORDER.filter((t) => included.has(t)) as ReviewTier[];
 }

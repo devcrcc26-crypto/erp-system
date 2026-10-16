@@ -66,7 +66,7 @@ function compareText(a: string, b: string): number {
 }
 
 /**
- * Attendance records table — present / absent / leave / late / flagged + actions.
+ * Attendance records table - present / absent / leave / late / flagged + actions.
  */
 export default function AttendanceTable({
   records,
@@ -88,7 +88,7 @@ export default function AttendanceTable({
           compareText(formatUserName(a.employee), formatUserName(b.employee)),
         render: (_: unknown, row: AttendanceRecord) => {
           const name = formatUserName(row.employee);
-          const erpId = row.employee.employeeId?.trim() || '—';
+          const erpId = row.employee.employeeId?.trim() || '-';
           return (
             <div className="flex items-center gap-2.5">
               <Avatar
@@ -142,7 +142,7 @@ export default function AttendanceTable({
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
           if (absent === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <span className="erp-att-num erp-att-num--danger">
@@ -161,7 +161,7 @@ export default function AttendanceTable({
         render: (_: unknown, row: AttendanceRecord) => {
           const unpaid = toNumber(row.unpaidLeaveDays ?? 0);
           if (unpaid === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <span className="erp-att-num erp-att-num--danger">
@@ -177,7 +177,7 @@ export default function AttendanceTable({
         render: (_: unknown, row: AttendanceRecord) => {
           const leaves = row.approvedLeave ?? [];
           if (leaves.length === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
 
           return (
@@ -215,7 +215,7 @@ export default function AttendanceTable({
                 value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
               }
             >
-              {value > 0 ? value : '—'}
+              {value > 0 ? value : '-'}
             </span>
           );
         },
@@ -230,7 +230,7 @@ export default function AttendanceTable({
           const flagged = row.flaggedDays ?? 0;
           const resolved = row.resolvedDays ?? 0;
           if (flagged === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           if (resolved === flagged) {
             return (

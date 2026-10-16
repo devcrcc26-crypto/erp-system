@@ -1,5 +1,5 @@
 /*
- * Announcements — employee list / detail, What's new, the urgent banner and
+ * Announcements - employee list / detail, What's new, the urgent banner and
  * modals, HR management. Same panel language as the v2 pages: white panels,
  * 16px radius, soft shadow, no hard borders. Every rule is scoped to an
  * `.erp-ann-*` class or `.erp-markdown`, so other pages are unaffected.

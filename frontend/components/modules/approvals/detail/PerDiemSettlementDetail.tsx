@@ -83,7 +83,7 @@ export default function PerDiemSettlementDetail({
             {formatProjectDate(settlement.actualReturnDate)} {settlement.actualReturnTime}
           </MetaItem>
           <MetaItem label="Vehicle km">
-            {kmDifference != null ? String(kmDifference) : '—'}
+            {kmDifference != null ? String(kmDifference) : '-'}
           </MetaItem>
           <MetaItem label="Per diem earned">
             {formatEtbAmount(settlement.perDiemEarned)}

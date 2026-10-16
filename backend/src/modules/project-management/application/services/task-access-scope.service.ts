@@ -31,7 +31,7 @@ export interface TaskAccessProfile {
 const NONE_ID = '__none__';
 
 /**
- * Comment-8 phase 5 — server-side query scoping for projects, tasks, disciplines, and subtasks.
+ * Comment-8 phase 5 - server-side query scoping for projects, tasks, disciplines, and subtasks.
  * Out-of-scope reads return 404 (not 403).
  */
 @Injectable()

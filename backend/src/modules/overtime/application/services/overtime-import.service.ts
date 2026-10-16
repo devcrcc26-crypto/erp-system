@@ -247,7 +247,7 @@ export class OvertimeImportService {
       instructions.addRow([
         'employeeId',
         'If no email',
-        'User UUID — required when employeeEmail is blank',
+        'User UUID - required when employeeEmail is blank',
       ]);
     }
     if (input.includePeriod) {
@@ -824,7 +824,7 @@ export class OvertimeImportService {
           ? 'Chinese'
           : 'all';
     return (
-      `Row ${line} — ${employeeName}, ${date}: isHoliday is marked but ${date} is not a ` +
+      `Row ${line} - ${employeeName}, ${date}: isHoliday is marked but ${date} is not a ` +
       `registered public holiday for ${nationalityLabel} employees. Hours have been ` +
       `classified as holiday. Please verify before submitting.`
     );
@@ -967,7 +967,7 @@ export class OvertimeImportService {
       return this.cellToString(value.result as ExcelJS.CellValue);
     }
     if (value instanceof Date) {
-      // Time-only Excel cells often come as Date — format HH:mm in local excel serial
+      // Time-only Excel cells often come as Date - format HH:mm in local excel serial
       const hours = value.getHours();
       const minutes = value.getMinutes();
       if (

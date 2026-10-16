@@ -114,7 +114,7 @@ function RateStat({
 }
 
 /**
- * HR employee per diem rates list — Users chrome.
+ * HR employee per diem rates list - Users chrome.
  */
 export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -188,12 +188,12 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
           render: (_: unknown, row: EmployeePerDiemRateListItem) => {
             const rateRow = row.rate;
             if (!rateRow) {
-              return <span className="erp-users-cell-sub">—</span>;
+              return <span className="erp-users-cell-sub">-</span>;
             }
             const amount = toRateNumber(rateRow[rate]);
             const isActive = rateRow[active];
             if (amount == null) {
-              return <span className="erp-users-cell-sub">—</span>;
+              return <span className="erp-users-cell-sub">-</span>;
             }
             const lowEtb =
               (category === 'Regional' || category === 'International') &&
@@ -241,7 +241,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
               </p>
             ) : null}
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
-              {row.employee.department?.name ?? '—'}
+              {row.employee.department?.name ?? '-'}
             </p>
           </div>
         ),
@@ -253,7 +253,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_: unknown, row: EmployeePerDiemRateListItem) => (
           <span className="erp-users-cell-sub">
-            {row.employee.department?.name ?? '—'}
+            {row.employee.department?.name ?? '-'}
           </span>
         ),
       },

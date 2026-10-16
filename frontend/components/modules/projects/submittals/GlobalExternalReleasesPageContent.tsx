@@ -52,7 +52,7 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
 ];
 
 /**
- * Global external releases list — cross-project, current-user relevant only.
+ * Global external releases list - cross-project, current-user relevant only.
  */
 export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const router = useRouter();
@@ -146,7 +146,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );

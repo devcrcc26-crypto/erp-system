@@ -24,12 +24,12 @@ interface EmployeeApproverOnlyFieldProps {
   userId: string;
   excluded: boolean;
   reason: string | null | undefined;
-  /** users.edit — the same permission PATCH /users/:id requires. */
+  /** users.edit - the same permission PATCH /users/:id requires. */
   canEdit: boolean;
 }
 
 /**
- * Approver only — excluded from HR processes. Read-only without users.edit.
+ * Approver only - excluded from HR processes. Read-only without users.edit.
  */
 export default function EmployeeApproverOnlyField({
   userId,

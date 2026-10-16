@@ -81,7 +81,7 @@ type UploadedFile = {
 };
 
 /**
- * Vehicle refueling request lifecycle — submit-in-one-call with HR Officer
+ * Vehicle refueling request lifecycle - submit-in-one-call with HR Officer
  * approval tier (or direct APPROVED for HR and above).
  * Receipt attachment after approval via multipart upload.
  */
@@ -192,7 +192,7 @@ export class VehicleRefuelingService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'VEHICLE_REFUELING',
-        title: `Vehicle Refueling — ${vehicle.plateNumber}`,
+        title: `Vehicle Refueling - ${vehicle.plateNumber}`,
         formData: {
           vehiclePlate: vehicle.plateNumber,
           fuelType: dto.fuelType,

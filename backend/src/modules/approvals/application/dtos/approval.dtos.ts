@@ -24,7 +24,7 @@ export class SubmitRequestDto {
   @MaxLength(100)
   categoryCode!: string;
 
-  @ApiProperty({ example: 'Annual leave — 5 days' })
+  @ApiProperty({ example: 'Annual leave - 5 days' })
   @IsString()
   @MinLength(1)
   @MaxLength(500)
@@ -124,12 +124,12 @@ export class ListRequestsDto {
   @IsIn(['MY_REQUESTS', 'PENDING_MY_ACTION', 'ALL'])
   inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION' | 'ALL';
 
-  @ApiPropertyOptional({ description: 'ISO date — filter submittedAt >= dateFrom' })
+  @ApiPropertyOptional({ description: 'ISO date - filter submittedAt >= dateFrom' })
   @IsOptional()
   @IsDateString()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ description: 'ISO date — filter submittedAt <= dateTo' })
+  @ApiPropertyOptional({ description: 'ISO date - filter submittedAt <= dateTo' })
   @IsOptional()
   @IsDateString()
   dateTo?: string;

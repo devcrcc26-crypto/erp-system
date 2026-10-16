@@ -14,7 +14,7 @@ import { PerDiemSettlementController } from './presentation/controllers/per-diem
 import { PerDiemController } from './presentation/controllers/per-diem.controller';
 
 /**
- * Per diem module — ETB employee rates, travel advances, and settlements.
+ * Per diem module - ETB employee rates, travel advances, and settlements.
  * Advances use the Discipline Lead single-tier chain; settlements use HR-only.
  */
 @Module({

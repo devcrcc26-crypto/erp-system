@@ -55,7 +55,7 @@ const EXTERNAL_RELEASE_PURPOSES: {
   },
 ];
 
-/** Subtasks eligible for external release — Approved or Locked only. */
+/** Subtasks eligible for external release - Approved or Locked only. */
 const RELEASABLE_STATUSES: DesignPackageProjectedStatus[] = [
   'APPROVED',
   'LOCKED',
@@ -88,7 +88,7 @@ export default function SubmittalPackageDrawer({
   const effectiveProjectId = selectedProjectId ?? '';
 
   const capabilitiesReady = useCapabilitiesReady();
-  // Prefer /projects (access-scoped) over My Work — My Work omits projects without assignments.
+  // Prefer /projects (access-scoped) over My Work - My Work omits projects without assignments.
   const projectsQuery = useAllProjects(
     {},
     open && showProjectSelector && capabilitiesReady,
@@ -109,7 +109,7 @@ export default function SubmittalPackageDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -377,7 +377,7 @@ function SubmittalPackageForm({
           options={disciplines.map((d) => ({
             value: d.id,
             label: d.disciplineNumber
-              ? `${d.disciplineNumber} — ${d.disciplineName ?? ''}`
+              ? `${d.disciplineNumber} - ${d.disciplineName ?? ''}`
               : (d.disciplineName ?? formatDisciplineLabel(d.disciplineIndex)),
           }))}
         />
@@ -434,7 +434,7 @@ function SubmittalPackageForm({
                 optionFilterProp="label"
                 options={lockablePackages.map((pkg) => ({
                   value: pkg.id,
-                  label: `${pkg.packageCode ?? pkg.name} — ${pkg.name} (${pkg.projectedStatus})`,
+                  label: `${pkg.packageCode ?? pkg.name} - ${pkg.name} (${pkg.projectedStatus})`,
                 }))}
                 value={selectedPackageId ?? undefined}
                 onChange={(id) => onSelectedPackageChange(id)}
@@ -453,7 +453,7 @@ function SubmittalPackageForm({
                       {selectedPackage.siteRepName ??
                         selectedPackage.siteRepresentativeName}
                       {selectedPackage.siteRepCompany &&
-                        ` — ${selectedPackage.siteRepCompany}`}
+                        ` - ${selectedPackage.siteRepCompany}`}
                     </p>
                   </div>
                 )}
@@ -466,7 +466,7 @@ function SubmittalPackageForm({
                     <p className="text-sm text-[var(--color-text-primary)]">
                       {selectedPackage.consultantName}
                       {selectedPackage.consultantTitle &&
-                        ` — ${selectedPackage.consultantTitle}`}
+                        ` - ${selectedPackage.consultantTitle}`}
                       {selectedPackage.consultantCompany &&
                         ` (${selectedPackage.consultantCompany})`}
                     </p>

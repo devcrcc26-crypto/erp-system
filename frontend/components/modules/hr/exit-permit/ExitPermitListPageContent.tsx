@@ -111,7 +111,7 @@ function ExitPermitStat({
 }
 
 /**
- * Exit permit list — Users chrome (stat bar, filter row, soft table).
+ * Exit permit list - Users chrome (stat bar, filter row, soft table).
  */
 export default function ExitPermitListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -314,7 +314,7 @@ export default function ExitPermitListPageContent(): React.ReactNode {
           value ? (
             <span className="erp-users-role-tag">{value}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
     ],

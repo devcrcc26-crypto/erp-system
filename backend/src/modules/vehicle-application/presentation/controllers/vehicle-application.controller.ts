@@ -136,7 +136,7 @@ export class VehicleApplicationController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Release vehicle after use — sets releasedAt/By, vehicle → AVAILABLE',
+      'Release vehicle after use - sets releasedAt/By, vehicle → AVAILABLE',
   })
   release(
     @CurrentUser() user: AuthenticatedUser,

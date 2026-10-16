@@ -79,7 +79,7 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
 
 function dash(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : '—';
+  return trimmed ? trimmed : '-';
 }
 
 /**
@@ -98,8 +98,8 @@ export function exportMaterialRequisitionPdf(
   const projectLabel = requisition.project
     ? [requisition.project.projectCode, requisition.project.name]
         .filter(Boolean)
-        .join(' — ')
-    : '—';
+        .join(' - ')
+    : '-';
 
   let y = PAGE_MARGIN;
 
@@ -153,7 +153,7 @@ export function exportMaterialRequisitionPdf(
         labels.requiredByDate,
         requisition.requiredByDate
           ? formatProjectDate(requisition.requiredByDate)
-          : '—',
+          : '-',
       ],
       [labels.project, projectLabel],
       [labels.itemCount, String(requisition.itemCount ?? requisition.items.length)],
@@ -161,7 +161,7 @@ export function exportMaterialRequisitionPdf(
         labels.submittedAt,
         requisition.submittedAt
           ? formatProjectDate(requisition.submittedAt)
-          : '—',
+          : '-',
       ],
       [labels.createdAt, formatProjectDate(requisition.createdAt)],
     ],
@@ -179,7 +179,7 @@ export function exportMaterialRequisitionPdf(
           String(item.quantity),
           dash(item.unit),
         ])
-      : [[labels.none, '—', '—', '—', '—']];
+      : [[labels.none, '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -222,7 +222,7 @@ export function exportMaterialRequisitionPdf(
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — ${labels.page} ${page} ${labels.of} ${pageCount}`,
+      `${labels.footer} - ${labels.title} - ${labels.page} ${page} ${labels.of} ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

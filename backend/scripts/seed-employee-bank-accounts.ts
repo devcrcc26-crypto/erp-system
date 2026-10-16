@@ -312,7 +312,7 @@ async function main(): Promise<void> {
       if (matched.bankAccountNumber === row.account && !shouldFixLastName) {
         unchanged += 1;
         console.log(
-          `OK    ${matched.employeeId ?? '—'}  ${matched.firstName}  already ${row.account}`,
+          `OK    ${matched.employeeId ?? '-'}  ${matched.firstName}  already ${row.account}`,
         );
         continue;
       }
@@ -327,7 +327,7 @@ async function main(): Promise<void> {
       });
       updated += 1;
       console.log(
-        `SET   ${matched.employeeId ?? '—'}  ${matched.firstName}${shouldFixLastName ? ` +last=${inferredLast}` : ''}  ${matched.bankAccountNumber ?? 'null'} → ${row.account}`,
+        `SET   ${matched.employeeId ?? '-'}  ${matched.firstName}${shouldFixLastName ? ` +last=${inferredLast}` : ''}  ${matched.bankAccountNumber ?? 'null'} → ${row.account}`,
       );
     }
 

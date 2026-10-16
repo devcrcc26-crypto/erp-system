@@ -97,7 +97,7 @@ function DetailSection({
 }
 
 /**
- * Monthly overtime sheet detail — Users / employee profile chrome.
+ * Monthly overtime sheet detail - Users / employee profile chrome.
  */
 export default function OvertimeSheetDetailPageContent({
   sheetId,
@@ -168,7 +168,7 @@ export default function OvertimeSheetDetailPageContent({
 
   useSetBreadcrumbLabel(
     sheet
-      ? `${formatOvertimeEmployeeName(sheet.employee)} — ${formatOvertimePeriod(sheet.month, sheet.year, t)}`
+      ? `${formatOvertimeEmployeeName(sheet.employee)} - ${formatOvertimePeriod(sheet.month, sheet.year, t)}`
       : null,
   );
 
@@ -405,7 +405,7 @@ export default function OvertimeSheetDetailPageContent({
               }}
               title={text}
             >
-              {text || '—'}
+              {text || '-'}
             </span>
             {row.attendanceWarning ? (
               <Tooltip title={row.attendanceWarning}>
@@ -645,7 +645,7 @@ export default function OvertimeSheetDetailPageContent({
                   hours > 0 ? item.color : 'text-gray-400'
                 }`}
               >
-                {hours > 0 ? `${formatOvertimeHours(hours)}h` : '—'}
+                {hours > 0 ? `${formatOvertimeHours(hours)}h` : '-'}
               </p>
             </div>
           );

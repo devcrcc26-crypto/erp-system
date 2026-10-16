@@ -1,5 +1,5 @@
 /*
- * Evaluation module (v2) — same panel language as the Employees list:
+ * Evaluation module (v2) - same panel language as the Employees list:
  * white floating tiles, 16px radius, soft shadow, no hard borders.
  * Scoped under `.erp-evaluation-v2` on every evaluation page root.
  * Overrides `.erp-evaluation-page` square corners for this module.

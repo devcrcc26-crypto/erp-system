@@ -97,7 +97,7 @@ function CompanyAssetStat({
 }
 
 /**
- * Company asset register — Users chrome (stat bar, filter row, soft table).
+ * Company asset register - Users chrome (stat bar, filter row, soft table).
  */
 export default function CompanyAssetListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -242,7 +242,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
           value ? (
             <span className="erp-users-role-tag">{value}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {
@@ -264,7 +264,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         render: (_: unknown, row: CompanyAssetListItem) => {
           const depreciation = resolveAssetDepreciation(row);
           if (depreciation.netValue == null) {
-            return <span className="erp-users-cell-sub">—</span>;
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return (
             <span
@@ -299,7 +299,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         responsive: ['sm'],
         render: (_: unknown, row: CompanyAssetListItem) => {
           if (!row.assignedTo) {
-            return <span className="erp-users-cell-sub">—</span>;
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return (
             <div className="min-w-0">

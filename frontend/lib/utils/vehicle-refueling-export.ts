@@ -138,7 +138,7 @@ export function exportVehicleRefuelingPdf(input: {
   exportHrDocumentPdf({
     documentTitle: 'Vehicle Refueling Request',
     subtitle: refueling.vehicle
-      ? `${refueling.vehicle.plateNumber} — ${refueling.fuelStation}`
+      ? `${refueling.vehicle.plateNumber} - ${refueling.fuelStation}`
       : refueling.fuelStation,
     requestNumber: refueling.requestNumber,
     companyName,
@@ -167,7 +167,7 @@ export function exportVehicleRefuelingPdf(input: {
           {
             label: 'Vehicle',
             value: refueling.vehicle
-              ? `${refueling.vehicle.plateNumber} — ${refueling.vehicle.make} ${refueling.vehicle.model}`
+              ? `${refueling.vehicle.plateNumber} - ${refueling.vehicle.make} ${refueling.vehicle.model}`
               : null,
           },
           { label: 'Fuel Date', value: exportDate(refueling.fuelDate) },

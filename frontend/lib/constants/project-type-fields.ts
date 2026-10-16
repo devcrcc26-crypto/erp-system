@@ -33,7 +33,7 @@ export const PROJECT_TYPE_FIELDS: Record<string, ProjectTypeFieldConfig[]> = {
     { key: 'grossFloorAreaM2', label: 'Gross Floor Area', unit: 'm²' },
   ],
   // BRIDGE, TUNNEL, WATER_SUPPLY_DRAINAGE, PORT_HARBOR, AIRPORT,
-  // POWER_ENERGY, INDUSTRIAL, INFRASTRUCTURE, OTHER intentionally have no entry —
+  // POWER_ENERGY, INDUSTRIAL, INFRASTRUCTURE, OTHER intentionally have no entry -
   // no type-specific fields shown for these until confirmed.
 };
 

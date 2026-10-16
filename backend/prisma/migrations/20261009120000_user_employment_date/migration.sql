@@ -16,7 +16,7 @@ WHERE u."experience_start_date" IS NOT NULL
     FROM "employee_contract" c
     WHERE c."employee_id" = u."id"
       AND c."company_id" = u."company_id"
-      AND c."notes" = 'Seeded from August 2026 salary sheet — dates derived from employment anniversary.'
+      AND c."notes" = 'Seeded from August 2026 salary sheet - dates derived from employment anniversary.'
   );
 
 CREATE INDEX IF NOT EXISTS "idx_user_company_employment_date"

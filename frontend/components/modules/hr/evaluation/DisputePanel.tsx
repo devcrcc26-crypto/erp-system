@@ -271,9 +271,9 @@ export default function DisputePanel({
                     ? `Score adjusted to ${
                         activeDispute.dlAdjustedScore != null
                           ? Number(activeDispute.dlAdjustedScore).toFixed(1)
-                          : '—'
+                          : '-'
                       }`
-                    : 'Score upheld — no change'
+                    : 'Score upheld - no change'
                 }
                 description={activeDispute.dlComment}
               />
@@ -530,7 +530,7 @@ export default function DisputePanel({
                                       ? Number(
                                           activeDispute.hrFinalScore,
                                         ).toFixed(1)
-                                      : '—'
+                                      : '-'
                                   }`
                                 : 'Score upheld'}
                             </p>

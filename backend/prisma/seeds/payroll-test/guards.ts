@@ -1,5 +1,5 @@
 /**
- * Payroll test seed guardrails — local DB + SEED_MODE only.
+ * Payroll test seed guardrails - local DB + SEED_MODE only.
  */
 export function assertPayrollSeedGuards(): { host: string; database: string } {
   const seedMode = process.env.SEED_MODE;

@@ -148,7 +148,7 @@ export function pickTopLevelRoleName(
 }
 
 /**
- * Label for user pickers — name, roles, and discipline.
+ * Label for user pickers - name, roles, and discipline.
  */
 export function formatUserPickerLabel(user: User): string {
   return `${formatUserName(user)} (${formatUserDiscipline(user)})`;

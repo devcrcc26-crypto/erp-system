@@ -9,7 +9,7 @@
  *
  * Payroll generate/recalculate must price from entry start/end times (exact
  * minutes via {@link datedEntriesFromExactMinutes}), not from stored Decimal(5,2)
- * hour columns — those are display-rounded and drift pay (e.g. 20h10m → 20.17).
+ * hour columns - those are display-rounded and drift pay (e.g. 20h10m → 20.17).
  */
 
 import {
@@ -359,7 +359,7 @@ export function assignOvertimeToSalaryPeriods(input: {
       dateInInclusiveRange(assignDate, p.periodStart, p.periodEnd),
     );
     if (periodIndex < 0) {
-      // Outside all windows — attach to nearest period by start date.
+      // Outside all windows - attach to nearest period by start date.
       periodIndex = 0;
       for (let i = 0; i < periods.length; i += 1) {
         if (assignDate.getTime() >= toDateOnlyUtc(periods[i]!.periodStart).getTime()) {

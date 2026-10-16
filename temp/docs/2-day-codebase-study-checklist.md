@@ -10,7 +10,7 @@ Keep a running notes doc with 4 sections: **Routes**, **Entities**, **Flows trac
 
 ## Before you start (30 min)
 
-- [ ] Read `.cursorrules` (architecture rules — treat as law)
+- [ ] Read `.cursorrules` (architecture rules - treat as law)
 - [ ] Skim `.env.example`, `docker-compose.yml`
 - [ ] Copy env files: `backend/.env.example` → `backend/.env`, `frontend/.env.example` → `frontend/.env.local`
 - [ ] Start infra: `docker compose up -d postgres redis minio`
@@ -25,11 +25,11 @@ Keep a running notes doc with 4 sections: **Routes**, **Entities**, **Flows trac
 
 
 
-# DAY 1 — Platform skeleton
+# DAY 1 - Platform skeleton
 
 
 
-## Hour 1 — Monorepo map [Both]
+## Hour 1 - Monorepo map [Both]
 
 **Goal:** Know the folder layout.
 
@@ -52,7 +52,7 @@ Keep a running notes doc with 4 sections: **Routes**, **Entities**, **Flows trac
 
 
 
-## Hour 2 — Frontend routing [FE]
+## Hour 2 - Frontend routing [FE]
 
 **Goal:** Page → component mapping.
 
@@ -83,7 +83,7 @@ Repeat mentally for:
 
 
 
-## Hour 3 — API client & server state [FE]
+## Hour 3 - API client & server state [FE]
 
 **Goal:** How the browser talks to the API.
 
@@ -109,7 +109,7 @@ Repeat mentally for:
 
 
 
-## Hour 4 — Auth backend [BE]
+## Hour 4 - Auth backend [BE]
 
 **Goal:** Login → JWT → guards.
 
@@ -131,7 +131,7 @@ Repeat mentally for:
 
 
 
-## Hour 5 — RBAC & capabilities [Both]
+## Hour 5 - RBAC & capabilities [Both]
 
 **Goal:** Why a user can see inbox but not review mode (common bug class).
 
@@ -154,9 +154,9 @@ Repeat mentally for:
 
 
 
-## Hour 6 — Database schema (EPC core) [BE]
+## Hour 6 - Database schema (EPC core) [BE]
 
-**Goal:** Entity relationships — don't read every field.
+**Goal:** Entity relationships - don't read every field.
 
 
 | Read in `backend/prisma/schema.prisma`              | Focus               |
@@ -184,7 +184,7 @@ DesignPackage → ReviewSession → ReviewComment
 
 
 
-## Hour 7 — Backend layering [BE]
+## Hour 7 - Backend layering [BE]
 
 **Goal:** Clean architecture boundaries.
 
@@ -207,7 +207,7 @@ DesignPackage → ReviewSession → ReviewComment
 
 
 
-## Hour 8 — Shared infrastructure [BE]
+## Hour 8 - Shared infrastructure [BE]
 
 **Goal:** Cross-cutting concerns.
 
@@ -227,11 +227,11 @@ DesignPackage → ReviewSession → ReviewComment
 
 
 
-## Hour 9 — Day 1 synthesis [Both]
+## Hour 9 - Day 1 synthesis [Both]
 
 **Goal:** Trace one complete vertical slice.
 
-**Exercise — Disciplines list:**
+**Exercise - Disciplines list:**
 
 ```
 ContextSidebar "Disciplines"
@@ -257,11 +257,11 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-# DAY 2 — EPC workflow (the heart)
+# DAY 2 - EPC workflow (the heart)
 
 
 
-## Hour 10 — Domain language [Both]
+## Hour 10 - Domain language [Both]
 
 **Goal:** Status enums and role vocabulary.
 
@@ -285,7 +285,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 11 — Flow A: Designer submits [Both]
+## Hour 11 - Flow A: Designer submits [Both]
 
 **Goal:** Submit for review path.
 
@@ -309,7 +309,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 12 — Flow B: Review mode [Both]
+## Hour 12 - Flow B: Review mode [Both]
 
 **Goal:** Governance review path.
 
@@ -328,13 +328,13 @@ Write the chain in your notes with **exact file paths**.
 
 **Exercise:** Trace **Approve & escalate** from button click → `approveSession.mutateAsync` → backend handler.
 
-**Checkpoint:** What is `currentTier`? When is final tier "Approve — close package"?
+**Checkpoint:** What is `currentTier`? When is final tier "Approve - close package"?
 
 ---
 
 
 
-## Hour 13 — Flow C: Approve EDVs + comments [Both]
+## Hour 13 - Flow C: Approve EDVs + comments [Both]
 
 **Goal:** Document-level approval and comment blocking.
 
@@ -356,7 +356,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 14 — Flow D: Lock + close [Both]
+## Hour 14 - Flow D: Lock + close [Both]
 
 **Goal:** Post-review package closure.
 
@@ -381,7 +381,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 15 — My Work & role routing [FE]
+## Hour 15 - My Work & role routing [FE]
 
 **Goal:** How users land on the right workspace.
 
@@ -402,7 +402,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 16 — Workflow kernel & state machine [BE]
+## Hour 16 - Workflow kernel & state machine [BE]
 
 **Goal:** How writes actually happen.
 
@@ -423,7 +423,7 @@ Write the chain in your notes with **exact file paths**.
 
 
 
-## Hour 17 — Tests as docs [BE]
+## Hour 17 - Tests as docs [BE]
 
 **Goal:** Business rules without reading all services.
 
@@ -445,11 +445,11 @@ Skim (read test names + key assertions only):
 
 
 
-## Hour 18 — Final synthesis [Both]
+## Hour 18 - Final synthesis [Both]
 
 **Goal:** Prove you understand the system.
 
-### Exercise 1 — Blind trace (30 min)
+### Exercise 1 - Blind trace (30 min)
 
 Pick a feature you haven't traced: **Submittals**
 
@@ -463,7 +463,7 @@ frontend/app/(dashboard)/projects/[projectId]/submittals/page.tsx
 
 
 
-### Exercise 2 — Explain to a colleague (20 min)
+### Exercise 2 - Explain to a colleague (20 min)
 
 Explain aloud (or write):
 
@@ -473,7 +473,7 @@ Explain aloud (or write):
 
 
 
-### Exercise 3 — Gap list (10 min)
+### Exercise 3 - Gap list (10 min)
 
 Write 5 things you still don't know. Example:
 
@@ -576,8 +576,8 @@ You pass if you can do these **without searching blindly**:
 
 ## Related docs
 
-- `docs/core-foundation-and-pm-learning-guide.md` — deep-dive learning guide
-- `docs/epc-operating-model.md` — EPC business model
-- `ERD files/workflow.md` — workflow diagram
-- `.cursorrules` — architecture rules
+- `docs/core-foundation-and-pm-learning-guide.md` - deep-dive learning guide
+- `docs/epc-operating-model.md` - EPC business model
+- `ERD files/workflow.md` - workflow diagram
+- `.cursorrules` - architecture rules
 

@@ -368,7 +368,7 @@ function hfNumber(value: unknown): number {
   return Number.NaN;
 }
 
-describe('PayrollExcelExportService — template + formulas', () => {
+describe('PayrollExcelExportService - template + formulas', () => {
   jest.setTimeout(60_000);
 
   it('writes full first+middle+last names on Data and Payroll', async () => {

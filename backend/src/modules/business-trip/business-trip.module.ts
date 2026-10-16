@@ -7,7 +7,7 @@ import { BusinessTripImportController } from './presentation/controllers/busines
 import { BusinessTripController } from './presentation/controllers/business-trip.controller';
 
 /**
- * Business trip (third-country) module — international travel requests with
+ * Business trip (third-country) module - international travel requests with
  * multi-tier approval, budget estimate, ticket attachment, and passenger acknowledgement.
  */
 @Global()

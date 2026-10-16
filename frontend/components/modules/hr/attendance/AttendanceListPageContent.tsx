@@ -50,7 +50,7 @@ const STATUS_COLORS: Record<AttendanceMonthStatus, string> = {
 };
 
 /**
- * HR attendance list — Employees / leave v2 chrome.
+ * HR attendance list - Employees / leave v2 chrome.
  */
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

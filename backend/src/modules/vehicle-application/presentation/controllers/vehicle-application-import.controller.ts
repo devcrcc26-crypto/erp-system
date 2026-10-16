@@ -2,7 +2,7 @@ import { createHrImportController } from '../../../hr-shared/application/import-
 import { VehicleApplicationImportService } from '../../application/services/vehicle-application-import.service';
 
 /**
- * `GET/POST /hr/vehicle-applications/import*` — template, preview and commit.
+ * `GET/POST /hr/vehicle-applications/import*` - template, preview and commit.
  */
 export const VehicleApplicationImportController = createHrImportController({
   route: 'hr/vehicle-applications/import',

@@ -2,7 +2,7 @@ import { createHrImportController } from '../../hr-shared/application/import-exp
 import { CompanyAssetImportService } from '../application/services/company-asset-import.service';
 
 /**
- * `GET/POST /organization/assets/import*` — template, preview and commit.
+ * `GET/POST /organization/assets/import*` - template, preview and commit.
  */
 export const CompanyAssetImportController = createHrImportController({
   route: 'organization/assets/import',

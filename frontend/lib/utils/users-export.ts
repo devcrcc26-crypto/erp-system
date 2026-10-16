@@ -5,7 +5,7 @@ import { buildUsersExportRows } from '@/lib/utils/users-export-excel';
 /**
  * Excel export for the user directory.
  *
- * Row building stays in `users-export-excel.ts` — it is covered by tests and
+ * Row building stays in `users-export-excel.ts` - it is covered by tests and
  * its camelCase keys line up with the import template. This module only puts
  * the human-readable headers on top of those keys.
  */
@@ -36,7 +36,7 @@ export function buildUsersExportSheets(
         { header: 'National ID', key: 'nationalId', width: 16 },
         { header: 'Education Level', key: 'educationLevel', width: 16 },
         { header: 'Field of Study', key: 'fieldOfStudy', width: 20 },
-        { header: 'Experience Since', key: 'experienceStartDate', width: 18 },
+        { header: 'Experience As Of', key: 'yearsOfExperienceAsOf', width: 18 },
         { header: 'Years of Experience', key: 'yearsOfExperience', width: 18 },
         { header: 'Country', key: 'addressCountry', width: 16 },
         { header: 'Region', key: 'addressRegion', width: 16 },

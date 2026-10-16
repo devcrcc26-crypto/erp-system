@@ -46,7 +46,7 @@ export function resolveTabStatusFilter(
 
 /**
  * Builds Status Select options from the same status set the active tab uses.
- * Labels come from the table's formatter / workflow — not a parallel list.
+ * Labels come from the table's formatter / workflow - not a parallel list.
  */
 export function buildTabStatusFilterOptions<T extends string>(
   tabStatuses: string,

@@ -7,7 +7,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { FlightAdditionalValues } from './flight-stepper.types';
 
 /**
- * Step 3 — accommodation / per diem / notes / attachments.
+ * Step 3 - accommodation / per diem / notes / attachments.
  */
 export default function FlightAdditionalStep({
   values,

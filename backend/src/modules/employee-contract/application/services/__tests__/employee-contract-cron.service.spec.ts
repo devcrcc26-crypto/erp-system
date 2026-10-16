@@ -100,7 +100,7 @@ describe('EmployeeContractCronService', () => {
         recipientId: hrOfficerId,
         eventType: 'employee_contract.expiry_warning',
         channel: 'IN_APP',
-        subject: 'Contract Expiry Warning — Jane Doe',
+        subject: 'Contract Expiry Warning - Jane Doe',
         body: expect.stringContaining('expires in 25 days on 2026-09-16'),
         link: `/hr/employee-contract/${contractId}`,
       }),

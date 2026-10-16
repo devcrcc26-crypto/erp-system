@@ -30,6 +30,7 @@
     "myProfile": "My Profile",
     "departments": "Departments",
     "positions": "Positions",
+    "seniorityLevels": "Seniority levels",
     "disciplinesCatalog": "Disciplines",
     "menuApplication": "Application",
     "menuProject": "Project",
@@ -318,7 +319,7 @@
           "attachment": "Attachment"
         },
         "explainDays": {
-          "title": "Explain flagged days — {{period}}",
+          "title": "Explain flagged days - {{period}}",
           "subtitle": "Select days with the same issue, explain them, and save as draft. Continue to the next step to review and submit for approval. Unexplained days can stay until later.",
           "selectionCount": "{{selected}} of {{total}} selected",
           "selectAll": "Select all compatible days",
@@ -402,7 +403,7 @@
       "resolve": "Resolve",
       "resolveConditionsFirst": "Resolve all conditions before taking action.",
       "waitingEmployeeResponse": "Waiting for employee response",
-      "employeeRespondedReady": "Employee responded — ready to resolve",
+      "employeeRespondedReady": "Employee responded - ready to resolve",
       "responseLabel": "Response",
       "attachmentsOnly": "(attachments only)",
       "fileCount": "{{count}} file(s)",
@@ -412,7 +413,7 @@
       "returnedHint": "Please make changes and resubmit.",
       "returnedWithNote": "Approver note: {{note}}. Please make changes and resubmit.",
       "rejectedTitle": "This request was rejected",
-      "lateSubmissionBadge": "Late submission — for {{month}}",
+      "lateSubmissionBadge": "Late submission - for {{month}}",
       "lateSubmissionReason": "Reason: {{reason}}",
       "lateSubmissionOnBehalf": "Entered by {{name}} on behalf",
       "resubmit": {
@@ -459,11 +460,11 @@
         "resolveFailed": "Failed to resolve condition"
       },
       "waiting": {
-        "approved": "Fully approved — no further action required",
-        "rejected": "Request rejected — no further action required",
-        "cancelled": "Request cancelled — no further action required",
-        "returnedRequester": "Returned — update and resubmit to continue",
-        "returnedOther": "Returned to requester — waiting for resubmit",
+        "approved": "Fully approved - no further action required",
+        "rejected": "Request rejected - no further action required",
+        "cancelled": "Request cancelled - no further action required",
+        "returnedRequester": "Returned - update and resubmit to continue",
+        "returnedOther": "Returned to requester - waiting for resubmit",
         "onTier": "Waiting on {{label}} ({{name}})",
         "none": "No active approval actions"
       },
@@ -659,7 +660,7 @@
           "projectPlaceholder": "Link to a project",
           "dateRange": "Date range",
           "periods": "Periods",
-          "periodsHint": "Each period is an inclusive date range. Add another period for non-contiguous dates — each becomes its own request.",
+          "periodsHint": "Each period is an inclusive date range. Add another period for non-contiguous dates - each becomes its own request.",
           "addPeriod": "Add period",
           "removePeriod": "Remove period",
           "periodRequired": "Select at least one date range.",
@@ -748,11 +749,11 @@
         "saved": "Policy saved.",
         "saveError": "Could not save the policy.",
         "affectedRunsTitle": "Payroll already exists for {{count}} affected month(s)",
-        "affectedRunStale": "{{run}} ({{status}}) will be marked stale — recalculate it.",
+        "affectedRunStale": "{{run}} ({{status}}) will be marked stale - recalculate it.",
         "affectedRunReview": "{{run}} ({{status}}) will be marked \"review required\". It is not recalculated.",
         "confirmAffected": "I understand. Save and mark these runs.",
         "historyTitle": "History: {{name}}",
-        "historyEmpty": "No changes yet — the default applies.",
+        "historyEmpty": "No changes yet - the default applies.",
         "historyFrom": "From",
         "historyChange": "Old → new",
         "historyBy": "By",
@@ -1048,7 +1049,7 @@
           "holidayDays": "Holiday Days"
         },
         "daily": {
-          "title": "Daily breakdown — {{month}} {{year}}",
+          "title": "Daily breakdown - {{month}} {{year}}",
           "date": "Date",
           "day": "Day",
           "status": "Status",
@@ -1109,11 +1110,11 @@
           "saveCorrection": "Save Correction",
           "correctSuccess": "Daily log corrected.",
           "banner": {
-            "pending": "Pending Review — Review all employee records before approving",
-            "reviewed": "Reviewed — Ready for approval",
+            "pending": "Pending Review - Review all employee records before approving",
+            "reviewed": "Reviewed - Ready for approval",
             "approved": "Approved and locked on {{date}} by {{name}}",
-            "unlocked": "Unlocked on {{date}} — Reason: {{reason}}",
-            "recalcStale": "Schedule approved after this month was locked — unlock the month to apply site / WFH / leave to attendance figures"
+            "unlocked": "Unlocked on {{date}} - Reason: {{reason}}",
+            "recalcStale": "Schedule approved after this month was locked - unlock the month to apply site / WFH / leave to attendance figures"
           },
           "status": {
             "PENDING_REVIEW": "Pending Review",
@@ -1136,7 +1137,7 @@
           "importMeta": "Imported on {{date}} from {{file}} · {{count}} employees processed",
           "wouldDeduct": "Would deduct {{days}}d (not applied)",
           "deducted": "Deducted {{days}}d",
-          "earlyDeparturePending": "Early departure — approval pending",
+          "earlyDeparturePending": "Early departure - approval pending",
           "scanReview": {
             "title": "Scans after the latest scan time",
             "subtitle": "Scan-only schedules: the employee is present, but the first scan was after the schedule's latest scan time. No pay effect either way.",
@@ -1155,7 +1156,7 @@
             "markLate": "Mark late",
             "change": "Change",
             "notePlaceholder": "Optional note",
-            "reviewTitle": "{{decision}} — {{name}}, {{date}}",
+            "reviewTitle": "{{decision}} - {{name}}, {{date}}",
             "save": "Save",
             "saved": "Review saved.",
             "saveFailed": "Failed to save review.",
@@ -1201,8 +1202,8 @@
             "HOLIDAY": "Holiday",
             "WORK_FROM_HOME": "Work from home",
             "ON_SITE": "On site",
-            "onSiteAt": "On site — {{siteName}}",
-            "onSiteScannedIn": "On site — scanned in {{time}}",
+            "onSiteAt": "On site - {{siteName}}",
+            "onSiteScannedIn": "On site - scanned in {{time}}",
             "alsoOnSite": "also on site",
             "LEAVE": "Leave",
             "UNPAID_LEAVE": "Unpaid leave",
@@ -1244,13 +1245,13 @@
           "onBehalfRequired": "You do not have permission to submit on behalf of this employee.",
           "siteSubmitted": "Site assignment submitted for approval.",
           "wfhSubmitted": "Work-from-home request submitted for approval.",
-          "coveredAutoImport": "Fully covered — imported automatically",
+          "coveredAutoImport": "Fully covered - imported automatically",
           "matchMethodCovered": "Covered by schedule",
           "ignoredSection": "Ignored ({{count}})",
           "ignoredEmpty": "No ignored attendance identities for this file.",
-          "ignoredStored": "Previously ignored — left company",
+          "ignoredStored": "Previously ignored - left company",
           "undoIgnore": "Undo",
-          "ignoreLeftCompany": "Ignore — left company",
+          "ignoreLeftCompany": "Ignore - left company",
           "ignoreTitle": "Ignore this Deli identity?",
           "ignoreReasonPlaceholder": "Why should this person be ignored?",
           "ignoreReasonRequired": "A reason of at least 3 characters is required.",
@@ -1292,7 +1293,7 @@
           "rejectedFollowUp": "Set their employee ID in the Deli e+ app and re-import next month, or match them manually on the next import.",
           "importAnother": "Import Another Month",
           "stepOf": "Step {{current}} of 3 · {{label}}",
-          "notEnrolledMonth": "Not enrolled — {{ordinal}} month"
+          "notEnrolledMonth": "Not enrolled - {{ordinal}} month"
         },
         "dailyDrawer": {
           "period": "{{month}} {{year}}",
@@ -1314,7 +1315,7 @@
         },
         "awaitingEnrolment": {
           "title": "Awaiting enrolment",
-          "description": "Not yet enrolled on the attendance machine — counted present. They leave this list automatically once an import contains a scan for them.",
+          "description": "Not yet enrolled on the attendance machine - counted present. They leave this list automatically once an import contains a scan for them.",
           "since": "Since {{month}} {{year}}",
           "monthsOne": "1 month",
           "monthsMany": "{{count}} months"
@@ -1412,7 +1413,7 @@
           "reasonHint": "Shown on the calendar (for example office closure or hybrid Friday).",
           "reasonPlaceholder": "e.g. Office closed for maintenance",
           "scope": "Who works from home",
-          "scopeHint": "Direct assignment — no approval request is sent. Employees can also request WFH via New Request.",
+          "scopeHint": "Direct assignment - no approval request is sent. Employees can also request WFH via New Request.",
           "disciplineLeadHint": "You can assign WFH only to employees in the discipline(s) you lead.",
           "departments": "Departments",
           "departmentsPlaceholder": "Select one or more departments",
@@ -1441,7 +1442,7 @@
           "cancelApprovedHint": "The work-from-home days this request created are removed and attendance is recalculated.",
           "cancelReason": "Reason (optional)",
           "cancelled": "Request cancelled.",
-          "cancelledRemoved": "Request cancelled — {{count}} work-from-home day(s) removed.",
+          "cancelledRemoved": "Request cancelled - {{count}} work-from-home day(s) removed.",
           "cancelFailed": "Could not cancel the request.",
           "cancelledOn": "Cancelled",
           "reasons": {
@@ -1864,7 +1865,7 @@
           "pendingSetup": "Not configured",
           "activeCategories": "Active categories"
         },
-        "lowEtbWarning": "This rate looks low for ETB — please verify."
+        "lowEtbWarning": "This rate looks low for ETB - please verify."
       },
       "perDiemSettlement": {
         "new": "New Per Diem Settlement",
@@ -2338,6 +2339,39 @@
         "projects": "Projects",
         "activeProjects": "Active",
         "noLeader": "No leader"
+      }
+    },
+    "seniorityLevels": {
+      "title": "Seniority levels",
+      "description": "Levels HR can assign to employees, in display order.",
+      "accessDenied": "You do not have access to seniority levels.",
+      "loadFailed": "Failed to load seniority levels",
+      "add": "Add level",
+      "edit": "Edit level",
+      "view": "View level",
+      "created": "Seniority level created",
+      "updated": "Seniority level updated",
+      "createFailed": "Failed to create seniority level",
+      "updateFailed": "Failed to update seniority level",
+      "empty": "No seniority levels defined",
+      "deleteTitle": "Delete seniority level?",
+      "deleteDescription": "\"{{name}}\" will be removed. Employees on this level will have their seniority cleared.",
+      "deleted": "Seniority level deleted",
+      "deleteFailed": "Failed to delete seniority level",
+      "table": {
+        "name": "Level",
+        "order": "Order",
+        "people": "People"
+      },
+      "form": {
+        "name": "Name",
+        "nameRequired": "Name is required",
+        "namePlaceholder": "e.g. Senior",
+        "nameZh": "Name (Chinese)",
+        "nameZhPlaceholder": "例如：高级",
+        "sortOrder": "Display order",
+        "sortOrderHelp": "Lower numbers are listed first.",
+        "activeHelp": "Inactive levels stay on existing employees but are hidden from the employee form."
       }
     },
     "positions": {
@@ -2858,17 +2892,17 @@
     "moreActions": "More actions",
     "updateEmployee": "Update employee",
     "detailNotFound": "Employee not found.",
-    "backToList": "Back to employees",
+    "backToList": "Back",
     "detailFullAddress": "Full address",
     "detailEmailVerified": "Email verified",
     "detailCreatedAt": "Created",
     "loginName": "Login name",
     "loginNameNotSet": "Not set",
     "approverOnly": "Approver only",
-    "approverOnlySwitch": "Approver only — excluded from HR processes",
+    "approverOnlySwitch": "Approver only - excluded from HR processes",
     "approverOnlyHint": "No attendance, payroll, contracts, leave, overtime, field movement, site assignment, work-from-home or evaluations of their own. Still approves requests.",
     "approverOnlyReason": "Reason",
-    "approverOnlyReasonPlaceholder": "e.g. External director — approves only",
+    "approverOnlyReasonPlaceholder": "e.g. External director - approves only",
     "approverOnlyEnableTitle": "Mark as approver only?",
     "approverOnlyDisableTitle": "Include in HR processes again?",
     "approverOnlyUpdated": "Approver-only setting saved.",
@@ -2878,10 +2912,11 @@
     "loginNameDiffersWarning": "Login name differs from full name",
     "loginNameEditTitle": "Edit login name",
     "loginNameEditHint": "This is the exact name the employee types to sign in",
+    "loginNameCreateHint": "Optional. Defaults to the full name if left blank",
     "loginNameRequired": "Login name is required",
     "loginNameUpdated": "Login name updated.",
     "loginNameUpdateError": "Could not update login name.",
-    "loginNameNotChangedToast": "Login name not changed — the employee still logs in as {{loginName}}",
+    "loginNameNotChangedToast": "Login name not changed - the employee still logs in as {{loginName}}",
     "loginNameColumn": "Login name",
     "showLoginNameColumn": "Show login name",
     "searchPlaceholder": "Search by name, email, or ID…",
@@ -2915,7 +2950,7 @@
     "setPrimaryRoleError": "Failed to update primary role.",
     "addAnotherRole": "Add another role",
     "noRole": "No Role",
-    "noRoleTooltip": "No roles assigned — employee cannot use role-gated features",
+    "noRoleTooltip": "No roles assigned - employee cannot use role-gated features",
     "filterNoRole": "Show employees with no role",
     "primaryRoleUpdated": "Primary role updated.",
     "addRole": "Add Role",
@@ -2946,6 +2981,8 @@
     "deleteEmployee": "Delete employee",
     "deleteDescription": "Deactivate {{name}} ({{email}})? They will no longer be able to sign in.",
     "deactivated": "{{name}} has been deactivated.",
+    "yearsValue": "{{years}} years",
+    "yearsOfExperienceRecorded": "Recorded on {{date}}",
     "separation": {
       "action": "Separate employee",
       "title": "Separate {{name}}",
@@ -2976,7 +3013,7 @@
       "saved": "{{name}} has been separated.",
       "saveError": "Could not save the separation.",
       "bannerScheduled": "Leaving on {{date}} ({{type}})",
-      "bannerSeparated": "Separated — last working day {{date}} ({{type}})",
+      "bannerSeparated": "Separated - last working day {{date}} ({{type}})",
       "cancel": "Cancel separation",
       "cancelTitle": "Cancel this separation?",
       "cancelDescription": "Employment, the contract end date and login are restored to how they were before.",
@@ -3001,7 +3038,7 @@
     },
     "employment": {
       "statusActive": "Active",
-      "statusInactive": "Inactive — {{type}} ({{from}} → {{to}})",
+      "statusInactive": "Inactive - {{type}} ({{from}} → {{to}})",
       "statusInactiveShort": "Inactive",
       "statusSeparated": "Separated {{date}} ({{type}})",
       "statusSeparatedShort": "Separated",
@@ -3215,7 +3252,14 @@
       "fieldOfStudy": "Field of Study",
       "fieldOfStudyPlaceholder": "e.g. Civil Engineering",
       "employmentDate": "Employment date",
-      "experienceStartDate": "Experience Since",
+      "secondaryPhone": "Secondary phone",
+      "phoneFormatHint": "Ethiopian numbers are saved as +251…",
+      "seniority": "Seniority",
+      "noSeniorityLevelsHint": "No seniority levels yet – add them under Company structure → Seniority levels",
+      "yearsOfExperienceHint": "Years of experience as of today. It grows automatically.",
+      "yearsOfExperienceRecordedHint": "Recorded on {{date}} and grows automatically. Change it only to correct it.",
+      "yearsOfExperienceInvalid": "Enter a number from 0 to {{max}}",
+      "yearsOfExperiencePlaceholder": "e.g. 6.5",
       "yearsOfExperience": "Years of Experience",
       "leavePolicy": "Leave Policy",
       "noLeavePoliciesHint": "No policies available - create one at HR → Leave Policy",
@@ -3249,7 +3293,7 @@
       "description": "Upload a spreadsheet to add multiple employees. Rows with an email receive an activation link; rows without an email are saved as record-only (no login).",
       "downloadTemplate": "Download template",
       "chooseFile": "Choose .xlsx file",
-        "requiredColumns": "Required: firstName. Optional: lastName, email, middleName, chineseName, role, phone, discipline, gender, department, position, employeeId, nationality, employeeType, dateOfBirth, nationalId, tin, educationLevel, fieldOfStudy, experienceStartDate, addressCountry, addressRegion, addressCity, addressSubcity, addressWoreda, addressHouseNumber, leavePolicy.",
+        "requiredColumns": "Required: firstName. Optional: lastName, email, middleName, chineseName, role, phone, discipline, gender, department, position, employeeId, nationality, employeeType, dateOfBirth, nationalId, tin, educationLevel, fieldOfStudy, yearsOfExperience, addressCountry, addressRegion, addressCity, addressSubcity, addressWoreda, addressHouseNumber, leavePolicy.",
       "ready": "Ready",
       "invalid": "Invalid",
       "duplicate": "Duplicate",
@@ -3326,7 +3370,7 @@
         "discipline": "Discipline",
         "employeeType": "Employee type",
         "leavePolicy": "Leave policy",
-        "experienceStartDate": "Experience start date",
+        "yearsOfExperience": "Years of experience",
         "gender": "Gender",
         "nationality": "Nationality",
         "dateOfBirth": "Date of birth",
@@ -3990,9 +4034,12 @@
     "educationLevel": {
       "PHD": "PhD",
       "MSC": "MSc",
-      "BSC": "BSc",
+      "BSC": "Bachelor's degree",
       "DIPLOMA": "Diploma",
       "CERTIFICATE": "Certificate",
+      "TECHNICIAN": "Technician",
+      "SECONDARY": "Secondary school",
+      "PRIMARY": "Primary school",
       "OTHER": "Other"
     },
     "labels": {
@@ -4030,7 +4077,7 @@
       "pensionApplicable": "Pension applicable",
       "taxApplicable": "Tax applicable",
       "salaryPreview": "Salary preview",
-      "salaryPreviewNormalMonth": "Estimated net — normal month (no overtime, no absences)",
+      "salaryPreviewNormalMonth": "Estimated net - normal month (no overtime, no absences)",
       "salaryPreviewEmpty": "Enter basic salary to see tax, pension, and net estimates.",
       "taxableIncome": "Taxable income",
       "incomeTax": "Income tax",
@@ -4137,7 +4184,7 @@
       "failedToReturnAssignment": "Failed to return asset assignment",
       "failedToLoad": "Failed to load company assets",
       "photoOptionalHint": "Optional - upload a clear photo of the asset (JPG, PNG, or WEBP).",
-      "photoHelp": "JPEG, PNG, WebP, or GIF — max 5 MB.",
+      "photoHelp": "JPEG, PNG, WebP, or GIF - max 5 MB.",
       "photoInvalidType": "Photo must be JPEG, PNG, WebP, or GIF.",
       "photoTooLarge": "Photo must be 5 MB or smaller.",
       "photoUploaded": "Asset photo uploaded.",
@@ -4603,7 +4650,7 @@
       "linkedSiteAssignmentHint": "Selecting an approved site assignment fills the destination and travel dates, and locks the category to Domestic.",
       "perDiemCategoryAutoDetected": "Per diem category auto-detected: {{category}}",
       "domesticRateAutoApplied": "Domestic rate applied automatically for Ethiopia flights",
-      "linkedTravelHint": "Optional — link to an approved flight or business trip to auto-fill destination, dates, and per diem category",
+      "linkedTravelHint": "Optional - link to an approved flight or business trip to auto-fill destination, dates, and per diem category",
       "vehicleApplicationLoadFailed": "Failed to load vehicle applications",
       "vehicleApplicationSubmitted": "Vehicle application submitted for approval",
       "vehicleApplicationApproved": "Vehicle application approved",
@@ -4857,7 +4904,7 @@
       "pensionApplicable": "Pension applicable",
       "taxApplicable": "Tax applicable",
       "salaryPreview": "Salary preview",
-      "salaryPreviewNormalMonth": "Estimated net — normal month (no overtime, no absences)",
+      "salaryPreviewNormalMonth": "Estimated net - normal month (no overtime, no absences)",
       "salaryPreviewEmpty": "Enter basic salary to see tax, pension, and net estimates.",
       "taxableIncome": "Taxable income",
       "incomeTax": "Income tax",
@@ -5154,10 +5201,10 @@
         "MISSING_OVERTIME_APPROVAL": "Overtime not approved",
         "ZERO_SALARY": "Zero salary",
         "MANUAL_OVERRIDE": "Manual override",
-        "LEAVER_FINAL_MONTH": "Leaver — final month",
+        "LEAVER_FINAL_MONTH": "Leaver - final month",
         "LOGIN_DISABLED_STILL_EMPLOYED": "Login disabled, still employed",
         "INACTIVE_IN_MONTH": "Inactive in month",
-        "CONTRACT_ENDED_NOT_RENEWED": "Contract ended — not renewed"
+        "CONTRACT_ENDED_NOT_RENEWED": "Contract ended - not renewed"
       },
       "list": {
         "title": "Payroll runs",
@@ -5245,9 +5292,9 @@
         "exportBankLetterWarnTitle": "Employees missing bank accounts",
         "exportBankLetterWarnDescription": "{{count}} employees have no bank account: {{names}}. They stay in the letter with an empty account cell for you to fill in. Download the letter for all {{included}} employees?",
         "exportBankLetterContinue": "Download letter",
-        "attendanceStaleDraft": "Attendance changed after this run was generated — regenerate",
-        "attendanceStaleApproved": "Attendance changed after this run was generated — review required",
-        "policyReviewRequired": "An HR policy changed for this month after the run was approved — review required (not recalculated automatically)",
+        "attendanceStaleDraft": "Attendance changed after this run was generated - regenerate",
+        "attendanceStaleApproved": "Attendance changed after this run was generated - review required",
+        "policyReviewRequired": "An HR policy changed for this month after the run was approved - review required (not recalculated automatically)",
         "recalculateSuccess": "Entries recalculated.",
         "markReviewedSuccess": "Run marked as reviewed.",
         "submitSuccess": "Run submitted for approval.",
@@ -5558,9 +5605,9 @@
       "domestic": "Domestic (Ethiopia)",
       "regional": "Regional (Neighboring Countries)",
       "international": "International",
-      "domesticDescription": "Ethiopia — daily rate in ETB",
-      "regionalDescription": "Neighboring countries — Uganda, Kenya, Tanzania, Rwanda, etc.",
-      "internationalDescription": "All other countries — Middle East, Asia, Europe, Americas"
+      "domesticDescription": "Ethiopia - daily rate in ETB",
+      "regionalDescription": "Neighboring countries - Uganda, Kenya, Tanzania, Rwanda, etc.",
+      "internationalDescription": "All other countries - Middle East, Asia, Europe, Americas"
     },
     "inspectionType": {
       "INSPECTION": "Inspection",
@@ -5849,7 +5896,7 @@
       "selectDestinationCategory": "Select destination",
       "selectLinkedTravel": "Select flight or business trip",
       "selectSiteAssignment": "Select approved site assignment",
-      "noLinkedTravel": "— No linked trip or flight (standalone per diem) —",
+      "noLinkedTravel": "- No linked trip or flight (standalone per diem) -",
       "selectOriginCountry": "Select origin country",
       "selectDestinationCountry": "Select destination country",
       "selectDepartureCity": "Select departure city",
@@ -5990,12 +6037,12 @@
       "month": "Month",
       "openSheet": "Open sheet",
       "overtimeDescription": "Choose the month, and the employee if you are filing their overtime, then open the sheet to add entries.",
-      "overtimeTitle": "Overtime — {{name}}"
+      "overtimeTitle": "Overtime - {{name}}"
     },
     "dateRules": {
       "overnight": "Overnight (crosses midnight)",
       "overnightRequired": "End time is before start time. Enable overnight if this entry crosses midnight.",
-      "overnightNote": "This entry crosses midnight — {{hours}} hours total",
+      "overnightNote": "This entry crosses midnight - {{hours}} hours total",
       "endAfterStart": "End time must be after start time on the same day.",
       "returnAfterDeparture": "Return must be after departure"
     }
@@ -6072,7 +6119,7 @@
       "doneOn": "You acknowledged this on {{date}}.",
       "prompt": "Please confirm you have read and understood this announcement.",
       "button": "I have read and understood",
-      "success": "Thank you — your acknowledgement was recorded.",
+      "success": "Thank you - your acknowledgement was recorded.",
       "failed": "Couldn't record your acknowledgement."
     },
     "detail": {
@@ -6089,7 +6136,7 @@
       "dismiss": "Hide urgent announcement"
     },
     "ackModal": {
-      "kicker": "Urgent — please acknowledge",
+      "kicker": "Urgent - please acknowledge",
       "remaining": "Waiting for your acknowledgement: {{count}}"
     },
     "widget": {
@@ -6199,7 +6246,7 @@
       "cannotEdit": "You can't edit this announcement.",
       "changesSaved": "Changes saved.",
       "reacknowledgeWarning": "Acknowledged so far: {{count}}. Editing the message will ask everyone to acknowledge again.",
-      "reacknowledgeHint": "Title, pin and expiry changes keep their acknowledgements. Changing the message — even a typo — clears them and notifies everyone to review it again.",
+      "reacknowledgeHint": "Title, pin and expiry changes keep their acknowledgements. Changing the message - even a typo - clears them and notifies everyone to review it again.",
       "reacknowledgeConfirm": "Ask everyone to acknowledge again?",
       "reacknowledgeSaved": "Saved. Acknowledgements cleared: {{count}}. Everyone was asked to review it again."
     }

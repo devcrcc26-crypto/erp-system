@@ -128,7 +128,7 @@ export function requiresLateReason(params: {
 }
 
 export function payrollFinalisedMessage(month: number, year: number): string {
-  return `Payroll for ${formatMonthYearLabel(month, year)} is finalised — record this as an adjustment in the next payroll.`;
+  return `Payroll for ${formatMonthYearLabel(month, year)} is finalised - record this as an adjustment in the next payroll.`;
 }
 
 export function assertDatesNotBeforeEarliest(

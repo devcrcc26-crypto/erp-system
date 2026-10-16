@@ -92,7 +92,7 @@ export function assertCredentialsPathGitignored(
 
   if (!covered) {
     console.error(
-      `Refused: ${relativePath} is not covered by .gitignore — credentials must not be committed.`,
+      `Refused: ${relativePath} is not covered by .gitignore - credentials must not be committed.`,
     );
     process.exit(1);
   }

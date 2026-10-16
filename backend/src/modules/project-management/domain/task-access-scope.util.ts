@@ -15,7 +15,7 @@ export function disciplineAssigneeOr(
   ];
 }
 
-/** DesignPackage (subtask) role columns — canonical per comment-8 phase 4. */
+/** DesignPackage (subtask) role columns - canonical per comment-8 phase 4. */
 export function subtaskRoleOr(userId: string): Prisma.DesignPackageWhereInput[] {
   return [
     { designerUserId: userId },

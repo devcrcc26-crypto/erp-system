@@ -181,7 +181,7 @@ export function useFolderDocuments(
 }
 
 /**
- * Core document metadata (name, MIME type, size) — no signed URL is issued.
+ * Core document metadata (name, MIME type, size) - no signed URL is issued.
  */
 export function useDocumentMetadata(documentId: string, enabled = true) {
   return useQuery({

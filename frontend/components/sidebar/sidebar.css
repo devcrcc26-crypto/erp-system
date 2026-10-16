@@ -1,5 +1,5 @@
 /*
- * Main sidebar theme — light surface with teal selection, matching the app
+ * Main sidebar theme - light surface with teal selection, matching the app
  * tokens (lib/theme/tokens.ts). Every colour the sidebar uses is a variable
  * here so the single selected state, focus ring and contrast ratios are
  * defined once. The drawer shares the variables because it renders outside
@@ -115,7 +115,7 @@
   color: var(--sb-text-strong);
 }
 
-/* THE selected state — used by rail, panel and project items alike. */
+/* THE selected state - used by rail, panel and project items alike. */
 .sb-selectable[aria-current='page'],
 .sb-selectable[data-active='true'] {
   background: var(--sb-active-bg);
@@ -326,11 +326,11 @@
 }
 
 /*
- * Panel typography — two text levels, hierarchy carried by weight, tracking
+ * Panel typography - two text levels, hierarchy carried by weight, tracking
  * and colour rather than a size drop:
  *   group title  12px / 600 / 0.04em, muted   (People, Time & Leave, …)
  *   module link  13px / 400, 500 when active   (Leave Requests, Overtime, …)
- * Sentence/Title Case only — no all-caps below 13px. Colours come from the
+ * Sentence/Title Case only - no all-caps below 13px. Colours come from the
  * existing rules above; these classes set typography only. Declared after
  * `.sb-row` and `.sb-selectable[aria-current]` so they win at equal specificity.
  */
@@ -929,7 +929,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
- * Sidebar v2 — docked flush look. Everything below is scoped under
+ * Sidebar v2 - docked flush look. Everything below is scoped under
  * `.erp-sidebar-v2` (desktop <nav>, drawer root and drawer <nav>), so the
  * rules above remain the base and nothing leaks outside the sidebar.
  *
@@ -1005,7 +1005,7 @@
   background: var(--sb-hover);
 }
 
-/* Icons sit bare on the row — no tile — in both modes. */
+/* Icons sit bare on the row - no tile - in both modes. */
 .erp-sidebar-v2 .sb-icon-tile,
 .erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-icon-tile,
 .erp-sidebar-v2 .sb-selectable:hover .sb-icon-tile,

@@ -174,7 +174,7 @@ function filterEntries(
 
 /**
  * Removes everything the session cannot open. Empty groups and folders
- * disappear entirely — nothing is ever rendered greyed out.
+ * disappear entirely - nothing is ever rendered greyed out.
  */
 export function buildSidebarModel(
   config: SidebarConfig,

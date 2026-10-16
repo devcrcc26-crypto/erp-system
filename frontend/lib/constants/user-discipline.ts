@@ -1,5 +1,5 @@
 /**
- * User engineering discipline values and labels — must match backend enum keys.
+ * User engineering discipline values and labels - must match backend enum keys.
  */
 export const USER_DISCIPLINE_VALUES = [
   'HIGHWAY',

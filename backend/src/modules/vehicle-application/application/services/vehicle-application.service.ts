@@ -65,7 +65,7 @@ const APPLICATION_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Vehicle application lifecycle — submit-in-one-call with HR Officer
+ * Vehicle application lifecycle - submit-in-one-call with HR Officer
  * approval tier (or direct APPROVED for HR and above).
  */
 @Injectable()
@@ -204,7 +204,7 @@ export class VehicleApplicationService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'VEHICLE_APPLICATION',
-        title: `Vehicle Application — ${vehicle.plateNumber}`,
+        title: `Vehicle Application - ${vehicle.plateNumber}`,
         formData: {
           vehiclePlate: vehicle.plateNumber,
           driveType: dto.driveType,
@@ -591,7 +591,7 @@ export class VehicleApplicationService
   }
 
   /**
-   * Releases a vehicle after use — only APPROVED applications.
+   * Releases a vehicle after use - only APPROVED applications.
    * Sets releasedAt/releasedBy and puts vehicle back to AVAILABLE.
    */
   async releaseVehicle(
@@ -731,7 +731,7 @@ export class VehicleApplicationService
 
     if (conflict) {
       throw new BadRequestException(
-        `Vehicle is not available — conflicts with application ${conflict.applicationNumber} ` +
+        `Vehicle is not available - conflicts with application ${conflict.applicationNumber} ` +
           `(${conflict.departureDatetime.toISOString()} – ${conflict.returnDatetime.toISOString()})`,
       );
     }

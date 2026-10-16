@@ -16,5 +16,5 @@ export function isVacantApprover(user: {
 }
 
 export function vacantApproverMessage(role: string): string {
-  return `Approver position vacant: ${role} — ask HR`;
+  return `Approver position vacant: ${role} - ask HR`;
 }

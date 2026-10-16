@@ -7,7 +7,7 @@ import type { PerDiemSettlementDetail } from '@/lib/api/per-diem.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New per diem settlement — shared HR form banner + stepper form.
+ * New per diem settlement - shared HR form banner + stepper form.
  */
 export default function PerDiemSettlementFormContent(): React.ReactNode {
   const router = useRouter();

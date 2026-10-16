@@ -99,7 +99,7 @@ function VehicleApplicationStat({
 }
 
 /**
- * Vehicle applications list — Users chrome (stat bar, filter row, rounded table).
+ * Vehicle applications list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function VehicleApplicationListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -245,7 +245,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         render: (_: unknown, row: VehicleApplicationListItem) => (
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">
-              {row.vehicle?.plateNumber ?? '—'}
+              {row.vehicle?.plateNumber ?? '-'}
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
               {row.vehicle
@@ -332,7 +332,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
           return row.currentTierLabel ? (
             <span className="erp-users-role-tag">{row.currentTierLabel}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           );
         },
       },

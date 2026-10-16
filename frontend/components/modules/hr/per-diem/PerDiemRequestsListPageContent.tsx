@@ -110,7 +110,7 @@ function PerDiemStat({
 }
 
 /**
- * Per diem requests list — Users chrome (stat bar, filter row, rounded table).
+ * Per diem requests list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -294,7 +294,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
               {t('pages.hr.perDiem.unpaid')}
             </span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {
@@ -306,7 +306,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           row.settlement?.requestNumber ? (
             <span className="erp-users-id-chip">{row.settlement.requestNumber}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {

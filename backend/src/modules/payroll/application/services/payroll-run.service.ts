@@ -731,7 +731,7 @@ export class PayrollRunService {
       ctx,
       [...recipients],
       'payroll.run_reopened',
-      `Payroll ${run.runNumber} changed — approval needed again`,
+      `Payroll ${run.runNumber} changed - approval needed again`,
       `Payroll run ${run.runNumber} (${run.month}/${run.year}) was changed after it was ${run.status === 'SUBMITTED' ? 'submitted' : 'approved'}. It is back in draft and must be reviewed and approved again.`,
       `/payroll/runs/${run.id}`,
     );
@@ -1331,7 +1331,7 @@ export class PayrollRunService {
           year,
         },
         // unpaidLeaveDays omitted until prisma generate (derive from dayStatus).
-        // earlyDepartureWouldDeductDays from 20261009160000 — cast until client regen
+        // earlyDepartureWouldDeductDays from 20261009160000 - cast until client regen
         select: {
           id: true,
           employeeId: true,
@@ -1517,7 +1517,7 @@ export class PayrollRunService {
     }
 
     const taxableThreshold = this.toNumber(run.taxableThreshold);
-    // Policies as of the payroll month — never "current".
+    // Policies as of the payroll month - never "current".
     const policy = await loadPolicySnapshot(this.prisma, ctx.companyId, monthStart);
     const drafts: EntryDraft[] = [];
 
@@ -2205,7 +2205,7 @@ export class PayrollRunService {
     for (const [type, days] of byType) {
       const paid = policy.inactivePaid[type] === true;
       if (!paid) unpaidDays += days;
-      parts.push(`Inactive (${label[type] ?? type}) ${days} day(s) — ${paid ? 'paid' : 'unpaid'}`);
+      parts.push(`Inactive (${label[type] ?? type}) ${days} day(s) - ${paid ? 'paid' : 'unpaid'}`);
     }
     return { note: parts.join('; '), unpaidDays };
   }
@@ -2281,7 +2281,7 @@ export class PayrollRunService {
           })),
         });
         for (const p of periods) {
-          // id is text (Prisma String), not uuid — do not cast ::uuid.
+          // id is text (Prisma String), not uuid - do not cast ::uuid.
           await this.prisma.$executeRaw`
             UPDATE payroll_salary_period SET
               normal_ot_hours = ${p.normalOtHours},

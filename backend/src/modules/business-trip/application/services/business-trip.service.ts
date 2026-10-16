@@ -144,7 +144,7 @@ export class BusinessTripService
     userId: string,
   ): Promise<unknown> {
     // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
-    // Passengers are chosen independently — the target is not added automatically.
+    // Passengers are chosen independently - the target is not added automatically.
     const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
       companyId,

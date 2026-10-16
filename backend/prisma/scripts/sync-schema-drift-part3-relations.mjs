@@ -1,5 +1,5 @@
 /**
- * Part 3 — HR/approval relations + submittedAt timestamp(6)
+ * Part 3 - HR/approval relations + submittedAt timestamp(6)
  */
 import fs from 'fs';
 import path from 'path';

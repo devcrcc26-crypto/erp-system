@@ -204,7 +204,7 @@ export default function ScheduleGantt({
             <strong className="font-semibold text-slate-800">
               {metrics.actualProgressPct !== null
                 ? `${metrics.actualProgressPct}%`
-                : '—'}
+                : '-'}
             </strong>
           </span>
           <span className="text-xs text-slate-600">
@@ -331,7 +331,7 @@ export default function ScheduleGantt({
             </div>
           </div>
 
-          {/* Desktop: fixed day-width timeline — scrolls horizontally, zoomable. */}
+          {/* Desktop: fixed day-width timeline - scrolls horizontally, zoomable. */}
           <div className="hidden lg:block">
             <div className="overflow-x-auto rounded-md border border-slate-200">
               <div

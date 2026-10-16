@@ -1,7 +1,7 @@
 /**
  * Import-time attendance day counts, before the month is recomputed with
  * summarizeMonthAbsence (which then sets scheduled / present / absent / paid).
- * Every working day counts 1, Saturday included — a half-day schedule never
+ * Every working day counts 1, Saturday included - a half-day schedule never
  * makes a day 0.5. Payroll paid/absent days come from summarizeMonthAbsence.
  */
 

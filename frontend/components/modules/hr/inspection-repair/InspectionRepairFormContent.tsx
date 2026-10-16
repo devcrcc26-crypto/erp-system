@@ -7,7 +7,7 @@ import type { InspectionRepairDetail } from '@/lib/api/inspection-repair.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New inspection & repair request — shared HR form banner + stepper form.
+ * New inspection & repair request - shared HR form banner + stepper form.
  */
 export default function InspectionRepairFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -103,7 +103,7 @@ export default function LeaveBalanceLedgerSection({
         title: t(`${KEY}.colReason`),
         dataIndex: 'reason',
         key: 'reason',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: t(`${KEY}.colBy`),

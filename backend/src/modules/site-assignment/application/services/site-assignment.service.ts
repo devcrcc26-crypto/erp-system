@@ -98,7 +98,7 @@ const TERMINAL_OVERLAP_STATUSES: SiteAssignmentStatus[] = [
 ];
 
 /**
- * Site assignment requests — remote project work without HQ scanner coverage.
+ * Site assignment requests - remote project work without HQ scanner coverage.
  */
 @Injectable()
 export class SiteAssignmentService
@@ -185,7 +185,7 @@ export class SiteAssignmentService
         companyId,
       );
 
-    const title = `Site assignment — ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
+    const title = `Site assignment - ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
     const now = new Date();
     const recordId = randomUUID();
 
@@ -262,7 +262,7 @@ export class SiteAssignmentService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Site assignment — Discipline Lead only',
+          ruleName: 'Site assignment - Discipline Lead only',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,

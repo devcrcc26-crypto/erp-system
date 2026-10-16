@@ -61,7 +61,7 @@ describe('leavePortionWeight', () => {
   });
 });
 
-describe('computeLeaveCoveredAbsences — portion-aware payroll restore', () => {
+describe('computeLeaveCoveredAbsences - portion-aware payroll restore', () => {
   const month = 10;
   const year = 2026;
   const day = '2026-10-06'; // Tuesday
@@ -130,7 +130,7 @@ describe('computeLeaveCoveredAbsences — portion-aware payroll restore', () => 
   });
 });
 
-describe('computeLeaveCoveredAbsences — legacy full-day behaviour', () => {
+describe('computeLeaveCoveredAbsences - legacy full-day behaviour', () => {
   const month = 10;
   const year = 2026;
 

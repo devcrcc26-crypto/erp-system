@@ -1,5 +1,5 @@
 /**
- * User engineering discipline — backend source of truth; keys must match Prisma enum.
+ * User engineering discipline - backend source of truth; keys must match Prisma enum.
  */
 export const USER_DISCIPLINE_VALUES = [
   'HIGHWAY',

@@ -101,7 +101,7 @@ function mapAssetToFormValues(asset: CompanyAssetDetail): FormValues {
 }
 
 /**
- * Company asset create/edit form — StepperForm chrome like Add Employee.
+ * Company asset create/edit form - StepperForm chrome like Add Employee.
  */
 export default function CompanyAssetForm({
   mode = 'create',
@@ -576,29 +576,29 @@ export default function CompanyAssetForm({
             <div className="erp-form-grid-2">
               <ReviewItem
                 label={t('hr.assetLabels.serialNumber')}
-                value={reviewValues.serialNumber?.trim() || '—'}
+                value={reviewValues.serialNumber?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.assetLabels.type')}
-                value={reviewValues.type?.trim() || '—'}
+                value={reviewValues.type?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.assetLabels.brand')}
-                value={reviewValues.brand?.trim() || '—'}
+                value={reviewValues.brand?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.assetLabels.model')}
-                value={reviewValues.model?.trim() || '—'}
+                value={reviewValues.model?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.assetLabels.year')}
                 value={
-                  reviewValues.year != null ? String(reviewValues.year) : '—'
+                  reviewValues.year != null ? String(reviewValues.year) : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.assetLabels.color')}
-                value={reviewValues.color?.trim() || '—'}
+                value={reviewValues.color?.trim() || '-'}
               />
               {reviewValues.description?.trim() ? (
                 <ReviewItem

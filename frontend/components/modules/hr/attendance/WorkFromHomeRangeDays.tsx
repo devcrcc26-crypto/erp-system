@@ -56,7 +56,7 @@ export default function WorkFromHomeRangeDays({
             </Tag>
           ) : (
             <span className="text-xs text-slate-600">
-              {t(`${KEY}.skipped`)} — {reasonLabel(day)}
+              {t(`${KEY}.skipped`)} - {reasonLabel(day)}
             </span>
           )}
         </li>

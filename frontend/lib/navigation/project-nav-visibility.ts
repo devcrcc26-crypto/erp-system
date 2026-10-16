@@ -7,7 +7,7 @@ import type { EpcCapabilities } from '@/lib/api/types';
 import { extractProjectId } from '@/config/navConfig';
 import type { ProjectWorkspaceNavItem } from '@/lib/navigation/project-workspace-nav';
 
-/** Global icon-rail only — never shown in the project context sidebar. */
+/** Global icon-rail only - never shown in the project context sidebar. */
 export const GLOBAL_ONLY_PROJECT_NAV_KEYS = new Set([
   'my-work',
   'review-inbox',
@@ -43,7 +43,7 @@ const DESIGNER_PROJECT_KEYS = new Set(['submittals']);
 const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
 /**
- * Narrow design-cycle assignees (FK probes) — global workspaces only.
+ * Narrow design-cycle assignees (FK probes) - global workspaces only.
  * Excludes navFullAccess / navDepartmentLeader (those keep the project sidebar).
  */
 function isFkDesignCycleAssignee(epc: EpcCapabilities): boolean {
@@ -58,7 +58,7 @@ function isFkDesignCycleAssignee(epc: EpcCapabilities): boolean {
 /**
  * True when the user may see the project context (second) sidebar.
  * Full-access / department leaders always. Other roles need projects.canView.
- * FK design-cycle assignees never — Employee portfolio projects.canView
+ * FK design-cycle assignees never - Employee portfolio projects.canView
  * must not open this sidebar (Wei Chen / Khalid demo case).
  */
 export function hasProjectSidebarAccess(

@@ -1,5 +1,5 @@
 /**
- * Dashboard semantic colors — one mapping used by KPI cards, charts, and alerts.
+ * Dashboard semantic colors - one mapping used by KPI cards, charts, and alerts.
  * Do not introduce ad-hoc hex values for status elsewhere on the dashboard.
  */
 import { tokens } from '@/lib/theme/tokens';

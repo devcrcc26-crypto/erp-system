@@ -122,7 +122,7 @@ export function formatFlightSubmitterName(
   user?: FlightUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }
@@ -182,7 +182,7 @@ export function getCurrentStep(
     case 'RETURNED':
       return {
         step: tr(t, 'hr.status.RETURNED', 'Returned'),
-        description: 'Changes requested — please resubmit',
+        description: 'Changes requested - please resubmit',
         color: 'orange',
       };
     case 'REJECTED':
@@ -284,7 +284,7 @@ export function getCurrentStepLabel(
   if (application.currentTierLabel) {
     return application.currentTierLabel;
   }
-  return getCurrentStep(application, t)?.step ?? '—';
+  return getCurrentStep(application, t)?.step ?? '-';
 }
 
 /**

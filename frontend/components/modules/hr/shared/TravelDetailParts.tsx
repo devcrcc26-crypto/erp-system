@@ -251,7 +251,7 @@ export function TravelRouteHero({
         <RouteFact
           icon={<CalendarCheck2 size={17} strokeWidth={1.75} />}
           label={t('hr.labels.return')}
-          value={returnDate ? formatProjectDate(returnDate) : '—'}
+          value={returnDate ? formatProjectDate(returnDate) : '-'}
         />
         <RouteFact
           icon={<Ticket size={17} strokeWidth={1.75} />}

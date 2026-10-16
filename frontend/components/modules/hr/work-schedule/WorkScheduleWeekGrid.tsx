@@ -66,7 +66,7 @@ export default function WorkScheduleWeekGrid({
               </span>
             </div>
             <p className="m-0 mt-1.5 text-[13px] text-slate-600 tabular-nums">
-              {day && !off ? formatDayHours(day, t) : '—'}
+              {day && !off ? formatDayHours(day, t) : '-'}
             </p>
           </li>
         );

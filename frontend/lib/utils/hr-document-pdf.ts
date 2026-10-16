@@ -17,12 +17,12 @@ const NAVY: [number, number, number] = [27, 43, 75];
 const MUTED: [number, number, number] = [111, 114, 119];
 const BAND: [number, number, number] = [229, 231, 235];
 const PAGE_MARGIN = 14;
-const EM_DASH = '—';
+const EM_DASH = '-';
 
 export interface HrPdfField {
   label: string;
   value: string | number | null | undefined;
-  /** Renders the value across both columns — for long free text. */
+  /** Renders the value across both columns - for long free text. */
   wide?: boolean;
 }
 
@@ -43,7 +43,7 @@ export interface HrPdfItemsTable {
 export interface HrPdfInput {
   /** Document title in the header band, e.g. `Vehicle Application`. */
   documentTitle: string;
-  /** Second line of the header band — the record's own subject. */
+  /** Second line of the header band - the record's own subject. */
   subtitle?: string | null;
   /** Request or application number shown in the header and file name. */
   requestNumber: string;
@@ -197,7 +197,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${HR_PDF_COMPANY_NAME} — ${input.documentTitle} ${input.requestNumber}`,
+      `${HR_PDF_COMPANY_NAME} - ${input.documentTitle} ${input.requestNumber}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

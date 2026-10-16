@@ -164,7 +164,7 @@ export default function SettingsDisciplinesPanel(): React.ReactNode {
             ((editing._count?.taskDisciplines ?? 0) > 0 ||
               (editing._count?.users ?? 0) > 0) && (
               <p className="text-[12px] text-gray-500">
-                Referenced disciplines cannot be deleted — deactivate to hide from
+                Referenced disciplines cannot be deleted - deactivate to hide from
                 dropdowns.
               </p>
             )}

@@ -2,9 +2,9 @@ import type { PayrollEntryFlag } from '@prisma/client';
 import type { EmploymentWindow } from '../../../../shared/employment/employment-window.util';
 
 export const LEAVER_FINAL_MONTH_NOTE =
-  'Leaver final month — final settlement handled outside the system';
+  'Leaver final month - final settlement handled outside the system';
 export const LOGIN_DISABLED_STILL_EMPLOYED_NOTE =
-  'Login disabled but employment is still open — separate the employee or re-enable login';
+  'Login disabled but employment is still open - separate the employee or re-enable login';
 
 /** Flags HR must explicitly review before a run is submitted or approved. */
 export const EMPLOYMENT_REVIEW_FLAGS = [
@@ -30,7 +30,7 @@ export function employmentReviewFlag(entry: {
   const note = entry.flagNote ?? '';
   if (note.includes('Leaver final month')) return 'LEAVER_FINAL_MONTH';
   if (note.includes('Inactive (')) return 'INACTIVE_IN_MONTH';
-  if (note.includes('Contract ended — renew')) return 'CONTRACT_ENDED_NOT_RENEWED';
+  if (note.includes('Contract ended - renew')) return 'CONTRACT_ENDED_NOT_RENEWED';
   if (note.includes('Login disabled but employment is still open')) {
     return 'LOGIN_DISABLED_STILL_EMPLOYED';
   }
@@ -42,7 +42,7 @@ function formatYmd(date: Date): string {
 }
 
 export const CONTRACT_ENDED_NOT_RENEWED_NOTE =
-  'Contract ended — renew, convert or separate; paid on the ended contract terms';
+  'Contract ended - renew, convert or separate; paid on the ended contract terms';
 
 /**
  * Adds employment flags on top of the contract/attendance flag. An entry holds
@@ -55,7 +55,7 @@ export function resolveEmploymentEntryFlag(input: {
   baseNote?: string;
   window: EmploymentWindow | null;
   isActive: boolean;
-  /** e.g. "Inactive (Suspended) 10 days — unpaid"; set when the month has inactive days. */
+  /** e.g. "Inactive (Suspended) 10 days - unpaid"; set when the month has inactive days. */
   inactiveNote?: string | null;
   /** Date the last contract ended when pay continues on it (no renewal). */
   contractEndedOn?: Date | null;
@@ -70,7 +70,7 @@ export function resolveEmploymentEntryFlag(input: {
     const leaving = `leaving date ${formatYmd(input.window.end)}`;
     if (input.settlementNotes && input.settlementNotes.length > 0) {
       notes.push(
-        `Leaver final month (${leaving}) — final settlement per policy: ${input.settlementNotes.join('; ')}`,
+        `Leaver final month (${leaving}) - final settlement per policy: ${input.settlementNotes.join('; ')}`,
       );
     } else {
       notes.push(`${LEAVER_FINAL_MONTH_NOTE} (${leaving})`);

@@ -54,7 +54,7 @@ function DetailSection({
 }
 
 /**
- * Site assignment detail — leave / attendance v2 hero and soft sections.
+ * Site assignment detail - leave / attendance v2 hero and soft sections.
  */
 export default function SiteAssignmentDetailPageContent({
   id,
@@ -273,8 +273,8 @@ export default function SiteAssignmentDetailPageContent({
             </p>
             <p className="erp-sa-field-value">
               {row.project
-                ? `${row.project.projectCode} — ${row.project.name}`
-                : '—'}
+                ? `${row.project.projectCode} - ${row.project.name}`
+                : '-'}
             </p>
           </div>
           <div className="erp-sa-field">
@@ -313,7 +313,7 @@ export default function SiteAssignmentDetailPageContent({
                   className="h-auto p-0"
                   onClick={() => router.push(`/hr/per-diem/${advance.id}`)}
                 >
-                  {advance.requestNumber} — {advance.destination} (
+                  {advance.requestNumber} - {advance.destination} (
                   {advance.status}
                   {advance.paidAt ? ` · ${t('pages.hr.perDiem.paid')}` : ''})
                 </Button>

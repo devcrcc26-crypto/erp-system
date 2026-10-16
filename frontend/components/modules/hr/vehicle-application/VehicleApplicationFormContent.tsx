@@ -7,7 +7,7 @@ import type { VehicleApplicationDetail } from '@/lib/api/vehicle-application.typ
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New vehicle application — shared HR form banner + stepper form.
+ * New vehicle application - shared HR form banner + stepper form.
  */
 export default function VehicleApplicationFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

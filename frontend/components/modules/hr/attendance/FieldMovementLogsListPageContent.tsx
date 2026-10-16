@@ -235,10 +235,10 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         width: 260,
         render: (_: unknown, row: FieldMovementLog) => {
           if (!row.employee) {
-            return <span className="erp-fml-dash">—</span>;
+            return <span className="erp-fml-dash">-</span>;
           }
           const name = formatUserName(row.employee);
-          const erpId = row.employee.employeeId?.trim() || '—';
+          const erpId = row.employee.employeeId?.trim() || '-';
           return (
             <div className="erp-fml-person">
               <Avatar
@@ -269,7 +269,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         width: 80,
         align: 'right',
         render: (_: unknown, row: FieldMovementLog) => (
-          <span className="erp-fml-num">{row.entryCount ?? '—'}</span>
+          <span className="erp-fml-num">{row.entryCount ?? '-'}</span>
         ),
       },
       {
@@ -289,7 +289,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           PENDING_STATUSES.includes(row.status) && row.currentTierLabel ? (
             row.currentTierLabel
           ) : (
-            <span className="erp-fml-dash">—</span>
+            <span className="erp-fml-dash">-</span>
           ),
       },
       {

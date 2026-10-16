@@ -590,7 +590,7 @@ export class LeaveLedgerService {
   }
 
   /**
-   * HR go-live: OPENING_BALANCE for the current leave year — only while the
+   * HR go-live: OPENING_BALANCE for the current leave year - only while the
    * year has no entitlement or opening balance yet (else use an adjustment).
    */
   async setOpeningBalance(input: {
@@ -1158,12 +1158,12 @@ export class LeaveLedgerService {
           year,
           kind: LeaveBalanceEntryKind.ENTITLEMENT,
           days: this.entitlementFor(employee, leaveType, year),
-          reason: `${options.reason} — ${serviceYears} service year(s)`,
+          reason: `${options.reason} - ${serviceYears} service year(s)`,
           sourceContractId: options.sourceContractId,
           dedupeKey: `ENTITLEMENT:${employee.id}:${leaveType}:${startKey}`,
           actorUserId: options.actorUserId,
         });
-        // Carry / expiry only when a new leave year is first opened — never
+        // Carry / expiry only when a new leave year is first opened - never
         // mid-year against an already-open current year.
         if (CARRY_OVER_LEAVE_TYPES.includes(leaveType)) {
           await this.closePreviousYear(employee, leaveType, year, options);
@@ -1199,7 +1199,7 @@ export class LeaveLedgerService {
       return;
     }
 
-    // HR go-live / snapshot owns this leave year — do not auto carry/expire.
+    // HR go-live / snapshot owns this leave year - do not auto carry/expire.
     const hrManaged = await this.prisma.leaveBalanceEntry.count({
       where: {
         employeeId: employee.id,

@@ -180,7 +180,7 @@ export default function NotificationPanel(): React.ReactNode {
       placement="bottomRight"
       rootClassName="erp-hd-dropdown-root"
     >
-      {/* Hide the tooltip while the panel is open — it covered "Mark all read". */}
+      {/* Hide the tooltip while the panel is open - it covered "Mark all read". */}
       <Tooltip title={t('nav.notifications')} open={open ? false : undefined}>
         <button
           type="button"

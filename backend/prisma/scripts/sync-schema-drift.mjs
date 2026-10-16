@@ -68,7 +68,7 @@ for (const model of indexSyncModels) {
 }
 
 const replacements = [
-  // Generated / computed columns — match DB introspection exactly
+  // Generated / computed columns - match DB introspection exactly
   [
     'remaining  Decimal   @default(dbgenerated("(entitled - used - pending)")) @db.Decimal(4, 1)',
     'remaining  Decimal?  @default(dbgenerated("((entitled - used) - pending)")) @db.Decimal(4, 1)',

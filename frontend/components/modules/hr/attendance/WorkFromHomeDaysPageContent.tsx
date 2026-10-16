@@ -120,7 +120,7 @@ function periodExceedsMax(range: [Dayjs, Dayjs]): boolean {
 }
 
 /**
- * WFH assign calendar — HR (any scope) or Discipline Lead (multi-select reports).
+ * WFH assign calendar - HR (any scope) or Discipline Lead (multi-select reports).
  */
 export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -46,10 +46,10 @@ interface LoadedDeductionData {
   }>;
   /** Approved paid leave dates (excludes UNPAID). */
   leaveDateKeys: Set<string>;
-  /** Approved UNPAID leave dates — absence, not coverage. */
+  /** Approved UNPAID leave dates - absence, not coverage. */
   unpaidLeaveDateKeys: Set<string>;
   fieldMovementByDate: Map<string, FieldMovementCoverage>;
-  /** FIELD_VISIT / EARLY_LEAVE only — used for early-departure waiver. */
+  /** FIELD_VISIT / EARLY_LEAVE only - used for early-departure waiver. */
   earlyDepartureWaiverByDate: Map<string, FieldMovementCoverage>;
   siteAssignments: Array<{
     startDate: Date;

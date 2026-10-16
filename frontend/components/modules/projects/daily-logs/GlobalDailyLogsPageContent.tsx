@@ -45,7 +45,7 @@ const DAILY_LOG_ACTIVE_STATUSES = 'DRAFT,SUBMITTED';
 const DAILY_LOG_APPROVED_STATUSES = 'APPROVED';
 
 /**
- * Global Daily Logs list — cross-project, user-scoped or portfolio-wide.
+ * Global Daily Logs list - cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalDailyLogsPageContent(): React.ReactNode {
   const router = useRouter();
@@ -144,11 +144,11 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
       portfolioMode
         ? (allProjectsQuery.data?.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           }))
         : (myProjectsQuery.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           })),
     [portfolioMode, allProjectsQuery.data?.data, myProjectsQuery.data],
   );
@@ -185,25 +185,25 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
         title: 'Project',
         key: 'project',
         render: (_: unknown, record: DailyLog) =>
-          record.projectCode?.trim() || '—',
+          record.projectCode?.trim() || '-',
       },
       {
         title: 'Shift',
         dataIndex: 'shift',
         key: 'shift',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Weather',
         dataIndex: 'weatherCondition',
         key: 'weatherCondition',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Workforce',
         key: 'workforce',
         render: (_: unknown, record: DailyLog) =>
-          record.totalWorkers || record.workforceCount || '—',
+          record.totalWorkers || record.workforceCount || '-',
       },
       {
         title: 'Incidents',
@@ -222,7 +222,7 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
         render: (_: unknown, record: DailyLog) =>
           record.supervisorId
             ? resolveUserDisplay(record.supervisorId, record.supervisorName)
-            : '—',
+            : '-',
       },
       {
         title: 'Status',
@@ -314,7 +314,7 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Daily log APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

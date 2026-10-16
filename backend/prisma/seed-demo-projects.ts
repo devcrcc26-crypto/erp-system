@@ -85,7 +85,7 @@ const TASK_ATTRIBUTES_CYCLE: TaskAttributes[] = [
 const PROJECT_1_DEF: DemoProjectDef = {
   index: 10,
   code: 'ZMC-2023-002',
-  name: 'Zhongshan Medical Centre — Phase 2 Expansion',
+  name: 'Zhongshan Medical Centre - Phase 2 Expansion',
   nameZh: '中山医疗中心二期扩建',
   location: 'Zhongshan, Guangdong',
   projectType: ProjectType.COMMERCIAL,
@@ -120,7 +120,7 @@ const PROJECT_2_DEF: DemoProjectDef = {
 const PROJECT_3_DEF: DemoProjectDef = {
   index: 12,
   code: 'PDR-2025-003',
-  name: 'Pudong Residential Complex — Block C',
+  name: 'Pudong Residential Complex - Block C',
   nameZh: '浦东住宅综合体C栋',
   location: 'Pudong, Shanghai',
   projectType: ProjectType.RESIDENTIAL,
@@ -510,7 +510,7 @@ async function seedExtendedProjectData(
         assignedTo: U.pm,
         rfiNumber: `RFI-${prefix}-${rfi.number}`,
         title: rfi.title,
-        description: `${rfi.title} — clarification required for ${projectCode}.`,
+        description: `${rfi.title} - clarification required for ${projectCode}.`,
         discipline: 'Structural',
         priority: rfi.priority,
         status: rfi.status,
@@ -809,7 +809,7 @@ async function seedEdvChain(
       versionNumber: spec.versionNumber,
       fileKey,
       fileSizeBytes: pdfSize(fileKey),
-      changeNote: `${spec.title} — ${spec.revisionLabel}`,
+      changeNote: `${spec.title} - ${spec.revisionLabel}`,
     },
   });
 
@@ -1501,7 +1501,7 @@ async function seedNotificationsForProject(
           companyId,
           recipientId: userId,
           channel: NotificationChannel.IN_APP,
-          subject: `${subjects[i]} — ${projectCode}`,
+          subject: `${subjects[i]} - ${projectCode}`,
           body: `Demo notification ${i + 1} for ${projectCode}. Action may be required on your review inbox.`,
           status: i === 0 ? NotificationStatus.SENT : NotificationStatus.PENDING,
           sentAt: i === 0 ? new Date() : null,
@@ -1651,7 +1651,7 @@ async function seedProject1Epc(ctx: PmSeedContext): Promise<void> {
     projectCode: code,
     fileName: 'Civil-Grading-Locked.pdf',
     docNumber: 'CIV-GRD-001',
-    title: 'Site Grading Plan — As-Built',
+    title: 'Site Grading Plan - As-Built',
     revisionLabel: 'C',
     status: EdvStatus.LOCKED,
     versionNumber: 1,
@@ -1695,7 +1695,7 @@ async function seedProject1Epc(ctx: PmSeedContext): Promise<void> {
   await seedDesignPackageRow(ctx, p, code, {
     packageId: civilPkg,
     disciplineId: civilDisciplineId,
-    name: 'Civil Works — Final Issue',
+    name: 'Civil Works - Final Issue',
     projectedStatus: DesignPackageProjectedStatus.LOCKED,
     packageStatus: DesignPackageStatus.CLOSED,
     requiredTiers: computeRequiredTiers({
@@ -1718,7 +1718,7 @@ async function seedProject1Epc(ctx: PmSeedContext): Promise<void> {
   await seedDesignPackageRow(ctx, p, code, {
     packageId: structuralPkg,
     disciplineId: structuralDisciplineId,
-    name: 'Structural IFC — Closed',
+    name: 'Structural IFC - Closed',
     projectedStatus: DesignPackageProjectedStatus.LOCKED,
     packageStatus: DesignPackageStatus.CLOSED,
     requiredTiers: computeRequiredTiers({
@@ -1904,35 +1904,35 @@ async function seedProject2Epc(ctx: PmSeedContext): Promise<void> {
   const pkgMep2 = sid(p, 214);
 
   await seedDesignPackageRow(ctx, p, code, {
-    packageId: pkgCivil, disciplineId: civilId, name: 'Package Civil — Site Works',
+    packageId: pkgCivil, disciplineId: civilId, name: 'Package Civil - Site Works',
     projectedStatus: DesignPackageProjectedStatus.LOCKED, packageStatus: DesignPackageStatus.CLOSED,
     requiredTiers: tiers, edvIds: [civilEdv], itemEntityStart: 211,
     submittedAt: '2025-01-10', approvedAt: '2025-02-20', packageClosedAt: '2025-02-28', packageClosedBy: U.lead,
   });
   await seedDesignPackageRow(ctx, p, code, {
-    packageId: pkgStructural, disciplineId: structuralId, name: 'Package Structural — Core Walls',
+    packageId: pkgStructural, disciplineId: structuralId, name: 'Package Structural - Core Walls',
     projectedStatus: DesignPackageProjectedStatus.APPROVED, packageStatus: DesignPackageStatus.SUBMITTED,
     requiredTiers: tiers, edvIds: [structuralEdv], itemEntityStart: 215,
     submittedAt: '2025-11-01', approvedAt: '2025-12-15',
   });
   await seedDesignPackageRow(ctx, p, code, {
-    packageId: pkgMep, disciplineId: mepId, name: 'Package MEP — Level 12 HVAC',
+    packageId: pkgMep, disciplineId: mepId, name: 'Package MEP - Level 12 HVAC',
     projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD, packageStatus: DesignPackageStatus.OPEN,
     requiredTiers: tiers, edvIds: [mepEdv], itemEntityStart: 216,
     submittedAt: '2026-01-20',
-    briefText: 'MEP coordination package under lead review — active inbox scenario.',
+    briefText: 'MEP coordination package under lead review - active inbox scenario.',
   });
   await seedDesignPackageRow(ctx, p, code, {
-    packageId: pkgArch, disciplineId: archId, name: 'Package Architecture — Facade',
+    packageId: pkgArch, disciplineId: archId, name: 'Package Architecture - Facade',
     projectedStatus: DesignPackageProjectedStatus.REWORK_REQUIRED, packageStatus: DesignPackageStatus.OPEN,
     requiredTiers: tiers, edvIds: [archEdvDraft, archEdvSuperseded], itemEntityStart: 217,
     submittedAt: '2025-12-01',
   });
   await seedDesignPackageRow(ctx, p, code, {
-    packageId: pkgMep2, disciplineId: mepId, name: 'Package MEP2 — Electrical Risers',
+    packageId: pkgMep2, disciplineId: mepId, name: 'Package MEP2 - Electrical Risers',
     projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS, packageStatus: DesignPackageStatus.OPEN,
     requiredTiers: tiers, edvIds: [mep2Edv], itemEntityStart: 218,
-    briefText: 'Early draft package — no review session yet.',
+    briefText: 'Early draft package - no review session yet.',
   });
 
   const civilSession = sid(p, 220);
@@ -1965,7 +1965,7 @@ async function seedProject2Epc(ctx: PmSeedContext): Promise<void> {
     status: ReviewSessionStatus.RETURNED_FOR_REWORK, outcome: ReviewSessionOutcome.RETURNED,
     currentTier: ReviewTier.REVIEWER, assignedToUserId: U.reviewer, edvIds: [archEdvDraft, archEdvSuperseded],
     openedAt: '2025-12-05T09:00:00Z', closedAt: '2025-12-20T15:00:00Z',
-    closedReason: 'Facade anchor detail requires redesign — revise and resubmit.',
+    closedReason: 'Facade anchor detail requires redesign - revise and resubmit.',
   });
 
   await seedReviewCommentRow(ctx, {
@@ -2044,16 +2044,16 @@ const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
     disciplineName: 'Podium Envelope',
     packages: [
       {
-        name: 'Podium Envelope — Curtain Wall Stack',
+        name: 'Podium Envelope - Curtain Wall Stack',
         docNumber: 'LJZ-INB-O-01',
         fileName: 'Session-Tier1-Owner-Markup.pdf',
-        title: 'Curtain Wall Stack — Owner Review',
+        title: 'Curtain Wall Stack - Owner Review',
       },
       {
-        name: 'Podium Envelope — Lobby Atrium',
+        name: 'Podium Envelope - Lobby Atrium',
         docNumber: 'LJZ-INB-O-02',
         fileName: 'Package-Brief-Coordination-Supplement.pdf',
-        title: 'Lobby Atrium — Owner Review',
+        title: 'Lobby Atrium - Owner Review',
       },
     ],
   },
@@ -2063,16 +2063,16 @@ const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
     disciplineName: 'Steel Connections',
     packages: [
       {
-        name: 'Steel Connections — Transfer Truss',
+        name: 'Steel Connections - Transfer Truss',
         docNumber: 'LJZ-INB-R-01',
         fileName: 'Session-Tier2-Reviewer-Redlines.pdf',
-        title: 'Transfer Truss — Reviewer Redlines',
+        title: 'Transfer Truss - Reviewer Redlines',
       },
       {
-        name: 'Steel Connections — Core Bracing',
+        name: 'Steel Connections - Core Bracing',
         docNumber: 'LJZ-INB-R-02',
         fileName: 'Reviewer-Markup-Grid-B4.pdf',
-        title: 'Core Bracing — Reviewer Redlines',
+        title: 'Core Bracing - Reviewer Redlines',
       },
     ],
   },
@@ -2082,16 +2082,16 @@ const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
     disciplineName: 'MEP Coordination',
     packages: [
       {
-        name: 'MEP Coordination — Level 18 Risers',
+        name: 'MEP Coordination - Level 18 Risers',
         docNumber: 'LJZ-INB-L-01',
         fileName: 'Session-Tier3-Lead-Approval.pdf',
-        title: 'Level 18 Risers — Lead Review',
+        title: 'Level 18 Risers - Lead Review',
       },
       {
-        name: 'MEP Coordination — Plant Room Layout',
+        name: 'MEP Coordination - Plant Room Layout',
         docNumber: 'LJZ-INB-L-02',
         fileName: 'Drawing-Markup-MEP-Level12.pdf',
-        title: 'Plant Room Layout — Lead Review',
+        title: 'Plant Room Layout - Lead Review',
       },
     ],
   },
@@ -2101,16 +2101,16 @@ const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
     disciplineName: 'Structural Systems',
     packages: [
       {
-        name: 'Structural Systems — Outrigger Level',
+        name: 'Structural Systems - Outrigger Level',
         docNumber: 'LJZ-INB-C-01',
         fileName: 'MEP-Coordination-Rev-A.pdf',
-        title: 'Outrigger Level — Dept Chief Review',
+        title: 'Outrigger Level - Dept Chief Review',
       },
       {
-        name: 'Structural Systems — Mega Column',
+        name: 'Structural Systems - Mega Column',
         docNumber: 'LJZ-INB-C-02',
         fileName: 'Structural-Steel-Rev-A.pdf',
-        title: 'Mega Column — Dept Chief Review',
+        title: 'Mega Column - Dept Chief Review',
       },
     ],
   },
@@ -2120,16 +2120,16 @@ const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
     disciplineName: 'Tower Crown',
     packages: [
       {
-        name: 'Tower Crown — Architectural Crown',
+        name: 'Tower Crown - Architectural Crown',
         docNumber: 'LJZ-INB-I-01',
         fileName: 'External-Release-Consultant-Cover.pdf',
-        title: 'Architectural Crown — Institute Chief Review',
+        title: 'Architectural Crown - Institute Chief Review',
       },
       {
-        name: 'Tower Crown — MEP Penthouse',
+        name: 'Tower Crown - MEP Penthouse',
         docNumber: 'LJZ-INB-I-02',
         fileName: 'Electrical-SLD-Rev-A.pdf',
-        title: 'MEP Penthouse — Institute Chief Review',
+        title: 'MEP Penthouse - Institute Chief Review',
       },
     ],
   },
@@ -2211,7 +2211,7 @@ export async function seedLjzTierReviewInboxes(
         edvIds: [edvId],
         itemEntityStart: 900 + offset,
         submittedAt: openedAt.slice(0, 10),
-        briefText: `${packageSpec.name} — active ${tierSpec.tier.replace(/_/g, ' ').toLowerCase()} inbox item.`,
+        briefText: `${packageSpec.name} - active ${tierSpec.tier.replace(/_/g, ' ').toLowerCase()} inbox item.`,
       });
 
       await seedReviewSessionRow(ctx, {
@@ -2321,7 +2321,7 @@ async function seedProject3Epc(ctx: PmSeedContext): Promise<void> {
     requiredTiers: tiers,
     edvIds: [edvId],
     itemEntityStart: 211,
-    briefText: 'Initial civil layout for site mobilization — owner review pending.',
+    briefText: 'Initial civil layout for site mobilization - owner review pending.',
   });
 
   const sessionId = sid(p, 220);
@@ -2407,7 +2407,7 @@ async function seedProject1(
   await seedAuditLogsForProject(ctx, def.index, projectId, projectCode);
   await seedNotificationsForProject(ctx, def.index, projectCode);
 
-  console.log(`✓ Seeded project 1: ${projectCode} (${projectId}) — CLOSED / fully complete`);
+  console.log(`✓ Seeded project 1: ${projectCode} (${projectId}) - CLOSED / fully complete`);
 }
 
 async function seedProject2(
@@ -2440,7 +2440,7 @@ async function seedProject2(
   await seedAuditLogsForProject(ctx, def.index, projectId, projectCode);
   await seedNotificationsForProject(ctx, def.index, projectCode);
 
-  console.log(`✓ Seeded project 2: ${projectCode} (${projectId}) — ACTIVE with EPC scenarios`);
+  console.log(`✓ Seeded project 2: ${projectCode} (${projectId}) - ACTIVE with EPC scenarios`);
 }
 
 async function seedProject3(
@@ -2479,7 +2479,7 @@ async function seedProject3(
   await seedAuditLogsForProject(ctx, def.index, projectId, projectCode);
   await seedNotificationsForProject(ctx, def.index, projectCode);
 
-  console.log(`✓ Seeded project 3: ${projectCode} (${projectId}) — IN_PROGRESS / early stage`);
+  console.log(`✓ Seeded project 3: ${projectCode} (${projectId}) - IN_PROGRESS / early stage`);
 }
 
 async function verifySeed(ctx: PmSeedContext): Promise<void> {

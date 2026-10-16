@@ -4,7 +4,7 @@ import type { LeaveType, Prisma, PrismaClient } from '@prisma/client';
 /** Prisma client or transaction client. */
 export type AttendanceLeavePrisma = PrismaClient | Prisma.TransactionClient;
 
-/** Mirrors Prisma LeaveDayPortion — local until client regenerate. */
+/** Mirrors Prisma LeaveDayPortion - local until client regenerate. */
 export type LeaveCoverageDayPortion = 'FULL' | 'MORNING' | 'AFTERNOON';
 
 export interface LeaveCoverageDailyLog {
@@ -181,7 +181,7 @@ export function formatApprovedLeavesForAttendanceList(
 }
 
 /**
- * Approved leave requests overlapping a month — for list views (independent of daily logs).
+ * Approved leave requests overlapping a month - for list views (independent of daily logs).
  */
 export async function getApprovedLeaveSummariesForEmployees(
   prisma: AttendanceLeavePrisma,
@@ -416,7 +416,7 @@ export async function getLeaveCoveredAbsences(
 }
 
 /**
- * Bulk leave coverage for many employees — two queries regardless of headcount.
+ * Bulk leave coverage for many employees - two queries regardless of headcount.
  */
 export async function getLeaveCoveredAbsencesForEmployees(
   prisma: AttendanceLeavePrisma,

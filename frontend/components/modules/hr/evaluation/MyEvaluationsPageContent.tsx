@@ -201,7 +201,7 @@ export default function MyEvaluationsPageContent({
       render: (_value, row) => {
         const score = row.adjustedScore ?? row.finalScore;
         if (score == null) {
-          return <span className="erp-users-cell-sub">—</span>;
+          return <span className="erp-users-cell-sub">-</span>;
         }
         return (
           <div className="flex items-center gap-2">

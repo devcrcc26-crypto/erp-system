@@ -7,7 +7,7 @@ import { CompanyVehicleImportController } from './presentation/controllers/compa
 import { CompanyVehicleController } from './presentation/controllers/company-vehicle.controller';
 
 /**
- * Company vehicle fleet management — CRUD operations for the vehicle register
+ * Company vehicle fleet management - CRUD operations for the vehicle register
  * used by vehicle applications and refueling requests, plus the Excel import
  * that registers vehicles in bulk.
  */

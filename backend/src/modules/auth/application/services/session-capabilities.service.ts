@@ -43,7 +43,7 @@ const DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES = new Set([
   PROJECT_ADMINISTRATOR_ROLE,
 ]);
 
-/** Full design-cycle sidebar — Project Manager ≡ Project Admin per product. */
+/** Full design-cycle sidebar - Project Manager ≡ Project Admin per product. */
 const NAV_FULL_ACCESS_ROLE_NAMES = new Set([
   'System Administrator',
   'Managing Director',
@@ -183,7 +183,7 @@ export class SessionCapabilitiesService {
   }
 
   /**
-   * Indexed EXISTS probes — one round-trip of parallel counts (select 1).
+   * Indexed EXISTS probes - one round-trip of parallel counts (select 1).
    * Never invent assignments: false unless a live FK/membership row exists.
    */
   private async resolveNavAssignmentProbes(

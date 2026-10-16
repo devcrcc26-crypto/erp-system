@@ -35,7 +35,7 @@ function contextFor(
   };
 }
 
-describe('Needs enrolment — counted present', () => {
+describe('Needs enrolment - counted present', () => {
   const fullContract = [{ startDate: d(2020, 1, 1), endDate: null }];
 
   it('is counted present like "Present this month"; scanned methods are not', () => {
@@ -144,7 +144,7 @@ describe('payroll entry for Needs enrolment', () => {
     expect(result.flagNote).toBeUndefined();
     expect(result.entryNote).toBe(NOT_ENROLLED_PAYROLL_NOTE);
     expect(NOT_ENROLLED_PAYROLL_NOTE).toBe(
-      'Not enrolled on the attendance machine — counted present.',
+      'Not enrolled on the attendance machine - counted present.',
     );
   });
 
@@ -167,7 +167,7 @@ describe('payroll entry for Needs enrolment', () => {
   });
 });
 
-describe('Not enrolled — nth month', () => {
+describe('Not enrolled - nth month', () => {
   it('first month missing → 0 previous (no label)', () => {
     expect(previousNotEnrolledMonths(8, 2026, [])).toBe(0);
   });

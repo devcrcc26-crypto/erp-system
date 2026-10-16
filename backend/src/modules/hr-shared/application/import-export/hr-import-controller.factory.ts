@@ -64,9 +64,9 @@ const fileBody: ApiBodyOptions = {
 /**
  * Builds the standard three-endpoint import controller for an HR module:
  *
- * - `GET  {route}/template` — downloads the Excel template for the schema
- * - `POST {route}/preview`  — validates an upload without writing anything
- * - `POST {route}`          — creates DRAFT records and reports per-row results
+ * - `GET  {route}/template` - downloads the Excel template for the schema
+ * - `POST {route}/preview`  - validates an upload without writing anything
+ * - `POST {route}`          - creates DRAFT records and reports per-row results
  *
  * The module supplies its own route, Swagger tag, template file name, the
  * guards' permission set, and the service class that implements the import.

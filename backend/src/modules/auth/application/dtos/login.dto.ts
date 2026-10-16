@@ -23,7 +23,7 @@ export class LoginDto {
 
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'Deprecated — use identifier. Kept for older clients.',
+    description: 'Deprecated - use identifier. Kept for older clients.',
   })
   @IsOptional()
   @ValidateIf((_, value) => value !== undefined)

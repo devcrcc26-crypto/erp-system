@@ -282,7 +282,7 @@ export default function LeaveBalanceEditModal({
                               >
                                 <InputNumber />
                               </Form.Item>
-                              <span className="erp-users-cell-sub">—</span>
+                              <span className="erp-users-cell-sub">-</span>
                             </>
                           )}
                         </td>

@@ -131,7 +131,7 @@ const COMPANY_VEHICLE_IMPORT_SCHEMA: ImportColumnSchema = {
 /**
  * Excel template / preview / commit for the company vehicle register.
  *
- * Vehicles have no approval workflow — imported rows land in the register with
+ * Vehicles have no approval workflow - imported rows land in the register with
  * status Available, the register's equivalent of a draft.
  */
 @Injectable()
@@ -164,7 +164,7 @@ export class CompanyVehicleImportService extends HrModuleImportServiceBase<Creat
         : undefined;
 
     const plateNumber = text('plateNumber').trim().toUpperCase();
-    const label = `${plateNumber} — ${text('make')} ${text('model')}`.trim();
+    const label = `${plateNumber} - ${text('make')} ${text('model')}`.trim();
 
     const existing = await this.prisma.companyVehicle.findFirst({
       where: activeOnly({ companyId: ctx.companyId, plateNumber }),

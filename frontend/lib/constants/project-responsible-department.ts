@@ -1,5 +1,5 @@
 /**
- * Project responsible department values and labels — must match backend enum keys.
+ * Project responsible department values and labels - must match backend enum keys.
  */
 export const PROJECT_RESPONSIBLE_DEPARTMENT_VALUES = [
   'MUNICIPAL_TRANSPORTATION_DEPARTMENT',

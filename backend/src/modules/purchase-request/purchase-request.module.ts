@@ -7,7 +7,7 @@ import { PurchaseRequestImportController } from './presentation/controllers/purc
 import { PurchaseRequestController } from './presentation/controllers/purchase-request.controller';
 
 /**
- * Purchase request module — multi-item procurement requests with per-item
+ * Purchase request module - multi-item procurement requests with per-item
  * currency conversion, attachment support, and a value-tiered approval chain.
  */
 @Module({

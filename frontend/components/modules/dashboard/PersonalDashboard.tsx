@@ -30,7 +30,7 @@ const HR = 'pages.dashboard.hr';
 const PENDING_LEAVE_STATUSES = ['SUBMITTED', 'IN_REVIEW'] as const;
 
 /**
- * Employee home dashboard — own HR stats (leave, overtime, holidays).
+ * Employee home dashboard - own HR stats (leave, overtime, holidays).
  * PM personal metrics stay unused while Project Management is hidden.
  */
 export default function PersonalDashboard({

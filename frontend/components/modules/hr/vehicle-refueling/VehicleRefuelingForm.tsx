@@ -73,7 +73,7 @@ function computeTotalCostEtb(
 }
 
 /**
- * Vehicle refueling create form — Users / Add Employee chrome.
+ * Vehicle refueling create form - Users / Add Employee chrome.
  */
 export default function VehicleRefuelingForm({
   onSuccess,
@@ -115,10 +115,10 @@ export default function VehicleRefuelingForm({
   const selectedDriverLabel = useMemo(() => {
     const driverId = formValues?.driverId;
     if (!driverId) {
-      return '—';
+      return '-';
     }
     return (
-      driverOptions.find((option) => option.value === driverId)?.label ?? '—'
+      driverOptions.find((option) => option.value === driverId)?.label ?? '-'
     );
   }, [driverOptions, formValues?.driverId]);
 
@@ -413,8 +413,8 @@ export default function VehicleRefuelingForm({
                 label={t('hr.form.vehicle')}
                 value={
                   selectedVehicle
-                    ? `${selectedVehicle.plateNumber} — ${selectedVehicle.make} ${selectedVehicle.model}`
-                    : '—'
+                    ? `${selectedVehicle.plateNumber} - ${selectedVehicle.make} ${selectedVehicle.model}`
+                    : '-'
                 }
               />
               <ReviewItem label={t('hr.form.driver')} value={selectedDriverLabel} />
@@ -423,7 +423,7 @@ export default function VehicleRefuelingForm({
                 value={
                   formValues?.fuelDate
                     ? formatProjectDate(formValues.fuelDate.toISOString())
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -432,14 +432,14 @@ export default function VehicleRefuelingForm({
               />
               <ReviewItem
                 label={t('hr.form.fuelStation')}
-                value={formValues?.fuelStation?.trim() || '—'}
+                value={formValues?.fuelStation?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.form.currentMileage')}
                 value={
                   formValues?.currentMileage != null
                     ? String(formValues.currentMileage)
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -447,7 +447,7 @@ export default function VehicleRefuelingForm({
                 value={
                   formValues?.requestedLitres != null
                     ? String(formValues.requestedLitres)
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -455,13 +455,13 @@ export default function VehicleRefuelingForm({
                 value={
                   formValues?.unitPriceEtb != null
                     ? formatEtbAmount(formValues.unitPriceEtb)
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.form.totalCostEtb')}
                 value={
-                  totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'
+                  totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '-'
                 }
               />
               {formValues?.notes?.trim() ? (
@@ -576,7 +576,7 @@ function TotalCostPreview({
           border: `1px solid ${totalCostEtb != null ? '#C0DD97' : tokens.colorBorder}`,
         }}
       >
-        {totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'}
+        {totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '-'}
       </div>
     </Form.Item>
   );

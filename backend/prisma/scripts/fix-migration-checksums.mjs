@@ -14,7 +14,7 @@ import { PrismaClient } from '@prisma/client';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationsRoot = join(__dirname, '..', 'migrations');
 
-/** Migrations edited after apply — recompute checksum to match migration.sql on disk */
+/** Migrations edited after apply - recompute checksum to match migration.sql on disk */
 const TARGETS = [
   '20260706110000_phase1_department_project_fk',
   '20260706120000_phase2_engineering_discipline',

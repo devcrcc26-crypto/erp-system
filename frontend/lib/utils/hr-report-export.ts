@@ -7,7 +7,7 @@ import {
 } from '@/lib/utils/hr-export-excel';
 
 /**
- * Excel export of the period HR report — one sheet per section so each table
+ * Excel export of the period HR report - one sheet per section so each table
  * on the page comes out as its own tab.
  */
 export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
@@ -46,14 +46,14 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
       metric: 'Average evaluation score',
       value:
         report.evaluations.averageFinalScore == null
-          ? '—'
+          ? '-'
           : exportNumber(report.evaluations.averageFinalScore),
     },
   ];
 
   const statusRows = (prefix: string, byStatus: Record<string, number>) =>
     Object.entries(byStatus).map(([status, count]) => ({
-      metric: `${prefix} — ${exportEnumLabel(status)}`,
+      metric: `${prefix} - ${exportEnumLabel(status)}`,
       value: exportNumber(count),
     }));
 

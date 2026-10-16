@@ -10,7 +10,7 @@ const MAX_CHAIN_DEPTH = 1000;
  * Checks whether making `userId` report to `newManagerId` would create a
  * reporting cycle. Walks up from the new manager; reaching `userId` means a cycle.
  *
- * Returns the cycle as user ids — `[userId, newManagerId, …, userId]` — or null.
+ * Returns the cycle as user ids - `[userId, newManagerId, …, userId]` - or null.
  * A loop above the subject that never reaches it is not reported here (the subject
  * does not take part in it); the walk simply stops.
  */

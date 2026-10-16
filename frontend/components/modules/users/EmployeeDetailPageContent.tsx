@@ -157,7 +157,7 @@ function MetaStat({
           }
           title={empty ? undefined : (value ?? undefined)}
         >
-          {empty ? '—' : value}
+          {empty ? '-' : value}
         </p>
       </div>
     </div>
@@ -213,8 +213,8 @@ function UserStatusIndicator({
 }
 
 /**
- * Employee detail (HR view). Same v2 layout as My Profile — identity card
- * with fact tiles, then a pill-tab workspace — via the shared
+ * Employee detail (HR view). Same v2 layout as My Profile - identity card
+ * with fact tiles, then a pill-tab workspace - via the shared
  * `erp-profile-page erp-profile-v2` styles; HR-only chrome (top bar, actions)
  * lives in `employee-detail-v2.css`.
  */
@@ -687,242 +687,267 @@ export default function EmployeeDetailPageContent({
             />
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <DetailSection title={t('users.sectionPersonalInformation')}>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.firstName')}>
-                      {user.firstName}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.middleName')}>
-                      {displayValue(user.middleName)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.lastName')}>
-                      {displayValue(user.lastName)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.chineseName')}>
-                      {displayValue(user.chineseName)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.gender')}>
-                      {user.gender ? t(`hr.gender.${user.gender}`) : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.dateOfBirth')}>
-                      {user.dateOfBirth
-                        ? formatProjectDate(user.dateOfBirth)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.nationalId')}>
-                      {displayValue(user.nationalId)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.nationality')}>
-                      {user.nationality
-                        ? t(`hr.nationality.${user.nationality}`)
-                        : '-'}
-                    </MetaItem>
-                  </div>
-                </DetailSection>
-
-                <DetailSection title={t('users.sectionAddress')}>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.addressCountry')}>
-                      {displayValue(user.addressCountry)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.addressRegion')}>
-                      {displayValue(user.addressRegion)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.addressCity')}>
-                      {displayValue(user.addressCity)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.addressSubcity')}>
-                      {displayValue(user.addressSubcity)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.addressWoreda')}>
-                      {displayValue(user.addressWoreda)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.addressHouseNumber')}>
-                      {displayValue(user.addressHouseNumber)}
-                    </MetaItem>
-                    <div className="sm:col-span-2">
-                      <MetaItem label={t('users.detailFullAddress')}>
-                        {formatAddress(user)}
+              <div className="erp-employee-overview-cols">
+                <div className="erp-employee-overview-col">
+                  <DetailSection title={t('users.sectionPersonalInformation')}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.firstName')}>
+                        {user.firstName}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.middleName')}>
+                        {displayValue(user.middleName)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.lastName')}>
+                        {displayValue(user.lastName)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.chineseName')}>
+                        {displayValue(user.chineseName)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.gender')}>
+                        {user.gender ? t(`hr.gender.${user.gender}`) : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.dateOfBirth')}>
+                        {user.dateOfBirth
+                          ? formatProjectDate(user.dateOfBirth)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.nationalId')}>
+                        {displayValue(user.nationalId)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.nationality')}>
+                        {user.nationality
+                          ? t(`hr.nationality.${user.nationality}`)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.phone')}>
+                        {displayValue(user.phone)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.secondaryPhone')}>
+                        {displayValue(user.secondaryPhone)}
                       </MetaItem>
                     </div>
-                  </div>
-                </DetailSection>
+                  </DetailSection>
 
-                <DetailSection title={t('users.sectionPayrollDetails')}>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.bankName')}>
-                      {displayValue(user.bankName)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.bankBranch')}>
-                      {displayValue(user.bankBranch)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.bankAccountNumber')}>
-                      {displayValue(user.bankAccountNumber)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.tin')}>
-                      {displayValue(user.tin)}
-                    </MetaItem>
-                  </div>
-                </DetailSection>
+                  <DetailSection title={t('users.sectionPayrollDetails')}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.bankName')}>
+                        {displayValue(user.bankName)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.bankBranch')}>
+                        {displayValue(user.bankBranch)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.bankAccountNumber')}>
+                        {displayValue(user.bankAccountNumber)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.tin')}>
+                        {displayValue(user.tin)}
+                      </MetaItem>
+                    </div>
+                  </DetailSection>
 
-                <DetailSection
-                  title={t('users.sectionOrganizationAssignment')}
-                >
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.employeeId')}>
-                      {user.employeeId ? (
-                        <span className="erp-users-id-chip">
-                          {user.employeeId}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.employeeType')}>
-                      {user.employeeType
-                        ? t(`hr.employeeType.${user.employeeType}`)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.employmentDate')}>
-                      {user.employmentDate
-                        ? formatProjectDate(user.employmentDate)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('common.department')}>
-                      {displayValue(user.department?.name)}
-                    </MetaItem>
-                    <MetaItem label={t('common.position')}>
-                      {displayValue(user.position?.title)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.reportsTo')}>
-                      {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('common.discipline')}>
-                      {user.engineeringDiscipline ? (
-                        <div>
-                          <div className="erp-users-cell-strong">
-                            {user.engineeringDiscipline.name}
-                          </div>
-                          {user.engineeringDiscipline.nameZh ? (
-                            <div className="erp-users-cell-sub mt-0.5">
-                              {user.engineeringDiscipline.nameZh}
+                  <DetailSection title={t('users.sectionEducationExperience')}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.educationLevel')}>
+                        {user.educationLevel
+                          ? t(`hr.educationLevel.${user.educationLevel}`)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.fieldOfStudy')}>
+                        {displayValue(user.fieldOfStudy)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.yearsOfExperience')}>
+                        {user.yearsOfExperience != null ? (
+                          <div>
+                            <div>
+                              {t('users.yearsValue', {
+                                years: user.yearsOfExperience,
+                              })}
                             </div>
-                          ) : null}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.leavePolicy')}>
-                      {displayValue(user.leavePolicy?.name)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.workSchedule')}>
-                      {user.workSchedule
-                        ? user.workSchedule.isDefault
-                          ? `${user.workSchedule.name} (${t('hr.workSchedule.defaultBadge')})`
-                          : user.workSchedule.name
-                        : t('hr.workSchedule.noSchedule')}
-                    </MetaItem>
-                  </div>
-                </DetailSection>
+                            {user.yearsOfExperienceAsOf ? (
+                              <div className="erp-users-cell-sub mt-0.5">
+                                {t('users.yearsOfExperienceRecorded', {
+                                  date: formatProjectDate(
+                                    user.yearsOfExperienceAsOf,
+                                  ),
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </MetaItem>
+                    </div>
+                  </DetailSection>
 
-                <DetailSection title={t('users.sectionEducationExperience')}>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.educationLevel')}>
-                      {user.educationLevel
-                        ? t(`hr.educationLevel.${user.educationLevel}`)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.fieldOfStudy')}>
-                      {displayValue(user.fieldOfStudy)}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.experienceStartDate')}>
-                      {user.experienceStartDate
-                        ? formatProjectDate(user.experienceStartDate)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.form.yearsOfExperience')}>
-                      {user.yearsOfExperience != null
-                        ? String(user.yearsOfExperience)
-                        : '-'}
-                    </MetaItem>
-                  </div>
-                </DetailSection>
-
-                <DetailSection title={t('users.sectionAccountAccess')}>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <MetaItem label={t('users.form.email')}>
-                      {displayValue(user.email)}
-                    </MetaItem>
-                    <EmployeeAccountAccessFields user={user} />
-                    <MetaItem label={t('common.status')}>
-                      <UserStatusIndicator user={user} t={t} />
-                    </MetaItem>
-                    <MetaItem label={t('common.activeAccount')}>
-                      {user.isActive ? t('hr.labels.yes') : t('hr.labels.no')}
-                    </MetaItem>
-                    <MetaItem label={t('users.detailEmailVerified')}>
-                      {user.emailVerifiedAt
-                        ? formatProjectDate(user.emailVerifiedAt)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.exportTable.lastLogin')}>
-                      {user.lastLogin
-                        ? formatProjectDate(user.lastLogin)
-                        : '-'}
-                    </MetaItem>
-                    <MetaItem label={t('users.detailCreatedAt')}>
-                      {formatProjectDate(user.createdAt)}
-                    </MetaItem>
-                  </div>
-                </DetailSection>
-
-                <DetailSection title={t('users.assignedRoles')}>
-                  <EmployeeRolesCard
-                    employeeId={user.id}
-                    employeeCode={user.employeeId}
-                    roles={user.userRoles ?? []}
-                    canEdit={canViewHr}
-                    onRolesChanged={() => {
-                      void detailQuery.refetch();
-                    }}
-                  />
-                </DetailSection>
-              </div>
-
-              <DetailSection title={t('users.sectionEmergencyContact')}>
-                {emergencyContacts.length === 0 ? (
-                  <p className="erp-users-cell-sub m-0">
-                    {t('users.form.noEmergencyContacts')}
-                  </p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {emergencyContacts.map((contact, index) => (
-                      <div
-                        key={`${formatEmergencyContactName(contact)}-${index}`}
-                        className="erp-employee-contact-card"
-                      >
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <MetaItem label={t('users.form.fullName')}>
-                            {formatEmergencyContactName(contact)}
-                          </MetaItem>
-                          <MetaItem
-                            label={t('users.form.emergencyContactPhone')}
+                  <DetailSection title={t('users.sectionEmergencyContact')}>
+                    {emergencyContacts.length === 0 ? (
+                      <p className="erp-users-cell-sub m-0">
+                        {t('users.form.noEmergencyContacts')}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {emergencyContacts.map((contact, index) => (
+                          <div
+                            key={`${formatEmergencyContactName(contact)}-${index}`}
+                            className="erp-employee-contact-card"
                           >
-                            {displayValue(contact.phone)}
-                          </MetaItem>
-                          <MetaItem
-                            label={t('users.form.emergencyContactEmail')}
-                          >
-                            {displayValue(contact.email)}
-                          </MetaItem>
-                        </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <MetaItem label={t('users.form.fullName')}>
+                                {formatEmergencyContactName(contact)}
+                              </MetaItem>
+                              <MetaItem
+                                label={t('users.form.emergencyContactPhone')}
+                              >
+                                {displayValue(contact.phone)}
+                              </MetaItem>
+                              <MetaItem
+                                label={t('users.form.emergencyContactEmail')}
+                              >
+                                {displayValue(contact.email)}
+                              </MetaItem>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </DetailSection>
+                    )}
+                  </DetailSection>
+
+                  <DetailSection title={t('users.assignedRoles')}>
+                    <EmployeeRolesCard
+                      employeeId={user.id}
+                      employeeCode={user.employeeId}
+                      roles={user.userRoles ?? []}
+                      canEdit={canViewHr}
+                      onRolesChanged={() => {
+                        void detailQuery.refetch();
+                      }}
+                    />
+                  </DetailSection>
+                </div>
+
+                <div className="erp-employee-overview-col">
+                  <DetailSection title={t('users.sectionAddress')}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.addressCountry')}>
+                        {displayValue(user.addressCountry)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.addressRegion')}>
+                        {displayValue(user.addressRegion)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.addressCity')}>
+                        {displayValue(user.addressCity)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.addressSubcity')}>
+                        {displayValue(user.addressSubcity)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.addressWoreda')}>
+                        {displayValue(user.addressWoreda)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.addressHouseNumber')}>
+                        {displayValue(user.addressHouseNumber)}
+                      </MetaItem>
+                      <div className="sm:col-span-2">
+                        <MetaItem label={t('users.detailFullAddress')}>
+                          {formatAddress(user)}
+                        </MetaItem>
+                      </div>
+                    </div>
+                  </DetailSection>
+
+                  <DetailSection
+                    title={t('users.sectionOrganizationAssignment')}
+                  >
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.employeeId')}>
+                        {user.employeeId ? (
+                          <span className="erp-users-id-chip">
+                            {user.employeeId}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.employeeType')}>
+                        {user.employeeType
+                          ? t(`hr.employeeType.${user.employeeType}`)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.employmentDate')}>
+                        {user.employmentDate
+                          ? formatProjectDate(user.employmentDate)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('common.department')}>
+                        {displayValue(user.department?.name)}
+                      </MetaItem>
+                      <MetaItem label={t('common.position')}>
+                        {displayValue(user.position?.title)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.seniority')}>
+                        {displayValue(user.seniorityLevel?.name)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.reportsTo')}>
+                        {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('common.discipline')}>
+                        {user.engineeringDiscipline ? (
+                          <div>
+                            <div className="erp-users-cell-strong">
+                              {user.engineeringDiscipline.name}
+                            </div>
+                            {user.engineeringDiscipline.nameZh ? (
+                              <div className="erp-users-cell-sub mt-0.5">
+                                {user.engineeringDiscipline.nameZh}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.leavePolicy')}>
+                        {displayValue(user.leavePolicy?.name)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.workSchedule')}>
+                        {user.workSchedule
+                          ? user.workSchedule.isDefault
+                            ? `${user.workSchedule.name} (${t('hr.workSchedule.defaultBadge')})`
+                            : user.workSchedule.name
+                          : t('hr.workSchedule.noSchedule')}
+                      </MetaItem>
+                    </div>
+                  </DetailSection>
+
+                  <DetailSection title={t('users.sectionAccountAccess')}>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <MetaItem label={t('users.form.email')}>
+                        {displayValue(user.email)}
+                      </MetaItem>
+                      <EmployeeAccountAccessFields user={user} />
+                      <MetaItem label={t('common.status')}>
+                        <UserStatusIndicator user={user} t={t} />
+                      </MetaItem>
+                      <MetaItem label={t('common.activeAccount')}>
+                        {user.isActive ? t('hr.labels.yes') : t('hr.labels.no')}
+                      </MetaItem>
+                      <MetaItem label={t('users.detailEmailVerified')}>
+                        {user.emailVerifiedAt
+                          ? formatProjectDate(user.emailVerifiedAt)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.exportTable.lastLogin')}>
+                        {user.lastLogin
+                          ? formatProjectDate(user.lastLogin)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.detailCreatedAt')}>
+                        {formatProjectDate(user.createdAt)}
+                      </MetaItem>
+                    </div>
+                  </DetailSection>
+                </div>
+              </div>
 
               {employment && !user.excludedFromHrProcesses ? (
                 <DetailSection title={t('users.employment.historyTitle')}>

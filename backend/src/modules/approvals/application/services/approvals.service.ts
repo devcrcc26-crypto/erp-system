@@ -502,7 +502,7 @@ export class ApprovalsService {
       null; 
 
     // Field movement filed on someone's behalf: who filed it, and whether the
-    // viewer is that person (they may not approve it — see approveTier).
+    // viewer is that person (they may not approve it - see approveTier).
     const fieldMovement = request.fieldMovementLog;
     let onBehalf: {
       submittedBy: { id: string; name: string };
@@ -1064,7 +1064,7 @@ export class ApprovalsService {
         await this.notifySafe(request.companyId, userId, {
           recipientId: request.requestedBy,
           eventType: APPROVAL_APPROVED_EVENT,
-          subject: `Approved — ${request.requestNumber}`,
+          subject: `Approved - ${request.requestNumber}`,
           body:
             note?.trim() ||
             `Your approval request ${request.requestNumber} has been fully approved.`,
@@ -1137,7 +1137,7 @@ export class ApprovalsService {
         await this.notifySafe(companyId, approverUserId, {
           recipientId: nextApprover.approverId,
           eventType: APPROVAL_PENDING_EVENT,
-          subject: `Approval required — ${request.requestNumber}`,
+          subject: `Approval required - ${request.requestNumber}`,
           body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
           link: `/approvals/${request.id}`,
           variables: {
@@ -1153,7 +1153,7 @@ export class ApprovalsService {
       await this.notifySafe(companyId, approverUserId, {
         recipientId: request.requestedBy,
         eventType: APPROVAL_APPROVED_EVENT,
-        subject: `Approved — ${request.requestNumber}`,
+        subject: `Approved - ${request.requestNumber}`,
         body: `Your approval request ${request.requestNumber} has been fully approved.`,
         link: `/approvals/${request.id}`,
         variables: {
@@ -1221,7 +1221,7 @@ export class ApprovalsService {
       await this.notifySafe(request.companyId, userId, {
         recipientId: request.requestedBy,
         eventType: APPROVAL_REJECTED_EVENT,
-        subject: `Rejected — ${request.requestNumber}`,
+        subject: `Rejected - ${request.requestNumber}`,
         body:
           note?.trim() ||
           `Your approval request ${request.requestNumber} was rejected.`,
@@ -1459,7 +1459,7 @@ export class ApprovalsService {
         await this.notifySafe(request.companyId, userId, {
           recipientId: request.requestedBy,
           eventType: APPROVAL_APPROVED_EVENT,
-          subject: `Approved — ${request.requestNumber}`,
+          subject: `Approved - ${request.requestNumber}`,
           body: `Your approval request ${request.requestNumber} has been fully approved.`,
           link: `/approvals/${request.id}`,
           variables: {
@@ -1743,7 +1743,7 @@ export class ApprovalsService {
     await this.notifySafe(companyId, userId, {
       recipientId: firstTier.approverId,
       eventType: APPROVAL_PENDING_EVENT,
-      subject: `Resubmitted for approval — ${request.requestNumber}`,
+      subject: `Resubmitted for approval - ${request.requestNumber}`,
       body:
         note?.trim() ||
         `Request ${request.requestNumber} was resubmitted and awaits your review.`,
@@ -1847,7 +1847,7 @@ export class ApprovalsService {
     await this.notifySafe(companyId, userId, {
       recipientId: activeTier.approverId,
       eventType: APPROVAL_CONDITION_RESPONSE_EVENT,
-      subject: `Condition response — ${request.requestNumber}`,
+      subject: `Condition response - ${request.requestNumber}`,
       body:
         note?.trim() ||
         `The requester responded to a condition on ${request.requestNumber}.`,

@@ -68,7 +68,7 @@ function DetailSection({
 }
 
 /**
- * Vehicle application detail — Users / employee profile chrome.
+ * Vehicle application detail - Users / employee profile chrome.
  */
 export default function VehicleApplicationDetailPageContent({
   applicationId,
@@ -417,7 +417,7 @@ export default function VehicleApplicationDetailPageContent({
                 ) : null}
                 {application.project ? (
                   <MetaItem label={t('hr.labels.project')}>
-                    {application.project.projectCode} —{' '}
+                    {application.project.projectCode} -{' '}
                     {application.project.name}
                   </MetaItem>
                 ) : null}

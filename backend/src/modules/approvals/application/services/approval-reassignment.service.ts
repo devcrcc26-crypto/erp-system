@@ -109,7 +109,7 @@ export class ApprovalReassignmentService {
       await this.notifications.send(ctx, {
         recipientId: newApproverId,
         eventType: 'approval.reassigned',
-        subject: `Approval reassigned to you — ${tier.request.requestNumber}`,
+        subject: `Approval reassigned to you - ${tier.request.requestNumber}`,
         body: `You are now the approver for "${tier.label}" on ${tier.request.requestNumber}. Reason: ${trimmed}`,
         link: `/approvals/${tier.request.id}`,
       });

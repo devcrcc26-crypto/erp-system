@@ -47,7 +47,7 @@ function DetailSection({
 }
 
 /**
- * Work schedule detail — week pattern, default/active, assignment count.
+ * Work schedule detail - week pattern, default/active, assignment count.
  */
 export default function WorkScheduleDetailPageContent({
   scheduleId,

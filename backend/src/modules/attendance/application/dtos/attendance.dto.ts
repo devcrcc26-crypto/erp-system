@@ -280,7 +280,7 @@ export class CreateFieldMovementEntryDto {
 
   @ApiPropertyOptional({
     description:
-      'Departure / time-out in HH:mm — required for FIELD_VISIT, EARLY_LEAVE, and FORGOT_CLOCK_OUT',
+      'Departure / time-out in HH:mm - required for FIELD_VISIT, EARLY_LEAVE, and FORGOT_CLOCK_OUT',
   })
   @IsOptional()
   @IsString()
@@ -289,7 +289,7 @@ export class CreateFieldMovementEntryDto {
 
   @ApiPropertyOptional({
     description:
-      'Return time in HH:mm local format — omit if did not return to office. For FORGOT_CLOCK_IN: the stated clock-in time (required when paired with FORGOT_CLOCK_OUT, i.e. "forgot both").',
+      'Return time in HH:mm local format - omit if did not return to office. For FORGOT_CLOCK_IN: the stated clock-in time (required when paired with FORGOT_CLOCK_OUT, i.e. "forgot both").',
   })
   @IsOptional()
   @IsString()

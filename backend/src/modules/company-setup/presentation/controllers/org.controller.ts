@@ -22,6 +22,7 @@ import {
   CreateDisciplineDto,
   CreateDivisionDto,
   CreatePositionDto,
+  CreateSeniorityLevelDto,
   ListEngineeringDisciplinesQueryDto,
   OrgEntityListQueryDto,
   AssignDisciplineLeaderDto,
@@ -31,6 +32,7 @@ import {
   UpdateDisciplineDto,
   UpdateDivisionDto,
   UpdatePositionDto,
+  UpdateSeniorityLevelDto,
 } from '../../application/dtos/company.dtos';
 import { CompanySetupService } from '../../application/services/company-setup.service';
 
@@ -331,5 +333,44 @@ export class OrgController {
   ): Promise<{ message: string }> {
     await this.companySetupService.deletePosition(this.ctx(user), id);
     return { message: 'Position deleted' };
+  }
+
+  @Get('seniority-levels')
+  @RequirePermission('departments', 'view')
+  @ApiOperation({ summary: 'List seniority levels (display order)' })
+  listSeniorityLevels(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: OrgEntityListQueryDto,
+  ): Promise<unknown> {
+    return this.companySetupService.listSeniorityLevels(this.ctx(user), query);
+  }
+
+  @Post('seniority-levels')
+  @RequirePermission('departments', 'create')
+  createSeniorityLevel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSeniorityLevelDto,
+  ): Promise<unknown> {
+    return this.companySetupService.createSeniorityLevel(this.ctx(user), dto);
+  }
+
+  @Patch('seniority-levels/:id')
+  @RequirePermission('departments', 'edit')
+  updateSeniorityLevel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateSeniorityLevelDto,
+  ): Promise<unknown> {
+    return this.companySetupService.updateSeniorityLevel(this.ctx(user), id, dto);
+  }
+
+  @Delete('seniority-levels/:id')
+  @RequirePermission('departments', 'delete')
+  async deleteSeniorityLevel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.companySetupService.deleteSeniorityLevel(this.ctx(user), id);
+    return { message: 'Seniority level deleted' };
   }
 }

@@ -159,7 +159,7 @@ export class RisksService {
     ctx: PmContext,
     query: PmListQueryDto,
   ): Promise<PaginatedResult<MappedMyRisk>> {
-    // Risk has no direct companyId column — scope via the owning project.
+    // Risk has no direct companyId column - scope via the owning project.
     const where: Prisma.RiskWhereInput = activeOnly({
       project: activeOnly({ companyId: ctx.companyId }),
     });
@@ -976,7 +976,7 @@ export class RisksService {
   /**
    * Who can view: full access, RBAC view permission, discipline lead on any
    * discipline in the project, the risk owner, or the risk's creator.
-   * Who can edit: only the risk owner, or full access — a narrower gate than
+   * Who can edit: only the risk owner, or full access - a narrower gate than
    * view, since risks are meant to be maintained by the person accountable
    * for them.
    */
@@ -1050,7 +1050,7 @@ export class RisksService {
         {
           recipientId: risk.ownerId,
           eventType: RISK_ASSIGNED_EVENT,
-          subject: `Risk assigned — ${risk.riskIdCode}`,
+          subject: `Risk assigned - ${risk.riskIdCode}`,
           body: `Risk ${risk.riskIdCode} has been assigned to you: ${risk.title}`,
           variables: {
             projectId: risk.projectId,
@@ -1087,7 +1087,7 @@ export class RisksService {
           {
             recipientId,
             eventType: RISK_STATUS_CHANGED_EVENT,
-            subject: `Risk status changed — ${risk.riskIdCode}`,
+            subject: `Risk status changed - ${risk.riskIdCode}`,
             body: `Risk ${risk.riskIdCode} status changed to ${risk.status}`,
             variables: {
               projectId: risk.projectId,

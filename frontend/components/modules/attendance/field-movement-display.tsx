@@ -142,9 +142,9 @@ export function ScanTimes({
 }): React.ReactNode {
   return (
     <span className="fm-scan-times">
-      <span>{clockIn ?? '—'}</span>
+      <span>{clockIn ?? '-'}</span>
       <span aria-hidden> / </span>
-      <span>{clockOut ?? '—'}</span>
+      <span>{clockOut ?? '-'}</span>
     </span>
   );
 }

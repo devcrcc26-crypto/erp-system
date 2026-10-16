@@ -99,7 +99,7 @@ function MetaStat({
         <p className="erp-users-stat-label">{label}</p>
         <p
           className={
-            value === '—'
+            value === '-'
               ? 'erp-employee-meta-value erp-profile-meta-empty'
               : 'erp-employee-meta-value'
           }
@@ -112,7 +112,7 @@ function MetaStat({
 }
 
 /**
- * My Profile — the signed-in employee's record, laid out like the HR employee
+ * My Profile - the signed-in employee's record, laid out like the HR employee
  * detail page. Only regional preferences, email, and password are editable.
  */
 export default function ProfilePageContent(): React.ReactNode {
@@ -153,7 +153,7 @@ export default function ProfilePageContent(): React.ReactNode {
   const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
   const tabsMountedRef = useRef(false);
 
-  // On phones the tab bar scrolls sideways — keep the selected tab in view.
+  // On phones the tab bar scrolls sideways - keep the selected tab in view.
   // Skipped on first render so the page itself does not jump on load.
   useEffect(() => {
     if (!tabsMountedRef.current) {
@@ -376,7 +376,7 @@ export default function ProfilePageContent(): React.ReactNode {
     <div className="flex flex-col gap-4">
       <ProfileAccountDetails profile={profile} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <ProfileSection title={t('profile.regionalPreferences')}>
           <p className="erp-users-cell-sub m-0 mb-3">
             {t('profile.regionalPreferencesDescription')}
@@ -735,7 +735,7 @@ export default function ProfilePageContent(): React.ReactNode {
           <MetaStat
             label={t('users.form.employeeType')}
             value={
-              profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'
+              profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '-'
             }
           />
         </div>

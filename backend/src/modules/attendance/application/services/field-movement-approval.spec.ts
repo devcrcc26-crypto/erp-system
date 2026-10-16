@@ -25,7 +25,7 @@ function d(y: number, m: number, day: number): Date {
   return new Date(Date.UTC(y, m - 1, day));
 }
 
-describe('field movement approval — deduction coverage', () => {
+describe('field movement approval - deduction coverage', () => {
   it('entry APPROVED wins over log still SUBMITTED in coverage merge', () => {
     expect(
       mergeFieldMovementCoverage(
@@ -138,7 +138,7 @@ describe('field movement approval — deduction coverage', () => {
   });
 });
 
-describe('field movement approval — AUTO_APPROVE_ALL path', () => {
+describe('field movement approval - AUTO_APPROVE_ALL path', () => {
   it('uses approveTier → dispatchFinalDecision → onApprovalDecision (same as manual)', () => {
     // Covered by approvals-auto-approve-all.spec.ts calling listener.onApprovalDecision;
     // field movement corrections + post-commit recalc live in AttendanceService.onApprovalDecision.
@@ -146,7 +146,7 @@ describe('field movement approval — AUTO_APPROVE_ALL path', () => {
   });
 });
 
-describe('field movement approval — recalc policy', () => {
+describe('field movement approval - recalc policy', () => {
   it('approved attendance month marks recalc stale instead of silent skip', async () => {
     const updateMany = jest.fn(async () => ({ count: 1 }));
     const db = {

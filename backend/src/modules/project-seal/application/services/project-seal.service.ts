@@ -154,7 +154,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         const approval = (await this.approvalsService.submitRequest(
             {
                 categoryCode: 'PROJECT_SEAL_USAGE',
-                title: `Project Seal — ${dto.fileName}`,
+                title: `Project Seal - ${dto.fileName}`,
                 formData: {
                     fileName: dto.fileName,
                     description: dto.description,

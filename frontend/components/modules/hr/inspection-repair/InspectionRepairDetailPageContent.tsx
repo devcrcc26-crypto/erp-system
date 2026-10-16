@@ -83,7 +83,7 @@ function DetailSection({
 }
 
 /**
- * Inspection & repair detail — Users / employee profile chrome.
+ * Inspection & repair detail - Users / employee profile chrome.
  */
 export default function InspectionRepairDetailPageContent({
   requestId,
@@ -392,7 +392,7 @@ export default function InspectionRepairDetailPageContent({
             <p className="erp-employee-meta-value">
               {request.completedAt
                 ? formatProjectDate(request.completedAt)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -412,7 +412,7 @@ export default function InspectionRepairDetailPageContent({
                         strokeWidth={1.75}
                       />
                       <span>
-                        {request.asset.serialNumber} — {request.asset.brand}{' '}
+                        {request.asset.serialNumber} - {request.asset.brand}{' '}
                         {request.asset.model}
                       </span>
                     </div>
@@ -422,13 +422,13 @@ export default function InspectionRepairDetailPageContent({
                   {request.deviceName}
                 </MetaItem>
                 <MetaItem label={t('hr.form.make')}>
-                  {request.make ?? '—'}
+                  {request.make ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.model')}>
-                  {request.model ?? '—'}
+                  {request.model ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.year')}>
-                  {request.year?.toString() ?? '—'}
+                  {request.year?.toString() ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.location')}>
                   {request.location}
@@ -443,7 +443,7 @@ export default function InspectionRepairDetailPageContent({
                 <div className="md:col-span-2">
                   <MetaItem label={t('hr.form.solution')}>
                     <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
-                      {request.solution ?? '—'}
+                      {request.solution ?? '-'}
                     </p>
                   </MetaItem>
                 </div>

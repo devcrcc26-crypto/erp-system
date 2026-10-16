@@ -102,7 +102,7 @@ function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
 }
 
 /**
- * Leave requests list — Employees v2 chrome with floating stats and soft cards.
+ * Leave requests list - Employees v2 chrome with floating stats and soft cards.
  */
 export default function LeaveRequestsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -322,7 +322,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               render: (_: unknown, row: LeaveRequestListItem) => {
                 const employee = row.employee;
                 if (!employee) {
-                  return <span className="erp-users-cell-sub">—</span>;
+                  return <span className="erp-users-cell-sub">-</span>;
                 }
                 return (
                   <div className="erp-leave-person">

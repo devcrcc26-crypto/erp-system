@@ -53,7 +53,7 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
 ];
 
 /**
- * Global Issues list — cross-project, user-scoped or portfolio-wide.
+ * Global Issues list - cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalIssuesPageContent(): React.ReactNode {
   const router = useRouter();
@@ -144,11 +144,11 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
       portfolioMode
         ? (allProjectsQuery.data?.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           }))
         : (myProjectsQuery.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           })),
     [portfolioMode, allProjectsQuery.data?.data, myProjectsQuery.data],
   );
@@ -200,19 +200,19 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
         title: 'Assigned to',
         key: 'assignedTo',
         render: (_: unknown, record: Issue) =>
-          record.assignedToName ?? record.assignedTo ?? '—',
+          record.assignedToName ?? record.assignedTo ?? '-',
       },
       {
         title: 'Project',
         key: 'project',
         render: (_: unknown, record: Issue) =>
-          record.projectCode?.trim() || '—',
+          record.projectCode?.trim() || '-',
       },
       {
         title: 'Subtask',
         key: 'subtask',
         render: (_: unknown, record: Issue) =>
-          record.linkedDesignPackage?.fullCode ?? '—',
+          record.linkedDesignPackage?.fullCode ?? '-',
       },
       {
         title: 'Due date',
@@ -307,7 +307,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Issue APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

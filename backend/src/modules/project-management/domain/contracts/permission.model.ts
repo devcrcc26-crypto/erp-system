@@ -52,14 +52,14 @@ export interface PermissionContext {
   readonly subtaskDisciplinaryLeaderUserId?: string;
   readonly subtaskDeptDeputyChiefUserId?: string;
   readonly subtaskInstituteChiefUserId?: string;
-  /** External Institute Chief name on the subtask — blocks discipline IC fallback. */
+  /** External Institute Chief name on the subtask - blocks discipline IC fallback. */
   readonly subtaskInstituteChiefName?: string;
-  /** Site representative FK on the subtask — communication modules only (not engineering docs). */
+  /** Site representative FK on the subtask - communication modules only (not engineering docs). */
   readonly subtaskSiteRepresentativeUserId?: string;
-  /** System role Document Controller — logistics upload on assigned disciplines. */
+  /** System role Document Controller - logistics upload on assigned disciplines. */
   readonly isDocumentController?: boolean;
   /**
-   * SysAdmin / Managing Director / Project Manager / Project Administrator —
+   * SysAdmin / Managing Director / Project Manager / Project Administrator -
    * bypasses discipline/subtask FK matching on Layer 3.
    */
   readonly hasFullProjectAccess?: boolean;

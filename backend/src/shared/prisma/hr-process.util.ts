@@ -5,7 +5,7 @@
  * salary / attendance reports or dashboard counts. They still approve.
  *
  * Every query that selects the *subjects* of an HR process must go through
- * `hrProcessEmployeeWhere` — never hand-write the flag — so the rule lives in
+ * `hrProcessEmployeeWhere` - never hand-write the flag - so the rule lives in
  * one place. Approver resolution must NOT use it.
  */
 

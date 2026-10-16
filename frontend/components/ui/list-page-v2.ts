@@ -1,7 +1,7 @@
 /**
  * v2 list-page look (floating stat tiles, borderless 16px cards, quiet
  * filter row, clean table header) for pages built on the shared
- * `erp-users-*` / `erp-pro-card` list chrome — in Tailwind, applied once on
+ * `erp-users-*` / `erp-pro-card` list chrome - in Tailwind, applied once on
  * the page root. Matches the Employees, Payroll and Field Movement lists.
  *
  * The legacy rules live unlayered in globals.css and antd's styles are

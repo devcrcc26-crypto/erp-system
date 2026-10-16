@@ -1,4 +1,4 @@
-# Payroll overtime — dated entries by contract period
+# Payroll overtime - dated entries by contract period
 
 **Date:** 2026-10-08  
 **Scope:** OT priced from the contract in force on each overtime date (not month-end basic only).

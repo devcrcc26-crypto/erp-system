@@ -204,7 +204,7 @@ export class ConflictGuardService {
   }
 
   /**
-   * True when the document's package is RETURNED_FOR_REWORK — designer may
+   * True when the document's package is RETURNED_FOR_REWORK - designer may
    * supersede the returned DRAFT and upload a replacement revision.
    */
   async isReturnedForRework(

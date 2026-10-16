@@ -64,7 +64,7 @@ export function formatOvertimeEmployeeName(
   user?: OvertimeUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }

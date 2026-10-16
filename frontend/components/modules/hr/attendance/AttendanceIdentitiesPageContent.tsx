@@ -279,7 +279,7 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
         row.reason ? (
           <span className="text-[13px] text-slate-700">{row.reason}</span>
         ) : (
-          <span className="text-slate-400">—</span>
+          <span className="text-slate-400">-</span>
         ),
     },
     {

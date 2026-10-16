@@ -8,7 +8,7 @@ import { formatEtb } from '@/lib/utils/business-trip-display';
 import type { BusinessTripPurposeBudgetValues } from './business-trip-stepper.types';
 
 /**
- * Step 2 — purpose / host fields and budget estimate.
+ * Step 2 - purpose / host fields and budget estimate.
  */
 export default function BusinessTripPurposeBudgetStep({
   values,

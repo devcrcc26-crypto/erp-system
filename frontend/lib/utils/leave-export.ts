@@ -52,7 +52,7 @@ export function buildLeaveRequestExportSheets(
 }
 
 /**
- * Excel export for leave balances — one row per employee and leave type.
+ * Excel export for leave balances - one row per employee and leave type.
  */
 export function buildLeaveBalanceExportSheets(
   rows: EmployeeLeaveBalanceSummary[],

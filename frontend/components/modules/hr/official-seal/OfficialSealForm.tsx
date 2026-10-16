@@ -49,7 +49,7 @@ interface OfficialSealFormProps {
 const DETAILS_FIELDS = ['fileName', 'description', 'urgency', 'dateNeeded'] as const;
 
 /**
- * Official seal create form — same StepperForm chrome as Add Employee.
+ * Official seal create form - same StepperForm chrome as Add Employee.
  */
 export default function OfficialSealForm({
   onSuccess,
@@ -276,18 +276,18 @@ export default function OfficialSealForm({
             <div className="erp-form-grid-2">
               <ReviewItem
                 label={t('hr.form.fileName')}
-                value={reviewValues.fileName?.trim() || '—'}
+                value={reviewValues.fileName?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.form.description')}
-                value={reviewValues.description?.trim() || '—'}
+                value={reviewValues.description?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.labels.dateNeeded')}
                 value={
                   reviewValues.dateNeeded
                     ? formatProjectDate(reviewValues.dateNeeded.toISOString())
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -312,7 +312,7 @@ export default function OfficialSealForm({
                 value={
                   reviewValues.copyCount != null
                     ? String(reviewValues.copyCount)
-                    : '—'
+                    : '-'
                 }
               />
             </div>

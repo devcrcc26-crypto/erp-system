@@ -18,7 +18,7 @@ import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Consumables requisition body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function ConsumablesRequisitionDetail({
   sourceId,

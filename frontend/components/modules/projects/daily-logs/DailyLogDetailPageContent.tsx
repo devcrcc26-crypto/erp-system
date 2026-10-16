@@ -378,7 +378,7 @@ export default function DailyLogDetailPageContent({
       title: 'Contractor',
       dataIndex: 'contractor',
       key: 'contractor',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     { title: 'Workers', dataIndex: 'workerCount', key: 'workerCount', width: 90 },
     ...(canEditChildren
@@ -404,14 +404,14 @@ export default function DailyLogDetailPageContent({
       dataIndex: 'hoursUsed',
       key: 'hoursUsed',
       width: 100,
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Downtime',
       dataIndex: 'hoursDowntime',
       key: 'hoursDowntime',
       width: 100,
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     ...(canEditChildren
       ? [
@@ -436,7 +436,7 @@ export default function DailyLogDetailPageContent({
       title: 'Supplier',
       dataIndex: 'supplier',
       key: 'supplier',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     ...(canEditChildren
       ? [
@@ -459,13 +459,13 @@ export default function DailyLogDetailPageContent({
       title: 'Company',
       dataIndex: 'company',
       key: 'company',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Purpose',
       dataIndex: 'purpose',
       key: 'purpose',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     ...(canEditChildren
       ? [
@@ -489,7 +489,7 @@ export default function DailyLogDetailPageContent({
       dataIndex: 'severity',
       key: 'severity',
       width: 110,
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Description',
@@ -592,27 +592,27 @@ export default function DailyLogDetailPageContent({
                       {formatProjectDate(log.logDate)}
                     </Descriptions.Item>
                     <Descriptions.Item label="Shift">
-                      {log.shift ?? '—'}
+                      {log.shift ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Weather">
-                      {log.weatherCondition ?? '—'}
+                      {log.weatherCondition ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Temperature">
-                      {log.temperatureC != null ? `${log.temperatureC} °C` : '—'}
+                      {log.temperatureC != null ? `${log.temperatureC} °C` : '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Rainfall">
-                      {log.rainfallLevel ?? '—'}
+                      {log.rainfallLevel ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Humidity">
-                      {log.humidity != null ? `${log.humidity}%` : '—'}
+                      {log.humidity != null ? `${log.humidity}%` : '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Contractor">
-                      {log.contractorName ?? '—'}
+                      {log.contractorName ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Supervisor">
                       {log.supervisorId
                         ? resolveUserDisplay(log.supervisorId, log.supervisorName)
-                        : '—'}
+                        : '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Created by">
                       {resolveUserDisplay(log.siteEngineerId, log.siteEngineerName)}
@@ -948,7 +948,7 @@ export default function DailyLogDetailPageContent({
                   <Alert
                     type="success"
                     showIcon
-                    title="No incidents recorded — good day!"
+                    title="No incidents recorded - good day!"
                   />
                 )}
                 <div>

@@ -10,6 +10,11 @@ import { randomUUID } from 'crypto';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { AUTH_AUDIT_MODULE } from '../../../auth/application/constants/login-security.constants';
 import { resolveHrProcessExclusionUpdate } from '../utils/hr-process-exclusion.util';
+import {
+  currentYearsOfExperience,
+  todayDateOnly,
+  yearsOfExperienceUpdate,
+} from '../../domain/years-of-experience';
 
 const USERS_AUDIT_MODULE = 'users';
 import { PasswordService } from '../../../auth/application/services/password.service';
@@ -141,7 +146,7 @@ export class UserManagementService {
       this.prisma.user.count({ where }),
     ]);
     const canViewBank = await this.canViewFullBankDetails(ctx, null);
-    // listUsers requires users.view (HR/admin) — loginName is allowed for the optional column.
+    // listUsers requires users.view (HR/admin) - loginName is allowed for the optional column.
     const canViewLoginName = await this.canViewLoginName(ctx, null);
     return buildPaginatedResult(
       data.map((row) =>
@@ -442,13 +447,15 @@ export class UserManagementService {
         excludedReason: true,
         employmentStatus: true,
         isActive: true,
+        yearsOfExperience: true,
+        yearsOfExperienceAsOf: true,
       },
     });
     if (!existing) {
       throw new NotFoundException('User not found');
     }
 
-    // Deactivation via isActive=false is not a personal-data update — same rules as delete.
+    // Deactivation via isActive=false is not a personal-data update - same rules as delete.
     if (dto.isActive === false) {
       await this.assertCanDeactivateOrDeleteUser(ctx, id);
     }
@@ -471,6 +478,9 @@ export class UserManagementService {
     if (rest.leavePolicyId) {
       await this.assertLeavePolicy(ctx.companyId, rest.leavePolicyId);
     }
+    if (rest.seniorityLevelId) {
+      await this.assertSeniorityLevel(ctx.companyId, rest.seniorityLevelId);
+    }
 
     if (rest.reportsToUserId !== undefined) {
       await this.assertValidReportsTo(
@@ -484,6 +494,7 @@ export class UserManagementService {
     const data: Prisma.UserUncheckedUpdateInput = {
       ...this.buildBasicUpdateData(rest),
       ...profileData,
+      ...yearsOfExperienceUpdate(rest.yearsOfExperience, existing),
       updatedBy: ctx.userId,
     };
 
@@ -1349,6 +1360,8 @@ export class UserManagementService {
       department: { select: { id: true, name: true } },
       positionId: true,
       position: { select: { id: true, title: true } },
+      seniorityLevelId: true,
+      seniorityLevel: { select: { id: true, name: true, nameZh: true } },
       reportsToUserId: true,
       reportsTo: {
         select: {
@@ -1380,7 +1393,8 @@ export class UserManagementService {
       fieldOfStudy: true,
       employmentDate: true,
       employmentStatus: true,
-      experienceStartDate: true,
+      yearsOfExperience: true,
+      yearsOfExperienceAsOf: true,
       emergencyContacts: true,
       excludedFromHrProcesses: true,
       excludedReason: true,
@@ -1396,6 +1410,7 @@ export class UserManagementService {
       loginName: true,
       email: true,
       phone: true,
+      secondaryPhone: true,
       preferredLanguage: true,
       preferredTimezone: true,
       preferredDateFormat: true,
@@ -1472,7 +1487,9 @@ export class UserManagementService {
     educationLevel?: CreateUserDto['educationLevel'];
     fieldOfStudy?: string;
     employmentDate?: string;
-    experienceStartDate?: string;
+    secondaryPhone?: string;
+    seniorityLevelId?: string;
+    yearsOfExperience?: number | null;
     emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
     workScheduleId?: string;
@@ -1499,7 +1516,9 @@ export class UserManagementService {
       educationLevel: dto.educationLevel,
       fieldOfStudy: dto.fieldOfStudy,
       employmentDate: dto.employmentDate,
-      experienceStartDate: dto.experienceStartDate,
+      secondaryPhone: dto.secondaryPhone,
+      seniorityLevelId: dto.seniorityLevelId,
+      yearsOfExperience: dto.yearsOfExperience,
       emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
       workScheduleId: dto.workScheduleId,
@@ -1534,7 +1553,9 @@ export class UserManagementService {
       educationLevel?: CreateUserDto['educationLevel'];
       fieldOfStudy?: string;
       employmentDate?: string;
-      experienceStartDate?: string;
+      secondaryPhone?: string;
+      seniorityLevelId?: string;
+      yearsOfExperience?: number | null;
       emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
       workScheduleId?: string;
@@ -1551,6 +1572,9 @@ export class UserManagementService {
 
     if (profileInput.leavePolicyId) {
       await this.assertLeavePolicy(ctx.companyId, profileInput.leavePolicyId);
+    }
+    if (profileInput.seniorityLevelId) {
+      await this.assertSeniorityLevel(ctx.companyId, profileInput.seniorityLevelId);
     }
 
     const folderName = `${firstName} ${lastName}`.trim() || 'Employee Profile';
@@ -1596,9 +1620,11 @@ export class UserManagementService {
         employmentDate: profileInput.employmentDate
           ? this.parseDateOnly(profileInput.employmentDate)
           : null,
-        experienceStartDate: profileInput.experienceStartDate
-          ? this.parseDateOnly(profileInput.experienceStartDate)
-          : null,
+        secondaryPhone: profileInput.secondaryPhone?.trim() || null,
+        seniorityLevelId: profileInput.seniorityLevelId ?? null,
+        yearsOfExperience: profileInput.yearsOfExperience ?? null,
+        yearsOfExperienceAsOf:
+          profileInput.yearsOfExperience != null ? todayDateOnly() : null,
         emergencyContacts: this.normalizeEmergencyContacts(profileInput.emergencyContacts),
         leavePolicyId: profileInput.leavePolicyId ?? null,
         bankName: profileInput.bankName?.trim() || null,
@@ -1651,7 +1677,7 @@ export class UserManagementService {
       | 'educationLevel'
       | 'fieldOfStudy'
       | 'employmentDate'
-      | 'experienceStartDate'
+      | 'yearsOfExperience'
       | 'emergencyContacts'
       | 'leavePolicyId'
       | 'workScheduleId'
@@ -1663,9 +1689,14 @@ export class UserManagementService {
         rest.lastName !== undefined ? rest.lastName.trim() : undefined,
       chineseName: rest.chineseName?.trim() || undefined,
       phone: rest.phone?.trim() || undefined,
+      secondaryPhone:
+        rest.secondaryPhone !== undefined
+          ? rest.secondaryPhone?.trim() || null
+          : undefined,
       branchId: rest.branchId,
       departmentId: rest.departmentId,
       positionId: rest.positionId,
+      seniorityLevelId: rest.seniorityLevelId,
       reportsToUserId: rest.reportsToUserId,
       discipline: rest.discipline,
       engineeringDisciplineId: rest.engineeringDisciplineId,
@@ -1696,7 +1727,6 @@ export class UserManagementService {
         | 'educationLevel'
         | 'fieldOfStudy'
         | 'employmentDate'
-        | 'experienceStartDate'
         | 'emergencyContacts'
         | 'leavePolicyId'
         | 'bankName'
@@ -1759,11 +1789,6 @@ export class UserManagementService {
     if (rest.employmentDate !== undefined) {
       data.employmentDate = rest.employmentDate
         ? this.parseDateOnly(rest.employmentDate)
-        : null;
-    }
-    if (rest.experienceStartDate !== undefined) {
-      data.experienceStartDate = rest.experienceStartDate
-        ? this.parseDateOnly(rest.experienceStartDate)
         : null;
     }
     if (rest.emergencyContacts !== undefined) {
@@ -1866,6 +1891,19 @@ export class UserManagementService {
     }
   }
 
+  private async assertSeniorityLevel(
+    companyId: string,
+    seniorityLevelId: string,
+  ): Promise<void> {
+    const level = await this.prisma.seniorityLevel.findFirst({
+      where: activeOnly({ id: seniorityLevelId, companyId, isActive: true }),
+      select: { id: true },
+    });
+    if (!level) {
+      throw new BadRequestException('Seniority level not found or inactive');
+    }
+  }
+
   private async assertLeavePolicy(
     companyId: string,
     leavePolicyId: string,
@@ -1887,20 +1925,6 @@ export class UserManagementService {
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
-  }
-
-  private computeYearsOfExperience(startDate: Date | null): number | null {
-    if (!startDate) {
-      return null;
-    }
-    const now = new Date();
-    let years = now.getUTCFullYear() - startDate.getUTCFullYear();
-    const monthDiff = now.getUTCMonth() - startDate.getUTCMonth();
-    const dayDiff = now.getUTCDate() - startDate.getUTCDate();
-    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      years -= 1;
-    }
-    return Math.max(0, years);
   }
 
   private normalizeEmergencyContacts(
@@ -2073,16 +2097,21 @@ export class UserManagementService {
     });
   }
 
-  private mapUserResponse<T extends { experienceStartDate?: Date | null }>(
-    user: T | null,
-  ): (T & { yearsOfExperience: number | null }) | null {
+  /** Replaces the stored years of experience with today's value. */
+  private mapUserResponse<
+    T extends {
+      yearsOfExperience?: number | null;
+      yearsOfExperienceAsOf?: Date | null;
+    },
+  >(user: T | null): (T & { yearsOfExperience: number | null }) | null {
     if (!user) {
       return null;
     }
     return {
       ...user,
-      yearsOfExperience: this.computeYearsOfExperience(
-        user.experienceStartDate ?? null,
+      yearsOfExperience: currentYearsOfExperience(
+        user.yearsOfExperience,
+        user.yearsOfExperienceAsOf,
       ),
     };
   }

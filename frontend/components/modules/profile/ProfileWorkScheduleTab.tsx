@@ -40,7 +40,7 @@ function dayStatus(day: WorkScheduleDay): DayStatus {
 }
 
 function timeRange(start: string | null, end: string | null): string {
-  return start && end ? `${start} – ${end}` : '—';
+  return start && end ? `${start} – ${end}` : '-';
 }
 
 /**
@@ -103,7 +103,7 @@ export default function ProfileWorkScheduleTab({
       key: 'morning',
       render: (_: unknown, day: WorkScheduleDay) => (
         <span className="erp-users-cell-sub tabular-nums">
-          {day.isWorkingDay ? timeRange(day.morningStart, day.morningEnd) : '—'}
+          {day.isWorkingDay ? timeRange(day.morningStart, day.morningEnd) : '-'}
         </span>
       ),
     },
@@ -114,7 +114,7 @@ export default function ProfileWorkScheduleTab({
         <span className="erp-users-cell-sub tabular-nums">
           {day.isWorkingDay && !day.isHalfDay
             ? timeRange(day.afternoonStart, day.afternoonEnd)
-            : '—'}
+            : '-'}
         </span>
       ),
     },
@@ -125,7 +125,7 @@ export default function ProfileWorkScheduleTab({
       align: 'right',
       render: (value: number, day: WorkScheduleDay) => (
         <span className="erp-users-cell-strong tabular-nums">
-          {day.isWorkingDay ? Number(value).toFixed(1) : '—'}
+          {day.isWorkingDay ? Number(value).toFixed(1) : '-'}
         </span>
       ),
     },

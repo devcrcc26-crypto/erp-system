@@ -25,7 +25,7 @@ const OPS_DIVISION_ID = '359e3881-0f8b-488b-87cd-4a854a0b1d11';
 const SOURCE_DB = 'pwf_test';
 const TARGET_DB = 'pwf_fresh';
 const COMPANY_NAME =
-  'CRCC International Engineering Consulting Co. Ltd — Ethiopian Branch';
+  'CRCC International Engineering Consulting Co. Ltd - Ethiopian Branch';
 
 /** Titles the payroll test seed creates when missing (seed-payroll-test-data.ts). */
 const PAYROLL_SEED_POSITION_TITLES = new Set([
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
 
     if (keptHeadOffice || keptOps) {
       console.warn(
-        'WARNING: Head Office / Operations still required after remap — unexpected.',
+        'WARNING: Head Office / Operations still required after remap - unexpected.',
       );
     } else {
       console.log(
@@ -486,7 +486,8 @@ async function main(): Promise<void> {
         employeeType: samuelSource.employeeType,
         educationLevel: samuelSource.educationLevel,
         fieldOfStudy: samuelSource.fieldOfStudy,
-        experienceStartDate: samuelSource.experienceStartDate,
+        yearsOfExperience: samuelSource.yearsOfExperience,
+        yearsOfExperienceAsOf: samuelSource.yearsOfExperienceAsOf,
         passwordHash: samuelSource.passwordHash,
         preferredLanguage: samuelSource.preferredLanguage,
         preferredTimezone: samuelSource.preferredTimezone,

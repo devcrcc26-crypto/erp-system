@@ -386,7 +386,7 @@ export default function FieldMovementForm({
     <Modal
       open={open}
       onCancel={handleClose}
-      title={`Field Movement / Early Departure — ${monthName} ${year}`}
+      title={`Field Movement / Early Departure - ${monthName} ${year}`}
       width={760}
       destroyOnHidden
       footer={
@@ -531,7 +531,7 @@ export default function FieldMovementForm({
                     }`}
                   >
                     {day.submittedLog.status === 'DRAFT'
-                      ? `Unsubmitted draft ${day.submittedLog.requestNumber} — not in Approvals yet`
+                      ? `Unsubmitted draft ${day.submittedLog.requestNumber} - not in Approvals yet`
                       : `Already submitted: ${day.submittedLog.requestNumber}${
                           day.submittedLog.pendingApproverName
                             ? ` · waiting on ${day.submittedLog.pendingApproverName}`
@@ -671,7 +671,7 @@ export default function FieldMovementForm({
                 >
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-[#1A1A1A]">
-                      {titleParts.join(' — ')}
+                      {titleParts.join(' - ')}
                     </span>
                     <Tag>{days.length} day(s)</Tag>
                   </div>

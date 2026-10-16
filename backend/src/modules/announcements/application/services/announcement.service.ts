@@ -522,7 +522,7 @@ export class AnnouncementService {
 
     sheet.addRow([`${row.number} · ${row.title}`]).font = { bold: true, size: 13 };
     sheet.addRow([
-      `Published ${row.publishedAt ? formatDateTime(row.publishedAt) : '—'}`,
+      `Published ${row.publishedAt ? formatDateTime(row.publishedAt) : '-'}`,
       `Recipients ${recipients.length}`,
       `Read ${read}`,
       row.requireAcknowledgement ? `Acknowledged ${acknowledged}` : '',
@@ -946,7 +946,7 @@ export class AnnouncementService {
         kind === 'updated'
           ? zh
             ? '此公告已更新，请重新阅读并确认。'
-            : 'This announcement was updated — please review and acknowledge again.'
+            : 'This announcement was updated - please review and acknowledge again.'
           : markdownToPlainText((zh && announcement.bodyZh) || announcement.body);
       const subject =
         kind === 'reminder'

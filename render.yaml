@@ -1,14 +1,14 @@
-# Render Blueprint — Construction ERP backend API
+# Render Blueprint - Construction ERP backend API
 # Docs: https://render.com/docs/blueprint-spec
 #
 # Stack: Render (this service) + Supabase/Neon (Postgres) + Vercel (frontend) + Resend (email)
 #
 # Render dashboard (if not using Blueprint):
-#   Root Directory     — backend
-#   Build Command      — npm ci --include=dev && npm run build
-#   Pre-Deploy Command — leave EMPTY if migrations already applied (run locally or via CI)
-#   Start Command      — npm run start:prod
-#   Health Check Path  — /api/health
+#   Root Directory     - backend
+#   Build Command      - npm ci --include=dev && npm run build
+#   Pre-Deploy Command - leave EMPTY if migrations already applied (run locally or via CI)
+#   Start Command      - npm run start:prod
+#   Health Check Path  - /api/health
 #
 # Supabase DATABASE_URL: use session pooler on port 5432 (not transaction pooler :6543).
 #   postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
@@ -64,7 +64,7 @@ services:
         value: "300"
 
       # Postgres connection string (?sslmode=require recommended).
-      # Supabase: session pooler port 5432 — NOT transaction pooler :6543 (migrations hang).
+      # Supabase: session pooler port 5432 - NOT transaction pooler :6543 (migrations hang).
       - key: DATABASE_URL
         sync: false
 
@@ -85,7 +85,7 @@ services:
       - key: REDIS_PORT
         value: "6379"
 
-      # Object storage — point Minio client at S3-compatible host in production
+      # Object storage - point Minio client at S3-compatible host in production
       - key: STORAGE_PROVIDER
         value: minio
       - key: MINIO_ENDPOINT

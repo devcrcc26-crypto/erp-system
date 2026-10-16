@@ -1,6 +1,6 @@
 'use client';
 
-import { Checkbox, DatePicker, Form, Input, Select } from 'antd';
+import { Checkbox, DatePicker, Form, Input, InputNumber, Select } from 'antd';
 import { useCanEditHr } from '@/hooks/use-auth-capabilities';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useMemo } from 'react';
@@ -29,7 +29,6 @@ import {
   disableFutureDates,
   employeeIdRules,
   employmentDateRules,
-  experienceStartDateRules,
   fieldOfStudyRules,
   nationalIdRules,
 } from '@/lib/validation/user-fields';
@@ -52,7 +51,10 @@ export interface EmployeeProfileFormValues {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   employmentDate?: Dayjs;
-  experienceStartDate?: Dayjs;
+  /** Years of experience as of today (shown value; grows automatically). */
+  yearsOfExperience?: number | null;
+  /** Display only: when the stored value was recorded. Never sent. */
+  yearsOfExperienceAsOf?: string;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
   workScheduleId?: string;
@@ -71,14 +73,20 @@ const EMPLOYEE_TYPE_OPTIONS: EmployeeType[] = [
   'TEMPORARY',
   'FREELANCER',
 ];
-const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
+export const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
   'PHD',
   'MSC',
   'BSC',
   'DIPLOMA',
+  'TECHNICIAN',
   'CERTIFICATE',
+  'SECONDARY',
+  'PRIMARY',
   'OTHER',
 ];
+
+/** Upper bound for years of experience (matches the API). */
+export const YEARS_OF_EXPERIENCE_MAX = 70;
 
 export type EmployeeProfileSection =
   | 'personal'
@@ -135,7 +143,10 @@ export function EmployeeProfileFormFields({
   const canEditHr = useCanEditHr();
   const leavePoliciesQuery = useLeavePolicies();
   const workSchedulesQuery = useWorkScheduleList();
-  const experienceStartDate = Form.useWatch('experienceStartDate') as Dayjs | undefined;
+  // Display-only value with no Form.Item, so watch it from the store.
+  const yearsOfExperienceAsOf = Form.useWatch('yearsOfExperienceAsOf', {
+    preserve: true,
+  }) as string | undefined;
   const dateOfBirth = Form.useWatch('dateOfBirth') as Dayjs | undefined;
   const selectedWorkScheduleId = Form.useWatch('workScheduleId') as string | undefined;
 
@@ -162,11 +173,6 @@ export function EmployeeProfileFormFields({
         })),
     [workSchedulesQuery.data, selectedWorkScheduleId, t],
   );
-
-  const yearsOfExperience =
-    experienceStartDate && dayjs.isDayjs(experienceStartDate)
-      ? dayjs().diff(experienceStartDate, 'year')
-      : null;
 
   const visibleSections = sections ?? [
     'personal',
@@ -358,22 +364,36 @@ export function EmployeeProfileFormFields({
               <Input placeholder={t('users.form.fieldOfStudyPlaceholder')} />
             </Form.Item>
             <Form.Item
-              label={t('users.form.experienceStartDate')}
-              name="experienceStartDate"
-              dependencies={['dateOfBirth']}
-              rules={experienceStartDateRules(t)}
+              label={t('users.form.yearsOfExperience')}
+              name="yearsOfExperience"
+              extra={
+                yearsOfExperienceAsOf
+                  ? t('users.form.yearsOfExperienceRecordedHint', {
+                      date: dayjs(yearsOfExperienceAsOf).format('YYYY-MM-DD'),
+                    })
+                  : t('users.form.yearsOfExperienceHint')
+              }
+              rules={[
+                {
+                  type: 'number',
+                  min: 0,
+                  max: YEARS_OF_EXPERIENCE_MAX,
+                  message: t('users.form.yearsOfExperienceInvalid', {
+                    max: YEARS_OF_EXPERIENCE_MAX,
+                  }),
+                },
+              ]}
             >
-              <DatePicker
+              <InputNumber
+                min={0}
+                max={YEARS_OF_EXPERIENCE_MAX}
+                step={0.5}
+                precision={1}
                 style={{ width: '100%' }}
-                disabledDate={disableExperienceDates(dateOfBirth)}
+                placeholder={t('users.form.yearsOfExperiencePlaceholder')}
               />
             </Form.Item>
           </div>
-          {yearsOfExperience !== null ? (
-            <span className="mb-4 block text-sm text-gray-500">
-              {t('users.form.yearsOfExperience')}: {yearsOfExperience}
-            </span>
-          ) : null}
         </SectionShell>
       ) : null}
 
@@ -545,7 +565,7 @@ export function buildEmployeeProfilePayload(
   | 'educationLevel'
   | 'fieldOfStudy'
   | 'employmentDate'
-  | 'experienceStartDate'
+  | 'yearsOfExperience'
   | 'emergencyContacts'
   | 'leavePolicyId'
   | 'workScheduleId'
@@ -573,7 +593,8 @@ export function buildEmployeeProfilePayload(
     educationLevel: values.educationLevel,
     fieldOfStudy: values.fieldOfStudy?.trim() || undefined,
     employmentDate: formatFormDate(values.employmentDate),
-    experienceStartDate: formatFormDate(values.experienceStartDate),
+    // null clears; the API keeps the as-of date when the shown value is unchanged.
+    yearsOfExperience: values.yearsOfExperience ?? null,
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
     workScheduleId: values.workScheduleId,
@@ -625,9 +646,8 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     educationLevel: user.educationLevel ?? undefined,
     fieldOfStudy: user.fieldOfStudy ?? undefined,
     employmentDate: user.employmentDate ? dayjs(user.employmentDate) : undefined,
-    experienceStartDate: user.experienceStartDate
-      ? dayjs(user.experienceStartDate)
-      : undefined,
+    yearsOfExperience: user.yearsOfExperience ?? undefined,
+    yearsOfExperienceAsOf: user.yearsOfExperienceAsOf ?? undefined,
     emergencyContacts: parseEmergencyContacts(user.emergencyContacts),
     leavePolicyId: user.leavePolicyId ?? undefined,
     workScheduleId: user.workScheduleId ?? undefined,

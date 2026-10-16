@@ -89,7 +89,7 @@ const REQUISITION_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Consumables requisition lifecycle — low-value stock requests with a
+ * Consumables requisition lifecycle - low-value stock requests with a
  * single HR Officer approval tier (or direct APPROVED for HR and above).
  */
 @Injectable()
@@ -217,7 +217,7 @@ export class ConsumablesRequisitionService
   }
 
   /**
-   * Requester's org department name — the requisition's department is never client-supplied.
+   * Requester's org department name - the requisition's department is never client-supplied.
    */
   private async resolveEmployeeDepartment(
     employeeId: string,

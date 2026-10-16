@@ -10,7 +10,7 @@ const FULL_ACCESS_ROLES = new Set([
   PROJECT_ADMINISTRATOR_ROLE,
 ]);
 
-/** HR modules — Project Administrator does not receive these via full-access bypass. */
+/** HR modules - Project Administrator does not receive these via full-access bypass. */
 export const PROJECT_ADMIN_EXCLUDED_MODULES = new Set([
   'hr',
   'leave',

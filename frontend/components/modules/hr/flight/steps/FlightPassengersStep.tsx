@@ -11,7 +11,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { FlightPassengerValues } from './flight-stepper.types';
 
 /**
- * Step 2 — passenger selection and travel-document fields.
+ * Step 2 - passenger selection and travel-document fields.
  */
 export default function FlightPassengersStep({
   values,
@@ -39,7 +39,7 @@ export default function FlightPassengersStep({
 
   const options = selectablePassengers.map((p) => ({
     value: p.id,
-    label: p.name + (p.position ? ` — ${p.position}` : ''),
+    label: p.name + (p.position ? ` - ${p.position}` : ''),
   }));
 
   function handleSelect(employeeIds: string[]): void {

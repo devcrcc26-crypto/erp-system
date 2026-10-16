@@ -65,7 +65,7 @@ export class ResendEmailService implements OnModuleInit {
         : 'none';
 
     this.logger.log(
-      `Email service ready — provider: ${provider}, ` +
+      `Email service ready - provider: ${provider}, ` +
         `from: ${this.mailFrom}, ` +
         `API key configured: ${Boolean(this.resendApiKey)}, ` +
         `Redis enabled: ${this.redisEnabled}`,
@@ -94,7 +94,7 @@ export class ResendEmailService implements OnModuleInit {
 
     if (isLikelyFakeEmail(payload.to)) {
       this.logger.log(
-        `Email skipped — fake/seeded address detected: ${payload.to}`,
+        `Email skipped - fake/seeded address detected: ${payload.to}`,
       );
       return false;
     }
@@ -112,7 +112,7 @@ export class ResendEmailService implements OnModuleInit {
     }
 
     this.logger.warn(
-      `Email not sent to ${payload.to} — configure RESEND_API_KEY or MAIL_HOST`,
+      `Email not sent to ${payload.to} - configure RESEND_API_KEY or MAIL_HOST`,
     );
     return false;
   }

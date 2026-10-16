@@ -299,7 +299,7 @@ describe('AnnouncementService', () => {
     expect(ctx.sendSpy.mock.calls[0]?.[1]).toMatchObject({
       eventType: 'announcement.updated',
       subject: '📢 Updated: Leave policy 2027',
-      body: 'This announcement was updated — please review and acknowledge again.',
+      body: 'This announcement was updated - please review and acknowledge again.',
     });
     const summary = await ctx.service.summary(reader, NOW);
     expect(summary.unreadCount).toBe(1);

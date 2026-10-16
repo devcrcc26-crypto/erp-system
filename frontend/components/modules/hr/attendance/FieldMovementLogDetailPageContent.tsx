@@ -66,7 +66,7 @@ function avatarColor(seed: string): string {
 
 function formatDateTime(value: string | null): string {
   if (!value) {
-    return '—';
+    return '-';
   }
   return new Date(value).toLocaleString('en-GB', {
     day: 'numeric',
@@ -160,7 +160,7 @@ export default function FieldMovementLogDetailPageContent({
         key: 'destination',
         width: 160,
         ellipsis: true,
-        render: (value: string | null) => value?.trim() || '—',
+        render: (value: string | null) => value?.trim() || '-',
       },
       {
         title: 'Departure / out',
@@ -171,7 +171,7 @@ export default function FieldMovementLogDetailPageContent({
           value ? (
             <span className="erp-fml-time">{value}</span>
           ) : (
-            <span className="erp-fml-dash">—</span>
+            <span className="erp-fml-dash">-</span>
           ),
       },
       {
@@ -184,7 +184,7 @@ export default function FieldMovementLogDetailPageContent({
           value ? (
             <span className="erp-fml-time">{value}</span>
           ) : (
-            <span className="erp-fml-dash">—</span>
+            <span className="erp-fml-dash">-</span>
           ),
       },
       {
@@ -193,7 +193,7 @@ export default function FieldMovementLogDetailPageContent({
         key: 'notes',
         width: 220,
         ellipsis: true,
-        render: (value: string | null) => value?.trim() || '—',
+        render: (value: string | null) => value?.trim() || '-',
       },
     ];
 
@@ -203,7 +203,7 @@ export default function FieldMovementLogDetailPageContent({
         key: 'applied',
         width: 260,
         ellipsis: true,
-        render: (_value, entry) => appliedCorrection(log, entry) ?? '—',
+        render: (_value, entry) => appliedCorrection(log, entry) ?? '-',
       });
     }
 
@@ -260,11 +260,11 @@ export default function FieldMovementLogDetailPageContent({
   }
 
   const entries = log?.entries ?? [];
-  const employeeName = log?.employee ? formatUserName(log.employee) : '—';
-  const employeeCode = log?.employee?.employeeId?.trim() || '—';
+  const employeeName = log?.employee ? formatUserName(log.employee) : '-';
+  const employeeCode = log?.employee?.employeeId?.trim() || '-';
   const periodLabel = log
     ? `${t(`hr.months.${log.month}`)} ${log.year}`
-    : '—';
+    : '-';
   const tiers = (log?.approvalRequest?.tiers ?? []) as ApprovalTier[];
   const daysExplained = entries.length || log?.entryCount || 0;
 

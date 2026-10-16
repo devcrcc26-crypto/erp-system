@@ -208,7 +208,7 @@ export class LeaveController {
   @RequireAnyPermission({ module: 'hr', action: 'view' })
   @ApiOperation({
     summary:
-      'List employee leave balances (HR only — annual, maternity, compassionate)',
+      'List employee leave balances (HR only - annual, maternity, compassionate)',
   })
   listBalances(
     @CurrentCompany() companyId: string,
@@ -335,7 +335,7 @@ export class LeaveController {
   )
   @ApiOperation({
     summary:
-      'Cancel a draft, submitted or in-review leave request (owner or HR), or an approved one (HR — reverses used days)',
+      'Cancel a draft, submitted or in-review leave request (owner or HR), or an approved one (HR - reverses used days)',
   })
   cancel(
     @CurrentUser() user: AuthenticatedUser,

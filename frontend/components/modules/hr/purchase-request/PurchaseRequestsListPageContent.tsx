@@ -109,7 +109,7 @@ function PurchaseRequestStat({
 }
 
 /**
- * Purchase requests list — Users chrome (stat bar, filter row, rounded table).
+ * Purchase requests list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function PurchaseRequestsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -314,7 +314,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
         responsive: ['xl'],
         render: (value: string | null | undefined) => (
           <span className="erp-users-cell-sub">
-            {value ? formatProjectDate(value) : '—'}
+            {value ? formatProjectDate(value) : '-'}
           </span>
         ),
       },
@@ -341,7 +341,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           value ? (
             <span className="erp-users-role-tag">{value}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
     ],

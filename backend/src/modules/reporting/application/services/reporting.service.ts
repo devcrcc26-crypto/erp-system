@@ -42,7 +42,7 @@ export interface PortfolioSummary {
     onHold: number;
     cancelled: number;
     completed: number;
-    /** @deprecated Use inProgress — kept for older clients */
+    /** @deprecated Use inProgress - kept for older clients */
     active: number;
     averageProgressPct: number | null;
     totalBudget: string | null;

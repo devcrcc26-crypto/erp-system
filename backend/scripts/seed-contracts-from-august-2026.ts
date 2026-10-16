@@ -8,7 +8,7 @@
  *   npx ts-node --transpile-only scripts/seed-contracts-from-august-2026.ts --apply
  *
  * Default is --dry-run. Salary amounts are written only to
- * data/private/contract-seed-report.md — never to the console.
+ * data/private/contract-seed-report.md - never to the console.
  */
 import { randomUUID } from 'crypto';
 import { mkdirSync, writeFileSync } from 'fs';
@@ -45,7 +45,7 @@ const REPORT_PATH = join(
   'contract-seed-report.md',
 );
 const SEED_NOTE =
-  'Seeded from August 2026 salary sheet — dates derived from employment anniversary.';
+  'Seeded from August 2026 salary sheet - dates derived from employment anniversary.';
 
 /** Confirmed sheet-name → employeeId aliases (dry-run resolutions). */
 const NAME_ALIASES: Readonly<Record<string, string>> = {
@@ -373,7 +373,7 @@ interface DirectoryEntry {
 
 /**
  * Read employment dates from Employee_Directory_2026.xls / August 2026.
- * Columns: A S/N, B Names, C Position, D Date of Employment — ignore Salary/Phone.
+ * Columns: A S/N, B Names, C Position, D Date of Employment - ignore Salary/Phone.
  */
 function readDirectoryEntries(): DirectoryEntry[] {
   const wb = XLSX.readFile(DIRECTORY_PATH);
@@ -447,7 +447,7 @@ function fullMonthlyAmount(sheetValue: number, workedDays: number): number {
 /**
  * Build lookup keys for ERP users. Many CCECC employees are stored as
  * firstName + middleName with an empty lastName (Ethiopian naming).
- * Never emit single-token keys — they collide across employees.
+ * Never emit single-token keys - they collide across employees.
  */
 function nameKeys(first: string, middle: string | null, last: string): string[] {
   const parts = [first, middle, last]
@@ -631,7 +631,7 @@ async function nextContractNumber(
 
 function buildReportMarkdown(report: ReportData): string {
   const lines: string[] = [];
-  lines.push('# Contract seed report — August 2026 salary sheet');
+  lines.push('# Contract seed report - August 2026 salary sheet');
   lines.push('');
   lines.push(`Mode: **${report.mode}**`);
   lines.push(`Employment date field: **${report.employmentDateField}**`);
@@ -1162,7 +1162,7 @@ async function main(): Promise<void> {
             ? employment
             : lastYearAnniv
           : mostRecentAnniversaryOnOrBefore(employment, oldEnd);
-        // No AMENDMENT enum — mid-year changes use RENEWAL.
+        // No AMENDMENT enum - mid-year changes use RENEWAL.
         const newType = EmployeeContractType.RENEWAL;
 
         contracts.push(
@@ -1348,7 +1348,7 @@ async function main(): Promise<void> {
       });
       console.log('[seed] Apply transaction committed.');
     } else {
-      console.log('[seed] Dry run only — no database writes.');
+      console.log('[seed] Dry run only - no database writes.');
     }
 
     mkdirSync(join(__dirname, '..', 'data', 'private'), { recursive: true });

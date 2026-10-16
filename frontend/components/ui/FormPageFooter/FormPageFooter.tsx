@@ -60,7 +60,7 @@ export interface FormPageFooterProps {
 }
 
 /**
- * Fixed footer bar for full-page forms — matches StepperForm / Add Employee.
+ * Fixed footer bar for full-page forms - matches StepperForm / Add Employee.
  */
 export default function FormPageFooter({
   submitLabel,

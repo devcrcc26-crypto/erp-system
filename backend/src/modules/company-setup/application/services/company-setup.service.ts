@@ -24,6 +24,7 @@ import {
   CreateFinancialYearDto,
   CreateNumberSeriesDto,
   CreatePositionDto,
+  CreateSeniorityLevelDto,
   ListEngineeringDisciplinesQueryDto,
   OrgEntityListQueryDto,
   UpdateBranchDto,
@@ -36,6 +37,7 @@ import {
   UpdateFinancialYearDto,
   UpdateNumberSeriesDto,
   UpdatePositionDto,
+  UpdateSeniorityLevelDto,
 } from '../dtos/company.dtos';
 
 type AuditContext = { companyId: string; userId: string };
@@ -687,6 +689,117 @@ export class CompanySetupService {
     });
   }
 
+  /** Whole seniority catalogue (it is short), in display order. */
+  async listSeniorityLevels(
+    ctx: AuditContext,
+    query: OrgEntityListQueryDto,
+  ): Promise<unknown[]> {
+    return this.prisma.seniorityLevel.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        ...(query.isActive === 'true' || query.isActive === 'false'
+          ? { isActive: query.isActive === 'true' }
+          : {}),
+      }),
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        _count: { select: { users: { where: { deletedAt: null } } } },
+      },
+    });
+  }
+
+  async createSeniorityLevel(
+    ctx: AuditContext,
+    dto: CreateSeniorityLevelDto,
+  ): Promise<unknown> {
+    const name = dto.name.trim();
+    await this.assertSeniorityNameFree(ctx.companyId, name);
+    return this.prisma.seniorityLevel.create({
+      data: {
+        companyId: ctx.companyId,
+        name,
+        nameZh: dto.nameZh?.trim() || null,
+        sortOrder: dto.sortOrder ?? 0,
+        isActive: dto.isActive ?? true,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateSeniorityLevel(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateSeniorityLevelDto,
+  ): Promise<unknown> {
+    await this.findSeniorityLevelOrThrow(ctx.companyId, id);
+    const data: Prisma.SeniorityLevelUncheckedUpdateInput = {
+      updatedBy: ctx.userId,
+    };
+    if (dto.name !== undefined) {
+      const name = dto.name.trim();
+      await this.assertSeniorityNameFree(ctx.companyId, name, id);
+      data.name = name;
+    }
+    if (dto.nameZh !== undefined) {
+      data.nameZh = dto.nameZh.trim() || null;
+    }
+    if (dto.sortOrder !== undefined) {
+      data.sortOrder = dto.sortOrder;
+    }
+    if (dto.isActive !== undefined) {
+      data.isActive = dto.isActive;
+    }
+    return this.prisma.seniorityLevel.update({ where: { id }, data });
+  }
+
+  /** Soft delete; employees on this level are left without one. */
+  async deleteSeniorityLevel(ctx: AuditContext, id: string): Promise<void> {
+    await this.findSeniorityLevelOrThrow(ctx.companyId, id);
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: { companyId: ctx.companyId, seniorityLevelId: id, deletedAt: null },
+        data: { seniorityLevelId: null, updatedBy: ctx.userId },
+      });
+      await tx.seniorityLevel.update({
+        where: { id },
+        data: { deletedAt: now, deletedBy: ctx.userId, updatedBy: ctx.userId },
+      });
+    });
+  }
+
+  private async findSeniorityLevelOrThrow(
+    companyId: string,
+    id: string,
+  ): Promise<void> {
+    const level = await this.prisma.seniorityLevel.findFirst({
+      where: activeOnly({ id, companyId }),
+      select: { id: true },
+    });
+    if (!level) {
+      throw new NotFoundException('Seniority level not found');
+    }
+  }
+
+  private async assertSeniorityNameFree(
+    companyId: string,
+    name: string,
+    exceptId?: string,
+  ): Promise<void> {
+    const clash = await this.prisma.seniorityLevel.findFirst({
+      where: activeOnly({
+        companyId,
+        name: { equals: name, mode: Prisma.QueryMode.insensitive },
+        ...(exceptId ? { id: { not: exceptId } } : {}),
+      }),
+      select: { id: true },
+    });
+    if (clash) {
+      throw new ConflictException(`A seniority level named "${name}" already exists`);
+    }
+  }
+
   async listFinancialYears(
     ctx: AuditContext,
     query: PaginationQueryDto,
@@ -963,7 +1076,7 @@ export class CompanySetupService {
     }
   }
 
-  /** First active division for the company — used when org fields are omitted. */
+  /** First active division for the company - used when org fields are omitted. */
   private async resolveDefaultDivisionId(companyId: string): Promise<string> {
     const division = await this.prisma.division.findFirst({
       where: activeOnly({ companyId }),
@@ -972,13 +1085,13 @@ export class CompanySetupService {
     });
     if (!division) {
       throw new BadRequestException(
-        'No division configured — create a division or pass divisionId.',
+        'No division configured - create a division or pass divisionId.',
       );
     }
     return division.id;
   }
 
-  /** First active branch for the company — used when org fields are omitted. */
+  /** First active branch for the company - used when org fields are omitted. */
   private async resolveDefaultBranchId(companyId: string): Promise<string> {
     const branch = await this.prisma.branch.findFirst({
       where: activeOnly({ companyId }),
@@ -987,7 +1100,7 @@ export class CompanySetupService {
     });
     if (!branch) {
       throw new BadRequestException(
-        'No branch configured — create a branch or pass branchId.',
+        'No branch configured - create a branch or pass branchId.',
       );
     }
     return branch.id;

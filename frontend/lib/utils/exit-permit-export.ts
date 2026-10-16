@@ -108,7 +108,7 @@ export function exportExitPermitPdf(input: {
 
   exportHrDocumentPdf({
     documentTitle: 'Equipment & Materials Exit Permit',
-    subtitle: `${exportEnumLabel(permit.direction)} — ${exportDate(permit.date)}`,
+    subtitle: `${exportEnumLabel(permit.direction)} - ${exportDate(permit.date)}`,
     requestNumber: permit.requestNumber,
     companyName,
     preparedBy,

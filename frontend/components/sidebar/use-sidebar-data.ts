@@ -165,7 +165,7 @@ function writeStored(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    /* storage unavailable — the in-memory copy still drives the UI */
+    /* storage unavailable - the in-memory copy still drives the UI */
   }
   window.dispatchEvent(new Event(STORAGE_EVENT));
 }

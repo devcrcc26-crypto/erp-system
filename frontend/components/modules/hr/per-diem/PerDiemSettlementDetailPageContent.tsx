@@ -34,7 +34,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
- * Per diem settlement detail — same sheet layout as the create form, plus approval and cash returned.
+ * Per diem settlement detail - same sheet layout as the create form, plus approval and cash returned.
  */
 export default function PerDiemSettlementDetailPageContent({
   settlementId,
@@ -221,13 +221,13 @@ export default function PerDiemSettlementDetailPageContent({
               {settlement.vehicleUsed ? t('common.yes') : t('common.no')}
             </MetaItem>
             <MetaItem label={t('pages.hr.perDiemSettlement.kmOut')}>
-              {settlement.kmDeparture ?? '—'}
+              {settlement.kmDeparture ?? '-'}
             </MetaItem>
             <MetaItem label={t('pages.hr.perDiemSettlement.kmIn')}>
-              {settlement.kmReturn ?? '—'}
+              {settlement.kmReturn ?? '-'}
             </MetaItem>
             <MetaItem label={t('pages.hr.perDiemSettlement.kmDifference')}>
-              {kmDifference ?? '—'}
+              {kmDifference ?? '-'}
             </MetaItem>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function PerDiemSettlementDetailPageContent({
                       {advance.pvNumber ?? advance.requestNumber}
                     </span>
                     <span className="ms-2 text-sm">
-                      {advance.pvDate ? formatProjectDate(advance.pvDate) : '—'}
+                      {advance.pvDate ? formatProjectDate(advance.pvDate) : '-'}
                       {' · '}
                       {formatEtbAmount(advance.totalAmount)}
                     </span>
@@ -289,7 +289,7 @@ export default function PerDiemSettlementDetailPageContent({
               <MetaItem label={t('pages.hr.perDiemSettlement.cashReturnedDate')}>
                 {settlement.cashReturnedDate
                   ? formatProjectDate(settlement.cashReturnedDate)
-                  : '—'}
+                  : '-'}
               </MetaItem>
             </div>
           </div>

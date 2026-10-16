@@ -55,7 +55,7 @@ const DETAILS_FIELDS = [
 ] as const;
 
 /**
- * Inspection & repair create form — StepperForm chrome like Add Employee.
+ * Inspection & repair create form - StepperForm chrome like Add Employee.
  */
 export default function InspectionRepairForm({
   onSuccess,
@@ -89,7 +89,7 @@ export default function InspectionRepairForm({
     () =>
       (assetsQuery.data ?? []).map((asset) => ({
         value: asset.id,
-        label: `${asset.serialNumber} — ${asset.brand} ${asset.model}`,
+        label: `${asset.serialNumber} - ${asset.brand} ${asset.model}`,
       })),
     [assetsQuery.data],
   );
@@ -97,10 +97,10 @@ export default function InspectionRepairForm({
   const selectedAssetLabel = useMemo(() => {
     const assetId = detailsSnapshot?.assetId ?? formValues?.assetId;
     if (!assetId) {
-      return '—';
+      return '-';
     }
     return (
-      assetOptions.find((option) => option.value === assetId)?.label ?? '—'
+      assetOptions.find((option) => option.value === assetId)?.label ?? '-'
     );
   }, [assetOptions, detailsSnapshot?.assetId, formValues?.assetId]);
 
@@ -429,36 +429,36 @@ export default function InspectionRepairForm({
                 <>
                   <ReviewItem
                     label={t('hr.form.deviceName')}
-                    value={reviewValues?.deviceName?.trim() || '—'}
+                    value={reviewValues?.deviceName?.trim() || '-'}
                   />
                   <ReviewItem
                     label={t('hr.form.make')}
-                    value={reviewValues?.make?.trim() || '—'}
+                    value={reviewValues?.make?.trim() || '-'}
                   />
                   <ReviewItem
                     label={t('hr.form.model')}
-                    value={reviewValues?.model?.trim() || '—'}
+                    value={reviewValues?.model?.trim() || '-'}
                   />
                   <ReviewItem
                     label={t('hr.form.year')}
                     value={
                       reviewValues?.year != null
                         ? String(reviewValues.year)
-                        : '—'
+                        : '-'
                     }
                   />
                 </>
               )}
               <ReviewItem
                 label={t('hr.form.location')}
-                value={reviewValues?.location?.trim() || '—'}
+                value={reviewValues?.location?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.form.inspectionType')}
                 value={
                   reviewValues?.inspectionType
                     ? t(`hr.inspectionType.${reviewValues.inspectionType}`)
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -466,12 +466,12 @@ export default function InspectionRepairForm({
                 value={
                   reviewValues?.urgency
                     ? t(`hr.urgency.${reviewValues.urgency}`)
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.form.description')}
-                value={reviewValues?.description?.trim() || '—'}
+                value={reviewValues?.description?.trim() || '-'}
               />
               {reviewValues?.solution?.trim() ? (
                 <ReviewItem

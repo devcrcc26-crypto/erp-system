@@ -153,7 +153,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Creates a design package — only the discipline leader may create packages.
+   * Creates a design package - only the discipline leader may create packages.
    */
   async create(
     ctx: PmContext,

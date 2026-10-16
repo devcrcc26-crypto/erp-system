@@ -23,9 +23,9 @@ export interface SidebarPanelBindings {
 /**
  * The contents of a folder (HR, Project Management, Organization, …).
  *
- * - `inline`: expanded sidebar — hangs under its folder row; the folder row
+ * - `inline`: expanded sidebar - hangs under its folder row; the folder row
  *   itself is the open/close control.
- * - `docked`: compact sidebar — a full-height column beside the rail with a
+ * - `docked`: compact sidebar - a full-height column beside the rail with a
  *   heading and an explicit close button. Esc also closes it.
  *
  * Both variants share groups, items and the selected state, so they read as
@@ -50,7 +50,7 @@ export default function SidebarModulePanel({
   /** Project workspace items are still resolving. */
   loading?: boolean;
   bindings: SidebarPanelBindings;
-  /** Docked only — closes the panel and returns focus to its folder. */
+  /** Docked only - closes the panel and returns focus to its folder. */
   onClose?: () => void;
   /** Replaces the group list (used for search and favorites panels). */
   children?: React.ReactNode;

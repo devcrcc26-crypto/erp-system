@@ -10,7 +10,7 @@ export interface RoleLens {
   canViewEngineering: boolean;
   canCreateEngineering: boolean;
   canEditEngineering: boolean;
-  /** Register EDVs and upload file versions only — no package or metadata edits. */
+  /** Register EDVs and upload file versions only - no package or metadata edits. */
   canUploadEngineeringDocuments: boolean;
   /** Matches schedule create permission used by submit-for-review API. */
   canSubmitDesignPackage: boolean;
@@ -70,7 +70,7 @@ function buildRoleLens(
   const canViewReviewInbox = epc.canViewReviewInbox;
   const canViewMyComments = epc.canViewMyComments;
 
-  /** FK discipline lead / designer — construction submittals without RBAC module grants. */
+  /** FK discipline lead / designer - construction submittals without RBAC module grants. */
   const canAccessConstructionSubmittals =
     epc.navDisciplineLeader || epc.navDesigner;
 

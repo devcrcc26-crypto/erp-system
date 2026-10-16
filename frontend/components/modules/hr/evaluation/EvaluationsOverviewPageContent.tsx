@@ -146,7 +146,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
                     {row.employee.employeeId}
                   </span>
                 ) : (
-                  <p className="erp-users-email m-0 mt-0.5">—</p>
+                  <p className="erp-users-email m-0 mt-0.5">-</p>
                 )}
               </div>
             </div>
@@ -181,7 +181,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
         render: (_value, row) => {
           const score = row.adjustedScore ?? row.finalScore;
           if (score == null) {
-            return <span className="erp-users-cell-sub">—</span>;
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return (
             <div className="flex items-center gap-2">

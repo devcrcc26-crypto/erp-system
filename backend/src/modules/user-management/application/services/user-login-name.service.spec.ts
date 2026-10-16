@@ -50,7 +50,8 @@ describe('UserManagementService login name', () => {
       middleName: 'Bekele',
       lastName: 'Kebede',
       loginName: 'Abebe Bekele Kebede',
-      experienceStartDate: null,
+      yearsOfExperience: null,
+      yearsOfExperienceAsOf: null,
       bankAccountNumber: null,
       userRoles: [],
     };
@@ -124,7 +125,8 @@ describe('UserManagementService login name', () => {
         loginName: 'New Login',
         firstName: 'Abebe',
         lastName: 'Kebede',
-        experienceStartDate: null,
+        yearsOfExperience: null,
+        yearsOfExperienceAsOf: null,
       });
 
       await service.updateLoginName(
@@ -176,7 +178,8 @@ describe('UserManagementService login name', () => {
         firstName: 'Abebe',
         middleName: 'Bekele',
         lastName: 'Kebede',
-        experienceStartDate: null,
+        yearsOfExperience: null,
+        yearsOfExperienceAsOf: null,
       });
 
       const result = (await service.setLoginNameToFullName(

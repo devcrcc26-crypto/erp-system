@@ -17,7 +17,7 @@ export function validateSiteAssignmentDateOrder(
   }
 }
 
-/** @deprecated Use BackdatingPolicyService — kept as alias for date order only. */
+/** @deprecated Use BackdatingPolicyService - kept as alias for date order only. */
 export function validateSiteAssignmentDates(
   startDate: Date,
   endDate: Date,

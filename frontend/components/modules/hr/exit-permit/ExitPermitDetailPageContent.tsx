@@ -91,7 +91,7 @@ function DetailSection({
 }
 
 /**
- * Exit permit detail — Users / employee profile chrome.
+ * Exit permit detail - Users / employee profile chrome.
  */
 export default function ExitPermitDetailPageContent({
   permitId,
@@ -282,7 +282,7 @@ export default function ExitPermitDetailPageContent({
         width: 72,
         responsive: ['sm'],
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       ...(canEdit

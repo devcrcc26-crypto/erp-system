@@ -65,7 +65,7 @@ const LIST_PATH = '/hr/public-holidays';
 type StatusMode = 'all' | 'active' | 'inactive' | 'upcoming';
 
 /**
- * HR public holiday calendar — Employees / leave v2 chrome.
+ * HR public holiday calendar - Employees / leave v2 chrome.
  */
 export default function PublicHolidaysPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

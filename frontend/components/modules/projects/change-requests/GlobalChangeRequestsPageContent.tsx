@@ -47,7 +47,7 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Global change requests list — cross-project, current-user relevant only.
+ * Global change requests list - cross-project, current-user relevant only.
  */
 export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const router = useRouter();
@@ -121,7 +121,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -266,7 +266,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Change request APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

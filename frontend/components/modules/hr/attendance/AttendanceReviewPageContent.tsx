@@ -145,8 +145,8 @@ function statusBanner(
         message: t('pages.hr.attendance.review.banner.approved', {
           date: meta.approvedAt
             ? new Date(meta.approvedAt).toLocaleString()
-            : '—',
-          name: meta.approverName ?? '—',
+            : '-',
+          name: meta.approverName ?? '-',
         }),
       };
     case 'UNLOCKED':
@@ -156,8 +156,8 @@ function statusBanner(
         message: t('pages.hr.attendance.review.banner.unlocked', {
           date: meta.unlockedAt
             ? new Date(meta.unlockedAt).toLocaleString()
-            : '—',
-          reason: meta.unlockReason ?? '—',
+            : '-',
+          reason: meta.unlockReason ?? '-',
         }),
       };
     default:
@@ -251,8 +251,8 @@ export default function AttendanceReviewPageContent({
 
   const importedAt = approval?.importBatch?.importedAt
     ? new Date(approval.importBatch.importedAt).toLocaleString()
-    : '—';
-  const fileName = approval?.importBatch?.fileName ?? '—';
+    : '-';
+  const fileName = approval?.importBatch?.fileName ?? '-';
   const totalRows =
     approval?.importBatch?.matchedRows ??
     approval?.importBatch?.totalRows ??
@@ -267,7 +267,7 @@ export default function AttendanceReviewPageContent({
         fixed: 'left',
         render: (_: unknown, row: AttendanceRecord) => {
           const name = formatUserName(row.employee);
-          const erpId = row.employee.employeeId?.trim() || '—';
+          const erpId = row.employee.employeeId?.trim() || '-';
           return (
             <div className="flex items-center gap-2.5">
               <Avatar
@@ -318,7 +318,7 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
           if (absent === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <span className="erp-att-num erp-att-num--danger">
@@ -335,7 +335,7 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const unpaid = toNumber(row.unpaidLeaveDays ?? 0);
           if (unpaid === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <span className="erp-att-num erp-att-num--danger">
@@ -352,7 +352,7 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const leaveDays = row.leaveDaysThisMonth ?? 0;
           if (leaveDays === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <span className="erp-att-num">{formatNumber(leaveDays)}</span>
@@ -374,7 +374,7 @@ export default function AttendanceReviewPageContent({
           const siteDays = row.siteDaysThisMonth ?? [];
           const wfhDays = row.workFromHomeDaysThisMonth ?? 0;
           if (siteDays.length === 0 && wfhDays === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <div className="flex flex-col gap-0.5 text-[12px]">
@@ -405,7 +405,7 @@ export default function AttendanceReviewPageContent({
                 value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
               }
             >
-              {value > 0 ? value : '—'}
+              {value > 0 ? value : '-'}
             </span>
           );
         },
@@ -420,7 +420,7 @@ export default function AttendanceReviewPageContent({
           const would = toNumber(row.earlyDepartureWouldDeductDays);
           const deducted = toNumber(row.earlyDepartureDeductedDays);
           if (count === 0 && would === 0 && deducted === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <div className="flex flex-col items-end gap-0.5 text-[12px]">
@@ -453,7 +453,7 @@ export default function AttendanceReviewPageContent({
           return value > 0 ? (
             <span className="erp-att-num">{value}</span>
           ) : (
-            <span className="erp-att-dash">—</span>
+            <span className="erp-att-dash">-</span>
           );
         },
       },
@@ -467,7 +467,7 @@ export default function AttendanceReviewPageContent({
           const threshold =
             row.forgotToClockFlagThreshold ?? 3;
           if (value === 0) {
-            return <span className="erp-att-dash">—</span>;
+            return <span className="erp-att-dash">-</span>;
           }
           return (
             <Tag
@@ -885,7 +885,7 @@ export default function AttendanceReviewPageContent({
                     title: t('pages.hr.attendance.importModal.colEmployeeId'),
                     key: 'employeeId',
                     render: (_: unknown, row: AttendanceImportMissing) =>
-                      row.user.employeeId ?? '—',
+                      row.user.employeeId ?? '-',
                   },
                   {
                     title: t(
@@ -900,7 +900,7 @@ export default function AttendanceReviewPageContent({
                           <Tag className="m-0 rounded-full">{note}</Tag>
                         );
                       }
-                      return '—';
+                      return '-';
                     },
                   },
                   {

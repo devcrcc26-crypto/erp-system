@@ -85,7 +85,7 @@ function better(a: DayCover | null, b: DayCover | null): DayCover | null {
 
 /**
  * Covers for each day from the modules in `check`. Schedule day-offs (and
- * legacy Sundays) are skipped — no module credits a day off. One cover per
+ * legacy Sundays) are skipped - no module credits a day off. One cover per
  * day: the first approved one, else the first requested one, in order of
  * `check`.
  */
@@ -177,7 +177,7 @@ const REQUESTED_PHRASE: Record<CoverModule, string> = {
 
 /**
  * "This day (2026-08-03) has approved leave (LV-0012)." /
- * "Leave has been requested for this day (2026-08-03) — LV-0012."
+ * "Leave has been requested for this day (2026-08-03) - LV-0012."
  */
 export function dayCoverMessage(cover: DayCover): string {
   const ref = cover.reference ? ` (${cover.reference})` : '';

@@ -1,4 +1,4 @@
-/** Project design stage — must match Prisma `ProjectDesignStage` enum keys. */
+/** Project design stage - must match Prisma `ProjectDesignStage` enum keys. */
 export enum ProjectDesignStage {
   TENDER = 'TENDER',
   CONCEPT_DESIGN_CD = 'CONCEPT_DESIGN_CD',

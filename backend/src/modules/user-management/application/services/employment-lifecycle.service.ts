@@ -368,7 +368,7 @@ export class EmploymentLifecycleService {
               recipientId,
               eventType: CONTRACT_ENDED_EVENT,
               channel: 'IN_APP',
-              subject: `Contract ended — renew, convert or separate: ${name}`,
+              subject: `Contract ended - renew, convert or separate: ${name}`,
               body: `${name}'s contract ${contract.contractNumber} ended on ${formatDateOnlyUtc(contract.endDate!)} and there is no new contract. They remain employed and are paid on the last contract until you renew, convert (e.g. to freelancer) or separate them.`,
               link: `/hr/employee-contract/${contract.id}`,
             },

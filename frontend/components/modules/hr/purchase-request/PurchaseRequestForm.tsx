@@ -87,7 +87,7 @@ function nextKey(): string {
 }
 
 /**
- * Purchase request create form — same StepperForm chrome as Add Employee.
+ * Purchase request create form - same StepperForm chrome as Add Employee.
  */
 export default function PurchaseRequestForm({
   onSuccess,
@@ -329,7 +329,7 @@ export default function PurchaseRequestForm({
             </span>
           </Tooltip>
         ) : (
-          '—'
+          '-'
         ),
     },
     {
@@ -664,7 +664,7 @@ export default function PurchaseRequestForm({
               <div className="erp-form-grid-2">
                 <ReviewItem
                   label={t('hr.form.title')}
-                  value={detailsSnapshot.title?.trim() || '—'}
+                  value={detailsSnapshot.title?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.section.items')}
@@ -677,12 +677,12 @@ export default function PurchaseRequestForm({
                       ? formatDisplayDate(
                           detailsSnapshot.requiredByDate.format('YYYY-MM-DD'),
                         )
-                      : '—'
+                      : '-'
                   }
                 />
                 <ReviewItem
                   label={t('hr.form.vendor')}
-                  value={detailsSnapshot.vendorName?.trim() || '—'}
+                  value={detailsSnapshot.vendorName?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.form.estimatedTotal')}
@@ -690,7 +690,7 @@ export default function PurchaseRequestForm({
                 />
                 <ReviewItem
                   label={t('hr.form.justification')}
-                  value={detailsSnapshot.justification?.trim() || '—'}
+                  value={detailsSnapshot.justification?.trim() || '-'}
                 />
               </div>
             </FormLayout>

@@ -37,8 +37,8 @@ export function buildSealImportColumns(
       maxLength: 255,
       example:
         kind === 'official'
-          ? 'Bank guarantee letter — Adama Phase 2'
-          : 'Subcontract agreement — Adama Phase 2',
+          ? 'Bank guarantee letter - Adama Phase 2'
+          : 'Subcontract agreement - Adama Phase 2',
       notes: `Name of the document that needs the ${sealLabel}.`,
       aliases: ['fileName', 'documentName'],
       width: 34,

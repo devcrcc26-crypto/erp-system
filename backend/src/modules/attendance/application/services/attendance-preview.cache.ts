@@ -42,7 +42,7 @@ export class AttendancePreviewCache implements OnModuleDestroy {
     } else {
       this.redis = null;
       this.logger.log(
-        'REDIS_ENABLED=false — attendance preview cache uses in-memory store',
+        'REDIS_ENABLED=false - attendance preview cache uses in-memory store',
       );
     }
   }

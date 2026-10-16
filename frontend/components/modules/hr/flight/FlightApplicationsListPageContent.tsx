@@ -121,7 +121,7 @@ function FlightStat({
 }
 
 /**
- * Flight applications list — Users chrome (stat bar, filter row, rounded table).
+ * Flight applications list - Users chrome (stat bar, filter row, rounded table).
  * Search and filters run on the frontend against a full list fetch.
  */
 export default function FlightApplicationsListPageContent(): React.ReactNode {
@@ -343,8 +343,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         responsive: ['xl'],
         render: (_: unknown, row: FlightApplicationListItem) => {
           const label = getCurrentStepLabel(row, t);
-          if (!label || label === '—') {
-            return <span className="erp-users-cell-sub">—</span>;
+          if (!label || label === '-') {
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return <span className="erp-users-role-tag">{label}</span>;
         },

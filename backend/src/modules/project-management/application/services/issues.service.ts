@@ -1048,7 +1048,7 @@ export class IssuesService {
 
   /**
    * Full access bypass, RBAC module perms, raiser/assignee (existing issues
-   * only — creation can't bootstrap off its own raiser), linked-subtask FK
+   * only - creation can't bootstrap off its own raiser), linked-subtask FK
    * roles, or discipline lead/designer on the linked discipline.
    */
   private async assertCanAccessIssue(
@@ -1254,7 +1254,7 @@ export class IssuesService {
         {
           recipientId: issue.assignedTo,
           eventType: ISSUE_ASSIGNED_EVENT,
-          subject: `Issue assigned — ${issue.issueNumber}`,
+          subject: `Issue assigned - ${issue.issueNumber}`,
           body: `${raisedByName} assigned issue ${issue.issueNumber} to you. Please start working on it.`,
           variables: {
             projectId: issue.projectId,
@@ -1290,7 +1290,7 @@ export class IssuesService {
         {
           recipientId: assignedTo,
           eventType: ISSUE_CLOSED_EVENT,
-          subject: `Issue closed — ${issue.issueNumber}`,
+          subject: `Issue closed - ${issue.issueNumber}`,
           body: `${closedByName} has closed issue ${issue.issueNumber}.`,
           variables: {
             projectId: issue.projectId,
@@ -1416,7 +1416,7 @@ export class IssuesService {
           {
             recipientId,
             eventType: ISSUE_RESPONSE_EVENT,
-            subject: `New response — ${issue.issueNumber}`,
+            subject: `New response - ${issue.issueNumber}`,
             body: `${responderName} added a response to issue ${issue.issueNumber}.`,
             variables,
           },

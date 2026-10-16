@@ -69,7 +69,7 @@ export default function DisciplineDetailDrawer({
         disciplineLeadUserId: body.disciplineLeadUserId,
       });
       messageApi.error(
-        `${badField} selection looks out of date (not a valid id). Refreshing the list — please reselect and try again.`,
+        `${badField} selection looks out of date (not a valid id). Refreshing the list - please reselect and try again.`,
       );
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
       return;

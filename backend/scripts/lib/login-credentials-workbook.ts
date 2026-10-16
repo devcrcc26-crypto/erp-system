@@ -10,7 +10,7 @@ export type LoginCredentialSheetRow = {
 };
 
 const TITLE =
-  'PWF ERP — Login credentials (temporary, change at first login)';
+  'PWF ERP - Login credentials (temporary, change at first login)';
 const SLIPS_PER_PAGE = 8;
 const PAPER_A4 = 9;
 
@@ -172,10 +172,10 @@ function buildInstructionsSheet(workbook: ExcelJS.Workbook): void {
   const sheet = workbook.addWorksheet('Instructions');
   sheet.getColumn(1).width = 90;
   const steps = [
-    'HR instructions — login credentials hand-out',
+    'HR instructions - login credentials hand-out',
     '',
     '1. Print the Credentials sheet (landscape) and collect a signature + date when each person receives their slip.',
-    '2. Hand out slips in person only — do not email, chat, or post passwords.',
+    '2. Hand out slips in person only - do not email, chat, or post passwords.',
     '3. Use the Slips sheet to cut individual blocks for each person.',
     '4. After everyone has signed and received their password, delete this Excel file from disk and from any shared drives.',
     '5. If someone loses their temporary password, use Reset password in the ERP (do not re-share this file).',

@@ -348,7 +348,7 @@ function resolveAttendanceDayFlag(params: {
   scanOnly?: boolean;
   /** Hire-to-first-scan grace: not absent and no field-movement flags. */
   enrolmentGrace?: boolean;
-  /** From dayDeduction — leave stays; flag only when scans exist. */
+  /** From dayDeduction - leave stays; flag only when scans exist. */
   onLeaveButScanned?: boolean;
   /** Coverage statuses that must not raise field-movement explain flags. */
   dayStatus?: DayDeductionStatus | null;
@@ -380,7 +380,7 @@ function resolveAttendanceDayFlag(params: {
   ) {
     return AttendanceDayFlag.NONE;
   }
-  // Exempt / manual-present days are PRESENT with no punches — not FM flags.
+  // Exempt / manual-present days are PRESENT with no punches - not FM flags.
   if (
     params.dayStatus === 'PRESENT' &&
     !params.clockIn &&
@@ -493,7 +493,7 @@ function reviveMatchResultDates(rows: AttendanceMatchResult[]): void {
 }
 
 /**
- * Attendance import and reporting — daily logs from Deli clock times,
+ * Attendance import and reporting - daily logs from Deli clock times,
  * recalculated against company work schedules and public holidays.
  */
 @Injectable()
@@ -799,7 +799,7 @@ export class AttendanceService
       const isDutyDay = !isHoliday && wouldBeWorkingDay;
       const isHalfDay = isDutyDay ? (scheduleDay?.isHalfDay ?? false) : false;
       const weekdayHours = Number(scheduleDay?.totalHours ?? 0);
-      // Holidays / weekends are not scheduled duty — expected hours are 0.
+      // Holidays / weekends are not scheduled duty - expected hours are 0.
       const scheduledHours = isDutyDay ? weekdayHours : 0;
 
       // SCAN_ONLY: any scan (first or last punch) is presence.
@@ -2069,7 +2069,7 @@ export class AttendanceService
   }
 
   /**
-   * Import batch history for HR — which months were imported and by whom.
+   * Import batch history for HR - which months were imported and by whom.
    */
   async getImportHistory(companyId: string): Promise<unknown> {
     return this.prisma.attendanceImportBatch.findMany({
@@ -3496,7 +3496,7 @@ export class AttendanceService
     const flaggedDays = await this.prisma.attendanceDailyLog.findMany({
       where: {
         attendanceRecordId: record.id,
-        // Field-movement Explain days only — leave+scan is an HR review flag.
+        // Field-movement Explain days only - leave+scan is an HR review flag.
         flag: {
           notIn: [
             AttendanceDayFlag.NONE,
@@ -3513,7 +3513,7 @@ export class AttendanceService
             'LEAVE',
           ],
         },
-        // Not employed yet — ignore flags before signed / start date.
+        // Not employed yet - ignore flags before signed / start date.
         ...(companyStartDate ? { date: { gte: companyStartDate } } : {}),
       },
       orderBy: { date: 'asc' },
@@ -3562,7 +3562,7 @@ export class AttendanceService
     });
 
     // Days covered by approved leave, a site assignment or work from home need
-    // no explanation — leave them out. Days with such a request still pending
+    // no explanation - leave them out. Days with such a request still pending
     // stay in the list, locked, with the reason.
     const covers = await this.dayCoverage.findCovers(
       companyId,
@@ -3833,12 +3833,12 @@ export class AttendanceService
       }
       if (log.dayStatus === 'ENROLMENT_GRACE') {
         throw new BadRequestException(
-          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace — no explanation needed`,
+          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace - no explanation needed`,
         );
       }
       if (log.flag === 'NONE') {
         throw new BadRequestException(
-          `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
+          `Day ${log.date.toISOString().split('T')[0]} has no flag - no explanation needed`,
         );
       }
     }
@@ -3852,7 +3852,7 @@ export class AttendanceService
       for (const log of dailyLogs) {
         if (log.date.getTime() < startMs) {
           throw new BadRequestException(
-            `Day ${log.date.toISOString().split('T')[0]} is before the employee's signed/start date — no explanation needed`,
+            `Day ${log.date.toISOString().split('T')[0]} is before the employee's signed/start date - no explanation needed`,
           );
         }
       }
@@ -3874,7 +3874,7 @@ export class AttendanceService
           (log.correctedClockOutLocal ?? log.clockOutLocal))
       ) {
         throw new BadRequestException(
-          `"Forgot both" is only for days with neither scan — ${dateLabel} already has a recorded scan`,
+          `"Forgot both" is only for days with neither scan - ${dateLabel} already has a recorded scan`,
         );
       }
       if (!clockIn?.returnTime) {
@@ -4165,12 +4165,12 @@ export class AttendanceService
       }
       if (log.dayStatus === 'ENROLMENT_GRACE') {
         throw new BadRequestException(
-          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace — no explanation needed`,
+          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace - no explanation needed`,
         );
       }
       if (log.flag === 'NONE') {
         throw new BadRequestException(
-          `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
+          `Day ${log.date.toISOString().split('T')[0]} has no flag - no explanation needed`,
         );
       }
     }
@@ -5317,7 +5317,7 @@ export class AttendanceService
     // an attendance-exempt one (paid categories such as leave still apply
     // first) instead of letting every working day become a no-scan absence.
     const presentByDecision = isCountedPresentMatchMethod(record.matchMethod);
-    // Policies as of the attendance month — never "current".
+    // Policies as of the attendance month - never "current".
     const policy = await loadPolicySnapshot(readDb, companyId, monthStart);
     const inactiveSpans =
       (await loadInactiveSpansForMonth(readDb, [employeeId], month, year)).get(employeeId) ?? [];
@@ -5544,7 +5544,7 @@ export class AttendanceService
           siteAssignmentName:
             siteName ??
             (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
-          // earlyDeparture* columns from 20261009160000 — cast until client regen
+          // earlyDeparture* columns from 20261009160000 - cast until client regen
           ...({
             earlyDepartureBand: coverageSuppressesScanFlags
               ? null
@@ -5701,7 +5701,7 @@ export class AttendanceService
         flaggedDays,
         resolvedDays,
         payableHours: Math.round(payableHours * 100) / 100,
-        // earlyDeparture* / forgotToClock* — cast until client regen
+        // earlyDeparture* / forgotToClock* - cast until client regen
         ...({
           earlyDepartureCount: monthSummary.earlyDepartureCount,
           earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,

@@ -12,7 +12,7 @@ const STAT_ACCENT = {
 export type OrgListStatAccent = keyof typeof STAT_ACCENT;
 
 /**
- * Clickable (or static) stat chip for organization list pages — Users chrome.
+ * Clickable (or static) stat chip for organization list pages - Users chrome.
  */
 export function OrgListStat({
   label,

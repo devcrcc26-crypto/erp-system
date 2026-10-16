@@ -284,12 +284,12 @@ export default function ExternalReleaseDetailPageContent({
       ? submittal.items
           .map(
             (item) =>
-              `${item.fullSubtaskCode ?? item.packageCode ?? '—'} — ${
+              `${item.fullSubtaskCode ?? item.packageCode ?? '-'} - ${
                 item.packageName ?? 'Unknown subtask'
               }`,
           )
           .join('; ')
-      : '—';
+      : '-';
 
   const statusLabel =
     submittal.status === 'DRAFT'
@@ -433,7 +433,7 @@ export default function ExternalReleaseDetailPageContent({
                                 Site representative
                               </p>
                               <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                                {siteRepItem.siteRepName ?? '—'}
+                                {siteRepItem.siteRepName ?? '-'}
                               </p>
                               {siteRepItem.siteRepCompany && (
                                 <p className={layout.drawerMutedText}>
@@ -460,7 +460,7 @@ export default function ExternalReleaseDetailPageContent({
                                 Consultant
                               </p>
                               <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                                {consultantItem.consultantName ?? '—'}
+                                {consultantItem.consultantName ?? '-'}
                               </p>
                               {consultantItem.consultantCompany && (
                                 <p className={layout.drawerMutedText}>
@@ -664,7 +664,7 @@ export default function ExternalReleaseDetailPageContent({
             {submittal.status === 'SITE_APPROVED' && !hasConsultant && (
               <div className="flex items-center justify-between gap-3">
                 <span className={layout.drawerMutedText}>
-                  Site review complete — ready to issue.
+                  Site review complete - ready to issue.
                 </span>
                 <Button
                   type="primary"
@@ -708,7 +708,7 @@ export default function ExternalReleaseDetailPageContent({
             {submittal.status === 'CONSULTANT_REVIEWED' && (
               <div className="flex items-center justify-between gap-3">
                 <span className={layout.drawerMutedText}>
-                  Consultant review complete — ready to issue.
+                  Consultant review complete - ready to issue.
                 </span>
                 <Button
                   type="primary"

@@ -5,7 +5,7 @@ import type { SidebarPermission } from '@/components/sidebar/sidebar.config';
 export interface SidebarPermissionContext {
   /** Session capabilities from `/auth/capabilities`. */
   readonly capabilities: Capabilities;
-  /** False until capabilities have loaded — resolves to no permissions. */
+  /** False until capabilities have loaded - resolves to no permissions. */
   readonly ready: boolean;
   /** Holds the Project Administrator role (disciplines catalog access). */
   readonly hasProjectAdministratorRole: boolean;
@@ -17,7 +17,7 @@ export interface SidebarPermissionContext {
  * This is the ONLY place navigation visibility is derived from backend
  * capabilities. When the backend exposes a finer-grained flag (for example a
  * dedicated procurement permission for storekeepers), change the matching
- * line here — the config and components stay untouched.
+ * line here - the config and components stay untouched.
  */
 export function resolveSidebarPermissions(
   context: SidebarPermissionContext,
@@ -59,7 +59,7 @@ export function resolveSidebarPermissions(
   // Evaluation inbox for non-HR leads (HR users get it under Performance).
   grant('evaluation.inbox', !hr);
 
-  // Human resources — self-service entries widen beyond hr.view
+  // Human resources - self-service entries widen beyond hr.view
   grant('hr.view', hr);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
   grant(
@@ -74,14 +74,14 @@ export function resolveSidebarPermissions(
       caps.canEditPayroll ||
       caps.canApprovePayroll,
   );
-  // The /hr flight and business-trip LISTS are HR-only — app/(dashboard)/hr/layout.tsx
+  // The /hr flight and business-trip LISTS are HR-only - app/(dashboard)/hr/layout.tsx
   // redirects everyone else. Employees submit these via the /approvals/new forms.
   grant('flight.access', hr);
   grant('businessTrip.access', hr);
   // Expense claims are self-service (see app/(dashboard)/hr/layout.tsx);
   // shown to anyone who travels on company business.
   grant('expenseClaims.access', hr || flight || businessTrip);
-  grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet — the /hr route guard requires hr.view.
+  grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet - the /hr route guard requires hr.view.
   grant('procurement.access', hr);
   grant('fleet.access', hr);
   grant('administration.access', hr);
@@ -101,7 +101,7 @@ export function resolveSidebarPermissions(
   );
   grant('org.vehicles', hr);
 
-  // Project management — sidebar entry is System Administrator only for now.
+  // Project management - sidebar entry is System Administrator only for now.
   // Capability checks still apply so links match what the pages allow.
   const adminPm = caps.isSystemAdministrator;
   const portfolio = pm.projects.canView;

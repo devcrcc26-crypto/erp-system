@@ -173,7 +173,7 @@ const COMPANY_ASSET_IMPORT_SCHEMA: ImportColumnSchema = {
 /**
  * Excel template / preview / commit for the company asset register.
  *
- * Assets have no approval workflow — imported rows land in the register with
+ * Assets have no approval workflow - imported rows land in the register with
  * status Available, the register's equivalent of a draft.
  */
 @Injectable()

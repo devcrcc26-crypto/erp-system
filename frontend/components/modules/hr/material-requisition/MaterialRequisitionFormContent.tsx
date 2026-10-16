@@ -7,7 +7,7 @@ import type { MaterialRequisitionDetail } from '@/lib/api/material-requisition.t
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New material requisition — shared HR form banner + stepper form.
+ * New material requisition - shared HR form banner + stepper form.
  */
 export default function MaterialRequisitionFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

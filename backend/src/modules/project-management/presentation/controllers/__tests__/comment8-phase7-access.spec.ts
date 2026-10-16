@@ -40,7 +40,7 @@ class TestUserGuard implements CanActivate {
   }
 }
 
-describe('Comment 8 Phase 7 — API access scoping (supertest)', () => {
+describe('Comment 8 Phase 7 - API access scoping (supertest)', () => {
   describe('DesignPackagesController', () => {
     let app: INestApplication;
     let designPackagesService: { getById: jest.Mock; list: jest.Mock };
@@ -284,7 +284,7 @@ describe('Comment 8 Phase 7 — API access scoping (supertest)', () => {
     });
   });
 
-  describe('UsersController — Project Administrator', () => {
+  describe('UsersController - Project Administrator', () => {
     let app: INestApplication;
 
     beforeEach(async () => {
@@ -319,7 +319,7 @@ describe('Comment 8 Phase 7 — API access scoping (supertest)', () => {
   });
 });
 
-describe('Comment 8 Phase 7 — TaskAccessScopeService scoping rules', () => {
+describe('Comment 8 Phase 7 - TaskAccessScopeService scoping rules', () => {
   const mtdDeptId = 'e0000000-0000-4000-8000-000000000001';
   const addDeptId = 'e0000000-0000-4000-8000-000000000002';
 

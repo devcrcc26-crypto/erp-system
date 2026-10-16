@@ -310,7 +310,7 @@ export class RevisionOrchestratorService {
       companyId: ctx.companyId,
       taskDisciplineId,
       packageCode,
-      name: `Revision Package — ${trigger.triggerType} ${trigger.sourceEntityId}`,
+      name: `Revision Package - ${trigger.triggerType} ${trigger.sourceEntityId}`,
       sourceEntityType,
       sourceEntityId: trigger.sourceEntityId,
       createdBy: ctx.userId,

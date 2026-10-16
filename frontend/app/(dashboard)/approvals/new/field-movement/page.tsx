@@ -5,7 +5,7 @@ import { Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 
 /**
- * Legacy path — dedicated form lives at /approvals/new/field-movement-log.
+ * Legacy path - dedicated form lives at /approvals/new/field-movement-log.
  */
 export default function FieldMovementLegacyRedirectPage(): React.ReactNode {
   const router = useRouter();

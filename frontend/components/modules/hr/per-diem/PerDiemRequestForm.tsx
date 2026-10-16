@@ -54,7 +54,7 @@ function calcInclusiveCalendarDays(
 }
 
 /**
- * Per diem create form — same StepperForm chrome as Add Employee.
+ * Per diem create form - same StepperForm chrome as Add Employee.
  */
 export default function PerDiemRequestForm({
   onSuccess,
@@ -107,7 +107,7 @@ export default function PerDiemRequestForm({
     () =>
       approvedSiteAssignments.map((row) => ({
         value: row.id,
-        label: `${row.requestNumber} — ${row.siteName} (${formatDisplayDate(String(row.startDate).slice(0, 10))} – ${formatDisplayDate(String(row.endDate).slice(0, 10))})`,
+        label: `${row.requestNumber} - ${row.siteName} (${formatDisplayDate(String(row.startDate).slice(0, 10))} – ${formatDisplayDate(String(row.endDate).slice(0, 10))})`,
       })),
     [approvedSiteAssignments],
   );
@@ -142,13 +142,13 @@ export default function PerDiemRequestForm({
         .filter((flight) => flight.submittedBy === onBehalf.effectiveEmployeeId)
         .map((flight) => ({
           value: `flight:${flight.id}`,
-          label: `${flight.isInternational ? t('hr.labels.intlFlightPrefix') : t('hr.labels.flightPrefix')} ${flight.applicationNumber} — ${flight.destination}`,
+          label: `${flight.isInternational ? t('hr.labels.intlFlightPrefix') : t('hr.labels.flightPrefix')} ${flight.applicationNumber} - ${flight.destination}`,
         })),
       ...(tripsQuery.data?.data ?? [])
         .filter((trip) => trip.submittedBy === onBehalf.effectiveEmployeeId)
         .map((trip) => ({
           value: `trip:${trip.id}`,
-          label: `${t('hr.labels.businessTripPrefix')} ${trip.tripNumber} — ${
+          label: `${t('hr.labels.businessTripPrefix')} ${trip.tripNumber} - ${
             trip.destinationCity
               ? `${trip.destinationCity}, ${trip.destinationCountry}`
               : trip.destinationCountry
@@ -186,7 +186,7 @@ export default function PerDiemRequestForm({
         const label = labelKey ? t(labelKey) : entry.destinationCategory;
         return {
           value: entry.destinationCategory,
-          label: `${label} — ${formatEtbAmount(entry.dailyRate)}`,
+          label: `${label} - ${formatEtbAmount(entry.dailyRate)}`,
         };
       }),
     [ratesQuery.data, t],
@@ -194,7 +194,7 @@ export default function PerDiemRequestForm({
 
   const categoryLabel = useMemo(() => {
     if (!destinationCategory) {
-      return '—';
+      return '-';
     }
     return (
       categoryOptions.find((option) => option.value === destinationCategory)
@@ -207,7 +207,7 @@ export default function PerDiemRequestForm({
     if (!value) {
       return t('hr.labels.standalonePerDiem');
     }
-    return travelOptions.find((option) => option.value === value)?.label ?? '—';
+    return travelOptions.find((option) => option.value === value)?.label ?? '-';
   }, [formValues?.linkedTravel, travelOptions, t]);
 
   const noActiveRates =
@@ -636,14 +636,14 @@ export default function PerDiemRequestForm({
               />
               <ReviewItem
                 label={t('hr.form.specificDestination')}
-                value={formValues?.destination?.trim() || '—'}
+                value={formValues?.destination?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.form.startDate')}
                 value={
                   dateRange?.[0]
                     ? formatDisplayDate(dateRange[0].format('YYYY-MM-DD'))
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -651,29 +651,29 @@ export default function PerDiemRequestForm({
                 value={
                   dateRange?.[1]
                     ? formatDisplayDate(dateRange[1].format('YYYY-MM-DD'))
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.form.departureTime')}
-                value={formValues?.departureTime?.format('HH:mm') ?? '—'}
+                value={formValues?.departureTime?.format('HH:mm') ?? '-'}
               />
               <ReviewItem
                 label={t('hr.form.returnTime')}
-                value={formValues?.returnTime?.format('HH:mm') ?? '—'}
+                value={formValues?.returnTime?.format('HH:mm') ?? '-'}
               />
               <ReviewItem
                 label={t('hr.form.perDiemDays')}
-                value={days > 0 ? String(days) : '—'}
+                value={days > 0 ? String(days) : '-'}
               />
               <ReviewItem
                 label={t('hr.form.dailyRate')}
-                value={selectedRate ? formatEtbAmount(selectedRate.dailyRate) : '—'}
+                value={selectedRate ? formatEtbAmount(selectedRate.dailyRate) : '-'}
               />
               <ReviewItem
                 label={t('hr.form.totalAmount')}
                 value={
-                  selectedRate && days > 0 ? formatEtbAmount(totalAmount) : '—'
+                  selectedRate && days > 0 ? formatEtbAmount(totalAmount) : '-'
                 }
               />
               <ReviewItem

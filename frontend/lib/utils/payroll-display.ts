@@ -17,7 +17,7 @@ export function formatPayrollMoney(
 ): string {
   const amount = parsePayrollMoney(value);
   if (options?.emptyZero !== false && amount === 0) {
-    return '—';
+    return '-';
   }
   return new Intl.NumberFormat('en-ET', {
     minimumFractionDigits: 2,

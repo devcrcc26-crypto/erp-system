@@ -42,7 +42,7 @@ const DEFAULT_RESULT: Record<string, unknown> = {
 
 /**
  * Prisma stand-in that records every model call and answers with empty
- * defaults unless overridden — enough to drive read paths without a database.
+ * defaults unless overridden - enough to drive read paths without a database.
  */
 function recordingPrisma(overrides: Record<string, Record<string, Override>> = {}) {
   const calls: Call[] = [];
@@ -112,7 +112,7 @@ describe('hrProcessEmployeeWhere', () => {
   });
 });
 
-describe('approver-only exclusion — attendance', () => {
+describe('approver-only exclusion - attendance', () => {
   it('import matching never offers approver-only employees', async () => {
     const { prisma, userWheres } = recordingPrisma();
     await new AttendanceMatchingService(prisma as never).matchRows([], COMPANY);
@@ -167,7 +167,7 @@ describe('approver-only exclusion — attendance', () => {
   });
 });
 
-describe('approver-only exclusion — payroll, evaluations, leave, WFH', () => {
+describe('approver-only exclusion - payroll, evaluations, leave, WFH', () => {
   it('payroll generation (entries, flags, MISSING_CONTRACT) skips approver-only employees', async () => {
     const { prisma, userWheres } = recordingPrisma();
     const service = make(PayrollRunService, { prisma });
@@ -252,7 +252,7 @@ describe('approver-only exclusion — payroll, evaluations, leave, WFH', () => {
   });
 });
 
-describe('approver-only exclusion — reports and dashboard', () => {
+describe('approver-only exclusion - reports and dashboard', () => {
   it('HR dashboard headcount, by-department and no-leave-policy counts exclude approver-only', async () => {
     const { prisma, userWheres } = recordingPrisma();
     await make(DashboardService, { prisma }).getHrDashboard({ companyId: COMPANY } as never);
@@ -277,7 +277,7 @@ describe('approver-only exclusion — reports and dashboard', () => {
   });
 });
 
-describe('approver-only exclusion — self-submission and on-behalf', () => {
+describe('approver-only exclusion - self-submission and on-behalf', () => {
   function onBehalfWith(excluded: boolean) {
     const { prisma, userWheres } = recordingPrisma({
       user: { findFirst: () => ({ id: ACTOR, excludedFromHrProcesses: excluded }) },

@@ -125,7 +125,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
       })
     : t('pages.hr.overtime.new');
 
-  const periodLabel = month ? month.format('MMMM YYYY') : '—';
+  const periodLabel = month ? month.format('MMMM YYYY') : '-';
 
   const opening = (
     <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl bg-white p-12 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">

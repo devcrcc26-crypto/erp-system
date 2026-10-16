@@ -174,7 +174,7 @@ export class LeavePolicyService {
     });
     if (assigned > 0) {
       throw new ConflictException(
-        'Cannot delete — employees are assigned to this policy',
+        'Cannot delete - employees are assigned to this policy',
       );
     }
 
@@ -203,7 +203,6 @@ export class LeavePolicyService {
       select: {
         leavePolicyId: true,
         employmentDate: true,
-        experienceStartDate: true,
         leavePolicy: {
           where: activeOnly({}),
           include: {
@@ -228,7 +227,6 @@ export class LeavePolicyService {
       employeeId,
       companyId,
       employee.employmentDate,
-      employee.experienceStartDate,
     );
     const yearsOfService = this.calculateYearsOfService(serviceStart, year);
     return this.entitlementFromRule(rule, yearsOfService);
@@ -282,7 +280,7 @@ export class LeavePolicyService {
 
   /**
    * Calendar-year safety net (1 January) for employees with no employment
-   * date and no contract — their leave year is the calendar year. Everyone
+   * date and no contract - their leave year is the calendar year. Everyone
    * else opens on their employment anniversary (cron) or on first read.
    */
   async refreshAllBalances(
@@ -353,7 +351,6 @@ export class LeavePolicyService {
     employeeId: string,
     companyId: string,
     employmentDate: Date | null,
-    experienceStartDate?: Date | null,
   ): Promise<Date | null> {
     const firstContract = await this.prisma.employeeContract.findFirst({
       where: {
@@ -364,12 +361,7 @@ export class LeavePolicyService {
       orderBy: { startDate: 'asc' },
       select: { startDate: true },
     });
-    return (
-      firstContract?.startDate ??
-      employmentDate ??
-      experienceStartDate ??
-      null
-    );
+    return firstContract?.startDate ?? employmentDate ?? null;
   }
 
   private assertValidRules(rules: LeavePolicyRuleDto[]): void {

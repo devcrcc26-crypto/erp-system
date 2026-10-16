@@ -65,7 +65,7 @@ function renderHoursCell(
   const amount = Number(value);
   if (!(amount > 0)) {
     return (
-      <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+      <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
     );
   }
   const label = `${formatOvertimeHours(amount)}h`;
@@ -143,7 +143,7 @@ function OvertimeStat({
 }
 
 /**
- * Overtime sheets list — Users chrome (stat bar, filter row, rounded table).
+ * Overtime sheets list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const router = useRouter();

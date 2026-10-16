@@ -278,14 +278,14 @@ export class PurchaseRequestImportService {
       instructions.addRow([
         'employeeId',
         'If no email',
-        'User UUID — required when employeeEmail is blank',
+        'User UUID - required when employeeEmail is blank',
       ]);
     }
     if (input.includeRequestHeader) {
       instructions.addRow([
         'title',
         'Yes',
-        'Request title — rows with the same employee+title share one DRAFT request',
+        'Request title - rows with the same employee+title share one DRAFT request',
       ]);
       instructions.addRow(['justification', 'Yes', 'Business justification']);
       instructions.addRow(['vendorName', 'No', 'Optional preferred vendor']);
@@ -295,7 +295,7 @@ export class PurchaseRequestImportService {
       instructions.addRow([
         'projectCode',
         'No',
-        'Project code — used when projectId is blank',
+        'Project code - used when projectId is blank',
       ]);
     }
     instructions.addRow(['itemName', 'Yes', 'Line item name']);

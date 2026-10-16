@@ -72,7 +72,7 @@ function displayEmployeeName(
   } | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }
@@ -113,7 +113,7 @@ function DetailSection({
 }
 
 /**
- * Company asset detail — Users / employee profile chrome.
+ * Company asset detail - Users / employee profile chrome.
  */
 export default function CompanyAssetDetailPageContent({
   assetId,
@@ -227,7 +227,7 @@ export default function CompanyAssetDetailPageContent({
               {displayEmployeeName(assignment.returnedBy)}
             </MetaItem>
             <MetaItem label={t('hr.assetLabels.returnedTo')}>
-              {assignment.returnedTo?.trim() || '—'}
+              {assignment.returnedTo?.trim() || '-'}
             </MetaItem>
             {assignment.returnedNotes ? (
               <div className="md:col-span-2">
@@ -559,7 +559,7 @@ export default function CompanyAssetDetailPageContent({
             <p className="erp-employee-meta-value truncate">
               {activeAssignment
                 ? displayEmployeeName(activeAssignment.employee)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -976,7 +976,7 @@ function DepreciationSummaryCard({
       value:
         depreciation.monthlyDepreciation != null
           ? formatEtbAmount(depreciation.monthlyDepreciation)
-          : '—',
+          : '-',
     },
     {
       label: t('hr.assetLabels.monthsDepreciated'),
@@ -987,14 +987,14 @@ function DepreciationSummaryCard({
       value:
         depreciation.accumulatedDepreciation != null
           ? formatEtbAmount(depreciation.accumulatedDepreciation)
-          : '—',
+          : '-',
     },
     {
       label: t('hr.assetLabels.netValue'),
       value:
         depreciation.netValue != null
           ? formatEtbAmount(depreciation.netValue)
-          : '—',
+          : '-',
     },
   ];
 

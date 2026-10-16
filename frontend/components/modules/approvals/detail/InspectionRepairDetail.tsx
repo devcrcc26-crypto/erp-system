@@ -13,7 +13,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Inspection & Repair body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function InspectionRepairDetail({
   sourceId,
@@ -64,7 +64,7 @@ export default function InspectionRepairDetail({
           { label: t('hr.form.location'), value: request.location },
           {
             label: t('hr.form.asset'),
-            value: request.asset?.serialNumber ?? '—',
+            value: request.asset?.serialNumber ?? '-',
           },
         ]}
       />

@@ -1,5 +1,5 @@
 /*
- * Org structure (v2) — Departments, Positions, Disciplines catalog.
+ * Org structure (v2) - Departments, Positions, Disciplines catalog.
  * Same panel language as Employees: floating tiles, 16px radius, soft
  * shadow. Scoped under `.erp-org-v2` (list roots) and `.erp-org-drawer`
  * (add/edit drawers, portaled).

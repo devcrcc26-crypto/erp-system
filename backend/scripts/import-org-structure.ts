@@ -328,7 +328,7 @@ async function main(): Promise<void> {
   writeFileSync(
     reportPath,
     [
-      `# Org import ${args.apply ? 'apply' : 'dry run'} — skipped`,
+      `# Org import ${args.apply ? 'apply' : 'dry run'} - skipped`,
       '',
       `Host: ${target.host} | DB: ${target.database}`,
       `Rows: ${rows.length} | Planned updates: ${changing.length} / ${plans.length}`,

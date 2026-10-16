@@ -169,7 +169,7 @@ export class EmployeeContractImportService {
     instructions.addRow([
       'employeeId',
       'If no email',
-      'User UUID — required when employeeEmail is blank',
+      'User UUID - required when employeeEmail is blank',
     ]);
     instructions.addRow([
       'contractType',
@@ -179,7 +179,7 @@ export class EmployeeContractImportService {
     instructions.addRow([
       'signedAt',
       'No',
-      'YYYY-MM-DD — defaults to startDate when blank',
+      'YYYY-MM-DD - defaults to startDate when blank',
     ]);
     instructions.addRow(['startDate', 'Yes', 'YYYY-MM-DD']);
     instructions.addRow([
@@ -426,7 +426,7 @@ export class EmployeeContractImportService {
       return { ...base, status: 'error', message: startDateResult.message };
     }
 
-    // Create DTO / DB require signedAt — default to startDate when omitted
+    // Create DTO / DB require signedAt - default to startDate when omitted
     const signedAt = signedAtResult.value ?? startDateResult.value!;
 
     const endDateResult = this.parseImportDate(row.endDate, 'endDate', false);

@@ -293,7 +293,7 @@ function SwitchRow({
 }
 
 /**
- * Create / edit work schedule — details, a compact Monday–Sunday grid and a
+ * Create / edit work schedule - details, a compact Monday–Sunday grid and a
  * live week summary with the save action.
  */
 export default function WorkScheduleForm({

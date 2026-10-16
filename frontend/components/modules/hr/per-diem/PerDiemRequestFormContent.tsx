@@ -7,7 +7,7 @@ import type { PerDiemRequestDetail } from '@/lib/api/per-diem.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New per diem request — shared HR form banner + stepper form.
+ * New per diem request - shared HR form banner + stepper form.
  */
 export default function PerDiemRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

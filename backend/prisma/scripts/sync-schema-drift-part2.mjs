@@ -1,5 +1,5 @@
 /**
- * Part 2 — relations, timestamps, defaults. Run after sync-schema-drift.mjs
+ * Part 2 - relations, timestamps, defaults. Run after sync-schema-drift.mjs
  */
 import fs from 'fs';
 import path from 'path';
@@ -137,7 +137,7 @@ for (const model of uuidModels) {
   );
 }
 
-// Design package — keep DB FK / index names from legacy migrations
+// Design package - keep DB FK / index names from legacy migrations
 schema = schema.replace(
   `  deptDeputyChiefUser    User? @relation("SubtaskDeptDeputyChief", fields: [deptDeputyChiefUserId], references: [id])
   instituteChiefUser     User? @relation("SubtaskInstituteChief", fields: [instituteChiefUserId], references: [id])

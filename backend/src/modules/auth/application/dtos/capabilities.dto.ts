@@ -97,7 +97,7 @@ export class EpcCapabilitiesDto {
 
   @ApiProperty({
     description:
-      'SysAdmin / Managing Director / Project Manager / Project Administrator — full design-cycle nav.',
+      'SysAdmin / Managing Director / Project Manager / Project Administrator - full design-cycle nav.',
   })
   navFullAccess!: boolean;
 
@@ -139,7 +139,7 @@ export class CapabilitiesDto {
 
   @ApiProperty({
     description:
-      'users.edit — edit employees, login name, approver-only flag, reset password',
+      'users.edit - edit employees, login name, approver-only flag, reset password',
   })
   canEditUsers!: boolean;
 
@@ -230,7 +230,7 @@ export class CapabilitiesDto {
 
   @ApiProperty({
     description:
-      'System Administrator — bypasses project team module gates and receives full RBAC.',
+      'System Administrator - bypasses project team module gates and receives full RBAC.',
   })
   isSystemAdministrator!: boolean;
 

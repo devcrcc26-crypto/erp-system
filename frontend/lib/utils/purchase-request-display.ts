@@ -77,7 +77,7 @@ export function formatPurchaseItemDescription(
   if (desc && spec) {
     return `${desc} (${spec})`;
   }
-  return desc || spec || '—';
+  return desc || spec || '-';
 }
 
 /** Formats combined description + model/spec for a single form input. */

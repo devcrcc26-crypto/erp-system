@@ -40,6 +40,7 @@ vi.mock('@/lib/query/users', () => ({
 vi.mock('@/lib/query/org', () => ({
   useDepartments: () => ({ data: { data: [] }, isLoading: false }),
   usePositions: () => ({ data: { data: [] }, isLoading: false }),
+  useSeniorityLevels: () => ({ data: [], isLoading: false }),
   useEngineeringDisciplineOptions: () => ({ options: [], isLoading: false }),
 }));
 
@@ -97,6 +98,7 @@ const USER = {
   chineseName: '董锦霞',
   email: 'jinxia.dong@ccecc.com',
   phone: '+251911000000',
+  loginName: 'Jinxia M Dong',
   gender: 'FEMALE',
   dateOfBirth: '1990-05-21',
   nationalId: 'NID-1',
@@ -110,6 +112,8 @@ const USER = {
   addressCity: 'Addis Ababa',
   emergencyContacts: [{ firstName: 'Wei', lastName: 'Chen', phone: '+251900000000' }],
   isActive: true,
+  excludedFromHrProcesses: false,
+  excludedReason: null,
   // Roles are required (exactly one primary) since multi-role assignment.
   userRoles: [{ roleId: 'role-employee', isPrimary: true, role: { name: 'Employee' } }],
 };
@@ -286,7 +290,7 @@ describe('AddEmployeeForm (edit mode)', () => {
   }, 20_000);
 });
 
-describe('AddEmployeeForm (edit mode) — approver-only switch', () => {
+describe('AddEmployeeForm - login name & approver-only (users.edit)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUpdateUser.mockResolvedValue({});
@@ -297,7 +301,7 @@ describe('AddEmployeeForm (edit mode) — approver-only switch', () => {
     useAuthStore.setState({ capabilities: { ...EMPTY_CAPABILITIES } });
   });
 
-  it('is hidden for hr.view without users.edit, and never sent', async () => {
+  it('hides login name and approver-only without users.edit, and never sends them', async () => {
     useAuthStore.setState({
       capabilities: { ...EMPTY_CAPABILITIES, canViewHr: true, canEditHr: true },
     });
@@ -305,35 +309,45 @@ describe('AddEmployeeForm (edit mode) — approver-only switch', () => {
     renderEditForm();
     await waitFor(() => expect(screen.getByDisplayValue('Jinxia')).toBeInTheDocument());
 
+    expect(screen.queryByLabelText('users.loginName')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('users.approverOnlySwitch')).not.toBeInTheDocument();
     await clickThroughAndSubmit(user, 'common.saveChanges');
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
     const { body } = mockUpdateUser.mock.calls[0][0] as { body: Record<string, unknown> };
+    expect(body).not.toHaveProperty('loginName');
     expect(body).not.toHaveProperty('excludedFromHrProcesses');
     expect(body).not.toHaveProperty('excludedReason');
   }, 20_000);
 
-  it('users.edit can mark the employee approver-only with a reason', async () => {
+  it('users.edit can set login name and mark approver-only with a reason', async () => {
     useAuthStore.setState({
       capabilities: { ...EMPTY_CAPABILITIES, canViewHr: true, canEditUsers: true },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderEditForm();
+    const loginInput = await screen.findByLabelText('users.loginName');
+    expect(loginInput).toHaveValue('Jinxia M Dong');
+    await user.clear(loginInput);
+    await user.type(loginInput, 'Jinxia Dong');
+
     const toggle = await screen.findByLabelText('users.approverOnlySwitch');
     expect(toggle).not.toBeChecked();
-
     await user.click(toggle);
-    await user.type(await screen.findByLabelText('users.approverOnlyReason'), 'External director');
+    await user.type(
+      await screen.findByLabelText('users.approverOnlyReason'),
+      'External director',
+    );
     await clickThroughAndSubmit(user, 'common.saveChanges');
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
     const { body } = mockUpdateUser.mock.calls[0][0] as { body: Record<string, unknown> };
     expect(body).toMatchObject({
+      loginName: 'Jinxia Dong',
       excludedFromHrProcesses: true,
       excludedReason: 'External director',
     });
-  }, 20_000);
+  }, 45_000);
 });
 
 describe('AddEmployeeForm (create mode)', () => {
@@ -397,7 +411,7 @@ describe('AddEmployeeForm (create mode)', () => {
   }, 20_000);
 
   it('saves the employment date entered for a new employee', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <StrictMode>
         <AddEmployeeForm onSuccess={vi.fn()} />

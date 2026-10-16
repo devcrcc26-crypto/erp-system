@@ -75,7 +75,7 @@ const CONTRACT_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Self-service contract view. Whitelists display fields only — pay columns
+ * Self-service contract view. Whitelists display fields only - pay columns
  * (basicSalary, transportationAllowance, monthlyBonus) are never selected,
  * so they cannot reach the client.
  */
@@ -331,7 +331,7 @@ export class EmployeeContractService {
     }
 
     /**
-     * Solves monthly bonus for a target net. Calculator only — nothing is stored.
+     * Solves monthly bonus for a target net. Calculator only - nothing is stored.
      */
     async bonusFromNet(
         dto: BonusFromNetDto,

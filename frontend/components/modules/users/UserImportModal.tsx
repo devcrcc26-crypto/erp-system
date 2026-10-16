@@ -85,7 +85,7 @@ type EditableImportFields = {
   nationalId?: string;
   tin?: string;
   fieldOfStudy?: string;
-  experienceStartDate?: string;
+  yearsOfExperience?: string;
   addressCountry?: string;
   addressRegion?: string;
   addressCity?: string;
@@ -114,7 +114,7 @@ const WORKBOOK_COLUMNS: Array<keyof EditableImportFields> = [
   'tin',
   'educationLevel',
   'fieldOfStudy',
-  'experienceStartDate',
+  'yearsOfExperience',
   'addressCountry',
   'addressRegion',
   'addressCity',
@@ -178,7 +178,7 @@ const EDIT_SECTIONS: Array<{ key: string; fields: EditFieldSpec[] }> = [
       { name: 'discipline', source: 'discipline' },
       { name: 'employeeType', options: EMPLOYEE_TYPE_OPTIONS, labelKey: 'hr.employeeType' },
       { name: 'leavePolicy', source: 'leavePolicy' },
-      { name: 'experienceStartDate', placeholder: DATE_PLACEHOLDER },
+      { name: 'yearsOfExperience', placeholder: 'e.g. 8 or 6.5' },
     ],
   },
   {
@@ -271,7 +271,7 @@ function inferFocusField(message?: string): keyof EditableImportFields | null {
     ['employeetype', 'employeeType'],
     ['educationlevel', 'educationLevel'],
     ['dateofbirth', 'dateOfBirth'],
-    ['experiencestartdate', 'experienceStartDate'],
+    ['yearsofexperience', 'yearsOfExperience'],
     ['nationalid', 'nationalId'],
     ['tin', 'tin'],
     ['fieldofstudy', 'fieldOfStudy'],
@@ -307,7 +307,7 @@ function rowToEditable(row: ImportRowPreview): EditableImportFields {
     nationalId: row.nationalId ?? '',
     tin: row.tin ?? '',
     fieldOfStudy: row.fieldOfStudy ?? '',
-    experienceStartDate: row.experienceStartDate ?? '',
+    yearsOfExperience: row.yearsOfExperience ?? '',
     addressCountry: row.addressCountry ?? '',
     addressRegion: row.addressRegion ?? '',
     addressCity: row.addressCity ?? '',

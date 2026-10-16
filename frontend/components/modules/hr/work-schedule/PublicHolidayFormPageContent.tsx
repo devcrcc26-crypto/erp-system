@@ -23,7 +23,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const LIST_PATH = '/hr/public-holidays';
 
 /**
- * Create / edit public holiday — v2 hero + soft form card.
+ * Create / edit public holiday - v2 hero + soft form card.
  */
 export default function PublicHolidayFormPageContent({
   holidayId,

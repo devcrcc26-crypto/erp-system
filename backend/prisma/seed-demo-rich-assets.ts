@@ -160,7 +160,7 @@ async function seedConstructionSubmittals(input: RichAssetsInput): Promise<void>
       reviewedBy: lifecycle === 'closed' ? U.pm : null,
       submittalNumber: `SUB-${prefix}-CON-001`,
       category: 'Field Installation',
-      title: 'Pile cap rebar installation — as-built documentation',
+      title: 'Pile cap rebar installation - as-built documentation',
       submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
       preparedByRole: SubmittalPreparedByRole.SITE_TEAM,
       contractor: 'Gulf Foundations Site Crew',
@@ -187,7 +187,7 @@ async function seedConstructionSubmittals(input: RichAssetsInput): Promise<void>
       submittedBy: U.engineer,
       submittalNumber: `SUB-${prefix}-CON-002`,
       category: 'Field Installation',
-      title: 'MEP sleeve coordination — level 2 slab penetration log',
+      title: 'MEP sleeve coordination - level 2 slab penetration log',
       submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
       preparedByRole: SubmittalPreparedByRole.SITE_TEAM,
       contractor: 'Gulf MEP Site Crew',
@@ -227,7 +227,7 @@ async function seedConstructionSubmittals(input: RichAssetsInput): Promise<void>
     docVersionId: sid(p, 481),
     folderId: constructionFolderId,
     fileName: 'Submittal-Site-As-Built-Photos.pdf',
-    changeNote: 'Grid A3 pile cap — bar spacing and cover photos',
+    changeNote: 'Grid A3 pile cap - bar spacing and cover photos',
     uploadedBy: U.engineer,
   });
   await seedAttachmentDocument(input, {
@@ -263,7 +263,7 @@ async function seedConstructionSubmittals(input: RichAssetsInput): Promise<void>
         comments:
           lifecycle === 'closed'
             ? 'As-built photos match IFC drawing S-104. Approved for record.'
-            : 'Site photos received — verifying bar spacing against IFC drawing.',
+            : 'Site photos received - verifying bar spacing against IFC drawing.',
         reviewedAt: d(lifecycle === 'closed' ? '2025-04-10' : '2026-03-14'),
         createdAt: d(lifecycle === 'closed' ? '2025-04-10' : '2026-03-14'),
       },
@@ -280,7 +280,7 @@ async function seedConstructionSubmittals(input: RichAssetsInput): Promise<void>
         reviewedBy: U.pm,
         revisionNumber: 2,
         status: SubmittalStatus.APPROVED,
-        comments: 'Final sign-off — record filed in closeout archive.',
+        comments: 'Final sign-off - record filed in closeout archive.',
         reviewedAt: d('2025-04-11'),
         createdAt: d('2025-04-11'),
       },
@@ -322,7 +322,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
       reviewedBy: U.pm,
       submittalNumber: `SUB-${prefix}-EXT-SITE-001`,
       category: 'Design',
-      title: 'Structural IFC issue — site release package',
+      title: 'Structural IFC issue - site release package',
       submittalPurpose: SubmittalPurpose.DISCIPLINE_SITE,
       contractor: `${projectCode} JV`,
       specReference: 'DIV 03 30 00',
@@ -345,7 +345,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
       reviewedBy: U.lead,
       revisionNumber: 1,
       status: SubmittalStatus.APPROVED,
-      comments: 'Approved for site issue — no further comments.',
+      comments: 'Approved for site issue - no further comments.',
       reviewedAt: d('2026-03-13'),
       createdAt: d('2026-03-13'),
     },
@@ -364,7 +364,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
           edvId: primaryEdvId,
           revisionLabel: 'C',
           documentNumber: 'STR-IFC-001',
-          title: 'Structural IFC — site issue',
+          title: 'Structural IFC - site issue',
         },
       ],
     },
@@ -385,7 +385,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
           edvId: primaryEdvId,
           revisionLabel: 'C',
           documentNumber: 'STR-IFC-001',
-          title: 'Structural IFC — site issue',
+          title: 'Structural IFC - site issue',
         },
       ],
       createdBy: U.docs,
@@ -397,7 +397,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
     docVersionId: sid(p, 484),
     folderId: sid(p, 16),
     fileName: 'External-Release-Site-Transmittal.pdf',
-    changeNote: `Site release transmittal cover — ${projectCode}`,
+    changeNote: `Site release transmittal cover - ${projectCode}`,
     uploadedBy: U.docs,
   });
 
@@ -421,7 +421,7 @@ async function seedExternalReleases(input: RichAssetsInput): Promise<void> {
       reviewedBy: U.consultant,
       submittalNumber: `SUB-${prefix}-EXT-CON-001`,
       category: 'Design',
-      title: 'Facade coordination — consultant release package',
+      title: 'Facade coordination - consultant release package',
       submittalPurpose: SubmittalPurpose.DISCIPLINE_CONSULTANT,
       contractor: 'Facade Partners LLC',
       specReference: 'DIV 08 44 00',
@@ -606,7 +606,7 @@ async function seedReviewInboxHistory(input: RichAssetsInput): Promise<void> {
     docVersionId: sid(p, 486),
     folderId: sid(p, 16),
     fileName: 'Reviewer-Markup-Grid-B4.pdf',
-    changeNote: 'Redline markup — reinforcement spacing at grid B4',
+    changeNote: 'Redline markup - reinforcement spacing at grid B4',
     uploadedBy: U.reviewer,
   });
   await seedAttachmentDocument(input, {
@@ -622,7 +622,7 @@ async function seedReviewInboxHistory(input: RichAssetsInput): Promise<void> {
     docVersionId: sid(p, 488),
     folderId: sid(p, 16),
     fileName: 'Session-Tier1-Owner-Markup.pdf',
-    changeNote: 'Discipline owner tier markup — session attachment',
+    changeNote: 'Discipline owner tier markup - session attachment',
     uploadedBy: U.owner,
   });
   await seedAttachmentDocument(input, {
@@ -747,7 +747,7 @@ async function seedReviewInboxHistory(input: RichAssetsInput): Promise<void> {
       {
         id: sid(p, 611),
         sessionId: returnedSessionId,
-        body: 'Clash with MEP routing at level 2 — revise coordination overlay.',
+        body: 'Clash with MEP routing at level 2 - revise coordination overlay.',
         severity: CommentSeverity.MAJOR,
         status: CommentStatus.OPEN,
         assignedTo: U.designer,
@@ -797,7 +797,7 @@ async function seedReviewInboxHistory(input: RichAssetsInput): Promise<void> {
       {
         id: sid(p, 615),
         sessionId: sid(p, 230),
-        body: 'Superseded session comment — anchor detail superseded in rev B.',
+        body: 'Superseded session comment - anchor detail superseded in rev B.',
         severity: CommentSeverity.MODERATE,
         status: CommentStatus.CLOSED,
         assignedTo: U.designer,
@@ -812,7 +812,7 @@ async function seedReviewInboxHistory(input: RichAssetsInput): Promise<void> {
       {
         id: sid(p, 616),
         sessionId: activeSessionId,
-        body: 'Final as-built dimensions verified against survey — no outstanding items.',
+        body: 'Final as-built dimensions verified against survey - no outstanding items.',
         severity: CommentSeverity.MINOR,
         status: CommentStatus.CLOSED,
         assignedTo: U.designer,
@@ -1016,7 +1016,7 @@ async function seedDrawingFileAttachments(input: RichAssetsInput): Promise<void>
       where: { id: row.versionId },
       update: {
         fileKey,
-        changeNote: `Issued for construction — ${row.fileName}`,
+        changeNote: `Issued for construction - ${row.fileName}`,
       },
       create: {
         id: row.versionId,
@@ -1025,7 +1025,7 @@ async function seedDrawingFileAttachments(input: RichAssetsInput): Promise<void>
         revision: row.revision,
         fileKey,
         status: 'CURRENT',
-        changeNote: `Issued for construction — ${row.fileName}`,
+        changeNote: `Issued for construction - ${row.fileName}`,
         createdAt: d('2026-02-01'),
       },
     });
@@ -1041,7 +1041,7 @@ async function seedDrawingFileAttachments(input: RichAssetsInput): Promise<void>
       revision: 'C-MARKUP',
       fileKey: `demo/${projectCode}/attachments/Drawing-Markup-MEP-Level12.pdf`,
       status: 'SUPERSEDED',
-      changeNote: 'Reviewer markup overlay — coordination comments',
+      changeNote: 'Reviewer markup overlay - coordination comments',
       createdAt: d('2026-02-15'),
     },
   });

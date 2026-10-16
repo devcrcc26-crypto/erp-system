@@ -145,7 +145,7 @@ export interface DocumentPreviewProps {
   fileSizeBytes?: number | null;
   /** Optional pre-fetched signed URL for an image (shown as its thumbnail). */
   thumbnailUrl?: string | null;
-  /** Default true — show a download button alongside preview. */
+  /** Default true - show a download button alongside preview. */
   showDownload?: boolean;
   /** Signed-URL endpoint when the file is not a plain core document. */
   urlPath?: string;

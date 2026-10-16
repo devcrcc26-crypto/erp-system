@@ -109,7 +109,7 @@ describe('planWorkFromHomeRange', () => {
   });
 });
 
-describe('WorkFromHomeDayService — range request lifecycle', () => {
+describe('WorkFromHomeDayService - range request lifecycle', () => {
   function setup(options: { leaveOn?: string; holidayOn?: string } = {}) {
     type DayRow = {
       id: string;
@@ -232,7 +232,7 @@ describe('WorkFromHomeDayService — range request lifecycle', () => {
       'e1',
     )) as { id: string };
     expect(t.approvalsService.submitRequest).toHaveBeenCalledTimes(1);
-    expect(t.approvals[approval.id]!.title).toBe('Work from home — Aug 13 – Aug 18 (3 days)');
+    expect(t.approvals[approval.id]!.title).toBe('Work from home - Aug 13 – Aug 18 (3 days)');
     expect(t.activeDays()).toEqual([]); // nothing before approval
 
     await t.service.onApprovalDecision(approval.id, 'APPROVED');

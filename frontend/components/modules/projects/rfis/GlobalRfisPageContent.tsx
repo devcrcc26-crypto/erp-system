@@ -69,7 +69,7 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
 ];
 
 /**
- * Global RFIs list — cross-project, user-scoped or portfolio-wide.
+ * Global RFIs list - cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalRfisPageContent(): React.ReactNode {
   const router = useRouter();
@@ -147,11 +147,11 @@ export default function GlobalRfisPageContent(): React.ReactNode {
       portfolioMode
         ? (allProjectsQuery.data?.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           }))
         : (myProjectsQuery.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           })),
     [portfolioMode, allProjectsQuery.data?.data, myProjectsQuery.data],
   );
@@ -186,7 +186,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
         dataIndex: 'rfiSource',
         key: 'rfiSource',
         render: (value: RfiSource | null) =>
-          value ? (RFI_SOURCE_LABELS[value] ?? value) : '—',
+          value ? (RFI_SOURCE_LABELS[value] ?? value) : '-',
       },
       {
         title: 'Priority',
@@ -211,19 +211,19 @@ export default function GlobalRfisPageContent(): React.ReactNode {
         title: 'Assigned to',
         key: 'assignedTo',
         render: (_: unknown, record: Rfi) =>
-          record.assignedToName ?? record.assignedTo ?? '—',
+          record.assignedToName ?? record.assignedTo ?? '-',
       },
       {
         title: 'Project',
         key: 'project',
         render: (_: unknown, record: Rfi) =>
-          record.projectCode?.trim() || '—',
+          record.projectCode?.trim() || '-',
       },
       {
         title: 'Subtask',
         key: 'subtask',
         render: (_: unknown, record: Rfi) =>
-          record.linkedDesignPackage?.fullCode ?? '—',
+          record.linkedDesignPackage?.fullCode ?? '-',
       },
       {
         title: 'Due date',
@@ -318,7 +318,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="RFI APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

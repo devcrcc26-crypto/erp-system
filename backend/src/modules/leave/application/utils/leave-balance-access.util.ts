@@ -1,6 +1,6 @@
 /**
  * Roles allowed to set / adjust employee leave balances
- * (Balances tab editors — not employee self-service).
+ * (Balances tab editors - not employee self-service).
  */
 export const LEAVE_BALANCE_EDITOR_ROLES: ReadonlySet<string> = new Set([
   'System Administrator',

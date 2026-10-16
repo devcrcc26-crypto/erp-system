@@ -140,7 +140,7 @@ describe('payslip layout', () => {
     );
     expect(body).toContain('Net bonus (after tax) / 税后奖金');
     expect(body).toContain('32,000.00');
-    expect(body).toContain('Includes one-time net top-up 30,000.00 — Project completion');
+    expect(body).toContain('Includes one-time net top-up 30,000.00 - Project completion');
     const netBonusIdx = body.indexOf('Net bonus (after tax)');
     const netPayIdx = body.indexOf('NET PAY / 实发工资');
     expect(netBonusIdx).toBeGreaterThan(-1);

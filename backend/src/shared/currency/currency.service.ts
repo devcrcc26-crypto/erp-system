@@ -12,7 +12,7 @@ interface FrankfurterV2RateResponse {
 
 /**
  * Daily-cached exchange rates against ETB, sourced from the Frankfurter v2 API.
- * ETB pairs are covered via NBE (and other) providers on api.frankfurter.dev —
+ * ETB pairs are covered via NBE (and other) providers on api.frankfurter.dev -
  * the legacy api.frankfurter.app ECB feed does not include ETB.
  */
 @Injectable()
@@ -20,7 +20,7 @@ export class CurrencyService {
   private readonly logger = new Logger(CurrencyService.name);
   private readonly FRANKFURTER_URL = 'https://api.frankfurter.dev/v2';
 
-  /** Fallback rates — used when Frankfurter is unreachable. */
+  /** Fallback rates - used when Frankfurter is unreachable. */
   private readonly FALLBACK_RATES: Partial<
     Record<SupportedCurrency, Partial<Record<SupportedCurrency, number>>>
   > = {
@@ -152,7 +152,7 @@ export class CurrencyService {
       this.logger.warn(
         `Failed to fetch exchange rate ${from}->${to} from Frankfurter: ${
           error instanceof Error ? error.message : String(error)
-        } — using fallback rate`,
+        } - using fallback rate`,
       );
 
       const fallback = this.FALLBACK_RATES[from]?.[to];

@@ -13,7 +13,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 const LIST_PATH = '/hr/employee-per-diem-rates';
 
 /**
- * Configure rates for an employee — shared HR form banner + selector.
+ * Configure rates for an employee - shared HR form banner + selector.
  */
 export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

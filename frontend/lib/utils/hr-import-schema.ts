@@ -4,8 +4,8 @@ import ExcelJS from 'exceljs';
  * Client-side mirror of the backend import column schema.
  *
  * The modal parses the chosen workbook in the browser first, so obvious
- * problems — a missing column, a blank required cell, an unrecognised status
- * label — are reported before anything is uploaded. The server still validates
+ * problems - a missing column, a blank required cell, an unrecognised status
+ * label - are reported before anything is uploaded. The server still validates
  * authoritatively (employees, referenced records, duplicates against the
  * database) once the file passes these checks.
  */
@@ -94,7 +94,7 @@ function requiredGroupsOf(
 /**
  * Parses and validates an uploaded workbook in the browser.
  *
- * Never throws — file-level problems come back as `fatalError`, row-level ones
+ * Never throws - file-level problems come back as `fatalError`, row-level ones
  * as `errors` on the row, so the modal can show both without a round trip.
  */
 export async function parseHrImportFile(

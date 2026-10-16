@@ -47,7 +47,7 @@ async function main(): Promise<void> {
       throw new Error(`Active user not found for ${SAMUEL_EMAIL}`);
     }
     if (!user.emailVerifiedAt) {
-      throw new Error('Samuel emailVerifiedAt is null — login would be forbidden');
+      throw new Error('Samuel emailVerifiedAt is null - login would be forbidden');
     }
     if (!user.passwordHash) {
       throw new Error('Samuel has no password hash');

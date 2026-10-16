@@ -66,11 +66,11 @@ export default function BusinessTripSummary({
   const origin =
     [tripDetails.originCity, tripDetails.originCountry]
       .filter(Boolean)
-      .join(', ') || '—';
+      .join(', ') || '-';
   const destination =
     [tripDetails.destinationCity, tripDetails.destinationCountry]
       .filter(Boolean)
-      .join(', ') || '—';
+      .join(', ') || '-';
 
   return (
     <FormLayout
@@ -95,7 +95,7 @@ export default function BusinessTripSummary({
           value={
             tripDetails.departureDate
               ? formatDisplayDateTime(tripDetails.departureDate.toISOString())
-              : '—'
+              : '-'
           }
         />
         <ReviewItem
@@ -109,7 +109,7 @@ export default function BusinessTripSummary({
         <div className="sm:col-span-2">
           <ReviewItem
             label={t('hr.labels.purpose')}
-            value={purposeBudget.purpose || '—'}
+            value={purposeBudget.purpose || '-'}
           />
         </div>
         {purposeBudget.hostOrganization.trim() ? (
@@ -148,7 +148,7 @@ export default function BusinessTripSummary({
             value={
               passengers.length > 0
                 ? passengers.map((p) => p.name).join(', ')
-                : '—'
+                : '-'
             }
           />
         </div>

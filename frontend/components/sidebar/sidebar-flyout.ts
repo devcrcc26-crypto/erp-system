@@ -12,7 +12,7 @@
  *   after `switchDelay` (no close/reopen flicker); entering the panel first
  *   cancels the switch.
  * - A click/keyboard toggle makes the panel "sticky": pointer movement no
- *   longer closes it — only a second toggle, Escape, an outside click or
+ *   longer closes it - only a second toggle, Escape, an outside click or
  *   navigation does (`close`). This is also what touch devices get.
  */
 export interface SidebarFlyoutState {
@@ -37,7 +37,7 @@ export const FLYOUT_TIMING: SidebarFlyoutTiming = {
 };
 
 /**
- * Docked (pinned) panel — and the mobile drawer's open folder — after a route
+ * Docked (pinned) panel - and the mobile drawer's open folder - after a route
  * change: follow the current page's module, like the fixed layout; Search and
  * Favorites close once the user navigates.
  */

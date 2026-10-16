@@ -8,7 +8,7 @@ const LJZ_PROJECT_CODE = 'LJZ-2024-001';
 
 /**
  * Adds active review inbox sessions at every governance tier for LJZ-2024-001.
- * Safe to re-run — all writes are upserts.
+ * Safe to re-run - all writes are upserts.
  */
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
@@ -55,11 +55,11 @@ async function main(): Promise<void> {
       `\nDone. ${LJZ_PROJECT_CODE} now has ${activeSessions} active review session(s).`,
     );
     console.log('Tier holders (log in to see their inbox):');
-    console.log('  Discipline Owner  — demo owner user (U.owner / Hassan)');
-    console.log('  Reviewer          — demo reviewer (U.reviewer / Nadia)');
-    console.log('  Discipline Lead   — demo lead (U.lead / Khalid)');
-    console.log('  Dept Chief        — demo dept chief (U.deptChief / Rania)');
-    console.log('  Institute Chief   — demo institute chief (U.instituteChief / Li Zhang)');
+    console.log('  Discipline Owner  - demo owner user (U.owner / Hassan)');
+    console.log('  Reviewer          - demo reviewer (U.reviewer / Nadia)');
+    console.log('  Discipline Lead   - demo lead (U.lead / Khalid)');
+    console.log('  Dept Chief        - demo dept chief (U.deptChief / Rania)');
+    console.log('  Institute Chief   - demo institute chief (U.instituteChief / Li Zhang)');
   } finally {
     await prisma.$disconnect();
   }

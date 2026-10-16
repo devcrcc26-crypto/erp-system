@@ -107,7 +107,7 @@ function ConsumablesStat({
 }
 
 /**
- * Consumables requisitions list — Users chrome (stat bar, filter row, rounded table).
+ * Consumables requisitions list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function ConsumablesRequisitionsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -274,7 +274,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
         responsive: ['lg'],
         ellipsis: true,
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {
@@ -296,7 +296,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
         responsive: ['xl'],
         render: (value: string | null | undefined) => (
           <span className="erp-users-cell-sub">
-            {value ? formatProjectDate(value) : '—'}
+            {value ? formatProjectDate(value) : '-'}
           </span>
         ),
       },
@@ -329,7 +329,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
           return row.currentTierLabel ? (
             <span className="erp-users-role-tag">{row.currentTierLabel}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           );
         },
       },

@@ -104,7 +104,7 @@ function buildTierDecisions(
       })),
     };
   }
-  // SUBMITTED / DRAFT / CANCELLED — nothing decided yet.
+  // SUBMITTED / DRAFT / CANCELLED - nothing decided yet.
   return {
     currentTier: tiers[0].order,
     tiers: tiers.map((t) => ({
@@ -224,7 +224,7 @@ async function createApprovalChain(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 4 — Leave requests
+// Step 4 - Leave requests
 // ────────────────────────────────────────────────────────────────────────────
 
 async function seedLeaveRequests(
@@ -260,7 +260,7 @@ async function seedLeaveRequests(
     const approvalRequest = await createApprovalChain(ctx, {
       employeeId: leave.employee.id,
       categoryCode: 'LEAVE_REQUEST',
-      title: `${leave.type} leave — ${leave.start} to ${leave.end}`,
+      title: `${leave.type} leave - ${leave.start} to ${leave.end}`,
       status: leave.status,
       companyId,
       days: leave.days,
@@ -323,7 +323,7 @@ async function seedLeaveRequests(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 5 — Overtime sheets
+// Step 5 - Overtime sheets
 // ────────────────────────────────────────────────────────────────────────────
 
 interface OvertimeEntrySeed {
@@ -424,7 +424,7 @@ async function seedOvertimeSheets(
     const approvalRequest = await createApprovalChain(ctx, {
       employeeId: sheet.employee.id,
       categoryCode: 'OVERTIME_APPLICATION',
-      title: `Overtime sheet — ${sheet.year}-${String(sheet.month).padStart(2, '0')}`,
+      title: `Overtime sheet - ${sheet.year}-${String(sheet.month).padStart(2, '0')}`,
       status: sheet.status,
       companyId,
     });
@@ -502,7 +502,7 @@ async function seedOvertimeSheets(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 6 — Flight applications
+// Step 6 - Flight applications
 // ────────────────────────────────────────────────────────────────────────────
 
 async function seedFlightApplications(
@@ -525,7 +525,7 @@ async function seedFlightApplications(
     returnDate: string | null;
     purpose: string;
     ticketClass: FlightTicketClass;
-    /** COMPLETED is a seed-only label — written to the DB as APPROVED. */
+    /** COMPLETED is a seed-only label - written to the DB as APPROVED. */
     status: HrRequestStatus | 'COMPLETED';
     passengers: User[];
   }> = [
@@ -599,7 +599,7 @@ async function seedFlightApplications(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 7 — Business trips
+// Step 7 - Business trips
 // ────────────────────────────────────────────────────────────────────────────
 
 async function seedBusinessTrips(

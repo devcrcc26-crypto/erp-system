@@ -28,11 +28,11 @@ export const PAYROLL_TOTALS_ROW = 109;
 export const PAYROLL_FIRST_COL = 1;
 export const PAYROLL_LAST_COL = 15;
 
-/** Data totals row — clear numeric/formula cells H–AB (8–28). */
+/** Data totals row - clear numeric/formula cells H–AB (8–28). */
 export const DATA_TOTALS_FIRST_COL = 8;
 export const DATA_TOTALS_LAST_COL = 28;
 
-/** Payroll totals row — clear E–O (5–15). */
+/** Payroll totals row - clear E–O (5–15). */
 export const PAYROLL_TOTALS_FIRST_COL = 5;
 export const PAYROLL_TOTALS_LAST_COL = 15;
 

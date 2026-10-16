@@ -13,7 +13,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 const LIST_PATH = '/hr/employee-per-diem-rates';
 
 /**
- * Edit employee per diem rates — shared HR form banner.
+ * Edit employee per diem rates - shared HR form banner.
  */
 export default function EmployeePerDiemRatesEditPageContent({
   employeeId,

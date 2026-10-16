@@ -1,5 +1,5 @@
 -- Replace project.responsible_department_id (UUID FK) with ProjectResponsibleDepartment enum.
--- Proposed mapping — confirm before deploying to live database.
+-- Proposed mapping - confirm before deploying to live database.
 
 ALTER TABLE "project" ADD COLUMN "responsible_department_tmp" TEXT;
 

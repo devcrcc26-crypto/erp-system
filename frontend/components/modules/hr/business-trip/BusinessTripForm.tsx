@@ -67,7 +67,7 @@ const INITIAL_ADDITIONAL: BusinessTripAdditionalValues = {
 };
 
 /**
- * Multi-step business trip form — same StepperForm chrome as Add Employee.
+ * Multi-step business trip form - same StepperForm chrome as Add Employee.
  */
 export function BusinessTripForm({
   onSuccess,

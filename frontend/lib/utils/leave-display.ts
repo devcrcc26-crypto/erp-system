@@ -137,7 +137,7 @@ export function formatLeaveEmployeeName(
   user?: LeaveUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }

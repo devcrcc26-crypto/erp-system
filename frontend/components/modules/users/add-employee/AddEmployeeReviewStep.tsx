@@ -14,6 +14,7 @@ import {
   useDepartments,
   useEngineeringDisciplineOptions,
   usePositions,
+  useSeniorityLevels,
 } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -119,6 +120,7 @@ export default function AddEmployeeReviewStep({
 
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, true);
   const positionsQuery = usePositions({ page: 1, limit: 100 }, true);
+  const seniorityLevelsQuery = useSeniorityLevels();
   const { options: disciplineOptions } = useEngineeringDisciplineOptions(
     true,
     true,
@@ -133,6 +135,9 @@ export default function AddEmployeeReviewStep({
   const positionName =
     (positionsQuery.data?.data ?? []).find((p) => p.id === values.positionId)
       ?.title ?? '-';
+  const seniorityName =
+    (seniorityLevelsQuery.data ?? []).find((l) => l.id === values.seniorityLevelId)
+      ?.name ?? '-';
   const disciplineName =
     disciplineOptions.find((d) => d.value === values.engineeringDisciplineId)
       ?.label ?? '-';
@@ -349,6 +354,10 @@ export default function AddEmployeeReviewStep({
               label={t('users.form.phone')}
               value={values.phone?.trim() || '-'}
             />
+            <ReviewField
+              label={t('users.form.secondaryPhone')}
+              value={values.secondaryPhone?.trim() || '-'}
+            />
             <div className="erp-review-field erp-review-field--wide">
               <p className="erp-review-field-label">{t('users.form.roles')}</p>
               {roleAssignments.length === 0 ? (
@@ -474,6 +483,10 @@ export default function AddEmployeeReviewStep({
               value={positionName}
             />
             <ReviewField
+              label={t('users.form.seniority')}
+              value={seniorityName}
+            />
+            <ReviewField
               label={t('users.form.discipline')}
               value={disciplineName}
             />
@@ -507,10 +520,10 @@ export default function AddEmployeeReviewStep({
               value={values.fieldOfStudy?.trim() || '-'}
             />
             <ReviewField
-              label={t('users.form.experienceStartDate')}
+              label={t('users.form.yearsOfExperience')}
               value={
-                values.experienceStartDate
-                  ? dayjs(values.experienceStartDate).format('YYYY-MM-DD')
+                values.yearsOfExperience != null
+                  ? t('users.yearsValue', { years: values.yearsOfExperience })
                   : '-'
               }
             />

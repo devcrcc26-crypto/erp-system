@@ -75,7 +75,7 @@ function DetailSection({
 }
 
 /**
- * Project seal detail — Users / employee profile chrome.
+ * Project seal detail - Users / employee profile chrome.
  */
 export default function ProjectSealDetailPageContent({
   sealId,
@@ -182,7 +182,7 @@ export default function ProjectSealDetailPageContent({
   }
 
   const employeeName =
-    formatProjectSealEmployeeName(seal.employee) || '—';
+    formatProjectSealEmployeeName(seal.employee) || '-';
 
   const overflowMenuItems: MenuProps['items'] = [];
   if (seal.approvalRequestId) {
@@ -332,7 +332,7 @@ export default function ProjectSealDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.labels.issued')}</p>
             <p className="erp-employee-meta-value">
-              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '—'}
+              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'}
             </p>
           </div>
         </div>
@@ -340,7 +340,7 @@ export default function ProjectSealDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.labels.issuedBy')}</p>
             <p className="erp-employee-meta-value truncate">
-              {formatProjectSealEmployeeName(seal.issuer) || '—'}
+              {formatProjectSealEmployeeName(seal.issuer) || '-'}
             </p>
           </div>
         </div>

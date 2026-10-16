@@ -7,7 +7,7 @@ import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
- * Company home dashboard — the personal widget home (v2). The previous
+ * Company home dashboard - the personal widget home (v2). The previous
  * HR / personal dashboards live in `DashboardPageContentLegacy.tsx`; point
  * `app/(dashboard)/page.tsx` back at it to revert.
  */

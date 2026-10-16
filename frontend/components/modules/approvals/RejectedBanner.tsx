@@ -4,7 +4,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Read-only rejection banner — no actions.
+ * Read-only rejection banner - no actions.
  */
 export default function RejectedBanner({
   note,

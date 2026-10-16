@@ -30,7 +30,7 @@ export function matchKey(name: string | null | undefined): string {
     .trim();
 }
 
-/** Lower-case letters and digits only — "Leul  Tesfaye" and "LeulTesfaye" compare equal. */
+/** Lower-case letters and digits only - "Leul  Tesfaye" and "LeulTesfaye" compare equal. */
 export function compactName(name: string | null | undefined): string {
   return matchKey(name).replace(/[^a-z0-9]/g, '');
 }

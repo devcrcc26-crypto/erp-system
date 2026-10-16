@@ -7,7 +7,7 @@ import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New vehicle refueling request — shared HR form banner + stepper form.
+ * New vehicle refueling request - shared HR form banner + stepper form.
  */
 export default function VehicleRefuelingFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

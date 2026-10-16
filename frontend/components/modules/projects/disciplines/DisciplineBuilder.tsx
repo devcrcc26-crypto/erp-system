@@ -111,7 +111,7 @@ export default function DisciplineBuilder({
       open={open}
       title={
         discipline
-          ? `Edit discipline — ${resolveDisciplineDisplayLabel(discipline)}`
+          ? `Edit discipline - ${resolveDisciplineDisplayLabel(discipline)}`
           : 'Edit discipline'
       }
       onCancel={onClose}

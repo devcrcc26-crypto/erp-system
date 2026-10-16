@@ -96,7 +96,7 @@ test.describe('01 �?Attendance import', () => {
     page,
   }) => {
     // App behavior: defaultActiveKeys includes 'rejected' when preview.rejected.length > 0
-    // (prompt expected collapsed — documented as finding in TEST-REPORT)
+    // (prompt expected collapsed - documented as finding in TEST-REPORT)
     await openImportModal(page);
     await uploadAttendanceFixture(page);
     await waitForImportPreview(page);

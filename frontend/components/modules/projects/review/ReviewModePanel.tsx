@@ -331,7 +331,7 @@ export default function ReviewModePanel({
         <Alert
           type="info"
           showIcon
-          message="Viewing completed review — actions disabled"
+          message="Viewing completed review - actions disabled"
           description={
             <>
               {actionTaken

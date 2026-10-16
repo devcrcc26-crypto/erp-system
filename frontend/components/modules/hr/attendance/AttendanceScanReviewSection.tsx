@@ -97,7 +97,7 @@ export default function AttendanceScanReviewSection({
       render: (_: unknown, row) => (
         <div className="min-w-0">
           <div className="erp-users-name">{row.employeeName}</div>
-          <span className="erp-users-id-chip">{row.employeeCode ?? '—'}</span>
+          <span className="erp-users-id-chip">{row.employeeCode ?? '-'}</span>
         </div>
       ),
     },
@@ -113,7 +113,7 @@ export default function AttendanceScanReviewSection({
       key: 'scanTime',
       width: 110,
       render: (value: string | null) => (
-        <span className="erp-att-num erp-att-num--warn">{value ?? '—'}</span>
+        <span className="erp-att-num erp-att-num--warn">{value ?? '-'}</span>
       ),
     },
     {
@@ -136,7 +136,7 @@ export default function AttendanceScanReviewSection({
       dataIndex: 'note',
       key: 'note',
       render: (value: string | null) =>
-        value ? <span className="text-[13px]">{value}</span> : <span className="erp-att-dash">—</span>,
+        value ? <span className="text-[13px]">{value}</span> : <span className="erp-att-dash">-</span>,
     },
     {
       title: t(`${KEY}.colReviewedBy`),
@@ -153,7 +153,7 @@ export default function AttendanceScanReviewSection({
             ) : null}
           </div>
         ) : (
-          <span className="erp-att-dash">—</span>
+          <span className="erp-att-dash">-</span>
         ),
     },
     {

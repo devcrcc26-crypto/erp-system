@@ -295,7 +295,7 @@ export default function PunchItemDetailPageContent({
               <Descriptions.Item label="Assigned To">
                 {item.assignedTo
                   ? resolveUserDisplay(item.assignedTo, item.assignedToName)
-                  : '—'}
+                  : '-'}
               </Descriptions.Item>
               {item.dueDate && (
                 <Descriptions.Item label="Due Date">
@@ -313,14 +313,14 @@ export default function PunchItemDetailPageContent({
               </Descriptions.Item>
               {item.taskDisciplineId && (
                 <Descriptions.Item label="Discipline">
-                  {item.disciplineName ?? '—'}
+                  {item.disciplineName ?? '-'}
                 </Descriptions.Item>
               )}
               {item.designPackageId && (
                 <Descriptions.Item label="Subtask">
                   {item.packageCode
-                    ? `${item.packageCode} — ${item.packageName ?? ''}`
-                    : '—'}
+                    ? `${item.packageCode} - ${item.packageName ?? ''}`
+                    : '-'}
                 </Descriptions.Item>
               )}
             </Descriptions>
@@ -357,7 +357,7 @@ export default function PunchItemDetailPageContent({
                           item.verifiedBy,
                           item.verifiedByName,
                         )
-                      : (item.verifiedByName ?? '—')}{' '}
+                      : (item.verifiedByName ?? '-')}{' '}
                     on {formatProjectDate(item.verifiedAt)}
                   </p>
                 </div>
@@ -372,7 +372,7 @@ export default function PunchItemDetailPageContent({
                     Closed by{' '}
                     {item.closedBy
                       ? resolveUserDisplay(item.closedBy, item.closedByName)
-                      : (item.closedByName ?? '—')}{' '}
+                      : (item.closedByName ?? '-')}{' '}
                     on {formatProjectDate(item.closedAt)}
                   </p>
                 </div>

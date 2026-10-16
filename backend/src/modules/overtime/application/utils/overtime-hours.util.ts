@@ -178,10 +178,10 @@ export function buildOvertimeScheduleNote(
     return null;
   }
   if (!context.isWorkingDay) {
-    return `${weekday} is a non-working day — hours classified as weekend`;
+    return `${weekday} is a non-working day - hours classified as weekend`;
   }
   if (context.isHalfDay) {
-    return `${weekday} half day — after morning ends classified as weekend; before morning uses night/regular rules`;
+    return `${weekday} half day - after morning ends classified as weekend; before morning uses night/regular rules`;
   }
   return null;
 }

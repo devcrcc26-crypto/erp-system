@@ -96,7 +96,7 @@ export default function DraftRevisionUploadPanel({
       return;
     }
     if (!resolvedDisciplineId) {
-      messageApi.error('Discipline context is missing — open this document from the discipline page.');
+      messageApi.error('Discipline context is missing - open this document from the discipline page.');
       return;
     }
 
@@ -169,7 +169,7 @@ export default function DraftRevisionUploadPanel({
         description={
           <>
             Rev {draftRevision.revisionLabel}{' '}
-            <EdvStatusBadge status={draftRevision.status} /> — upload your revised
+            <EdvStatusBadge status={draftRevision.status} /> - upload your revised
             file here, then continue the internal review workflow to lock it.
           </>
         }

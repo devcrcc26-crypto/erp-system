@@ -68,7 +68,7 @@ function DetailSection({
 }
 
 /**
- * Leave request detail — Employees / evaluation v2 hero and soft sections.
+ * Leave request detail - Employees / evaluation v2 hero and soft sections.
  */
 export default function LeaveRequestDetailPageContent({
   requestId,

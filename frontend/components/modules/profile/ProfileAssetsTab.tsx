@@ -104,7 +104,7 @@ export default function ProfileAssetsTab({
         width: 130,
         responsive: ['sm'],
         render: (value: string | null | undefined) =>
-          value ? formatDateWithPattern(value, dateFormat) : '—',
+          value ? formatDateWithPattern(value, dateFormat) : '-',
       },
     ],
     [dateFormat, t],

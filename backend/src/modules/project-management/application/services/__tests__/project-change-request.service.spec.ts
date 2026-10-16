@@ -209,7 +209,7 @@ describe('ProjectChangeRequestService status transitions', () => {
         expect.objectContaining({
           recipientId: 'designer-user',
           eventType: 'change_request.approved_revision_required',
-          subject: 'Revision required — CR-LJZ-GEO-001-001 approved',
+          subject: 'Revision required - CR-LJZ-GEO-001-001 approved',
           body: expect.stringContaining(
             '/projects/project-1/disciplines/discipline-1/packages/pkg-1',
           ),

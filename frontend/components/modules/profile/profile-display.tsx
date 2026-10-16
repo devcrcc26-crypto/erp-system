@@ -5,14 +5,14 @@ import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 /** Two-column label/value grid used by the employee detail pages. */
 export const PROFILE_FIELD_GRID = 'grid grid-cols-1 gap-3 sm:grid-cols-2';
 
-/** Shows `—` for null, undefined, or blank text. */
+/** Shows `-` for null, undefined, or blank text. */
 export function displayText(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : '—';
+  return trimmed ? trimmed : '-';
 }
 
 /**
- * Bordered section — same chrome as the HR employee detail sections.
+ * Bordered section - same chrome as the HR employee detail sections.
  */
 export function ProfileSection({
   title,

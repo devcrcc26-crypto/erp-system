@@ -75,10 +75,10 @@ describe('inactive period in attendance and payroll', () => {
       baseFlag: 'NONE',
       window: openWindow,
       isActive: false,
-      inactiveNote: 'Inactive (Suspended) 10 day(s) — unpaid',
+      inactiveNote: 'Inactive (Suspended) 10 day(s) - unpaid',
     });
     expect(result.flag).toBe('INACTIVE_IN_MONTH');
-    expect(result.flagNote).toBe('Inactive (Suspended) 10 day(s) — unpaid');
+    expect(result.flagNote).toBe('Inactive (Suspended) 10 day(s) - unpaid');
   });
 });
 
@@ -159,7 +159,7 @@ describe('final settlement on LEAVER_FINAL_MONTH', () => {
       policy: { ...POLICY_DEFAULTS, severancePay: { enabled: true, parameters: {} } },
     });
     expect(settlement.severancePay).toBe(0);
-    expect(settlement.notes[0]).toMatch(/not set — handled outside the system/);
+    expect(settlement.notes[0]).toMatch(/not set - handled outside the system/);
   });
 
   it('settlement enters gross (taxable part also taxable income) but not pension', () => {

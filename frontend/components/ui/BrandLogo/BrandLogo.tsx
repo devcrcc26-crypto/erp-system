@@ -5,7 +5,7 @@ import Image from 'next/image';
 const LOGO_SRC = '/ccecc-logo.png';
 
 /**
- * CCECC brand mark — used on login, shell nav, and related chrome.
+ * CCECC brand mark - used on login, shell nav, and related chrome.
  * Use `onDark` on dark surfaces so the blue mark sits on a light tile.
  */
 export default function BrandLogo({

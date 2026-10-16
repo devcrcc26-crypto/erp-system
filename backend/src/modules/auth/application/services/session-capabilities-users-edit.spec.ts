@@ -32,7 +32,7 @@ function serviceWith(grants: Record<string, Partial<Flags>>): SessionCapabilitie
   return new SessionCapabilitiesService(permissionService as never, emptyPrisma as never);
 }
 
-describe('SessionCapabilitiesService — canEditUsers', () => {
+describe('SessionCapabilitiesService - canEditUsers', () => {
   it('is true only with users.edit (the permission PATCH /users/:id checks)', async () => {
     const caps = await serviceWith({
       users: { canView: true, canEdit: true },

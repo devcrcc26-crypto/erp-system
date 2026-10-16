@@ -3,7 +3,7 @@
  *
  * "Today" is the company's calendar day (Africa/Addis_Ababa, UTC+3), not the server's
  * or UTC's. Date-only values are represented as `YYYY-MM-DD` strings for comparison and
- * as UTC-midnight `Date`s for storage — Prisma `@db.Date` columns persist the UTC calendar
+ * as UTC-midnight `Date`s for storage - Prisma `@db.Date` columns persist the UTC calendar
  * date, so this keeps stored days identical to what the user picked regardless of the
  * server's timezone.
  */

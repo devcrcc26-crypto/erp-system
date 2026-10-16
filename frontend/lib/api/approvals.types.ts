@@ -184,7 +184,7 @@ export interface ListApprovalRequestsParams {
   categoryId?: string;
   submittedById?: string;
   pendingApproverId?: string;
-  /** Server-enforced inbox scope — JWT user id is applied on the backend. ALL is full-access only. */
+  /** Server-enforced inbox scope - JWT user id is applied on the backend. ALL is full-access only. */
   inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION' | 'ALL';
   dateFrom?: string;
   dateTo?: string;

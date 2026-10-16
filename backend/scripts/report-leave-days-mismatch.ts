@@ -183,7 +183,7 @@ async function main(): Promise<void> {
         mismatches.push({
           requestNumber: req.requestNumber,
           status: req.status,
-          employee: `${req.employee.firstName} ${req.employee.lastName} (${req.employee.employeeId ?? '—'})`,
+          employee: `${req.employee.firstName} ${req.employee.lastName} (${req.employee.employeeId ?? '-'})`,
           stored,
           recalculated: result.days,
           delta: Math.round((result.days - stored) * 10) / 10,
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
       mismatches.push({
         requestNumber: req.requestNumber,
         status: req.status,
-        employee: `${req.employee.firstName} ${req.employee.lastName} (${req.employee.employeeId ?? '—'})`,
+        employee: `${req.employee.firstName} ${req.employee.lastName} (${req.employee.employeeId ?? '-'})`,
         stored: Number(req.days ?? 0),
         recalculated: 'ERROR',
         error: error instanceof Error ? error.message : String(error),

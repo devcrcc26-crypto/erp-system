@@ -61,7 +61,7 @@ const INSPECTION_REPAIR_IMPORT_SCHEMA: ImportColumnSchema = {
       label: 'Device Name',
       type: 'string',
       maxLength: 200,
-      example: 'Generator — Cummins C110',
+      example: 'Generator - Cummins C110',
       notes: 'Required when no Asset Serial Number is given.',
       width: 26,
     },
@@ -95,7 +95,7 @@ const INSPECTION_REPAIR_IMPORT_SCHEMA: ImportColumnSchema = {
       type: 'string',
       required: true,
       maxLength: 200,
-      example: 'Adama camp — workshop',
+      example: 'Adama camp - workshop',
       width: 26,
     },
     {

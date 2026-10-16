@@ -53,7 +53,7 @@ function permissionContext(
 }
 
 describe('designer-upload rights', () => {
-  describe('Layer 3 — primary vs supporting designer', () => {
+  describe('Layer 3 - primary vs supporting designer', () => {
     it('1. primary designer uploads EDV → allowed', () => {
       expect(
         canPerformFromContext(

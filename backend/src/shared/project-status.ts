@@ -1,5 +1,5 @@
 /**
- * Project status — backend source of truth; keys must match Prisma ProjectStatus enum.
+ * Project status - backend source of truth; keys must match Prisma ProjectStatus enum.
  */
 export const PROJECT_STATUS_VALUES = [
   'NOT_STARTED',

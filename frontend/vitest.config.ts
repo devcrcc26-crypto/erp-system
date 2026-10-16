@@ -14,7 +14,7 @@ export default defineConfig({
       },
     },
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    // Playwright e2e lives under tests/attendance and e2e — run via `npm run test:e2e` only.
+    // Playwright e2e lives under tests/attendance and e2e - run via `npm run test:e2e` only.
     exclude: [
       'node_modules',
       '.next',

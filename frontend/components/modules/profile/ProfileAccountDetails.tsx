@@ -78,17 +78,20 @@ export default function ProfileAccountDetails({
               {profile.employeeId ? (
                 <span className="erp-users-id-chip">{profile.employeeId}</span>
               ) : (
-                '—'
+                '-'
               )}
             </ProfileField>
             <ProfileField label={t('users.form.nationality')}>
-              {profile.nationality ? t(`hr.nationality.${profile.nationality}`) : '—'}
+              {profile.nationality ? t(`hr.nationality.${profile.nationality}`) : '-'}
             </ProfileField>
             <ProfileField label={t('users.form.dateOfBirth')}>
               {formatDateWithPattern(profile.dateOfBirth, dateFormat)}
             </ProfileField>
             <ProfileField label={t('users.form.gender')}>
-              {profile.gender ? t(`hr.gender.${profile.gender}`) : '—'}
+              {profile.gender ? t(`hr.gender.${profile.gender}`) : '-'}
+            </ProfileField>
+            <ProfileField label={t('users.form.secondaryPhone')}>
+              {displayText(profile.secondaryPhone)}
             </ProfileField>
           </div>
         </ProfileSection>
@@ -100,6 +103,15 @@ export default function ProfileAccountDetails({
             </ProfileField>
             <ProfileField label={t('common.position')}>
               {localizedName(locale, profile.positionTitle, profile.positionTitleZh)}
+            </ProfileField>
+            <ProfileField label={t('users.form.seniority')}>
+              {profile.seniorityLevelName
+                ? localizedName(
+                    locale,
+                    profile.seniorityLevelName,
+                    profile.seniorityLevelNameZh,
+                  )
+                : '-'}
             </ProfileField>
             <ProfileField label={t('profile.branch')}>
               {displayText(profile.branchName)}
@@ -115,11 +127,11 @@ export default function ProfileAccountDetails({
                   ) : null}
                 </div>
               ) : (
-                '—'
+                '-'
               )}
             </ProfileField>
             <ProfileField label={t('users.form.employeeType')}>
-              {profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'}
+              {profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '-'}
             </ProfileField>
             <ProfileField label={t('users.form.employmentDate')}>
               {formatDateWithPattern(profile.employmentDate, dateFormat)}
@@ -148,7 +160,7 @@ export default function ProfileAccountDetails({
               {displayText(profile.addressHouseNumber)}
             </ProfileField>
             <ProfileField label={t('users.detailFullAddress')} wide>
-              {addressParts.length > 0 ? addressParts.join(', ') : '—'}
+              {addressParts.length > 0 ? addressParts.join(', ') : '-'}
             </ProfileField>
           </div>
         </ProfileSection>
@@ -158,13 +170,15 @@ export default function ProfileAccountDetails({
             <ProfileField label={t('users.form.educationLevel')}>
               {profile.educationLevel
                 ? t(`hr.educationLevel.${profile.educationLevel}`)
-                : '—'}
+                : '-'}
             </ProfileField>
             <ProfileField label={t('users.form.fieldOfStudy')}>
               {displayText(profile.fieldOfStudy)}
             </ProfileField>
-            <ProfileField label={t('users.form.experienceStartDate')}>
-              {formatDateWithPattern(profile.experienceStartDate, dateFormat)}
+            <ProfileField label={t('users.form.yearsOfExperience')}>
+              {profile.yearsOfExperience != null
+                ? t('users.yearsValue', { years: profile.yearsOfExperience })
+                : '-'}
             </ProfileField>
           </div>
         </ProfileSection>

@@ -51,7 +51,7 @@ function ReviewItem({
 }
 
 /**
- * Employee work-from-home request for a date range — one request, Employee →
+ * Employee work-from-home request for a date range - one request, Employee →
  * Discipline Lead approval; approval creates a WFH day per working day.
  */
 export default function WorkFromHomeRequestFormContent(): React.ReactNode {
@@ -303,11 +303,11 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
               />
               <ReviewItem
                 label={t('pages.hr.workFromHome.range.dateRange')}
-                value={snapshot.label ?? '—'}
+                value={snapshot.label ?? '-'}
               />
               <ReviewItem
                 label={t('pages.hr.workFromHome.fields.reason')}
-                value={snapshot.reason || '—'}
+                value={snapshot.reason || '-'}
                 wide
               />
               <ReviewItem

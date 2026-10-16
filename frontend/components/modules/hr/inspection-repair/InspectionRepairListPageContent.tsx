@@ -98,7 +98,7 @@ function InspectionRepairStat({
 }
 
 /**
- * Inspection & repair list — Users chrome (stat bar, filter row, soft table).
+ * Inspection & repair list - Users chrome (stat bar, filter row, soft table).
  */
 export default function InspectionRepairListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

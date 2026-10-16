@@ -8,7 +8,7 @@
 
 /**
  * Permission tokens the sidebar understands. Resolved from session
- * capabilities in `sidebar-permissions.ts` — the only place that maps
+ * capabilities in `sidebar-permissions.ts` - the only place that maps
  * backend flags onto navigation visibility.
  */
 export type SidebarPermission =
@@ -57,7 +57,7 @@ export type SidebarBadgeSource =
 
 interface SidebarLinkBase {
   readonly kind: 'link';
-  /** Stable id — used for favorites and active-state resolution. */
+  /** Stable id - used for favorites and active-state resolution. */
   readonly id: string;
   /** i18n key in `locales/{en,zh}/epc.json`. */
   readonly labelKey: string;
@@ -87,7 +87,7 @@ interface SidebarLinkBase {
 export type SidebarLinkConfig = SidebarLinkBase &
   (
     | { readonly href: string; readonly comingSoon?: false }
-    /** Placeholder row with no route yet — rendered as non-interactive text. */
+    /** Placeholder row with no route yet - rendered as non-interactive text. */
     | { readonly href: null; readonly comingSoon: true }
   );
 
@@ -124,7 +124,7 @@ export interface SidebarLimitedNavigation {
 }
 
 export interface SidebarConfig {
-  /** Top of the sidebar — dashboard and module folders. */
+  /** Top of the sidebar - dashboard and module folders. */
   readonly primary: readonly SidebarEntryConfig[];
   /** Pinned to the bottom of the sidebar, still inside the one `<nav>`. */
   readonly utility: readonly SidebarEntryConfig[];
@@ -396,7 +396,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   ],
   // Footer: account and system administration only.
   utility: [
-    // Every signed-in user can open their own profile — no permission.
+    // Every signed-in user can open their own profile - no permission.
     { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', accountCard: true, activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
     { kind: 'link', id: 'settings', labelKey: 'nav.settings', icon: 'settings', href: '/settings', requires: ['settings.manage'], keywords: ['roles', 'permissions'] },

@@ -355,7 +355,7 @@ export default function PerDiemSettlementForm({
                 </Form.Item>
                 <p className="erp-users-cell-strong m-0">
                   {t('pages.hr.perDiemSettlement.kmDifference')}:{' '}
-                  {kmDifference != null && kmDifference >= 0 ? kmDifference : '—'}
+                  {kmDifference != null && kmDifference >= 0 ? kmDifference : '-'}
                 </p>
               </div>
             ) : null}
@@ -455,15 +455,15 @@ export default function PerDiemSettlementForm({
             <div className="erp-form-grid-2">
               <ReviewItem
                 label={t('hr.form.specificDestination')}
-                value={values?.destination?.trim() || '—'}
+                value={values?.destination?.trim() || '-'}
               />
-              <ReviewItem label={t('hr.form.destinationCategory')} value={category ?? '—'} />
+              <ReviewItem label={t('hr.form.destinationCategory')} value={category ?? '-'} />
               <ReviewItem
                 label={t('hr.form.departureDate')}
                 value={
                   values?.departureDate
                     ? `${formatDisplayDate(values.departureDate.format('YYYY-MM-DD'))} ${values.departureTime?.format('HH:mm') ?? ''}`
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -471,12 +471,12 @@ export default function PerDiemSettlementForm({
                 value={
                   values?.returnDate
                     ? `${formatDisplayDate(values.returnDate.format('YYYY-MM-DD'))} ${values.returnTime?.format('HH:mm') ?? ''}`
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.form.perDiemDays')}
-                value={actualDays > 0 ? String(actualDays) : '—'}
+                value={actualDays > 0 ? String(actualDays) : '-'}
               />
               <ReviewItem
                 label={t('pages.hr.perDiemSettlement.kmDifference')}

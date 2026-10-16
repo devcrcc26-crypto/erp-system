@@ -7,7 +7,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { ApprovalsService } from '../../application/services/approvals.service';
 
 /**
- * Approval categories for the New Request picker — filtered by create permission.
+ * Approval categories for the New Request picker - filtered by create permission.
  */
 @ApiTags('Approval Categories')
 @ApiBearerAuth()

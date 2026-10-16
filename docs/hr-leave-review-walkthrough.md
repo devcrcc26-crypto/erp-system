@@ -1,4 +1,4 @@
-# HR Leave Module — Review Walkthrough
+# HR Leave Module - Review Walkthrough
 
 **Purpose:** End-to-end review of Users, Leave Policy, Leave Balances, Leave Requests, and Approvals.  
 **App URL:** http://localhost:3000 (local)  
@@ -12,10 +12,10 @@ Use **separate browsers or incognito windows** so you can stay logged in as mult
 
 | Role in this walkthrough | Who | Email | Password | Notes |
 |---|---|---|---|---|
-| **System / HR setup** | System Administrator | `admin@company.local` | `Admin@12345` | Full access — users, policies, balances, approvals |
+| **System / HR setup** | System Administrator | `admin@company.local` | `Admin@12345` | Full access - users, policies, balances, approvals |
 | **HR Officer** | Jinxia Dong (董锦霞) | `jinxia.dong@company.local` | `Admin@12345` | Leave policy, balances, company leave list, **tier 2 approval** |
 | **Employee (submitter)** | Wei Chen | `demo.seed.designer@company.local` | `Admin@12345` | Must have a **discipline + leader** for leave submit |
-| **Immediate supervisor** *(Discipline Lead)* | Xiaoming Li (李晓铭) | `xiaoming.li@company.local` | `Admin@12345` | Leader of Structure(Building) — **tier 1 approval** |
+| **Immediate supervisor** *(Discipline Lead)* | Xiaoming Li (李晓铭) | `xiaoming.li@company.local` | `Admin@12345` | Leader of Structure(Building) - **tier 1 approval** |
 | Alternate employee | Mihret Moges | `mihret.moges@company.local` | `Admin@12345` | Also under Xiaoming Li |
 
 ### Leave approval chain (current)
@@ -28,7 +28,7 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 2. Part A — Login & shell
+## 2. Part A - Login & shell
 
 1. Open http://localhost:3000/login  
 2. Sign in as `admin@company.local` / `Admin@12345`  
@@ -37,7 +37,7 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 3. Part B — User list
+## 3. Part B - User list
 
 **Actor:** Admin or HR Officer (`jinxia.dong@company.local`)
 
@@ -52,7 +52,7 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 4. Part C — Add employee (with leave policy)
+## 4. Part C - Add employee (with leave policy)
 
 **Actor:** Admin or HR Officer
 
@@ -62,7 +62,7 @@ General Manager is **not** in the leave chain.
    - Personal  
    - Employment / organization  
    - Education (if shown)  
-   - **Leave policy + documents** — assign one of:
+   - **Leave policy + documents** - assign one of:
      - **Standard Staff**
      - **Site Workers**
      - **Management**
@@ -76,17 +76,17 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 5. Part D — Leave policy
+## 5. Part D - Leave policy
 
 **Actor:** HR Officer or Admin
 
 1. Go to **HR → Leave Policy** (`/hr/leave-policy`)  
 2. Confirm seeded policies (search works client-side):
-   - Standard Staff — progressive annual 16 days  
-   - Site Workers — flat annual 14 days  
-   - Management — progressive annual 20 days  
-   - Probation Entry — reduced annual until probation ends  
-3. Open a policy **detail** (row click) — Back / Update / Delete  
+   - Standard Staff - progressive annual 16 days  
+   - Site Workers - flat annual 14 days  
+   - Management - progressive annual 20 days  
+   - Probation Entry - reduced annual until probation ends  
+3. Open a policy **detail** (row click) - Back / Update / Delete  
 4. Click **New Leave Policy** (`/hr/leave-policy/new`):
    - Multi-section form (not a stepper): details + ANNUAL / MATERNITY / SICK  
    - **Cancel** in header; **Save** in sticky footer  
@@ -94,7 +94,7 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 6. Part E — Leave balances
+## 6. Part E - Leave balances
 
 **Actor:** HR Officer or Admin
 
@@ -109,9 +109,9 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 7. Part F — Employee submits leave
+## 7. Part F - Employee submits leave
 
-**Actor:** Wei Chen — `demo.seed.designer@company.local` / `Admin@12345`  
+**Actor:** Wei Chen - `demo.seed.designer@company.local` / `Admin@12345`  
 *(Log out admin / open a private window)*
 
 1. Login as the employee  
@@ -122,20 +122,20 @@ General Manager is **not** in the leave chain.
    - **Leave type:** Annual  
    - **Dates:** any valid range with enough balance  
    - Confirm **days** auto-calculates  
-   - Reason: e.g. `Family trip — HR review demo`  
+   - Reason: e.g. `Family trip - HR review demo`  
    - Optional attachment  
 4. Click **Submit** (sticky footer)  
 5. Note the new **request number** (e.g. `LR-…`) and status (**Submitted** / **In review**)  
-6. Open the request detail — approval timeline should show pending **Discipline Lead**, then **HR Officer**  
+6. Open the request detail - approval timeline should show pending **Discipline Lead**, then **HR Officer**  
 
 ---
 
-## 8. Part G — Immediate supervisor approval (Tier 1)
+## 8. Part G - Immediate supervisor approval (Tier 1)
 
-**Actor:** Xiaoming Li — `xiaoming.li@company.local` / `Admin@12345`
+**Actor:** Xiaoming Li - `xiaoming.li@company.local` / `Admin@12345`
 
 1. Login as Discipline Lead  
-2. Go to **Approvals** (`/approvals`) — inbox / pending for me  
+2. Go to **Approvals** (`/approvals`) - inbox / pending for me  
 3. Open the leave request from Wei Chen  
 4. Review dates, days, reason, balance if shown  
 5. **Approve** (optionally add a comment)  
@@ -143,9 +143,9 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 9. Part H — HR approval (Tier 2) — final
+## 9. Part H - HR approval (Tier 2) - final
 
-**Actor:** Jinxia Dong — `jinxia.dong@company.local` / `Admin@12345`
+**Actor:** Jinxia Dong - `jinxia.dong@company.local` / `Admin@12345`
 
 1. Login as HR Officer  
 2. **Approvals** → open the same request  
@@ -155,13 +155,13 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 10. Part I — HR verifies request & balances after approval
+## 10. Part I - HR verifies request & balances after approval
 
 **Actor:** HR Officer or Admin
 
-1. **HR → Leave Requests** — find the request by **name or request #** (frontend search)  
-2. Open detail — status **Approved**, approval timeline complete  
-3. **Leave Balances** tab — confirm the employee’s **annual used / remaining** updated  
+1. **HR → Leave Requests** - find the request by **name or request #** (frontend search)  
+2. Open detail - status **Approved**, approval timeline complete  
+3. **Leave Balances** tab - confirm the employee’s **annual used / remaining** updated  
 
 ---
 
@@ -181,7 +181,7 @@ General Manager is **not** in the leave chain.
 
 ---
 
-## 12. Quick reference — routes
+## 12. Quick reference - routes
 
 | Screen | Path |
 |---|---|

@@ -63,7 +63,7 @@ function cellColor(score: number): string {
 
 /**
  * 5x5 likelihood/impact grid with per-cell risk counts. Purely presentational
- * — counting is done by the caller passing in the risk set the matrix should
+ * - counting is done by the caller passing in the risk set the matrix should
  * summarize (should be the full project/portfolio set, not a paginated page).
  */
 export default function RiskMatrix({

@@ -61,7 +61,7 @@ export type UpdateWorkSchedulePayload = Partial<CreateWorkSchedulePayload> & {
   recalculateFrom?: string;
 };
 
-/** Returned by DELETE /hr/work-schedules/:id — who was moved, and where to. */
+/** Returned by DELETE /hr/work-schedules/:id - who was moved, and where to. */
 export interface DeleteWorkScheduleResult {
   movedEmployees: number;
   defaultScheduleId: string;
@@ -188,7 +188,7 @@ export interface ListPublicHolidaysParams {
   upcoming?: number;
 }
 
-/** GET /hr/public-holidays/my/upcoming — `date` is the next occurrence. */
+/** GET /hr/public-holidays/my/upcoming - `date` is the next occurrence. */
 export interface MyUpcomingHoliday {
   id: string;
   name: string;

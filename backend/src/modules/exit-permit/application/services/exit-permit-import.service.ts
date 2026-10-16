@@ -35,7 +35,7 @@ interface ExitPermitImportPayload {
 const EXIT_PERMIT_IMPORT_SCHEMA: ImportColumnSchema = {
   sheetName: 'Exit Permits',
   templateFileName: 'exit-permit-import-template',
-  note: 'One row per item. Repeat the employee, direction, date and department columns on every row of the same permit — rows that share all four are folded into a single DRAFT permit with several items. Nothing is submitted or approved.',
+  note: 'One row per item. Repeat the employee, direction, date and department columns on every row of the same permit - rows that share all four are folded into a single DRAFT permit with several items. Nothing is submitted or approved.',
   maxRows: 1000,
   columns: [
     {
@@ -164,7 +164,7 @@ export class ExitPermitImportService extends HrModuleImportServiceBase<ExitPermi
         message: employee.message,
       };
     }
-    const label = `${this.excel.employeeLabel(employee.employee)} — ${text('itemName')}`;
+    const label = `${this.excel.employeeLabel(employee.employee)} - ${text('itemName')}`;
 
     let departmentId: string | undefined;
     const departmentName = text('department');

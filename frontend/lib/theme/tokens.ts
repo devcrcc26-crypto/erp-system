@@ -40,7 +40,7 @@ export const tokens = {
   colorGray600: '#5F5E5A',
 
   colorNavy: '#1B2B4B',
-  /** Light sider — high-contrast labels, teal active states */
+  /** Light sider - high-contrast labels, teal active states */
   colorSidebarBg: '#FFFFFF',
   colorSidebarRailBg: '#F5F7F9',
   colorSidebarActive: '#E1F5EE',
@@ -63,7 +63,7 @@ export const tokens = {
   colorTextTertiary: 'rgba(0, 0, 0, 0.45)',
 
   /**
-   * Primary UI font — Segoe UI with system/CJK fallbacks.
+   * Primary UI font - Segoe UI with system/CJK fallbacks.
    */
   fontFamily:
     "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",

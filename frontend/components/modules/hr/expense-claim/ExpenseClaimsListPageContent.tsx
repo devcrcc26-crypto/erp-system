@@ -119,7 +119,7 @@ function ExpenseClaimStat({
 }
 
 /**
- * Expense claims list — Users chrome (stat bar, filter row, rounded table).
+ * Expense claims list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -70,10 +70,10 @@ function CreateIssueFormBody({
         <Descriptions.Item label="Assigned to">
           {actionItem.ownerId
             ? resolveUserDisplay(actionItem.ownerId, actionItem.ownerName)
-            : (actionItem.assignedToName ?? '—')}
+            : (actionItem.assignedToName ?? '-')}
         </Descriptions.Item>
         <Descriptions.Item label="Due date">
-          {actionItem.dueDate ? formatProjectDate(actionItem.dueDate) : '—'}
+          {actionItem.dueDate ? formatProjectDate(actionItem.dueDate) : '-'}
         </Descriptions.Item>
       </Descriptions>
 
@@ -85,7 +85,7 @@ function CreateIssueFormBody({
             loading={subtasksQuery.isLoading}
             options={(subtasksQuery.data ?? []).map((s) => ({
               value: s.id,
-              label: `${s.fullCode} — ${s.name}`,
+              label: `${s.fullCode} - ${s.name}`,
             }))}
           />
         </Form.Item>

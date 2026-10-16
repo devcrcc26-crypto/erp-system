@@ -54,7 +54,7 @@ export class DocumentFoldersController {
   @ApiOperation({
     summary: 'Search all documents in a project folder tree',
     description:
-      'Project document browser — search by title, folder path, engineering document metadata, discipline, source type, file type, and upload date.',
+      'Project document browser - search by title, folder path, engineering document metadata, discipline, source type, file type, and upload date.',
   })
   listProjectDocuments(
     @CurrentUser() user: AuthenticatedUser,

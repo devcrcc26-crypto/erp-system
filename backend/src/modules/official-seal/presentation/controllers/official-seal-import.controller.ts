@@ -2,7 +2,7 @@ import { createHrImportController } from '@/modules/hr-shared/application/import
 import { OfficialSealImportService } from '../../application/services/official-seal-import.service';
 
 /**
- * `GET/POST /hr/official-seal/import*` — template, preview and commit.
+ * `GET/POST /hr/official-seal/import*` - template, preview and commit.
  */
 export const OfficialSealImportController = createHrImportController({
   route: 'hr/official-seal/import',

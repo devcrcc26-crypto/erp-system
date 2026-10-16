@@ -1,6 +1,6 @@
 /**
  * Seeds the CRCC Standard work schedule (Sunday off, Sat half day).
- * Does not seed public holidays — HR adds those from the UI.
+ * Does not seed public holidays - HR adds those from the UI.
  *
  * Usage:
  *   npx ts-node --transpile-only prisma/seed/work-schedules.seed.ts

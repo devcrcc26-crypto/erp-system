@@ -1,5 +1,5 @@
 /*
- * Employees list (v2) — floating panels matching the sidebar, header and
+ * Employees list (v2) - floating panels matching the sidebar, header and
  * dashboard. Scoped under `.erp-employees-v2` (UsersPageContent root only);
  * selectors repeat the global table chain so they win without new !important
  * except where the global rule already uses it.

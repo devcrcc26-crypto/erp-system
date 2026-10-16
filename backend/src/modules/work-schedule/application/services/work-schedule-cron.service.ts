@@ -24,7 +24,7 @@ export class WorkScheduleCronService {
   ) {}
 
   /**
-   * Runs every day at 07:00 — upcoming-holiday reminders for HR.
+   * Runs every day at 07:00 - upcoming-holiday reminders for HR.
    */
   @Cron('0 7 * * *')
   async notifyUpcomingHolidays(): Promise<void> {
@@ -50,7 +50,7 @@ export class WorkScheduleCronService {
       const officers = await this.findHrOfficers(company.id);
       if (officers.length === 0) {
         this.logger.warn(
-          `No HR Officer found for company ${company.id} — skipping holiday reminders`,
+          `No HR Officer found for company ${company.id} - skipping holiday reminders`,
         );
         continue;
       }

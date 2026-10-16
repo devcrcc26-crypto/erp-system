@@ -10,7 +10,7 @@
 --   Structural, Structural Systems -> Structure(Building)
 --   Structure(Road) -> Structure(Road)
 --   Tower Crown -> Tower Crown (custom)
--- User.discipline enum: 143 null rows — no user backfill
+-- User.discipline enum: 143 null rows - no user backfill
 -- Rollback:
 --   UPDATE task_discipline SET discipline_id = NULL;
 --   UPDATE "user" SET engineering_discipline_id = NULL;

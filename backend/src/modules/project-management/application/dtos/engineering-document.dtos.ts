@@ -431,7 +431,7 @@ export class CreateDesignPackageDto {
   instituteChiefUserId?: string;
 
   @ApiPropertyOptional({
-    description: 'External Institute Chief name — set instead of instituteChiefUserId when they have no system account.',
+    description: 'External Institute Chief name - set instead of instituteChiefUserId when they have no system account.',
   })
   @IsOptional()
   @IsString()

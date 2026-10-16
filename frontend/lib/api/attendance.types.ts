@@ -430,7 +430,7 @@ export interface AttendanceMonthlyApproval {
   unlockedBy: string | null;
   unlockReason: string | null;
   notificationsSentAt: string | null;
-  /** Site/WFH/leave approved while this month was locked — unlock to apply. */
+  /** Site/WFH/leave approved while this month was locked - unlock to apply. */
   attendanceRecalcStale?: boolean;
   createdAt: string;
   updatedAt: string;

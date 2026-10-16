@@ -95,7 +95,7 @@ function DetailSection({
 }
 
 /**
- * Expense claim detail — Users / employee profile chrome (aligned with leave & overtime).
+ * Expense claim detail - Users / employee profile chrome (aligned with leave & overtime).
  */
 export default function ExpenseClaimDetailPageContent({
   claimId,
@@ -687,7 +687,7 @@ export default function ExpenseClaimDetailPageContent({
             <p className="erp-users-stat-label">{t('hr.form.receipt')}</p>
             <p className="erp-employee-meta-value">
               {claim.items.length === 0
-                ? '—'
+                ? '-'
                 : `${receiptOkCount}/${claim.items.length}`}
             </p>
           </div>

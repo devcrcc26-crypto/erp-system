@@ -106,7 +106,7 @@ export const submittalDrawerProps: Pick<
   styles: detailDrawerStyles,
 };
 
-/** Two-step wizard modals (subtask / discipline edit) — fit within the viewport. */
+/** Two-step wizard modals (subtask / discipline edit) - fit within the viewport. */
 export const WIZARD_MODAL_WIDTH = 720;
 
 export const wizardModalProps: Pick<

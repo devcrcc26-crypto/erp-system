@@ -32,7 +32,7 @@ export default function DailyLogDetailDrawer({
   const log = logQuery.data;
 
   const title = log
-    ? log.logNumber?.trim() || `Daily log — ${formatProjectDate(log.logDate)}`
+    ? log.logNumber?.trim() || `Daily log - ${formatProjectDate(log.logDate)}`
     : 'Daily log';
 
   return (
@@ -91,24 +91,24 @@ export default function DailyLogDetailDrawer({
                 {formatProjectDate(log.logDate)}
               </Descriptions.Item>
               <Descriptions.Item label="Shift">
-                {log.shift ?? '—'}
+                {log.shift ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Weather">
-                {log.weatherCondition ?? '—'}
+                {log.weatherCondition ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Temperature">
-                {log.temperatureC != null ? `${log.temperatureC} °C` : '—'}
+                {log.temperatureC != null ? `${log.temperatureC} °C` : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Rainfall">
-                {log.rainfallLevel ?? '—'}
+                {log.rainfallLevel ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Contractor">
-                {log.contractorName ?? '—'}
+                {log.contractorName ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Supervisor">
                 {log.supervisorId
                   ? resolveUserDisplay(log.supervisorId, log.supervisorName)
-                  : '—'}
+                  : '-'}
               </Descriptions.Item>
               {log.submittedBy && (
                 <Descriptions.Item label="Submitted by">

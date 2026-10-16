@@ -35,7 +35,7 @@ interface LeavePolicyImportPayload {
 const LEAVE_POLICY_IMPORT_SCHEMA: ImportColumnSchema = {
   sheetName: 'Leave Policies',
   templateFileName: 'leave-policy-import-template',
-  note: 'One row per leave-type rule. Repeat the policy columns on every row of the same policy — rows sharing a Policy Name become one policy with several rules. A policy name that already exists is skipped.',
+  note: 'One row per leave-type rule. Repeat the policy columns on every row of the same policy - rows sharing a Policy Name become one policy with several rules. A policy name that already exists is skipped.',
   maxRows: 1000,
   columns: [
     {
@@ -190,7 +190,7 @@ export class LeavePolicyImportService extends HrModuleImportServiceBase<LeavePol
 
     const name = text('name');
     const leaveType = text('leaveType') as LeaveType;
-    const label = `${name} — ${leaveType}`;
+    const label = `${name} - ${leaveType}`;
 
     const existing = await this.prisma.leavePolicy.findFirst({
       where: activeOnly({ companyId: ctx.companyId, name }),

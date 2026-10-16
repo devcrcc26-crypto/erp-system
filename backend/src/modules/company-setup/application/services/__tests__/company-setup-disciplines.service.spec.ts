@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { CompanySetupService } from '../company-setup.service';
 
-describe('CompanySetupService — engineering disciplines', () => {
+describe('CompanySetupService - engineering disciplines', () => {
   const ctx = { companyId: 'company-1', userId: 'user-1' };
 
   let prisma: {

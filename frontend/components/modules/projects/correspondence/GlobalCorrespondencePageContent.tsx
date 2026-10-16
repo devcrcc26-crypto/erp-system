@@ -60,7 +60,7 @@ const DIRECTION_OPTIONS: { value: CorrespondenceDirection; label: string }[] = [
 ];
 
 /**
- * Global Correspondence list — company-wide portfolio access only.
+ * Global Correspondence list - company-wide portfolio access only.
  */
 export default function GlobalCorrespondencePageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -205,7 +205,7 @@ export default function GlobalCorrespondencePageContent(): React.ReactNode {
         title: 'Project',
         key: 'project',
         render: (_: unknown, record: Correspondence) =>
-          record.projectCode?.trim() || '—',
+          record.projectCode?.trim() || '-',
       },
     ],
     [],
@@ -263,7 +263,7 @@ export default function GlobalCorrespondencePageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Correspondence APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

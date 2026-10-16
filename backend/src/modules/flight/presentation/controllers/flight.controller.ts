@@ -211,7 +211,7 @@ export class FlightController {
     @Body() body: Record<string, unknown>,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
-    // Multipart nested passengers arrive as a JSON string — parse before validate.
+    // Multipart nested passengers arrive as a JSON string - parse before validate.
     const dto = await parseFlightSubmitDto(body ?? {});
     return this.flightService.submitApplication(
       dto,

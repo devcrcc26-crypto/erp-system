@@ -16,9 +16,9 @@ export function formatApprovalUserName(
   user?: ApprovalUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
-  return formatUserName(user) || user.email || '—';
+  return formatUserName(user) || user.email || '-';
 }
 
 export function formatApprovalStatus(status: string, t?: TFn): string {
@@ -79,7 +79,7 @@ export function approvalTierDecisionVariant(
 }
 
 /**
- * Display status for list rows — prefer current-tier conditional state when active.
+ * Display status for list rows - prefer current-tier conditional state when active.
  */
 export function resolveDisplayStatus(
   requestStatus: ApprovalRequestStatus,
@@ -158,7 +158,7 @@ export function getFormFieldLabels(
 
 export function formatFormDataValue(value: unknown, t?: TFn): string {
   if (value === null || value === undefined || value === '') {
-    return '—';
+    return '-';
   }
   if (typeof value === 'boolean') {
     return value

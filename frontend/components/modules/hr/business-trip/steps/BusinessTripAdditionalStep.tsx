@@ -7,7 +7,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BusinessTripAdditionalValues } from './business-trip-stepper.types';
 
 /**
- * Step 4 — accommodation / notes / attachments.
+ * Step 4 - accommodation / notes / attachments.
  */
 export default function BusinessTripAdditionalStep({
   values,

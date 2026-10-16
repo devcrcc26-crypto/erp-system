@@ -126,7 +126,7 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   y = doc.lastAutoTable.finalY + 8;
 
   y = ensureSpace(doc, y, 40);
-  y = drawSectionTitle(doc, `${labels.portfolio} — ${labels.byStatus}`, y);
+  y = drawSectionTitle(doc, `${labels.portfolio} - ${labels.byStatus}`, y);
   const statusRows = Object.entries(summary.projects.byStatus)
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
@@ -147,7 +147,7 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   y = doc.lastAutoTable.finalY + 8;
 
   y = ensureSpace(doc, y, 40);
-  y = drawSectionTitle(doc, `${labels.portfolio} — ${labels.byType}`, y);
+  y = drawSectionTitle(doc, `${labels.portfolio} - ${labels.byType}`, y);
   const typeRows = Object.entries(summary.projects.byType)
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
@@ -287,7 +287,7 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — Page ${page} of ${pageCount}`,
+      `${labels.footer} - ${labels.title} - Page ${page} of ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

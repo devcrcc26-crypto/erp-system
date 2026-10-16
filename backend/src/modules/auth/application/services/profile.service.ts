@@ -25,6 +25,7 @@ import { assertPasswordPolicy } from '../utils/password-policy.util';
 import { AuthMailService } from './auth-mail.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
+import { currentYearsOfExperience } from '../../../user-management/domain/years-of-experience';
 
 type SessionContext = {
   userId: string;
@@ -41,6 +42,7 @@ const PROFILE_INCLUDE = {
   },
   department: { select: { name: true, nameZh: true } },
   position: { select: { title: true, titleZh: true } },
+  seniorityLevel: { select: { name: true, nameZh: true } },
   branch: { select: { name: true } },
   reportsTo: { select: { firstName: true, lastName: true, chineseName: true } },
 } satisfies Prisma.UserInclude;
@@ -515,7 +517,14 @@ export class ProfileService {
       educationLevel: user.educationLevel,
       fieldOfStudy: user.fieldOfStudy,
       employmentDate: toDateOnly(user.employmentDate),
-      experienceStartDate: toDateOnly(user.experienceStartDate),
+      yearsOfExperience: currentYearsOfExperience(
+        user.yearsOfExperience,
+        user.yearsOfExperienceAsOf,
+      ),
+      yearsOfExperienceAsOf: toDateOnly(user.yearsOfExperienceAsOf),
+      secondaryPhone: user.secondaryPhone,
+      seniorityLevelName: user.seniorityLevel?.name ?? null,
+      seniorityLevelNameZh: user.seniorityLevel?.nameZh ?? null,
       addressCountry: user.addressCountry,
       addressRegion: user.addressRegion,
       addressCity: user.addressCity,

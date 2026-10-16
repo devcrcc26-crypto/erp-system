@@ -186,7 +186,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
 
   const quarterOptions = [1, 2, 3, 4].map((q) => ({
     value: q,
-    label: `Q${q} — ${['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'][q - 1]}`,
+    label: `Q${q} - ${['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'][q - 1]}`,
   }));
 
   const columns: ColumnsType<EvaluationCycle> = [
@@ -222,7 +222,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
         row.template?.name ? (
           <span className="erp-users-cell-strong">{row.template.name}</span>
         ) : (
-          <span className="erp-users-cell-sub">—</span>
+          <span className="erp-users-cell-sub">-</span>
         ),
     },
     {
@@ -438,7 +438,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
       >
         <p className="erp-evaluation-modal-hint">
           Choose the quarter and year for this evaluation period. The cycle
-          starts as a draft — activate it when you are ready to generate
+          starts as a draft - activate it when you are ready to generate
           employee evaluations.
         </p>
         <Form layout="vertical" requiredMark={false}>

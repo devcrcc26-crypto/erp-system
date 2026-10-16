@@ -229,7 +229,7 @@ export default function CorrespondenceDetailDrawer({
                   <div className="mt-1 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-medium text-[var(--color-text-primary)]">
-                        {item.parent.referenceNumber} — {item.parent.subject}
+                        {item.parent.referenceNumber} - {item.parent.subject}
                       </p>
                       <StatusBadge
                         label={formatCorrespondenceStatus(item.parent.status)}
@@ -286,7 +286,7 @@ export default function CorrespondenceDetailDrawer({
               description={
                 canUploadAttachments
                   ? 'Upload letters, scanned documents, email PDFs, and other supporting files.'
-                  : 'Closed correspondence is read-only — attachments cannot be changed.'
+                  : 'Closed correspondence is read-only - attachments cannot be changed.'
               }
             />
 

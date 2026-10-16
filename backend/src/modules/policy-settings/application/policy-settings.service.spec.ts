@@ -127,7 +127,7 @@ describe('PolicySettingsService', () => {
   });
 
   describe('existing payroll runs', () => {
-    it('warns first, then marks open runs stale and approved/paid runs "review required" — no recalculation', async () => {
+    it('warns first, then marks open runs stale and approved/paid runs "review required" - no recalculation', async () => {
       const runs = [run('oct', 10, 'PAID'), run('nov', 11, 'DRAFT'), run('dec', 12, 'GM_APPROVED'), run('sep', 9, 'PAID')];
       const { service, prisma } = makeService({ roles: ['HR Manager'], runs });
       const input = { value: { regular: 2, night: 2, weekend: 2.5, holiday: 3 }, effectiveFrom: '2026-10-01', reason: 'New CBA' };

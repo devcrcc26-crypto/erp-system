@@ -51,21 +51,21 @@ export interface DayDeductionContext {
   isWorkFromHome: (date: Date) => boolean;
   /** Approved site assignment covering this date, if any. */
   siteNameForDate: (date: Date) => string | null;
-  /** Approved paid leave (not UNPAID) — counts as present for pay. */
+  /** Approved paid leave (not UNPAID) - counts as present for pay. */
   isOnApprovedLeave: (date: Date) => boolean;
   /**
-   * Approved UNPAID leave — full absence (deduction 1), including Saturday.
+   * Approved UNPAID leave - full absence (deduction 1), including Saturday.
    * Checked before WFH / site / paid leave so unpaid never produces coverage.
    */
   isOnUnpaidLeave?: (date: Date) => boolean;
   fieldMovementCoverage: (date: Date) => FieldMovementCoverage;
   /**
-   * Approved / pending FIELD_VISIT or EARLY_LEAVE only — waives early-departure
+   * Approved / pending FIELD_VISIT or EARLY_LEAVE only - waives early-departure
    * deduction. FORGOT_CLOCK_* never waives early departure.
    */
   earlyDepartureWaiver?: (date: Date) => FieldMovementCoverage;
   /**
-   * Attendance-exempt employees (no scanner) — treat duty days as full presence.
+   * Attendance-exempt employees (no scanner) - treat duty days as full presence.
    * Checked after paid categories (day off / holiday / WFH / site / leave).
    */
   isAttendanceExempt?: () => boolean;
@@ -140,12 +140,12 @@ export interface DayDeductionResult {
   /** True when the day was evaluated under a SCAN_ONLY schedule. */
   scanOnly?: boolean;
   /**
-   * SCAN_ONLY: earliest scan (HH:mm) when it is after latestScanTime — flagged
+   * SCAN_ONLY: earliest scan (HH:mm) when it is after latestScanTime - flagged
    * SCAN_AFTER_DEADLINE for HR review. No pay effect.
    */
   scanAfterDeadlineTime?: string | null;
   /**
-   * Approved paid leave with any HQ scan — leave status stays; HR review flag
+   * Approved paid leave with any HQ scan - leave status stays; HR review flag
    * ON_LEAVE_BUT_SCANNED. No automatic change to the leave request.
    */
   onLeaveButScanned?: boolean;
@@ -194,7 +194,7 @@ export function dayDeduction(
   }
 
   if (kind === 'DAY_OFF') {
-    // Scans on a day off are informational only — no pay change, no flags.
+    // Scans on a day off are informational only - no pay change, no flags.
     if (hasAnyScan) {
       return { deduction: 0, status: 'WORKED_ON_DAY_OFF' };
     }
@@ -271,7 +271,7 @@ export function dayDeduction(
     };
   }
 
-  // Both punches present — tiered early departure (grace / flag / >1h).
+  // Both punches present - tiered early departure (grace / flag / >1h).
   // Only FIELD_VISIT / EARLY_LEAVE waive; FORGOT_CLOCK_* does not.
   const earlyWaiver = context.earlyDepartureWaiver?.(date) ?? 'NONE';
   const early = evaluateEarlyDeparture({
@@ -315,7 +315,7 @@ export function dayDeduction(
 /**
  * SCAN_ONLY duty day (after day off / holiday / unpaid / leave / WFH / site /
  * exempt): any scan → PRESENT 0; no scan → enrolment grace or ABSENT 1.
- * Earliest scan after latestScanTime is flagged only — status and pay unchanged.
+ * Earliest scan after latestScanTime is flagged only - status and pay unchanged.
  */
 function scanOnlyDayDeduction(
   date: Date,
@@ -400,7 +400,7 @@ export interface MonthAbsenceSummary {
 }
 
 export const FULLY_ABSENT_NO_PAY_NOTE =
-  'Absent all working days — no pay.';
+  'Absent all working days - no pay.';
 
 /**
  * Duty day for absence pay / fully-absent / COVERED: WORKING or HALF_DAY.

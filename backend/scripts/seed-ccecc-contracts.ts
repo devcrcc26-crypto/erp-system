@@ -252,13 +252,12 @@ async function main(): Promise<void> {
           firstName: true,
           lastName: true,
           employmentDate: true,
-          experienceStartDate: true,
         },
       });
       if (!user) {
         throw new Error(`User ${employeeCode} not found`);
       }
-      const hireDate = user.employmentDate ?? user.experienceStartDate;
+      const hireDate = user.employmentDate;
       if (!hireDate) {
         throw new Error(`${employeeCode} has no employment_date`);
       }
@@ -306,7 +305,7 @@ async function main(): Promise<void> {
             notes: hasDual
               ? i === 0
                 ? 'Seeded prior terms (superseded by salary revision row)'
-                : 'Seeded current terms — edit start date as needed'
+                : 'Seeded current terms - edit start date as needed'
               : 'Seeded from employment salary roster',
             createdBy: SAMUEL_ID,
             updatedBy: SAMUEL_ID,
@@ -324,7 +323,7 @@ async function main(): Promise<void> {
     console.log(`Contracts created: ${contractsCreated}`);
     console.log(`Employees with 2 contracts: ${dualEmployees}`);
     console.log(
-      'Dual #2 start dates are employment_start+1 day placeholders — edit in UI.',
+      'Dual #2 start dates are employment_start+1 day placeholders - edit in UI.',
     );
   } finally {
     await prisma.$disconnect();

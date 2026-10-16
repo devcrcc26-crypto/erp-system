@@ -1,6 +1,6 @@
 export type QueryParamValue = string | number | boolean | undefined | null;
 
-/** Loose map for query builders — callers may pass domain-specific filters. */
+/** Loose map for query builders - callers may pass domain-specific filters. */
 export type QueryStringParams = Record<string, QueryParamValue | undefined>;
 
 /**

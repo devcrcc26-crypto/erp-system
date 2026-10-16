@@ -19,7 +19,7 @@ export interface SidebarFavoriteControl {
 
 /**
  * One destination inside a module group (or a search result). Coming-soon
- * placeholders render as static text — they are never focusable links.
+ * placeholders render as static text - they are never focusable links.
  */
 export default function SidebarModuleItem({
   link,

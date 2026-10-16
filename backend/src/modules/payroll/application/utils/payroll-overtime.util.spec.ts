@@ -167,7 +167,7 @@ describe('assignOvertimeToSalaryPeriods', () => {
   });
 
   it(`overnight spanning renewal uses ${OVERNIGHT_OT_DATE_ASSIGNMENT} (start date)`, () => {
-    // Entry dated Aug 23 overnight — hours stay on old contract (start date).
+    // Entry dated Aug 23 overnight - hours stay on old contract (start date).
     const result = assignOvertimeToSalaryPeriods({
       entries: [
         {

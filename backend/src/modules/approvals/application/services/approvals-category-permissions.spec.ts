@@ -86,7 +86,7 @@ function makeService(input: {
   );
 }
 
-describe('ApprovalsService — category create permissions', () => {
+describe('ApprovalsService - category create permissions', () => {
   it('hides Vehicle Refueling from a regular employee', async () => {
     const service = makeService({
       roleNames: ['Employee'],

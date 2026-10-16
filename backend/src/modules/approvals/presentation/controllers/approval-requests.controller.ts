@@ -33,7 +33,7 @@ import {
 import { ApprovalsService } from '../../application/services/approvals.service';
 
 /**
- * Approval requests — authenticated users only.
+ * Approval requests - authenticated users only.
  * Visibility is enforced in ApprovalsService (own + assigned vs hr.view full access).
  * Tier actions still verify the caller is the assigned approver in the service.
  */

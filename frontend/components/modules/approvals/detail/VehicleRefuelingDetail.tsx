@@ -16,7 +16,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Vehicle refueling body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function VehicleRefuelingDetail({
   sourceId,
@@ -64,21 +64,21 @@ export default function VehicleRefuelingDetail({
           },
           {
             label: t('hr.table.litres'),
-            value: refueling.requestedLitres?.toString() ?? '—',
+            value: refueling.requestedLitres?.toString() ?? '-',
           },
           {
             label: t('hr.form.unitPriceEtb'),
             value:
               refueling.unitPriceEtb != null
                 ? formatEtbAmount(refueling.unitPriceEtb)
-                : '—',
+                : '-',
           },
           {
             label: t('hr.labels.totalCostEtb'),
             value:
               refueling.totalCostEtb != null
                 ? formatEtbAmount(refueling.totalCostEtb)
-                : '—',
+                : '-',
           },
         ]}
       />
@@ -92,12 +92,12 @@ export default function VehicleRefuelingDetail({
             {formatProjectDate(refueling.fuelDate)}
           </MetaItem>
           <MetaItem label={t('hr.form.currentMileage')}>
-            {refueling.currentMileage?.toString() ?? '—'}
+            {refueling.currentMileage?.toString() ?? '-'}
           </MetaItem>
           <MetaItem label={t('hr.form.vehicle')}>
             {refueling.vehicle
-              ? `${refueling.vehicle.plateNumber} — ${refueling.vehicle.make} ${refueling.vehicle.model}`
-              : '—'}
+              ? `${refueling.vehicle.plateNumber} - ${refueling.vehicle.make} ${refueling.vehicle.model}`
+              : '-'}
           </MetaItem>
           {refueling.driver ? (
             <MetaItem label={t('hr.form.driver')}>

@@ -11,11 +11,11 @@ const COMPANY = 'co-1';
 const ctx = { companyId: COMPANY, userId: 'hr-manager' };
 
 const entryRows = [
-  { id: 'e1', flag: 'CONTRACT_ENDED_NOT_RENEWED', flagNote: 'Contract ended — renew, convert or separate; paid on the ended contract terms (ended 2026-09-30)', employee: { id: 'u1', employeeId: 'EM-001', firstName: 'Abebe', lastName: 'K' } },
+  { id: 'e1', flag: 'CONTRACT_ENDED_NOT_RENEWED', flagNote: 'Contract ended - renew, convert or separate; paid on the ended contract terms (ended 2026-09-30)', employee: { id: 'u1', employeeId: 'EM-001', firstName: 'Abebe', lastName: 'K' } },
   { id: 'e2', flag: 'NONE', flagNote: null, employee: { id: 'u2', employeeId: 'EM-002', firstName: 'Bethel', lastName: 'M' } },
   // Data-problem flag took the slot; the leaver note was appended.
-  { id: 'e3', flag: 'MISSING_ATTENDANCE', flagNote: 'No attendance; Leaver final month — final settlement handled outside the system (leaving date 2026-10-20)', employee: { id: 'u3', employeeId: 'EM-003', firstName: 'Chala', lastName: 'T' } },
-  { id: 'e4', flag: 'INACTIVE_IN_MONTH', flagNote: 'Inactive (Suspended) 10 day(s) — unpaid', employee: { id: 'u4', employeeId: 'EM-004', firstName: 'Dawit', lastName: 'A' } },
+  { id: 'e3', flag: 'MISSING_ATTENDANCE', flagNote: 'No attendance; Leaver final month - final settlement handled outside the system (leaving date 2026-10-20)', employee: { id: 'u3', employeeId: 'EM-003', firstName: 'Chala', lastName: 'T' } },
+  { id: 'e4', flag: 'INACTIVE_IN_MONTH', flagNote: 'Inactive (Suspended) 10 day(s) - unpaid', employee: { id: 'u4', employeeId: 'EM-004', firstName: 'Dawit', lastName: 'A' } },
 ];
 
 function makeService(status: 'REVIEWED' | 'SUBMITTED' | 'APPROVED', rows = entryRows) {

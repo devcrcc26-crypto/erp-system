@@ -73,7 +73,7 @@ interface LeavePolicyDetailPageContentProps {
 }
 
 /**
- * Leave policy detail — Users / employee profile chrome.
+ * Leave policy detail - Users / employee profile chrome.
  */
 export default function LeavePolicyDetailPageContent({
   policyId,
@@ -291,7 +291,7 @@ export default function LeavePolicyDetailPageContent({
               {t('hr.leavePolicy.governedBy')}
             </p>
             <p className="erp-employee-meta-value truncate">
-              {policy.governedBy || '—'}
+              {policy.governedBy || '-'}
             </p>
           </div>
         </div>
@@ -349,7 +349,7 @@ export default function LeavePolicyDetailPageContent({
                 />
               </MetaItem>
               <MetaItem label={t('hr.leavePolicy.governedBy')}>
-                {policy.governedBy || '—'}
+                {policy.governedBy || '-'}
               </MetaItem>
               <MetaItem label={t('hr.leavePolicy.employees')}>
                 {policy.employeeCount === 0
@@ -413,26 +413,26 @@ export default function LeavePolicyDetailPageContent({
                       </MetaItem>
                       <MetaItem label={t('hr.leavePolicy.maxCarryForwardDays')}>
                         <span className="tabular-nums">
-                          {rule.maxCarryForwardDays ?? '—'}
+                          {rule.maxCarryForwardDays ?? '-'}
                         </span>
                       </MetaItem>
                       {rule.isProgressive ? (
                         <>
                           <MetaItem label={t('hr.leavePolicy.incrementDays')}>
                             <span className="tabular-nums">
-                              {rule.incrementDays ?? '—'}
+                              {rule.incrementDays ?? '-'}
                             </span>
                           </MetaItem>
                           <MetaItem
                             label={t('hr.leavePolicy.incrementEveryYears')}
                           >
                             <span className="tabular-nums">
-                              {rule.incrementEveryYears ?? '—'}
+                              {rule.incrementEveryYears ?? '-'}
                             </span>
                           </MetaItem>
                           <MetaItem label={t('hr.leavePolicy.maxDaysCap')}>
                             <span className="tabular-nums">
-                              {rule.maxDaysCap ?? '—'}
+                              {rule.maxDaysCap ?? '-'}
                             </span>
                           </MetaItem>
                         </>

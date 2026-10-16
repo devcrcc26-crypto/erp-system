@@ -86,7 +86,7 @@ const REQUEST_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Per diem request lifecycle — owns request data; delegates tier workflow to ApprovalsService.
+ * Per diem request lifecycle - owns request data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class PerDiemService
@@ -267,7 +267,7 @@ export class PerDiemService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'PER_DIEM',
-        title: `Per diem — ${dto.destination} (${dto.startDate} to ${dto.endDate})`,
+        title: `Per diem - ${dto.destination} (${dto.startDate} to ${dto.endDate})`,
         formData: {
           tripType,
           destinationCategory,

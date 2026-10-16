@@ -8,7 +8,7 @@ import {
 } from '@/lib/utils/review-tier-display';
 
 /**
- * Final governance tier for THIS package — the last tier, in canonical
+ * Final governance tier for THIS package - the last tier, in canonical
  * REVIEW_TIER_ORDER, among the package's own requiredTiers. Not a fixed
  * tier: a package that doesn't require INSTITUTE_CHIEF finalizes at
  * DEPT_CHIEF, one that does finalizes at INSTITUTE_CHIEF.
@@ -21,7 +21,7 @@ export function isFinalReviewTier(
     return false;
   }
   if (!requiredTiers || requiredTiers.length === 0) {
-    // No package context available — fall back to the pre-INSTITUTE_CHIEF
+    // No package context available - fall back to the pre-INSTITUTE_CHIEF
     // default rather than silently treating every tier as non-final.
     return tier === 'DEPT_CHIEF';
   }
