@@ -20,7 +20,11 @@ interface LoginFormValues {
   password: string;
 }
 
-function useLoginLabels(): { fullName: string; subtitle: string } {
+function useLoginLabels(): {
+  fullName: string;
+  subtitle: string;
+  brandLine: string;
+} {
   return useMemo(() => {
     const lang =
       typeof document !== 'undefined'
@@ -32,6 +36,9 @@ function useLoginLabels(): { fullName: string; subtitle: string } {
       subtitle: isZh
         ? '请输入姓名和密码以继续'
         : 'Enter your full name and password to continue',
+      brandLine: isZh
+        ? '建设企业的统一工作平台'
+        : 'One workspace for construction operations',
     };
   }, []);
 }
@@ -131,143 +138,183 @@ function LoginForm(): React.ReactNode {
   }
 
   return (
-    <div className="erp-login-page flex min-h-dvh w-full flex-col">
-      <header className="erp-login-header flex h-14 shrink-0 items-center px-5 sm:px-8">
-        <div className="flex items-center gap-3">
-          <span className="erp-login-logo-chip">
+    <div className="erp-login-page">
+      <aside className="erp-login-brand" aria-label="CCECC">
+        <div className="erp-login-brand-glow" aria-hidden />
+        <div className="erp-login-brand-grid" aria-hidden />
+        <div className="erp-login-brand-inner">
+          <div className="erp-login-brand-mark">
+            <span className="erp-login-logo-chip erp-login-logo-chip--hero">
+              <Image
+                src="/ccecc-logo.png"
+                alt=""
+                width={48}
+                height={48}
+                className="h-auto w-auto max-h-12 max-w-12 object-contain"
+                priority
+                suppressHydrationWarning
+              />
+            </span>
+            <p className="erp-login-brand-name">CCECC</p>
+          </div>
+          <h1 className="erp-login-brand-title">Construction ERP</h1>
+          <p className="erp-login-brand-line">{labels.brandLine}</p>
+        </div>
+        <p className="erp-login-brand-foot">
+          © {new Date().getFullYear()} China Civil Engineering Construction
+          Corporation
+        </p>
+      </aside>
+
+      <div className="erp-login-stage">
+        <header className="erp-login-stage-header">
+          <span className="erp-login-logo-chip erp-login-logo-chip--compact">
             <Image
               src="/ccecc-logo.png"
               alt="CCECC"
               width={28}
               height={28}
-              className="object-contain"
+              className="h-auto w-auto max-h-7 max-w-7 object-contain"
               priority
               suppressHydrationWarning
             />
           </span>
-          <div className="flex min-w-0 flex-col leading-tight">
-            <span
-              className="text-[13px] font-semibold tracking-wide text-slate-900"
-              style={{ fontFamily: tokens.fontFamily }}
-            >
-              CCECC
-            </span>
-            <span className="text-[11px] text-slate-500">Construction ERP</span>
+          <div className="erp-login-stage-brand-text">
+            <span className="erp-login-stage-name">CCECC</span>
+            <span className="erp-login-stage-product">Construction ERP</span>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="erp-login-main flex flex-1 flex-col items-center justify-center px-5 py-10 sm:px-8">
-        <div className="erp-login-layout w-full">
-          <div className="erp-login-card">
-            <div className="erp-login-card-body">
-              <h1
-                className="m-0 text-[1.5rem] font-semibold tracking-[-0.02em] text-slate-900"
-                style={{ fontFamily: tokens.fontFamily }}
-              >
-                Sign in
-              </h1>
-              <p className="mt-2 text-sm text-slate-500">{labels.subtitle}</p>
-
-              <Form<LoginFormValues>
-                form={form}
-                layout="vertical"
-                requiredMark={false}
-                className="erp-login-form mt-7"
-                onFinish={(values: LoginFormValues) => void handleSubmit(values)}
-              >
-                <Form.Item
-                  label={labels.fullName}
-                  name="identifier"
-                  rules={[
-                    { required: true, message: `${labels.fullName} is required` },
-                  ]}
+        <main className="erp-login-main">
+          <div className="erp-login-layout">
+            <div className="erp-login-card">
+              <div className="erp-login-card-body">
+                <p className="erp-login-eyebrow">Welcome back</p>
+                <h2
+                  className="erp-login-heading"
+                  style={{ fontFamily: tokens.fontFamily }}
                 >
-                  <Input
-                    placeholder={labels.fullName}
-                    autoComplete="username"
-                    size="large"
-                  />
-                </Form.Item>
+                  Sign in
+                </h2>
+                <p className="erp-login-subtitle">{labels.subtitle}</p>
 
-                <Form.Item
-                  label="Password"
-                  name="password"
-                  rules={[
-                    { required: true, message: 'Password is required' },
-                    { min: 8, message: 'Password must be at least 8 characters' },
-                  ]}
+                <Form<LoginFormValues>
+                  form={form}
+                  layout="vertical"
+                  requiredMark={false}
+                  className="erp-login-form"
+                  onFinish={(values: LoginFormValues) => void handleSubmit(values)}
                 >
-                  <Input.Password autoComplete="current-password" size="large" />
-                </Form.Item>
-
-                {hasExplicitLoginIntent ? (
-                  <ErpNotice
-                    tone="warning"
-                    className="mb-4"
-                    title="Sign in with the account you just updated. Any previous session in this browser has been cleared."
-                  />
-                ) : null}
-
-                {infoMessage ? (
-                  <ErpNotice tone="success" className="mb-4" title={infoMessage} />
-                ) : null}
-
-                {errorMessage ? (
-                  <ErpNotice tone="error" className="mb-4" title={errorMessage} />
-                ) : null}
-
-                {showResendActivation ? (
-                  <Button
-                    block
-                    className="!mb-4"
-                    onClick={() => void handleResendActivation()}
-                    loading={resendActivation.isPending}
+                  <Form.Item
+                    label={labels.fullName}
+                    name="identifier"
+                    rules={[
+                      {
+                        required: true,
+                        message: `${labels.fullName} is required`,
+                      },
+                    ]}
                   >
-                    Resend activation email
-                  </Button>
-                ) : null}
+                    <Input
+                      placeholder={labels.fullName}
+                      autoComplete="username"
+                      size="large"
+                    />
+                  </Form.Item>
 
-                <Form.Item className="!mb-0 !mt-1">
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    block
-                    size="large"
-                    loading={login.isPending}
-                    className="erp-login-submit"
+                  <Form.Item
+                    label="Password"
+                    name="password"
+                    rules={[
+                      { required: true, message: 'Password is required' },
+                      {
+                        min: 8,
+                        message: 'Password must be at least 8 characters',
+                      },
+                    ]}
                   >
-                    {login.isPending ? 'Signing in…' : 'Sign in'}
-                  </Button>
-                </Form.Item>
-              </Form>
+                    <Input.Password
+                      autoComplete="current-password"
+                      size="large"
+                    />
+                  </Form.Item>
 
-              <p className="mt-4 text-center">
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium hover:underline"
-                  style={{ color: tokens.colorPrimary }}
-                >
-                  Forgot password?
-                </Link>
-              </p>
-              <p className="mt-2 text-center text-xs text-slate-500">
-                No email on your account? Ask HR to reset your password.
-              </p>
+                  {hasExplicitLoginIntent ? (
+                    <ErpNotice
+                      tone="warning"
+                      className="mb-4"
+                      title="Sign in with the account you just updated. Any previous session in this browser has been cleared."
+                    />
+                  ) : null}
+
+                  {infoMessage ? (
+                    <ErpNotice
+                      tone="success"
+                      className="mb-4"
+                      title={infoMessage}
+                    />
+                  ) : null}
+
+                  {errorMessage ? (
+                    <ErpNotice
+                      tone="error"
+                      className="mb-4"
+                      title={errorMessage}
+                    />
+                  ) : null}
+
+                  {showResendActivation ? (
+                    <Button
+                      block
+                      className="!mb-4"
+                      onClick={() => void handleResendActivation()}
+                      loading={resendActivation.isPending}
+                    >
+                      Resend activation email
+                    </Button>
+                  ) : null}
+
+                  <Form.Item className="!mb-0 !mt-1">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      size="large"
+                      loading={login.isPending}
+                      className="erp-login-submit"
+                    >
+                      {login.isPending ? 'Signing in…' : 'Sign in'}
+                    </Button>
+                  </Form.Item>
+                </Form>
+
+                <p className="erp-login-forgot">
+                  <Link
+                    href="/forgot-password"
+                    className="erp-login-forgot-link"
+                    style={{ color: tokens.colorPrimary }}
+                  >
+                    Forgot password?
+                  </Link>
+                </p>
+                <p className="erp-login-help">
+                  No email on your account? Ask HR to reset your password.
+                </p>
+              </div>
             </div>
+
+            {isDemoLoginEnabled() ? (
+              <aside className="erp-login-demo-panel" aria-label="Demo access">
+                <DemoLoginPanel onSelectAccount={handleSelectDemoAccount} />
+              </aside>
+            ) : null}
           </div>
+        </main>
 
-          {isDemoLoginEnabled() ? (
-            <aside className="erp-login-demo-panel" aria-label="Demo access">
-              <DemoLoginPanel onSelectAccount={handleSelectDemoAccount} />
-            </aside>
-          ) : null}
-        </div>
-      </main>
-
-      <footer className="erp-login-footer shrink-0 px-5 py-4 text-center text-[11px] text-slate-400 sm:px-8">
-        © {new Date().getFullYear()} CCECC · Construction ERP
-      </footer>
+        <footer className="erp-login-footer">
+          © {new Date().getFullYear()} CCECC · Construction ERP
+        </footer>
+      </div>
     </div>
   );
 }
@@ -276,7 +323,7 @@ export default function LoginPage(): React.ReactNode {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-dvh items-center justify-center">
+        <div className="erp-login-fallback">
           <Spin />
         </div>
       }

@@ -14,6 +14,10 @@ backend/.env.*
 backend/.env.test
 backend/.env.example
 
+# Local-only credential dumps (never commit)
+backend/scripts/dev-login-credentials.csv
+
+
 # Build
 dist/
 .next/
