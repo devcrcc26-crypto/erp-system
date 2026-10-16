@@ -6,9 +6,6 @@
  *   npx ts-node -r tsconfig-paths/register scripts/create-approver-only-users.ts --apply
  *
  * Input: backend/data/private/approver-only-users.json
- *   [{ "fullName": "…", "role": null }]
- *
- * Stops if User.excludedFromHrProcesses does not exist yet.
  */
 
 import {
@@ -24,16 +21,21 @@ import * as bcrypt from 'bcrypt';
 import { generateTemporaryPassword } from '../src/modules/auth/application/utils/password-policy.util';
 import { normalizeLoginName } from '../src/modules/auth/application/utils/login-name.util';
 import {
+  matchApproverEntry,
+  splitPinyinFullName,
+  type ApproverEntry,
+  type ExistingUserMatch,
+} from '../src/shared/org-import/approver-entry-match';
+import {
   assertCredentialsPathGitignored,
   assertSeedMode,
   parseLoginSetupArgs,
   resolveDatabaseTarget,
 } from './lib/login-setup-guards';
+import { appendInitialCredentials } from './lib/credentials-csv';
 
 const BCRYPT_ROUNDS = 12;
 const EXCLUDED_REASON = 'Approver only';
-
-type ApproverInput = { fullName: string; role: string | null };
 
 async function main(): Promise<void> {
   assertSeedMode();
@@ -75,7 +77,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const raw = JSON.parse(readFileSync(inputPath, 'utf8')) as ApproverInput[];
+  const raw = JSON.parse(readFileSync(inputPath, 'utf8')) as ApproverEntry[];
   if (!Array.isArray(raw)) {
     console.error('Refused: approver-only-users.json must be an array.');
     await prisma.$disconnect();
@@ -106,24 +108,56 @@ async function main(): Promise<void> {
     select: { id: true, name: true },
   });
 
+  const allUsers = await prisma.user.findMany({
+    where: { companyId: company.id, deletedAt: null },
+    select: {
+      id: true,
+      loginNameNormalized: true,
+      chineseName: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+    },
+  });
+
+  const byLogin = new Map<string, ExistingUserMatch>();
+  const byChinese = new Map<string, ExistingUserMatch>();
+  for (const user of allUsers) {
+    const row: ExistingUserMatch = {
+      id: user.id,
+      loginNameNormalized: user.loginNameNormalized,
+      chineseName: user.chineseName,
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+    };
+    if (user.loginNameNormalized) {
+      byLogin.set(user.loginNameNormalized, row);
+    }
+    if (user.chineseName?.trim()) {
+      byChinese.set(user.chineseName.trim(), row);
+    }
+  }
+
   let created = 0;
+  let exists = 0;
   let collisions = 0;
   let skipped = 0;
-  const roleToAssign: string[] = [];
-  const collisionIds: string[] = [];
-  const credentialRows: string[] = [];
+  const existsLines: string[] = [];
+  const collisionLines: string[] = [];
+  const credentialRows: Array<{ loginName: string; temporaryPassword: string }> =
+    [];
 
-  let chainsNeedingApprovers: Array<{ id: string; name: string }> = [];
-  try {
-    chainsNeedingApprovers = await prisma.$queryRaw<
-      Array<{ id: string; name: string }>
-    >`
-      SELECT id, name FROM approval_workflow
-      WHERE company_id = ${company.id} AND deleted_at IS NULL
-      LIMIT 50
-    `;
-  } catch {
-    chainsNeedingApprovers = [];
+  const actorId = (
+    await prisma.user.findFirst({
+      where: { companyId: company.id, deletedAt: null },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    })
+  )?.id;
+  if (!actorId && args.apply) {
+    console.error('Refused: no actor user for createdBy.');
+    process.exit(1);
   }
 
   for (const entry of raw) {
@@ -132,30 +166,37 @@ async function main(): Promise<void> {
       skipped += 1;
       continue;
     }
+
     const loginName = fullName;
     const loginNameNormalized = normalizeLoginName(loginName);
+    const match = matchApproverEntry(entry, byLogin, byChinese);
 
-    const existing = await prisma.user.findFirst({
-      where: { loginNameNormalized },
-      select: { id: true },
-    });
-    if (existing) {
+    if (match.kind === 'EXISTS') {
+      exists += 1;
+      existsLines.push(`${fullName} → ${match.userId} (${match.via})`);
+      if (args.apply && entry.chineseName?.trim() && actorId) {
+        await prisma.user.update({
+          where: { id: match.userId },
+          data: {
+            chineseName: entry.chineseName.trim(),
+            updatedBy: actorId,
+          },
+        });
+      }
+      continue;
+    }
+    if (match.kind === 'COLLISION') {
       collisions += 1;
-      collisionIds.push(existing.id);
+      collisionLines.push(`${fullName} → ${match.userId} (${match.reason})`);
       continue;
     }
 
-    const parts = fullName.split(/\s+/);
-    const firstName = parts[0] ?? fullName;
-    const lastName = parts.length > 1 ? parts[parts.length - 1]! : '';
-    const middleName =
-      parts.length > 2 ? parts.slice(1, -1).join(' ') : null;
-
+    const { lastName, firstName, middleName } = splitPinyinFullName(fullName);
     const roleName = entry.role?.trim() || defaultRole?.name || 'Employee';
-    roleToAssign.push(`${loginName} → role to assign: ${roleName}`);
 
     if (!args.apply) {
       created += 1;
+      console.log(`CREATED (dry): ${loginName} role=${roleName}`);
       continue;
     }
 
@@ -164,50 +205,48 @@ async function main(): Promise<void> {
       temporaryPassword = generateTemporaryPassword(12);
     }
     const passwordHash = await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS);
-    const actorId = (
-      await prisma.user.findFirst({
-        where: { companyId: company.id, deletedAt: null },
-        select: { id: true },
-        orderBy: { createdAt: 'asc' },
-      })
-    )?.id;
-    if (!actorId) {
-      console.error('Refused: no actor user for createdBy.');
-      process.exit(1);
-    }
 
-    // Fields excludedFromHrProcesses / excludedReason exist only after that migration.
     const user = await prisma.user.create({
       data: {
         companyId: company.id,
         firstName,
         lastName,
         middleName,
+        chineseName: entry.chineseName?.trim() || null,
         loginName,
         loginNameNormalized,
         email: null,
         passwordHash,
         mustChangePassword: true,
         isActive: true,
-        createdBy: actorId,
-        updatedBy: actorId,
+        employmentStatus: 'ACTIVE',
+        createdBy: actorId!,
+        updatedBy: actorId!,
         excludedFromHrProcesses: true,
         excludedReason: EXCLUDED_REASON,
       } as never,
       select: { id: true },
     });
 
-    const role =
-      entry.role?.trim()
-        ? await prisma.role.findFirst({
-            where: {
-              companyId: company.id,
-              deletedAt: null,
-              name: { equals: entry.role.trim(), mode: 'insensitive' },
-            },
-            select: { id: true },
-          })
-        : defaultRole;
+    byLogin.set(loginNameNormalized, {
+      id: user.id,
+      loginNameNormalized,
+      chineseName: entry.chineseName?.trim() ?? null,
+      firstName,
+      middleName,
+      lastName,
+    });
+
+    const role = entry.role?.trim()
+      ? await prisma.role.findFirst({
+          where: {
+            companyId: company.id,
+            deletedAt: null,
+            name: { equals: entry.role.trim(), mode: 'insensitive' },
+          },
+          select: { id: true },
+        })
+      : defaultRole;
 
     if (role) {
       await prisma.userRole.create({
@@ -215,27 +254,19 @@ async function main(): Promise<void> {
           userId: user.id,
           roleId: role.id,
           isPrimary: true,
-          assignedBy: actorId,
-          createdBy: actorId,
-          updatedBy: actorId,
+          assignedBy: actorId!,
+          createdBy: actorId!,
+          updatedBy: actorId!,
         },
       });
     }
 
-    credentialRows.push(
-      `${csvEscape(loginName)},${csvEscape(temporaryPassword)}`,
-    );
+    credentialRows.push({ loginName, temporaryPassword });
     created += 1;
   }
 
   if (args.apply && credentialRows.length > 0) {
-    const csvPath = join(privateDir, 'initial-credentials.csv');
-    const headerNeeded = !existsSync(csvPath);
-    appendFileSync(
-      csvPath,
-      `${headerNeeded ? 'login_name,temporary_password\n' : ''}${credentialRows.join('\n')}\n`,
-      'utf8',
-    );
+    appendInitialCredentials(privateDir, credentialRows);
   }
 
   const reportPath = join(privateDir, 'login-setup-report.md');
@@ -247,20 +278,16 @@ async function main(): Promise<void> {
     `| Status | Count |`,
     `| --- | ---: |`,
     `| CREATED | ${created} |`,
+    `| EXISTS | ${exists} |`,
     `| COLLISION | ${collisions} |`,
     `| SKIPPED | ${skipped} |`,
     '',
-    '### Roles to assign',
-    ...roleToAssign.map((line) => `- ${line}`),
+    '### EXISTS',
+    ...(existsLines.length ? existsLines.map((l) => `- ${l}`) : ['- (none)']),
     '',
-    '### Approval chains that would need these users (not modified)',
-    ...(chainsNeedingApprovers.length
-      ? chainsNeedingApprovers.map((c) => `- ${c.id} ${c.name}`)
-      : ['- (none listed / model unavailable)']),
-    '',
-    '### Collision existing user ids',
-    ...(collisionIds.length
-      ? collisionIds.map((id) => `- ${id}`)
+    '### COLLISION',
+    ...(collisionLines.length
+      ? collisionLines.map((l) => `- ${l}`)
       : ['- (none)']),
     '',
   ].join('\n');
@@ -272,16 +299,9 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `CREATED=${created} COLLISION=${collisions} SKIPPED=${skipped}`,
+    `CREATED=${created} EXISTS=${exists} COLLISION=${collisions} SKIPPED=${skipped}`,
   );
   await prisma.$disconnect();
-}
-
-function csvEscape(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }
 
 main().catch(async (err: unknown) => {
