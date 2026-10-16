@@ -14,6 +14,7 @@ interface UserRow {
   id: string;
   isActive: boolean;
   employmentStatus: 'ACTIVE' | 'INACTIVE' | 'SEPARATED';
+  excludedFromHrProcesses: boolean;
   deletedAt: null;
 }
 
@@ -39,9 +40,34 @@ function makeWorld(options: { isHrManager?: boolean } = {}) {
     },
   };
   const users: Record<string, UserRow> = {
-    [NEW_APPROVER]: { id: NEW_APPROVER, isActive: true, employmentStatus: 'ACTIVE', deletedAt: null },
-    'on-leave': { id: 'on-leave', isActive: true, employmentStatus: 'INACTIVE', deletedAt: null },
-    [REQUESTER]: { id: REQUESTER, isActive: true, employmentStatus: 'ACTIVE', deletedAt: null },
+    [NEW_APPROVER]: {
+      id: NEW_APPROVER,
+      isActive: true,
+      employmentStatus: 'ACTIVE',
+      excludedFromHrProcesses: true,
+      deletedAt: null,
+    },
+    'on-leave': {
+      id: 'on-leave',
+      isActive: true,
+      employmentStatus: 'INACTIVE',
+      excludedFromHrProcesses: true,
+      deletedAt: null,
+    },
+    'not-approver-only': {
+      id: 'not-approver-only',
+      isActive: true,
+      employmentStatus: 'ACTIVE',
+      excludedFromHrProcesses: false,
+      deletedAt: null,
+    },
+    [REQUESTER]: {
+      id: REQUESTER,
+      isActive: true,
+      employmentStatus: 'ACTIVE',
+      excludedFromHrProcesses: false,
+      deletedAt: null,
+    },
   };
   const prisma: any = {
     userRole: {
@@ -115,6 +141,13 @@ describe('ApprovalReassignmentService', () => {
     await expect(reassignment.reassignTier(ctx, 'tier-1', REQUESTER, 'Cover')).rejects.toThrow(
       'cannot approve their own request',
     );
+  });
+
+  it('rejects reassignment to a non–approver-only employee', async () => {
+    const { reassignment } = makeWorld();
+    await expect(
+      reassignment.reassignTier(ctx, 'tier-1', 'not-approver-only', 'Cover'),
+    ).rejects.toThrow('approver-only');
   });
 });
 
