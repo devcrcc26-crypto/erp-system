@@ -246,6 +246,44 @@ describe('AddEmployeeForm (edit mode)', () => {
     };
     expect(body).toMatchObject({ addressCity: 'Adama', addressWoreda: '05' });
   }, 20_000);
+
+  it('sends an empty lastName when it is cleared', async () => {
+    const user = userEvent.setup();
+    renderEditForm();
+    const lastName = inputFor('users.form.lastName');
+    await waitFor(() => expect(lastName).toHaveValue('Dong'));
+
+    await user.clear(lastName);
+    await clickThroughAndSubmit(user, 'common.saveChanges');
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    const { body } = mockUpdateUser.mock.calls[0][0] as {
+      body: Record<string, unknown>;
+    };
+    expect(body).toMatchObject({ firstName: 'Jinxia', middleName: 'M', lastName: '' });
+  }, 20_000);
+
+  it('saves an employee whose lastName is already empty', async () => {
+    mockUseUser.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { ...USER, lastName: '' },
+      error: null,
+    });
+    const user = userEvent.setup();
+    renderEditForm();
+    await waitFor(() =>
+      expect(screen.getByDisplayValue('Jinxia')).toBeInTheDocument(),
+    );
+
+    await clickThroughAndSubmit(user, 'common.saveChanges');
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    const { body } = mockUpdateUser.mock.calls[0][0] as {
+      body: Record<string, unknown>;
+    };
+    expect(body.lastName).toBe('');
+  }, 20_000);
 });
 
 describe('AddEmployeeForm (edit mode) — approver-only switch', () => {
