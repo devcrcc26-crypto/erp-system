@@ -74,7 +74,7 @@ export default function EmployeeApproverOnlyField({
   return (
     <div className="sm:col-span-2">
       <MetaItem label={t('users.approverOnlySwitch')}>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col items-start gap-1">
           {canEdit ? (
             <Switch
               checked={excluded}
