@@ -51,6 +51,10 @@ export default function OvertimeNewPageContent(): React.ReactNode {
 
   const openMutation = useOpenOvertimeSheet();
   const [month, setMonth] = useState<dayjs.Dayjs | null>(null);
+  // Set once "Open sheet" has created the sheet. Creating it refreshes the
+  // sheet lists, so without this the page would find its own new draft and
+  // show "you have a draft" while the entries page is still loading.
+  const [openedSheetId, setOpenedSheetId] = useState<string | null>(null);
 
   const selectedMonth = month ? month.month() + 1 : undefined;
   const selectedYear = month ? month.year() : undefined;
@@ -106,6 +110,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
         month: selectedMonth,
         year: selectedYear,
       });
+      setOpenedSheetId(sheet.id);
       router.replace(`/hr/overtime/${sheet.id}`);
     } catch (error: unknown) {
       notifyApiError(error, t('hr.messages.failedToOpenOvertimeSheet'), messageApi);
@@ -148,7 +153,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
       cancelHref="/approvals/new"
       backLabel={t('hr.buttons.backToList')}
     >
-      {!eligibleResolved ? (
+      {!eligibleResolved || openedSheetId ? (
         opening
       ) : existingSheetQuery.isError ? (
         <Alert
@@ -195,7 +200,9 @@ export default function OvertimeNewPageContent(): React.ReactNode {
               ) : (
                 <Button
                   type="primary"
-                  loading={openMutation.isPending}
+                  // Wait for the existing-sheet check, so a draft is never
+                  // reopened without the user choosing "Continue draft".
+                  loading={openMutation.isPending || existingSheetQuery.isFetching}
                   disabled={!month}
                   onClick={() => void handleOpen()}
                 >

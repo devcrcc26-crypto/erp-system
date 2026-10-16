@@ -289,6 +289,24 @@ export class OvertimeController {
     );
   }
 
+  @Delete(':id/entries/:entryId/attachments/:documentId')
+  @ApiOperation({ summary: 'Remove an attachment from an overtime entry' })
+  removeEntryAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<unknown> {
+    return this.overtimeService.removeEntryAttachment(
+      id,
+      entryId,
+      documentId,
+      companyId,
+      user.userId,
+    );
+  }
+
   @Delete(':id/entries/:entryId')
   @ApiOperation({ summary: 'Delete an overtime entry' })
   deleteEntry(

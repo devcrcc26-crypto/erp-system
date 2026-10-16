@@ -223,7 +223,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.sections.structure',
           items: [
             { kind: 'link', id: 'departments', labelKey: 'nav.departments', icon: 'departments', href: '/departments', requires: ['org.departments'] },
-            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], keywords: ['job titles'] },
+            // Seniority levels open from the Positions page (panels stay ≤ 12 links).
+            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], activePaths: ['/seniority-levels'], keywords: ['job titles', 'seniority', 'junior', 'senior', 'grade', 'level'] },
             { kind: 'link', id: 'disciplines', labelKey: 'nav.disciplinesCatalog', icon: 'disciplines-catalog', href: '/disciplines', requires: ['org.disciplines'] },
           ],
         },

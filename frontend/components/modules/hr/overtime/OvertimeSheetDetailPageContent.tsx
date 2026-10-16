@@ -1,28 +1,31 @@
 'use client';
 
+import './overtime-entries-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   Dropdown,
-  Empty,
   Grid,
   Skeleton,
   Space,
-  Tag,
   Tooltip,
-  Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeleteOutlined,
   DownloadOutlined,
+  EditOutlined,
+  FieldTimeOutlined,
   MoreOutlined,
+  PaperClipOutlined,
   PlusOutlined,
   SendOutlined,
   StopOutlined,
   UploadOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ArrowLeft } from 'lucide-react';
@@ -35,6 +38,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -52,6 +56,7 @@ import {
   useOvertimeSheet,
   useOvertimeSheetImport,
   useOvertimeSheetImportPreview,
+  useRemoveOvertimeEntryAttachment,
   useSubmitOvertimeSheet,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
@@ -115,6 +120,7 @@ export default function OvertimeSheetDetailPageContent({
   const detailQuery = useOvertimeSheet(sheetId);
   const deleteMutation = useDeleteOvertimeEntry(sheetId);
   const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
+  const removeAttachmentMutation = useRemoveOvertimeEntryAttachment(sheetId);
   const submitMutation = useSubmitOvertimeSheet(sheetId);
   const cancelMutation = useCancelOvertimeSheet(sheetId);
   const deleteSheetMutation = useDeleteOvertimeSheet();
@@ -127,7 +133,13 @@ export default function OvertimeSheetDetailPageContent({
   const [entryDrawerOpen, setEntryDrawerOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
-  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
+  /** Entry whose newly chosen attachments are uploading (choose = upload). */
+  const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null);
+  const [pendingRemoveAttachment, setPendingRemoveAttachment] = useState<{
+    entryId: string;
+    documentId: string;
+    name: string;
+  } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -311,20 +323,41 @@ export default function OvertimeSheetDetailPageContent({
     }
   }
 
-  async function handleUploadEntryFiles(entryId: string): Promise<void> {
-    const files = entryFiles[entryId] ?? [];
+  /** Uploads as soon as files are chosen; no separate Upload step. */
+  async function handleUploadEntryFiles(entryId: string, files: File[]): Promise<void> {
     if (files.length === 0) {
-      messageApi.warning(t('hr.messages.selectFilesToUpload'));
       return;
     }
+    setUploadingEntryId(entryId);
     try {
       await uploadAttachmentsMutation.mutateAsync({ entryId, files });
       messageApi.success(t('hr.messages.attachmentsUploaded'));
-      setEntryFiles((prev) => ({ ...prev, [entryId]: [] }));
     } catch (error: unknown) {
       notifyApiError(
         error,
         t('hr.messages.failedToUploadAttachments'),
+        messageApi,
+      );
+    } finally {
+      setUploadingEntryId(null);
+    }
+  }
+
+  async function handleRemoveEntryAttachment(): Promise<void> {
+    if (!pendingRemoveAttachment) {
+      return;
+    }
+    try {
+      await removeAttachmentMutation.mutateAsync({
+        entryId: pendingRemoveAttachment.entryId,
+        documentId: pendingRemoveAttachment.documentId,
+      });
+      messageApi.success(t('hr.messages.attachmentRemoved'));
+      setPendingRemoveAttachment(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToRemoveAttachment'),
         messageApi,
       );
     }
@@ -336,86 +369,130 @@ export default function OvertimeSheetDetailPageContent({
         title: t('hr.table.date'),
         dataIndex: 'date',
         key: 'date',
-        width: 120,
-        render: (date: string) => (
-          <div style={{ fontWeight: 500, fontSize: 13 }}>
-            {dayjs(date).format('ddd DD MMM')}
-          </div>
-        ),
+        width: 150,
+        render: (date: string, row: OvertimeEntry) => {
+          const day = dayjs(date);
+          const kind =
+            row.isHoliday || Number(row.holidayHours) > 0
+              ? 'holiday'
+              : Number(row.weekendHours) > 0
+                ? 'weekend'
+                : 'workday';
+          return (
+            <div className="erp-ot-date" data-kind={kind}>
+              <span className="erp-ot-date-day" aria-hidden>
+                {day.format('DD')}
+              </span>
+              <span className="erp-ot-date-meta" aria-hidden>
+                <strong>{day.format('ddd')}</strong>
+                <span>{day.format('MMM YYYY')}</span>
+              </span>
+              <span className="sr-only">{day.format('dddd, D MMMM YYYY')}</span>
+            </div>
+          );
+        },
       },
       {
         title: t('pages.hr.overtime.timeRange'),
         key: 'time',
-        width: 130,
+        width: 140,
         render: (_: unknown, row: OvertimeEntry) => (
-          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>
-            {row.startTime} – {row.endTime}
-          </span>
-        ),
-      },
-      {
-        title: t('pages.hr.overtime.hoursBreakdown'),
-        key: 'hoursBreakdown',
-        width: 280,
-        render: (_: unknown, row: OvertimeEntry) => (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {Number(row.regularHours) > 0 ? (
-              <Tag color="blue" style={{ margin: 0 }}>
-                {formatOvertimeHours(row.regularHours)}h{' '}
-                {t('hr.overtimeCategory.regular')}
-              </Tag>
-            ) : null}
-            {Number(row.nightHours) > 0 ? (
-              <Tag color="purple" style={{ margin: 0 }}>
-                {formatOvertimeHours(row.nightHours)}h{' '}
-                {t('hr.overtimeCategory.night')}
-              </Tag>
-            ) : null}
-            {Number(row.weekendHours) > 0 ? (
-              <Tag color="orange" style={{ margin: 0 }}>
-                {formatOvertimeHours(row.weekendHours)}h{' '}
-                {t('hr.overtimeCategory.weekend')}
-              </Tag>
-            ) : null}
-            {Number(row.holidayHours) > 0 ? (
-              <Tooltip title={row.holidayName ?? undefined}>
-                <Tag color="red" style={{ margin: 0 }}>
-                  {formatOvertimeHours(row.holidayHours)}h{' '}
-                  {t('hr.overtimeCategory.holiday')}
-                </Tag>
-              </Tooltip>
+          <div>
+            <span className="erp-ot-time">
+              {row.startTime}
+              <span className="erp-ot-time-arrow" aria-hidden>
+                →
+              </span>
+              <span className="sr-only"> – </span>
+              {row.endTime}
+            </span>
+            {row.isOvernight ? (
+              <div className="erp-ot-pills">
+                <span className="erp-ot-pill" data-kind="night">
+                  {t('pages.hr.overtime.overnight')}
+                </span>
+              </div>
             ) : null}
           </div>
         ),
+      },
+      {
+        title: t('pages.hr.overtime.hoursColumn'),
+        key: 'hoursBreakdown',
+        width: 230,
+        render: (_: unknown, row: OvertimeEntry) => {
+          const parts = (
+            [
+              ['regular', row.regularHours],
+              ['night', row.nightHours],
+              ['weekend', row.weekendHours],
+              ['holiday', row.holidayHours],
+            ] as const
+          ).filter(([, hours]) => Number(hours) > 0);
+          return (
+            <div>
+              <span className="erp-ot-hours-total">
+                {formatOvertimeHours(row.totalHours)}h
+              </span>
+              {parts.length > 0 ? (
+                <div className="erp-ot-pills">
+                  {parts.map(([kind, hours]) => {
+                    const pill = (
+                      <span key={kind} className="erp-ot-pill" data-kind={kind}>
+                        {formatOvertimeHours(hours)}h {t(`hr.overtimeCategory.${kind}`)}
+                      </span>
+                    );
+                    return kind === 'holiday' && row.holidayName ? (
+                      <Tooltip key={kind} title={row.holidayName}>
+                        {pill}
+                      </Tooltip>
+                    ) : (
+                      pill
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         title: t('hr.labels.taskDescription'),
         dataIndex: 'taskDescription',
         key: 'taskDescription',
-        render: (text: string, row: OvertimeEntry) => (
-          <div className="flex max-w-[240px] flex-col gap-1">
-            <span
-              style={{
-                fontSize: 12,
-                color: 'var(--color-text-secondary)',
-                display: 'block',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={text}
-            >
-              {text || '-'}
-            </span>
-            {row.attendanceWarning ? (
-              <Tooltip title={row.attendanceWarning}>
-                <Tag color="gold" style={{ margin: 0, width: 'fit-content' }}>
-                  {t('pages.hr.overtime.attendanceFlag')}
-                </Tag>
-              </Tooltip>
-            ) : null}
-          </div>
-        ),
+        render: (text: string, row: OvertimeEntry) => {
+          const fileCount = row.documents?.length ?? 0;
+          return (
+            <div className="min-w-[200px]">
+              <p
+                className={`erp-ot-task${text ? '' : ' erp-ot-task--empty'}`}
+                title={text || undefined}
+              >
+                {text || '—'}
+              </p>
+              {fileCount > 0 || row.attendanceWarning ? (
+                <div className="erp-ot-task-chips">
+                  {fileCount > 0 ? (
+                    <span className="erp-ot-pill">
+                      <PaperClipOutlined aria-hidden />
+                      {fileCount === 1
+                        ? t('pages.hr.overtime.attachmentsCountOne')
+                        : t('pages.hr.overtime.attachmentsCount', { count: fileCount })}
+                    </span>
+                  ) : null}
+                  {row.attendanceWarning ? (
+                    <Tooltip title={row.attendanceWarning}>
+                      <span className="erp-ot-pill" data-kind="warning" tabIndex={0}>
+                        <WarningOutlined aria-hidden />
+                        {t('pages.hr.overtime.attendanceFlag')}
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
       },
       ...(canEdit
         ? [
@@ -428,11 +505,13 @@ export default function OvertimeSheetDetailPageContent({
                 const items: MenuProps['items'] = [
                   {
                     key: 'edit',
+                    icon: <EditOutlined />,
                     label: t('common.update'),
                     onClick: () => openEditEntry(row),
                   },
                   {
                     key: 'delete',
+                    icon: <DeleteOutlined />,
                     label: t('common.delete'),
                     danger: true,
                     onClick: () => setDeleteEntryId(row.id),
@@ -665,95 +744,113 @@ export default function OvertimeSheetDetailPageContent({
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection
-              title={t('hr.section.entries')}
-              bodyClassName="!p-0"
-              action={
-                <Space.Compact>
+        <section
+          className="erp-pro-card erp-ot-entries min-w-0"
+          aria-labelledby="ot-entries-title"
+        >
+          <div className="erp-ot-entries-header">
+            <h3 id="ot-entries-title" className="erp-ot-entries-title">
+              {t('hr.section.entries')}
+              <span className="erp-ot-entries-count">
+                {(sheet.entries?.length ?? 0).toLocaleString()}
+              </span>
+            </h3>
+            <div className="erp-ot-entries-actions">
+              <Button
+                icon={<DownloadOutlined />}
+                loading={exporting}
+                disabled={(sheet.entries?.length ?? 0) === 0}
+                onClick={() => void handleExportEntries()}
+                aria-label={t('pages.hr.overtime.exportEntries')}
+              >
+                {isNarrow ? undefined : t('pages.hr.overtime.exportEntries')}
+              </Button>
+              {canEdit ? (
+                <>
                   <Button
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    loading={exporting}
-                    onClick={() => void handleExportEntries()}
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                    aria-label={t('common.importFromExcel')}
                   >
-                    {t('pages.hr.overtime.exportEntries')}
+                    {isNarrow ? undefined : t('common.importFromExcel')}
                   </Button>
-                  {canEdit ? (
-                    <>
-                      <Button
-                        size="small"
-                        icon={<UploadOutlined />}
-                        onClick={() => setImportOpen(true)}
-                      >
-                        {t('common.importFromExcel')}
-                      </Button>
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={openAddEntry}
-                      >
-                        {t('hr.buttons.addEntry')}
-                      </Button>
-                    </>
-                  ) : null}
-                </Space.Compact>
-              }
-            >
-              <DataTable<OvertimeEntry>
-                rowKey="id"
-                className="erp-pro-table erp-users-table"
-                size="small"
-                columns={columns}
-                dataSource={sheet.entries ?? []}
-                pagination={false}
-                scroll={{ x: 720 }}
-                expandable={{
-                  expandedRowRender: (entry) => (
-                    <div className="space-y-2 py-1">
-                      <Typography.Text strong style={{ fontSize: 13 }}>
-                        {t('hr.section.attachments')}
-                      </Typography.Text>
-                      <AttachmentDownloadList documents={entry.documents} />
-                      {canEdit ? (
-                        <div className="flex flex-wrap items-end gap-2">
-                          <div className="min-w-[220px] flex-1">
-                            <FileUploadInput
-                              files={entryFiles[entry.id] ?? []}
-                              onChange={(files) =>
-                                setEntryFiles((prev) => ({
-                                  ...prev,
-                                  [entry.id]: files,
-                                }))
-                              }
-                              accept=".pdf,.jpg,.jpeg,.png"
-                              multiple
-                              disabled={uploadAttachmentsMutation.isPending}
-                            />
-                          </div>
-                          <Button
-                            type="primary"
-                            size="small"
-                            loading={uploadAttachmentsMutation.isPending}
-                            disabled={(entryFiles[entry.id] ?? []).length === 0}
-                            onClick={() => void handleUploadEntryFiles(entry.id)}
-                          >
-                            {t('hr.buttons.uploadAttachments')}
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ),
-                }}
-                locale={{
-                  emptyText: <Empty description={t('hr.empty.noEntries')} />,
-                }}
-              />
-            </DetailSection>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={openAddEntry}>
+                    {t('hr.buttons.addEntry')}
+                  </Button>
+                </>
+              ) : null}
+            </div>
           </div>
-        </div>
+          <DataTable<OvertimeEntry>
+            rowKey="id"
+            className="erp-pro-table erp-users-table"
+            size="middle"
+            columns={columns}
+            dataSource={sheet.entries ?? []}
+            pagination={false}
+            scroll={{ x: 760 }}
+            expandable={{
+              expandedRowRender: (entry) => (
+                <div className="erp-ot-expanded">
+                  <p className="erp-ot-expanded-title">{t('hr.section.attachments')}</p>
+                  <AttachmentDownloadList
+                    documents={entry.documents}
+                    onRemove={
+                      canEdit
+                        ? (documentId) => {
+                            const doc = entry.documents?.find(
+                              (item) => item.id === documentId,
+                            );
+                            setPendingRemoveAttachment({
+                              entryId: entry.id,
+                              documentId,
+                              name: doc?.name ?? documentId,
+                            });
+                          }
+                        : undefined
+                    }
+                    removingId={
+                      removeAttachmentMutation.isPending
+                        ? pendingRemoveAttachment?.documentId
+                        : null
+                    }
+                    removeLabel={t('hr.buttons.removeItem')}
+                  />
+                  {canEdit ? (
+                    <div aria-live="polite">
+                      <FileUploadInput
+                        files={[]}
+                        onChange={(files) => void handleUploadEntryFiles(entry.id, files)}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        multiple
+                        disabled={uploadingEntryId !== null}
+                        placeholder={
+                          uploadingEntryId === entry.id
+                            ? t('pages.hr.overtime.uploadingFiles')
+                            : t('pages.hr.overtime.attachFiles')
+                        }
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ),
+            }}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<FieldTimeOutlined />}
+                  title={t('pages.hr.overtime.entriesEmptyTitle')}
+                  description={t('hr.empty.noEntries')}
+                  action={
+                    canEdit
+                      ? { label: t('hr.buttons.addEntry'), onClick: openAddEntry }
+                      : undefined
+                  }
+                />
+              ),
+            }}
+          />
+        </section>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
           {sheet.status === 'DRAFT' ? (
@@ -847,6 +944,23 @@ export default function OvertimeSheetDetailPageContent({
         confirmLoading={deleteMutation.isPending}
         onConfirm={() => void handleDeleteEntry()}
         onCancel={() => setDeleteEntryId(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingRemoveAttachment)}
+        title={t('pages.hr.overtime.removeAttachmentTitle')}
+        description={t('pages.hr.overtime.removeAttachmentDescription', {
+          name: pendingRemoveAttachment?.name ?? '',
+        })}
+        confirmLabel={t('hr.buttons.removeItem')}
+        danger
+        confirmLoading={removeAttachmentMutation.isPending}
+        onConfirm={() => void handleRemoveEntryAttachment()}
+        onCancel={() => {
+          if (!removeAttachmentMutation.isPending) {
+            setPendingRemoveAttachment(null);
+          }
+        }}
       />
 
       {importOpen ? (

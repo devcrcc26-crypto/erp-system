@@ -22,11 +22,13 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  RiseOutlined,
   SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import Link from 'next/link';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -411,6 +413,11 @@ export default function PositionsPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <Link href="/seniority-levels" aria-label={t('nav.seniorityLevels')}>
+              <Button icon={<RiseOutlined />} tabIndex={-1}>
+                {isNarrow ? undefined : t('nav.seniorityLevels')}
+              </Button>
+            </Link>
             {canManage ? (
               <Button
                 type="primary"
