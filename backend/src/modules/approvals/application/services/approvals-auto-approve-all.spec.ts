@@ -462,22 +462,15 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
     jest
       .spyOn(
         chain as unknown as {
-          getDisciplineLeadSafe: () => Promise<{ found: false; reason: string }>;
+          getReportsToRequired: () => Promise<{ id: string }>;
         },
-        'getDisciplineLeadSafe',
+        'getReportsToRequired',
       )
-      .mockResolvedValue({
-        found: false,
-        reason: 'Employee is not assigned to an engineering discipline',
-      });
-    jest
-      .spyOn(
-        chain as unknown as {
-          getHRManager: () => Promise<{ id: string }>;
-        },
-        'getHRManager',
-      )
-      .mockRejectedValue(new BadRequestException('No HR Manager found'));
+      .mockRejectedValue(
+        new BadRequestException(
+          'Employee has no Reports to assigned - ask HR to set a supervisor before submitting.',
+        ),
+      );
 
     const tiers = await chain.buildOrgApprovalChain(
       'emp-orphan',

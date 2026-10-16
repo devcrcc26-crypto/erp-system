@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { BadRequestException } from '@nestjs/common';
 import { HrApprovalChainService } from './hr-approval-chain.service';
 import type { PrismaService } from '../../../../shared/prisma/prisma.service';
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000002';
-const SAMUEL_ID = '00000000-0000-4000-8000-000000000101';
+const SUPERVISOR_ID = '00000000-0000-4000-8000-000000000101';
 const ARCH_EMP_ID = '00000000-0000-4000-8000-000000000102';
 const HR_MANAGER_ID = '00000000-0000-4000-8000-000000000103';
 const LOCAL_HR_ID = '00000000-0000-4000-8000-000000000105';
@@ -34,12 +35,12 @@ describe('buildDisciplineLeadSingleTierChain (per diem advance)', () => {
     });
   }
 
-  it('Architecture employee advance → Samuel (DL) only', async () => {
+  it('Architecture employee advance → Reports to only', async () => {
     mockEmployee(ARCH_EMP_ID);
     jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
     jest
-      .spyOn(service, 'getDisciplineLeadSafe')
-      .mockResolvedValue({ found: true, id: SAMUEL_ID });
+      .spyOn(service, 'getReportsToRequired')
+      .mockResolvedValue({ id: SUPERVISOR_ID });
 
     const chain = await service.buildDisciplineLeadSingleTierChain(
       ARCH_EMP_ID,
@@ -47,29 +48,23 @@ describe('buildDisciplineLeadSingleTierChain (per diem advance)', () => {
     );
 
     expect(chain).toHaveLength(1);
-    expect(chain[0]?.approverId).toBe(SAMUEL_ID);
-    expect(chain[0]?.label).toBe('Discipline Lead');
+    expect(chain[0]?.approverId).toBe(SUPERVISOR_ID);
+    expect(chain[0]?.label).toBe('Reports to');
   });
 
-  it('Advance with no DL → HR Manager', async () => {
+  it('Advance with no Reports to → BadRequestException', async () => {
     mockEmployee(ARCH_EMP_ID);
     jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
-    jest.spyOn(service, 'getDisciplineLeadSafe').mockResolvedValue({
-      found: false,
-      reason: 'No Discipline Lead assigned',
-    });
-    jest.spyOn(service, 'getHRManager').mockResolvedValue({ id: HR_MANAGER_ID });
-
-    const chain = await service.buildDisciplineLeadSingleTierChain(
-      ARCH_EMP_ID,
-      COMPANY_ID,
+    jest.spyOn(service, 'getReportsToRequired').mockRejectedValue(
+      new BadRequestException(
+        'Employee has no Reports to assigned - ask HR to set a supervisor before submitting.',
+      ),
     );
 
-    expect(chain).toHaveLength(1);
-    expect(chain[0]?.approverId).toBe(HR_MANAGER_ID);
-    expect(chain[0]?.label).toBe('HR Manager');
+    await expect(
+      service.buildDisciplineLeadSingleTierChain(ARCH_EMP_ID, COMPANY_ID),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
-
 });
 
 describe('buildPerDiemSettlementApprovalChain', () => {
@@ -87,7 +82,7 @@ describe('buildPerDiemSettlementApprovalChain', () => {
     service = new HrApprovalChainService(prisma as unknown as PrismaService);
   });
 
-  it('Settlement → HR Manager only (no DL tier)', async () => {
+  it('Settlement → HR Manager only (no Reports to tier)', async () => {
     jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
     jest
       .spyOn(
@@ -118,7 +113,7 @@ describe('buildPerDiemSettlementApprovalChain', () => {
     expect(chain).toHaveLength(1);
     expect(chain[0]?.approverId).toBe(HR_MANAGER_ID);
     expect(chain[0]?.label).toBe('HR Manager');
-    expect(chain.some((tier) => tier.label === 'Discipline Lead')).toBe(false);
+    expect(chain.some((tier) => tier.label === 'Reports to')).toBe(false);
   });
 
   it('HR Manager submitter → Local HR Manager', async () => {
