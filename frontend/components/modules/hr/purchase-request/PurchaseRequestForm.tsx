@@ -412,24 +412,6 @@ export default function PurchaseRequestForm({
                   />
                 </Form.Item>
 
-                <Form.Item
-                  name="justification"
-                  label={t('hr.form.justification')}
-                  rules={[
-                    {
-                      required: true,
-                      message: t('hr.validation.justificationRequired'),
-                    },
-                  ]}
-                >
-                  <Input.TextArea
-                    rows={4}
-                    maxLength={2000}
-                    showCount
-                    placeholder={t('hr.placeholder.enterJustification')}
-                  />
-                </Form.Item>
-
                 <div className="erp-form-grid-2">
                   <Form.Item
                     name="requiredByDate"
@@ -460,6 +442,24 @@ export default function PurchaseRequestForm({
                     </Form.Item>
                   ) : null}
                 </div>
+
+                <Form.Item
+                  name="justification"
+                  label={t('hr.form.justification')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.justificationRequired'),
+                    },
+                  ]}
+                >
+                  <Input.TextArea
+                    rows={4}
+                    maxLength={2000}
+                    showCount
+                    placeholder={t('hr.placeholder.enterJustification')}
+                  />
+                </Form.Item>
             </FormLayout>
           </div>
         ),

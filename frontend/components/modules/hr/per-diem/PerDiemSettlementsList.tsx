@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Alert, Button, Input, Spin, Tooltip } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
@@ -117,7 +119,7 @@ export default function PerDiemSettlementsList(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+      <div className="erp-pro-card flex justify-center p-12">
         <Spin />
       </div>
     );
@@ -137,32 +139,49 @@ export default function PerDiemSettlementsList(): React.ReactNode {
           }
         />
       ) : null}
-      <div className="erp-users-toolbar flex flex-wrap items-center justify-between gap-2">
+      <div className="erp-pro-card-toolbar erp-users-toolbar">
+        <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <h3 className="erp-pro-card-toolbar-title m-0">
+            {t('pages.hr.perDiem.settlementsTab')}
+          </h3>
+          <span className="erp-users-count-pill">
+            {meta.total.toLocaleString()}
+          </span>
+        </div>
+        <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void listQuery.refetch()}
+              aria-label={t('common.refresh')}
+            />
+          </Tooltip>
+          <Button
+            type="primary"
+            onClick={() => router.push('/approvals/new/per-diem-settlement')}
+          >
+            {t('pages.hr.perDiemSettlement.new')}
+          </Button>
+        </div>
+      </div>
+      <div className="erp-users-filter-bar">
         <Input
           allowClear
-          prefix={<SearchOutlined />}
+          prefix={<SearchOutlined className="erp-users-search-icon" />}
           placeholder={t('pages.hr.perDiemSettlement.searchPlaceholder')}
           value={search}
           onChange={(event) => {
             setSearch(event.target.value);
             resetPage();
           }}
-          className="max-w-sm"
+          className="erp-users-search-input min-w-0"
+          aria-label={t('pages.hr.perDiemSettlement.searchPlaceholder')}
         />
-        <div className="flex items-center gap-2">
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              onClick={() => void listQuery.refetch()}
-            />
-          </Tooltip>
-          <Button type="primary" onClick={() => router.push('/approvals/new/per-diem-settlement')}>
-            {t('pages.hr.perDiemSettlement.new')}
-          </Button>
-        </div>
       </div>
       <DataTable
+        className="erp-pro-table erp-users-table"
         rowKey="id"
         columns={columns}
         dataSource={rows}

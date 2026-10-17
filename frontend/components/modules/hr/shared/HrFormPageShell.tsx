@@ -54,7 +54,7 @@ export default function HrFormPageShell({
   const backHref = cancelHref;
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+    <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
       <section className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
         <div className="min-w-0">
           {backHref ? (

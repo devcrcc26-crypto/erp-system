@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -54,13 +56,11 @@ function DrawerSection({
   children: React.ReactNode;
 }): React.ReactNode {
   return (
-    <div className="overflow-hidden rounded-[12px] border border-[#e8ebef] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-[#e8ebef] bg-[#fafbfc] px-4 py-2.5">
-        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">
-          {title}
-        </h3>
+    <div className="erp-expense-item-section">
+      <div className="erp-expense-item-section-header">
+        <h3 className="erp-expense-item-section-title">{title}</h3>
       </div>
-      <div className="px-4 py-4">{children}</div>
+      <div className="erp-expense-item-section-body">{children}</div>
     </div>
   );
 }
