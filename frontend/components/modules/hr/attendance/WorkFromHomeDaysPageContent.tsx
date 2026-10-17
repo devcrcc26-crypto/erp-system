@@ -42,7 +42,6 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import {
   createWorkFromHomeDay,
   deleteWorkFromHomeDay,
@@ -126,9 +125,8 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
-  const epc = useEpcCapabilities();
-  const canAssign =
-    canViewHr || epc.navDisciplineLeader || epc.navFullAccess;
+  // Direct assignment (no approval) is HR only (hr.view); others use New Request.
+  const canAssign = canViewHr;
   const queryClient = useQueryClient();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;

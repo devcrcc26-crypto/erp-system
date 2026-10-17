@@ -1,6 +1,9 @@
 import { SiteAssignmentStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsIn,
   IsInt,
@@ -15,6 +18,17 @@ export class SubmitSiteAssignmentDto {
   @IsOptional()
   @IsUUID()
   onBehalfOfEmployeeId?: string;
+
+  /**
+   * Crew request: one assignment per listed employee (direct reports or the
+   * submitter's delegate scope). Mutually exclusive with onBehalfOfEmployeeId.
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  crewEmployeeIds?: string[];
 
   @IsString()
   @MaxLength(200)

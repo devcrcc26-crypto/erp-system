@@ -10,8 +10,10 @@ import {
 import {
   ApprovalRequestStatus,
   Prisma,
+  RequestInitiatorType,
   SiteAssignmentStatus,
 } from '@prisma/client';
+import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
 import { randomUUID } from 'crypto';
 import { getRequestContext } from '../../../../shared/context/request-context';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -97,6 +99,16 @@ const DETAIL_INCLUDE = {
   },
 } as const;
 
+/** One validated subject of a site-assignment submission (nothing written yet). */
+interface SubmissionPlan {
+  employeeId: string;
+  initiatedAs: RequestInitiatorType;
+  startDate: Date;
+  endDate: Date;
+  backdating: { isLateSubmission: boolean; lateReason: string | null };
+  resolvedTiers: ResolvedApprovalTier[];
+}
+
 const TERMINAL_OVERLAP_STATUSES: SiteAssignmentStatus[] = [
   'SUBMITTED',
   'IN_REVIEW',
@@ -136,7 +148,9 @@ export class SiteAssignmentService
   }
 
   /**
-   * Submits a site assignment for the actor or an on-behalf employee.
+   * Submits a site assignment. With `crewEmployeeIds`, one assignment (and
+   * approval request) per crew member, all validated before any is created.
+   * Who may file for whom follows allowedInitiators.SITE_ASSIGNMENT.
    */
   async submitRequest(
     dto: SubmitSiteAssignmentDto,
@@ -148,10 +162,99 @@ export class SiteAssignmentService
         'Auto-approve is not available for site assignments; every tier is decided by its approver.',
       );
     }
-    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
+
+    if (dto.crewEmployeeIds && dto.crewEmployeeIds.length > 0) {
+      return this.submitCrew(dto, dto.crewEmployeeIds, companyId, userId);
+    }
+
+    const plan = await this.planSubmission(
+      dto,
+      dto.onBehalfOfEmployeeId,
+      companyId,
+      userId,
+    );
+    const recordId = await this.createFromPlan(plan, dto, companyId, userId, null);
+    return this.getDetail(recordId, companyId, userId);
+  }
+
+  /**
+   * Crew: every member must be a direct report of the submitter or inside the
+   * submitter's delegate scope (never the submitter). All-or-nothing: every
+   * member is validated first; if a create fails midway, the ones already
+   * created are cancelled.
+   */
+  private async submitCrew(
+    dto: SubmitSiteAssignmentDto,
+    crewEmployeeIds: string[],
+    companyId: string,
+    userId: string,
+  ): Promise<{ crewId: string; assignments: unknown[] }> {
+    const memberIds = [...new Set(crewEmployeeIds)];
+    if (memberIds.length !== crewEmployeeIds.length) {
+      throw new BadRequestException('A crew member is listed more than once');
+    }
+    if (memberIds.includes(userId)) {
+      throw new BadRequestException(
+        'A crew request is filed for your direct reports or delegated employees, not for yourself',
+      );
+    }
+    if (dto.onBehalfOfEmployeeId) {
+      throw new BadRequestException(
+        'Use either crewEmployeeIds or onBehalfOfEmployeeId, not both',
+      );
+    }
+
+    const plans: SubmissionPlan[] = [];
+    const errors: string[] = [];
+    for (const memberId of memberIds) {
+      try {
+        plans.push(await this.planSubmission(dto, memberId, companyId, userId));
+      } catch (error: unknown) {
+        errors.push(
+          `${await this.employeeLabel(memberId, companyId)}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    if (errors.length > 0) {
+      throw new BadRequestException({
+        message: `No site assignments were created. ${errors.length} crew member(s) failed validation.`,
+        errors,
+      });
+    }
+
+    const crewId = randomUUID();
+    const created: string[] = [];
+    try {
+      for (const plan of plans) {
+        created.push(await this.createFromPlan(plan, dto, companyId, userId, crewId));
+      }
+    } catch (error: unknown) {
+      await this.cancelCreatedCrew(created, companyId, userId);
+      throw error;
+    }
+
+    const assignments: unknown[] = [];
+    for (const id of created) {
+      assignments.push(await this.getDetail(id, companyId, userId));
+    }
+    return { crewId, assignments };
+  }
+
+  /** Validates one subject and resolves their approval chain; writes nothing. */
+  private async planSubmission(
+    dto: SubmitSiteAssignmentDto,
+    targetEmployeeId: string | null | undefined,
+    companyId: string,
+    userId: string,
+  ): Promise<SubmissionPlan> {
+    const { employeeId, initiatedAs } = await this.onBehalfService.resolveInitiation(
       userId,
       companyId,
-      dto.onBehalfOfEmployeeId,
+      'SITE_ASSIGNMENT',
+      targetEmployeeId,
+      { hrProcess: true },
     );
 
     const startDate = parseUtcDateOnly(dto.startDate);
@@ -192,16 +295,18 @@ export class SiteAssignmentService
       ['LEAVE', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
 
-    const days = calendarDaysInclusive(startDate, endDate);
-    const resolvedTiers =
+    let resolvedTiers =
       await this.hrApprovalChain.buildSiteAssignmentApprovalChain(
         employeeId,
         companyId,
       );
-
-    const title = `Site assignment - ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
-    const now = new Date();
-    const recordId = randomUUID();
+    if (initiatedAs === RequestInitiatorType.SUPERVISOR) {
+      resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
+        resolvedTiers,
+        userId,
+        companyId,
+      );
+    }
 
     // Site assignments unlock scheduled hours as OT, so they are never
     // auto-approved; the chain always has at least an HR tier.
@@ -210,6 +315,22 @@ export class SiteAssignmentService
         'No approver is available for this site assignment - ask HR to assign an HR Manager.',
       );
     }
+
+    return { employeeId, initiatedAs, startDate, endDate, backdating, resolvedTiers };
+  }
+
+  /** Opens the approval request and creates the assignment; returns its id. */
+  private async createFromPlan(
+    plan: SubmissionPlan,
+    dto: SubmitSiteAssignmentDto,
+    companyId: string,
+    userId: string,
+    crewId: string | null,
+  ): Promise<string> {
+    const { employeeId, initiatedAs, startDate, endDate, backdating, resolvedTiers } = plan;
+    const title = `Site assignment - ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
+    const now = new Date();
+    const recordId = randomUUID();
 
     const approval = (await this.approvalsService.submitRequest(
       {
@@ -220,18 +341,23 @@ export class SiteAssignmentService
           projectId: dto.projectId ?? null,
           startDate: dto.startDate,
           endDate: dto.endDate,
-          calendarDays: days,
+          calendarDays: calendarDaysInclusive(startDate, endDate),
           reason: dto.reason ?? null,
+          ...(crewId ? { crewId } : {}),
         },
       },
       companyId,
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Site assignment - Discipline Lead only',
+          ruleName:
+            initiatedAs === RequestInitiatorType.SUPERVISOR
+              ? 'Site assignment - above the submitting supervisor'
+              : 'Site assignment - Reports to',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        initiatedAs,
         lateSubmission: {
           isLateSubmission: backdating.isLateSubmission,
           lateReason: backdating.lateReason,
@@ -258,6 +384,7 @@ export class SiteAssignmentService
           submittedAt: now,
           createdFromAttendanceImport:
             dto.createdFromAttendanceImport === true,
+          crewId,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -285,10 +412,13 @@ export class SiteAssignmentService
       employeeId,
       recordId,
       recordReference: approval.requestNumber,
-      autoApproveTier: dto.autoApproveTier,
+      autoApproveTier: false,
     });
     await this.writeAudit(companyId, userId, 'create', recordId, approval.requestNumber, null, {
       employeeId,
+      initiatedBy: userId,
+      initiatedAs,
+      crewId,
       siteName: dto.siteName.trim(),
       projectId: dto.projectId ?? null,
       startDate: formatDateOnly(startDate),
@@ -296,11 +426,55 @@ export class SiteAssignmentService
       status: SiteAssignmentStatus.SUBMITTED,
       approvalRequestId: approval.id,
       approvers: resolvedTiers.map((tier) => tier.label),
-      onBehalf: employeeId !== userId,
     });
     // No delegate auto-approve: rejected above and blocked in OnBehalfService.
+    return recordId;
+  }
 
-    return this.getDetail(recordId, companyId, userId);
+  /** Rolls back a partly created crew (assignments and approvals cancelled). */
+  private async cancelCreatedCrew(
+    ids: string[],
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const now = new Date();
+    for (const id of ids) {
+      const row = await this.prisma.siteAssignment.update({
+        where: { id },
+        data: {
+          status: SiteAssignmentStatus.CANCELLED,
+          completedAt: now,
+          reason: '[Crew submission rolled back]',
+          updatedBy: userId,
+        },
+      });
+      if (row.approvalRequestId) {
+        await this.prisma.approvalRequest.update({
+          where: { id: row.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
+      await this.writeAudit(companyId, userId, 'cancel', row.id, row.requestNumber, {
+        status: SiteAssignmentStatus.SUBMITTED,
+      }, { status: SiteAssignmentStatus.CANCELLED, by: 'CREW_ROLLBACK' });
+    }
+  }
+
+  private async employeeLabel(employeeId: string, companyId: string): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId },
+      select: { firstName: true, lastName: true, employeeId: true },
+    });
+    if (!user) {
+      return employeeId;
+    }
+    return [user.firstName, user.lastName, user.employeeId ? `(${user.employeeId})` : null]
+      .filter(Boolean)
+      .join(' ');
   }
 
   /**

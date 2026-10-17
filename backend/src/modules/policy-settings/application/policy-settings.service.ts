@@ -58,6 +58,8 @@ export interface PolicyListItem {
   adminOnly: boolean;
   informational: boolean;
   locked: boolean;
+  /** Takes effect when saved (no effective month, no payroll impact). */
+  immediate: boolean;
   defaultValue: unknown;
   currentValue: unknown;
   currentSource: 'DEFAULT' | 'SETTING';
@@ -136,6 +138,7 @@ export class PolicySettingsService {
         adminOnly: definition.adminOnly,
         informational: definition.informational ?? false,
         locked: definition.locked ?? false,
+        immediate: definition.immediate ?? false,
         defaultValue: POLICY_DEFAULTS[definition.key],
         currentValue: current[definition.key],
         currentSource: inForce ? 'SETTING' : 'DEFAULT',
@@ -154,6 +157,9 @@ export class PolicySettingsService {
 
   async preview(ctx: Ctx, key: string, effectiveFromRaw: string): Promise<{ affectedRuns: AffectedRun[] }> {
     const definition = this.requireDefinition(key);
+    if (definition.immediate) {
+      return { affectedRuns: [] };
+    }
     const effectiveFrom = this.parseEffectiveFrom(effectiveFromRaw);
     return { affectedRuns: await this.affectedRuns(ctx.companyId, definition, effectiveFrom) };
   }
@@ -174,7 +180,11 @@ export class PolicySettingsService {
     if (reason.length < 3) {
       throw new BadRequestException('A reason is required');
     }
-    const effectiveFrom = this.parseEffectiveFrom(input.effectiveFrom);
+    // Immediate keys: dated to the current month so the next read sees them;
+    // the latest version in a month wins (createdAt tie-break).
+    const effectiveFrom = definition.immediate
+      ? policyMonthStart(todayInAddisUtc())
+      : this.parseEffectiveFrom(input.effectiveFrom);
     const error = definition.validate(input.value);
     if (error) {
       throw new BadRequestException(`${definition.key}: ${error}`);
@@ -186,7 +196,9 @@ export class PolicySettingsService {
       throw new BadRequestException(`${definition.key}: ${crossError}`);
     }
 
-    const affected = await this.affectedRuns(ctx.companyId, definition, effectiveFrom);
+    const affected = definition.immediate
+      ? []
+      : await this.affectedRuns(ctx.companyId, definition, effectiveFrom);
     if (affected.length > 0 && !input.confirmAffectedRuns) {
       throw new ConflictException({
         message:

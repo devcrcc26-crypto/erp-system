@@ -18,6 +18,39 @@ export type OnBehalfModuleCode =
   | 'SITE_ASSIGNMENT'
   | 'WORK_FROM_HOME';
 
+/** Request types governed by the allowedInitiators policy. */
+export type InitiatorModuleCode =
+  | 'SITE_ASSIGNMENT'
+  | 'WORK_FROM_HOME'
+  | 'FLIGHT_APPLICATION'
+  | 'BUSINESS_TRIP';
+
+export const INITIATOR_MODULE_CODES: readonly InitiatorModuleCode[] = [
+  'SITE_ASSIGNMENT',
+  'WORK_FROM_HOME',
+  'FLIGHT_APPLICATION',
+  'BUSINESS_TRIP',
+];
+
+export function isInitiatorModule(code: OnBehalfModuleCode): code is InitiatorModuleCode {
+  return (INITIATOR_MODULE_CODES as readonly string[]).includes(code);
+}
+
+export type RequestInitiator = 'SELF' | 'SUPERVISOR' | 'DELEGATE';
+
+/** GET /hr/on-behalf/initiable-employees. */
+export interface InitiableEmployees {
+  allowed: RequestInitiator[];
+  selfAllowed: boolean;
+  employees: Array<
+    Omit<OnBehalfEligibleEmployee, 'discipline' | 'gender'> & {
+      discipline?: string | null;
+      position: string | null;
+      initiatedAs: RequestInitiator;
+    }
+  >;
+}
+
 /** GET /hr/on-behalf/eligible-employees row. */
 export interface OnBehalfEligibleEmployee {
   id: string;

@@ -77,7 +77,14 @@ export interface ApprovalTier {
   decidedAt?: string | null;
   createdAt?: string;
   approver?: ApprovalUserSummary;
+  /** Set when a full-access user approved this tier for the assigned approver. */
+  actingApprover?: ApprovalUserSummary | null;
+  /** The assigned approver the tier was approved on behalf of. */
+  onBehalfOfApprover?: ApprovalUserSummary | null;
 }
+
+/** Capacity the creator filed the request in. */
+export type RequestInitiatorType = 'SELF' | 'SUPERVISOR' | 'DELEGATE';
 
 export interface ApprovalComment {
   id: string;
@@ -118,10 +125,20 @@ export interface ApprovalRequestListItem {
   needsTicketAcknowledgement?: boolean;
   lateSubmission?: LateSubmissionMeta | null;
   requester?: ApprovalUserSummary;
+  /** Who filed it (same as requester for self-submissions). */
+  createdBy?: string;
+  creator?: ApprovalUserSummary;
+  initiatedAs?: RequestInitiatorType | null;
   tiers?: Array<
     Pick<
       ApprovalTier,
-      'id' | 'tierOrder' | 'label' | 'decision' | 'approverId'
+      | 'id'
+      | 'tierOrder'
+      | 'label'
+      | 'decision'
+      | 'approverId'
+      | 'actingApprover'
+      | 'onBehalfOfApprover'
     >
   >;
 }
@@ -136,6 +153,8 @@ export interface ApprovalRequestDetail extends ApprovalRequestListItem {
     submittedBy: { id: string; name: string };
     viewerIsSubmitter: boolean;
   } | null;
+  /** Viewer may approve the current tier on behalf of its assigned approver. */
+  canApproveOnBehalf?: boolean;
   lateSubmission?: LateSubmissionMeta | null;
   notes?: string | null;
   attachmentFolderId?: string | null;
@@ -193,6 +212,8 @@ export interface ListApprovalRequestsParams {
 
 export interface TierActionPayload {
   note?: string;
+  /** Approve only: full-access roles approve for the assigned approver. */
+  onBehalf?: boolean;
 }
 
 export interface AddConditionPayload {

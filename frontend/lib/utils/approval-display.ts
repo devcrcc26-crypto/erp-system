@@ -21,6 +21,55 @@ export function formatApprovalUserName(
   return formatUserName(user) || user.email || '-';
 }
 
+/**
+ * "Submitted by Y for X" (plus the capacity) when someone filed the request for
+ * the subject employee; null for self-submissions.
+ */
+export function formatSubmittedFor(
+  request: {
+    requestedBy: string;
+    createdBy?: string;
+    requester?: ApprovalUserSummary | null;
+    creator?: ApprovalUserSummary | null;
+    initiatedAs?: 'SELF' | 'SUPERVISOR' | 'DELEGATE' | null;
+  },
+  t: TFn,
+): string | null {
+  if (!request.createdBy || request.createdBy === request.requestedBy || !request.creator) {
+    return null;
+  }
+  const text = t('pages.approvals.submittedByFor', {
+    by: formatApprovalUserName(request.creator),
+    for: formatApprovalUserName(request.requester),
+  });
+  return request.initiatedAs === 'SUPERVISOR' || request.initiatedAs === 'DELEGATE'
+    ? `${text} (${t(`pages.approvals.initiatedAs.${request.initiatedAs}`)})`
+    : text;
+}
+
+/**
+ * "Approved by Y on behalf of Z" / "Returned by Y on behalf of Z" for a tier a
+ * full-access user acted on; else null.
+ */
+export function formatApprovedOnBehalf(
+  tier: Pick<ApprovalTier, 'actingApprover' | 'onBehalfOfApprover'> & {
+    decision?: ApprovalTier['decision'];
+  },
+  t: TFn,
+): string | null {
+  if (!tier.actingApprover) {
+    return null;
+  }
+  const key =
+    tier.decision === 'RETURNED'
+      ? 'pages.approvals.returnedOnBehalf'
+      : 'pages.approvals.approvedOnBehalf';
+  return t(key, {
+    by: formatApprovalUserName(tier.actingApprover),
+    for: formatApprovalUserName(tier.onBehalfOfApprover),
+  });
+}
+
 export function formatApprovalStatus(status: string, t?: TFn): string {
   if (t) {
     const decisionKey = `hr.approvalDecision.${status}`;

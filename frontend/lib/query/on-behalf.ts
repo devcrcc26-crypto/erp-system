@@ -3,6 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client';
 import type {
+  InitiableEmployees,
+  InitiatorModuleCode,
   OnBehalfChainMembership,
   OnBehalfEligibleEmployee,
   OnBehalfModuleCode,
@@ -16,7 +18,29 @@ export const onBehalfKeys = {
     [...onBehalfKeys.all, 'eligible', userId ?? '', companyId ?? ''] as const,
   chain: (employeeId: string, moduleCode: OnBehalfModuleCode) =>
     [...onBehalfKeys.all, 'chain', moduleCode, employeeId] as const,
+  initiable: (userId: string | undefined, moduleCode: InitiatorModuleCode) =>
+    [...onBehalfKeys.all, 'initiable', moduleCode, userId ?? ''] as const,
 };
+
+/**
+ * Site assignment / WFH / flight / business trip: who the signed-in user may
+ * file for under allowedInitiators, and whether they may file for themselves.
+ */
+export function useInitiableEmployees(
+  userId: string | undefined,
+  moduleCode: InitiatorModuleCode | null,
+) {
+  return useQuery({
+    queryKey: onBehalfKeys.initiable(userId, moduleCode ?? 'SITE_ASSIGNMENT'),
+    queryFn: () =>
+      apiGet<InitiableEmployees>(
+        `${ON_BEHALF_PATH}/initiable-employees?module=${moduleCode}`,
+      ),
+    enabled: Boolean(userId) && moduleCode !== null,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
 
 /**
  * Employees the signed-in user may submit HR requests for (empty = no on-behalf access).

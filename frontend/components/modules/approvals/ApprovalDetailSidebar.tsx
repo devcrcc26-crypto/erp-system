@@ -13,6 +13,7 @@ import {
   approvalTierDecisionVariant,
   findCurrentTier,
   formatApprovalStatus,
+  formatApprovedOnBehalf,
   formatApprovalUserName,
   parseTierConditions,
 } from '@/lib/utils/approval-display';
@@ -188,6 +189,11 @@ export default function ApprovalDetailSidebar({
                       >
                         {t('pages.approvals.reassign.button')}
                       </Button>
+                    ) : null}
+                    {formatApprovedOnBehalf(tier, t) ? (
+                      <p className="erp-approval-tier-meta">
+                        {formatApprovedOnBehalf(tier, t)}
+                      </p>
                     ) : null}
                     {tier.decidedAt ? (
                       <p className="erp-approval-tier-meta">

@@ -160,7 +160,10 @@ export class ApprovalRequestsController {
   }
 
   @Post(':id/tiers/:tierId/approve')
-  @ApiOperation({ summary: 'Approve the current tier' })
+  @ApiOperation({
+    summary:
+      'Approve the current tier (onBehalf: full-access roles approve for the assigned approver)',
+  })
   approve(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -172,6 +175,7 @@ export class ApprovalRequestsController {
       tierId,
       user.userId,
       dto?.note,
+      { onBehalf: dto?.onBehalf === true },
     );
   }
 
@@ -204,6 +208,7 @@ export class ApprovalRequestsController {
       tierId,
       user.userId,
       dto?.note,
+      { onBehalf: dto?.onBehalf === true },
     );
   }
 

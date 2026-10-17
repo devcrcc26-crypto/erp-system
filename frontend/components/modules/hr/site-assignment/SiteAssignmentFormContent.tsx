@@ -12,8 +12,10 @@ import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice'
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
+  formatOnBehalfEmployeeName,
   OnBehalfSection,
   useOnBehalf,
+  useOnBehalfEmployees,
 } from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -111,6 +113,11 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SiteAssignmentFormValues>();
   const onBehalf = useOnBehalf('SITE_ASSIGNMENT');
+  // Crew: direct reports or delegate scope (allowedInitiators); never the submitter.
+  const crewCandidates = useOnBehalfEmployees('SITE_ASSIGNMENT');
+  const [crewIds, setCrewIds] = useState<string[]>([]);
+  const [targetError, setTargetError] = useState<string | null>(null);
+  const isCrew = crewIds.length > 0;
   const earliestQuery = useEarliestAllowedDate(onBehalf.effectiveEmployeeId);
   const submitMutation = useSubmitSiteAssignment();
   const earliestDay = earliestQuery.data?.earliestDate
@@ -223,6 +230,8 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       periods: [],
     });
     onBehalf.reset();
+    setCrewIds([]);
+    setTargetError(null);
   }
 
   function validatePeriods(): boolean {
@@ -240,6 +249,11 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   }
 
   async function validateDetailsStep(): Promise<boolean> {
+    if (!isCrew && onBehalf.targetRequired) {
+      setTargetError(t('pages.hr.siteAssignments.form.targetRequired'));
+      return false;
+    }
+    setTargetError(null);
     try {
       await form.validateFields(['siteName']);
       if (!validatePeriods()) {
@@ -267,22 +281,26 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     try {
       const created: Array<{ id: string }> = [];
       for (const period of values.periods) {
-        const detail = await submitMutation.mutateAsync({
+        const result = await submitMutation.mutateAsync({
           siteName: values.siteName,
           projectId: values.projectId,
           startDate: period.startDate,
           endDate: period.endDate,
           reason: values.reason || undefined,
           lateReason: values.lateReason?.trim() || undefined,
-          ...onBehalf.payload,
+          ...(isCrew ? { crewEmployeeIds: crewIds } : onBehalf.payload),
         });
-        created.push(detail);
+        if ('assignments' in result) {
+          created.push(...result.assignments);
+        } else {
+          created.push(result);
+        }
       }
       messageApi.success(
-        values.periods.length === 1
+        created.length === 1
           ? t('pages.hr.siteAssignments.form.submitSuccess')
           : t('pages.hr.siteAssignments.form.submitSuccessMany', {
-              count: values.periods.length,
+              count: created.length,
             }),
       );
       if (created.length === 1) {
@@ -300,9 +318,19 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     }
   }
 
-  const onBehalfLabel = onBehalf.employee
-    ? formatUserName(onBehalf.employee)
-    : t('hr.onBehalf.forYourself');
+  const crewOptions = useMemo(
+    () =>
+      crewCandidates.employees.map((employee) => ({
+        value: employee.id,
+        label: formatOnBehalfEmployeeName(employee),
+      })),
+    [crewCandidates.employees],
+  );
+  const onBehalfLabel = isCrew
+    ? t('pages.hr.siteAssignments.form.crewSummary', { count: crewIds.length })
+    : onBehalf.employee
+      ? formatUserName(onBehalf.employee)
+      : t('hr.onBehalf.forYourself');
 
   const periodsReviewValue =
     snapshot.periods.length === 0
@@ -325,7 +353,36 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
             title={t('pages.hr.siteAssignments.form.steps.details')}
             description={t('pages.hr.siteAssignments.form.detailsStepDescription')}
           >
-            <OnBehalfSection state={onBehalf} />
+            {isCrew ? null : <OnBehalfSection state={onBehalf} />}
+            {crewOptions.length > 1 ? (
+              <Form.Item
+                label={t('pages.hr.siteAssignments.form.crew')}
+                extra={t('pages.hr.siteAssignments.form.crewHint')}
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  value={crewIds}
+                  onChange={(next: string[]) => {
+                    setCrewIds(next);
+                    setTargetError(null);
+                    if (next.length > 0) {
+                      onBehalf.setEmployeeId(undefined);
+                    }
+                  }}
+                  options={crewOptions}
+                  placeholder={t('pages.hr.siteAssignments.form.crewPlaceholder')}
+                  aria-label={t('pages.hr.siteAssignments.form.crew')}
+                />
+              </Form.Item>
+            ) : null}
+            {targetError ? (
+              <p className="m-0 mb-3 text-sm text-[#B42318]" role="alert">
+                {targetError}
+              </p>
+            ) : null}
             <div className="erp-form-grid-2">
               <Form.Item
                 name="siteName"
@@ -537,6 +594,10 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       earliestDay,
       requiresLateReason,
       anyPeriodBeforeCurrentMonth,
+      isCrew,
+      crewIds,
+      crewOptions,
+      targetError,
     ],
   );
 

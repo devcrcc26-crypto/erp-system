@@ -4,9 +4,27 @@
  * existed; a company with no saved versions calculates exactly as before.
  */
 
-export type PolicyGroup = 'ATTENDANCE' | 'PAYROLL' | 'OVERTIME' | 'SEPARATION' | 'INACTIVE';
+export type PolicyGroup = 'ATTENDANCE' | 'PAYROLL' | 'OVERTIME' | 'REQUESTS' | 'SEPARATION' | 'INACTIVE';
 export type DeductionMode = 'REPORT_ONLY' | 'ENFORCED';
 export type InactiveType = 'SUSPENDED' | 'LONG_LEAVE' | 'OTHER';
+
+/** Who may file a request: the employee, their direct supervisor, or a delegate. */
+export type RequestInitiator = 'SELF' | 'SUPERVISOR' | 'DELEGATE';
+
+/** Request types governed by allowedInitiators. */
+export type InitiatorRequestType =
+  | 'SITE_ASSIGNMENT'
+  | 'WORK_FROM_HOME'
+  | 'FLIGHT_APPLICATION'
+  | 'BUSINESS_TRIP';
+
+export const REQUEST_INITIATORS: readonly RequestInitiator[] = ['SELF', 'SUPERVISOR', 'DELEGATE'];
+export const INITIATOR_REQUEST_TYPES: readonly InitiatorRequestType[] = [
+  'SITE_ASSIGNMENT',
+  'WORK_FROM_HOME',
+  'FLIGHT_APPLICATION',
+  'BUSINESS_TRIP',
+];
 
 export interface TaxBracket {
   /** Upper bound of taxable income for this band (inclusive); null = no upper bound. */
@@ -45,6 +63,9 @@ export interface PolicyValues {
   lunchCountsAsOvertime: boolean;
   /** On approved site-assignment days, scheduled office hours are claimable OT. */
   siteDayScheduledHoursClaimable: boolean;
+  // Requests
+  /** Allowed initiators per request type (full-access roles may always file as DELEGATE). */
+  allowedInitiators: Record<InitiatorRequestType, RequestInitiator[]>;
   // Separation (stored for phase 2; not used by calculations yet)
   /**
    * prorateCurrentYear: pay leave earned in the current leave year up to the
@@ -90,6 +111,12 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   multipliers: { regular: 1.5, night: 1.75, weekend: 2, holiday: 2.5 },
   lunchCountsAsOvertime: false,
   siteDayScheduledHoursClaimable: true,
+  allowedInitiators: {
+    SITE_ASSIGNMENT: ['SUPERVISOR', 'DELEGATE'],
+    WORK_FROM_HOME: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+    FLIGHT_APPLICATION: ['SELF', 'DELEGATE'],
+    BUSINESS_TRIP: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+  },
   unusedLeavePayout: { enabled: false, dailyRateBase: 'basic/30', prorateCurrentYear: true },
   severancePay: { enabled: false, parameters: {} },
   noticePay: { enabled: false, days: 0 },
@@ -112,12 +139,18 @@ export interface PolicyDefinition {
     | 'nullableInteger'
     | 'taxBrackets'
     | 'multipliers'
+    | 'initiators'
     | 'json';
   options?: readonly string[];
   /** Saved but not read by any calculation yet (phase 2 features). */
   informational?: boolean;
   /** Value is fixed for now; the editor shows it read-only. */
   locked?: boolean;
+  /**
+   * Takes effect when saved: the version is dated to the current month and no
+   * payroll run is affected (not read by any calculation).
+   */
+  immediate?: boolean;
   validate: (value: unknown) => string | null;
 }
 
@@ -181,6 +214,20 @@ export function validateTaxBrackets(v: unknown): string | null {
       return `Band ${i + 1}: deduction must be 0 or more`;
     }
     if (!last) previous = b.upTo as number;
+  }
+  return null;
+}
+
+export function validateAllowedInitiators(v: unknown): string | null {
+  if (!isObject(v)) return 'Must be an object';
+  const extra = Object.keys(v).filter((k) => !INITIATOR_REQUEST_TYPES.includes(k as InitiatorRequestType));
+  if (extra.length) return `Unknown request type(s): ${extra.join(', ')}`;
+  for (const type of INITIATOR_REQUEST_TYPES) {
+    const list = v[type];
+    if (!Array.isArray(list) || list.length === 0) return `${type}: choose at least one initiator`;
+    if (new Set(list).size !== list.length) return `${type}: duplicate initiator`;
+    const bad = list.filter((i) => !REQUEST_INITIATORS.includes(i as RequestInitiator));
+    if (bad.length) return `${type}: unknown initiator(s) ${bad.join(', ')}`;
   }
   return null;
 }
@@ -259,6 +306,14 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     adminOnly: true,
     kind: 'boolean',
     validate: isBool,
+  },
+  {
+    key: 'allowedInitiators',
+    group: 'REQUESTS',
+    adminOnly: true,
+    kind: 'initiators',
+    immediate: true,
+    validate: validateAllowedInitiators,
   },
   {
     key: 'unusedLeavePayout',

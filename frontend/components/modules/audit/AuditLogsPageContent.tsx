@@ -33,6 +33,7 @@ import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users'
 import {
   auditLogActionVariant,
   auditLogSourceVariant,
+  formatAuditLogOnBehalfSummary,
   formatAuditLogSourceLabel,
   formatAuditLogUserName,
 } from '@/lib/utils/audit-log-display';
@@ -400,11 +401,19 @@ export default function AuditLogsPageContent(): React.ReactNode {
                 key: 'user',
                 ellipsis: true,
                 responsive: ['md'],
-                render: (_value, record) => (
-                  <span className="erp-users-cell-strong">
-                    {formatAuditLogUserName(record)}
-                  </span>
-                ),
+                render: (_value, record) => {
+                  const onBehalf = formatAuditLogOnBehalfSummary(record, t);
+                  return (
+                    <div className="min-w-0">
+                      <span className="erp-users-cell-strong">
+                        {formatAuditLogUserName(record)}
+                      </span>
+                      {onBehalf ? (
+                        <p className="erp-users-cell-sub m-0">{onBehalf}</p>
+                      ) : null}
+                    </div>
+                  );
+                },
               },
               {
                 title: t('auditLogs.columns.module'),

@@ -49,7 +49,9 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   findCurrentTier,
+  formatApprovedOnBehalf,
   formatApprovalUserName,
+  formatSubmittedFor,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
 import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
@@ -322,11 +324,19 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         key: 'requester',
         width: 160,
         responsive: ['md'],
-        render: (_: unknown, row: ApprovalRequestListItem) => (
-          <span className="erp-users-cell-strong">
-            {formatApprovalUserName(row.requester)}
-          </span>
-        ),
+        render: (_: unknown, row: ApprovalRequestListItem) => {
+          const submittedFor = formatSubmittedFor(row, t);
+          return (
+            <div className="min-w-0">
+              <span className="erp-users-cell-strong">
+                {formatApprovalUserName(row.requester)}
+              </span>
+              {submittedFor ? (
+                <p className="erp-users-cell-sub m-0">{submittedFor}</p>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         title: t('pages.approvals.table.submitted'),
@@ -380,10 +390,21 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             row.tiers as ApprovalTier[] | undefined,
             row.currentTier,
           );
-          return current?.label ? (
-            <span className="erp-users-role-tag">{current.label}</span>
-          ) : (
-            <span className="erp-users-cell-sub">-</span>
+          const onBehalf = [...(row.tiers ?? [])]
+            .reverse()
+            .map((tier) => formatApprovedOnBehalf(tier, t))
+            .find(Boolean);
+          return (
+            <div className="min-w-0">
+              {current?.label ? (
+                <span className="erp-users-role-tag">{current.label}</span>
+              ) : (
+                <span className="erp-users-cell-sub">-</span>
+              )}
+              {onBehalf ? (
+                <p className="erp-users-cell-sub m-0">{onBehalf}</p>
+              ) : null}
+            </div>
           );
         },
       },

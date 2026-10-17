@@ -16,6 +16,7 @@ import {
   FlightTripType,
   FolderContextType,
   Prisma,
+  RequestInitiatorType,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -130,7 +131,11 @@ export class FlightService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    return this.hrApprovalChain.getSelectablePassengers(userId, companyId);
+    return this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'FLIGHT_APPLICATION',
+      );
   }
 
   /**
@@ -144,9 +149,10 @@ export class FlightService
   ): Promise<unknown> {
     // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
     // Passengers are chosen independently - the target is not added automatically.
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const { employeeId, initiatedAs } = await this.onBehalfService.resolveInitiation(
       userId,
       companyId,
+      'FLIGHT_APPLICATION',
       dto.onBehalfOfEmployeeId,
     );
 
@@ -174,10 +180,11 @@ export class FlightService
       throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
     }
 
-    const selectablePassengers = await this.hrApprovalChain.getSelectablePassengers(
-      userId,
-      companyId,
-    );
+    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'FLIGHT_APPLICATION',
+      );
     const selectableSet = new Set(selectablePassengers.map((p) => p.id));
     const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
     if (invalidIds.length > 0) {
@@ -187,10 +194,18 @@ export class FlightService
     }
 
     // --- Resolve approval chain ---
-    const resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
+    let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
       employeeId,
       companyId,
     );
+    if (initiatedAs === RequestInitiatorType.SUPERVISOR) {
+      // Supervisor filing: the chain starts above the supervisor, never with them.
+      resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
+        resolvedTiers,
+        userId,
+        companyId,
+      );
+    }
 
     // --- Direct APPROVED path (GM / MD / SysAdmin) ---
     if (resolvedTiers.length === 0) {
@@ -304,6 +319,7 @@ export class FlightService
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        initiatedAs,
       },
     )) as { id: string; requestNumber: string };
 
@@ -763,9 +779,10 @@ export class FlightService
     const app = await this.assertDraftOwner(applicationId, companyId, userId);
 
     const selectablePassengers =
-      await this.hrApprovalChain.getSelectablePassengers(
-        app.submittedBy,
+      await this.onBehalfService.getSelectablePassengers(
+        userId,
         companyId,
+        'FLIGHT_APPLICATION',
       );
     const selectableSet = new Set(selectablePassengers.map((p) => p.id));
     if (!selectableSet.has(dto.employeeId)) {

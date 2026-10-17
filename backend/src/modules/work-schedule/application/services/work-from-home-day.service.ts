@@ -13,9 +13,11 @@ import {
 import {
   ApprovalRequestStatus,
   Prisma,
+  RequestInitiatorType,
   WorkFromHomeScope,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { AuditService } from '../../../audit/application/services/audit.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { assertWithinEmploymentWindow } from '../../../../shared/employment/employment-guard.util';
@@ -85,8 +87,10 @@ const OPEN_WFH_STATUSES: ApprovalRequestStatus[] = [
 interface AssignerContext {
   userId: string;
   isHr: boolean;
-  ledDisciplineIds: string[];
 }
+
+const WFH_DIRECT_ASSIGN_HR_ONLY =
+  'Only HR (hr.view) can assign work-from-home days directly. Others submit a work-from-home request.';
 
 interface AssignableEmployee {
   id: string;
@@ -143,6 +147,7 @@ export class WorkFromHomeDayService
     private readonly backdatingPolicy: BackdatingPolicyService,
     @Inject(forwardRef(() => WorkScheduleService))
     private readonly workScheduleService: WorkScheduleService,
+    private readonly audit: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -214,7 +219,7 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * List for assigners (HR or Discipline Lead). Ordinary employees use New Request.
+   * List for assigners (HR only). Everyone else uses New Request.
    */
   async listForAssigner(
     companyId: string,
@@ -228,7 +233,7 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * Employees the actor may assign WFH to (HR: anyone; DL: their discipline).
+   * Employees HR may assign WFH to directly (any HR-process employee).
    */
   async listAssignableEmployees(
     userId: string,
@@ -239,21 +244,11 @@ export class WorkFromHomeDayService
     employees: AssignableEmployee[];
   }> {
     const ctx = await this.resolveAssigner(userId, companyId);
-    if (!ctx.isHr && ctx.ledDisciplineIds.length === 0) {
-      throw new ForbiddenException(
-        'Only HR or a Discipline Lead can assign work-from-home days',
-      );
-    }
+    this.assertCanAssign(ctx);
 
-    const where: Prisma.UserWhereInput = ctx.isHr
-      ? activeOnly(hrProcessEmployeeWhere({ companyId, isActive: true }))
-      : activeOnly(
-          hrProcessEmployeeWhere({
-            companyId,
-            isActive: true,
-            engineeringDisciplineId: { in: ctx.ledDisciplineIds },
-          }),
-        );
+    const where: Prisma.UserWhereInput = activeOnly(
+      hrProcessEmployeeWhere({ companyId, isActive: true }),
+    );
 
     const users = await this.prisma.user.findMany({
       where,
@@ -266,8 +261,9 @@ export class WorkFromHomeDayService
     });
 
     return {
-      canAssignCompanyWide: ctx.isHr,
-      isDisciplineLead: ctx.ledDisciplineIds.length > 0,
+      canAssignCompanyWide: true,
+      // Kept for API compatibility: Discipline Leads no longer assign directly.
+      isDisciplineLead: false,
       employees: users.map((user) => ({
         id: user.id,
         firstName: user.firstName,
@@ -282,7 +278,7 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * Direct assignment by HR (any scope) or Discipline Lead (employees under them).
+   * Direct assignment by HR (no approval; audit-logged).
    * Accepts a single `date` or an inclusive `startDate`–`endDate` range
    * (one calendar day row per date; employee-scope merges into existing days).
    */
@@ -313,21 +309,12 @@ export class WorkFromHomeDayService
       );
     }
 
-    const scope = ctx.isHr
-      ? (dto.scope ?? WorkFromHomeScope.ALL)
-      : WorkFromHomeScope.EMPLOYEES;
+    const scope = dto.scope ?? WorkFromHomeScope.ALL;
     const departmentIds =
       scope === WorkFromHomeScope.DEPARTMENTS ? (dto.departmentIds ?? []) : [];
-    let employeeIds =
+    const employeeIds =
       scope === WorkFromHomeScope.EMPLOYEES ? (dto.employeeIds ?? []) : [];
 
-    if (!ctx.isHr) {
-      employeeIds = await this.assertEmployeesUnderDiscipline(
-        employeeIds,
-        ctx.ledDisciplineIds,
-        companyId,
-      );
-    }
     await this.assertHrProcessEmployees(employeeIds, companyId);
     // Named employees only; company/department-wide WFH applies to whoever is employed that day.
     for (const employeeId of employeeIds) {
@@ -347,10 +334,18 @@ export class WorkFromHomeDayService
           scope,
           departmentIds,
           employeeIds,
-          ctx,
         }),
       );
     }
+    await this.writeAssignAudit(companyId, userId, 'create', `${startKey}:${endKey}`, null, {
+      startDate: startKey,
+      endDate: endKey,
+      scope,
+      departmentIds,
+      employeeIds,
+      reason: dto.reason.trim(),
+      days: dates.length,
+    });
     return dates.length === 1 ? created[0] : { created: created.length, days: created };
   }
 
@@ -362,7 +357,6 @@ export class WorkFromHomeDayService
     scope: WorkFromHomeScope;
     departmentIds: string[];
     employeeIds: string[];
-    ctx: AssignerContext;
   }): Promise<unknown> {
     const existing = await this.prisma.workFromHomeDay.findFirst({
       where: activeOnly({ companyId: input.companyId, date: input.date }),
@@ -376,7 +370,6 @@ export class WorkFromHomeDayService
           input.reason,
           input.userId,
           input.companyId,
-          input.ctx,
         );
       }
       // Range assign: keep existing company/department day; do not fail the whole range.
@@ -413,7 +406,7 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * Updates a WFH day. Discipline Leads may only manage EMPLOYEES scope for their reports.
+   * Updates a WFH day (HR only; audit-logged).
    */
   async update(
     id: string,
@@ -426,27 +419,7 @@ export class WorkFromHomeDayService
 
     const existing = await this.findOrThrow(id, companyId);
 
-    if (!ctx.isHr) {
-      if (existing.scope !== WorkFromHomeScope.EMPLOYEES) {
-        throw new ForbiddenException(
-          'Discipline Leads can only edit employee-scoped work-from-home days',
-        );
-      }
-      if (dto.scope != null && dto.scope !== WorkFromHomeScope.EMPLOYEES) {
-        throw new ForbiddenException(
-          'Discipline Leads can only assign specific employees',
-        );
-      }
-      if (dto.departmentIds != null && dto.departmentIds.length > 0) {
-        throw new ForbiddenException(
-          'Discipline Leads cannot assign by department',
-        );
-      }
-    }
-
-    const nextScope = ctx.isHr
-      ? (dto.scope ?? existing.scope)
-      : WorkFromHomeScope.EMPLOYEES;
+    const nextScope = dto.scope ?? existing.scope;
     let nextDepartmentIds =
       dto.departmentIds !== undefined
         ? dto.departmentIds
@@ -461,23 +434,6 @@ export class WorkFromHomeDayService
       nextEmployeeIds = [];
     }
 
-    if (!ctx.isHr) {
-      const allowed = new Set(
-        (
-          await this.listAssignableEmployees(userId, companyId)
-        ).employees.map((row) => row.id),
-      );
-      const outside = existing.employeeIds.filter((id) => !allowed.has(id));
-      const requested = dto.employeeIds ?? existing.employeeIds.filter((id) =>
-        allowed.has(id),
-      );
-      const validated = await this.assertEmployeesUnderDiscipline(
-        requested,
-        ctx.ledDisciplineIds,
-        companyId,
-      );
-      nextEmployeeIds = [...new Set([...outside, ...validated])];
-    }
     await this.assertHrProcessEmployees(dto.employeeIds ?? [], companyId);
 
     this.validateScopePayload(nextScope, nextDepartmentIds, nextEmployeeIds);
@@ -497,42 +453,36 @@ export class WorkFromHomeDayService
     if (dto.date !== undefined) {
       await this.recalculateMonth(companyId, parseDateOnly(dto.date));
     }
+    await this.writeAssignAudit(
+      companyId,
+      userId,
+      'update',
+      id,
+      {
+        date: existing.date.toISOString().slice(0, 10),
+        scope: existing.scope,
+        departmentIds: existing.departmentIds,
+        employeeIds: existing.employeeIds,
+        reason: existing.reason,
+      },
+      {
+        date: updated.date.toISOString().slice(0, 10),
+        scope: updated.scope,
+        departmentIds: updated.departmentIds,
+        employeeIds: updated.employeeIds,
+        reason: updated.reason,
+      },
+    );
     return this.mapRow(updated);
   }
 
   /**
-   * Soft-deletes a WFH day. Discipline Leads may only delete EMPLOYEES rows
-   * that only cover their reports (or remove their reports and keep the rest).
+   * Soft-deletes a WFH day (HR only; audit-logged).
    */
   async remove(id: string, companyId: string, userId: string): Promise<void> {
     const ctx = await this.resolveAssigner(userId, companyId);
     this.assertCanAssign(ctx);
     const existing = await this.findOrThrow(id, companyId);
-
-    if (!ctx.isHr) {
-      if (existing.scope !== WorkFromHomeScope.EMPLOYEES) {
-        throw new ForbiddenException(
-          'Discipline Leads can only change employee-scoped work-from-home days',
-        );
-      }
-      const allowed = new Set(
-        (
-          await this.listAssignableEmployees(userId, companyId)
-        ).employees.map((row) => row.id),
-      );
-      const remaining = existing.employeeIds.filter((id) => !allowed.has(id));
-      if (remaining.length > 0) {
-        await this.prisma.workFromHomeDay.update({
-          where: { id },
-          data: {
-            employeeIds: remaining,
-            updatedBy: userId,
-          },
-        });
-        await this.recalculateMonth(companyId, existing.date);
-        return;
-      }
-    }
 
     await this.prisma.workFromHomeDay.update({
       where: { id },
@@ -542,6 +492,43 @@ export class WorkFromHomeDayService
       },
     });
     await this.recalculateMonth(companyId, existing.date);
+    await this.writeAssignAudit(
+      companyId,
+      userId,
+      'delete',
+      id,
+      {
+        date: existing.date.toISOString().slice(0, 10),
+        scope: existing.scope,
+        departmentIds: existing.departmentIds,
+        employeeIds: existing.employeeIds,
+        reason: existing.reason,
+      },
+      { deleted: true },
+    );
+  }
+
+  /** Audit entry for HR direct assignment (no approval request exists). */
+  private async writeAssignAudit(
+    companyId: string,
+    userId: string,
+    action: 'create' | 'update' | 'delete',
+    recordId: string,
+    beforeValue: Record<string, unknown> | null,
+    afterValue: Record<string, unknown>,
+  ): Promise<void> {
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId,
+        companyId,
+        module: 'work_from_home',
+        action: `direct_assign_${action}`,
+        recordType: 'work_from_home_day',
+        recordId,
+        beforeValue: (beforeValue ?? undefined) as Prisma.InputJsonValue | undefined,
+        afterValue: afterValue as Prisma.InputJsonValue,
+      }),
+    );
   }
 
   /**
@@ -553,10 +540,12 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<WorkFromHomeRangePlan & { employeeId: string; label: string }> {
-    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
+    const { employeeId } = await this.onBehalfService.resolveInitiation(
       userId,
       companyId,
+      'WORK_FROM_HOME',
       dto.onBehalfOfEmployeeId,
+      { hrProcess: true },
     );
     const plan = await this.buildRangePlan(
       companyId,
@@ -584,10 +573,12 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
+    const { employeeId, initiatedAs } = await this.onBehalfService.resolveInitiation(
       userId,
       companyId,
+      'WORK_FROM_HOME',
       dto.onBehalfOfEmployeeId,
+      { hrProcess: true },
     );
     const startKey = dto.startDate ?? dto.date;
     const endKey = dto.endDate ?? dto.date ?? dto.startDate;
@@ -613,11 +604,18 @@ export class WorkFromHomeDayService
       lateReason: dto.lateReason,
     });
 
-    const resolvedTiers =
+    let resolvedTiers =
       await this.hrApprovalChain.buildWorkFromHomeApprovalChain(
         employeeId,
         companyId,
       );
+    if (initiatedAs === RequestInitiatorType.SUPERVISOR) {
+      resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
+        resolvedTiers,
+        userId,
+        companyId,
+      );
+    }
 
     const title = `Work from home - ${formatWorkFromHomeRangeLabel(
       plan.startDate,
@@ -674,6 +672,7 @@ export class WorkFromHomeDayService
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        initiatedAs,
         lateSubmission: {
           isLateSubmission: backdating.isLateSubmission,
           lateReason: backdating.lateReason,
@@ -1014,7 +1013,6 @@ export class WorkFromHomeDayService
     reason: string,
     userId: string,
     companyId: string,
-    ctx: AssignerContext,
   ): Promise<unknown> {
     if (existing.scope === WorkFromHomeScope.ALL) {
       throw new ConflictException(
@@ -1027,17 +1025,7 @@ export class WorkFromHomeDayService
       );
     }
 
-    let nextIds = [...new Set([...existing.employeeIds, ...employeeIds])];
-    if (!ctx.isHr) {
-      const allowed = new Set(
-        (
-          await this.listAssignableEmployees(userId, companyId)
-        ).employees.map((row) => row.id),
-      );
-      const outside = existing.employeeIds.filter((id) => !allowed.has(id));
-      const mine = employeeIds.filter((id) => allowed.has(id));
-      nextIds = [...new Set([...outside, ...mine])];
-    }
+    const nextIds = [...new Set([...existing.employeeIds, ...employeeIds])];
 
     const updated = await this.prisma.workFromHomeDay.update({
       where: { id: existing.id },
@@ -1091,24 +1079,12 @@ export class WorkFromHomeDayService
       'hr',
       'view',
     );
-    const user = await this.prisma.user.findFirst({
-      where: activeOnly({ id: userId, companyId }),
-      include: {
-        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
-      },
-    });
-    return {
-      userId,
-      isHr,
-      ledDisciplineIds: user?.ledDisciplines.map((d) => d.id) ?? [],
-    };
+    return { userId, isHr };
   }
 
   private assertCanAssign(ctx: AssignerContext): void {
-    if (!ctx.isHr && ctx.ledDisciplineIds.length === 0) {
-      throw new ForbiddenException(
-        'Only HR or a Discipline Lead can assign work-from-home days',
-      );
+    if (!ctx.isHr) {
+      throw new ForbiddenException(WFH_DIRECT_ASSIGN_HR_ONLY);
     }
   }
 
@@ -1129,33 +1105,6 @@ export class WorkFromHomeDayService
         `${EXCLUDED_FROM_HR_MESSAGE} (or was not found)`,
       );
     }
-  }
-
-  private async assertEmployeesUnderDiscipline(
-    employeeIds: string[],
-    ledDisciplineIds: string[],
-    companyId: string,
-  ): Promise<string[]> {
-    if (employeeIds.length === 0) {
-      throw new BadRequestException('Select at least one employee');
-    }
-    const users = await this.prisma.user.findMany({
-      where: activeOnly(
-        hrProcessEmployeeWhere({
-          companyId,
-          id: { in: employeeIds },
-          isActive: true,
-          engineeringDisciplineId: { in: ledDisciplineIds },
-        }),
-      ),
-      select: { id: true },
-    });
-    if (users.length !== employeeIds.length) {
-      throw new ForbiddenException(
-        'You can only assign work-from-home to employees in your discipline(s)',
-      );
-    }
-    return users.map((u) => u.id);
   }
 
   private validateScopePayload(

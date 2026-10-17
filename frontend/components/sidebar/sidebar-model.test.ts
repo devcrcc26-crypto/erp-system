@@ -162,6 +162,21 @@ describe('sidebar permissions and filtering', () => {
     expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
+  it('grants direct work-from-home assignment to HR only, not Discipline Leads', () => {
+    const permissions = (overrides: Partial<Capabilities>) =>
+      resolveSidebarPermissions({
+        capabilities: capabilities(overrides),
+        ready: true,
+        hasProjectAdministratorRole: false,
+      });
+    expect(permissions({ canViewHr: true }).has('wfh.assign')).toBe(true);
+    expect(
+      permissions({
+        epc: { ...EMPTY_CAPABILITIES.epc, navDisciplineLeader: true, navFullAccess: true },
+      }).has('wfh.assign'),
+    ).toBe(false);
+  });
+
   it('gives everyone Announcements with the unread badge', () => {
     const entry = modelFor({}).primary.find((item) => item.id === 'announcements');
     expect(entry?.kind).toBe('link');

@@ -9,7 +9,7 @@ function buildService() {
     .fn<(...args: unknown[]) => Promise<unknown>>()
     .mockResolvedValue(undefined);
   const service = new OnBehalfService(
-    {} as never,
+    { user: { findMany: async () => [] } } as never,
     {} as never,
     {} as never,
     { autoApproveOwnTier } as never,

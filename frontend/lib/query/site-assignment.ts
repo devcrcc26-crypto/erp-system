@@ -5,6 +5,7 @@ import { apiGet, apiGetPaginated, apiPost } from '@/lib/api/client';
 import type {
   ListSiteAssignmentsParams,
   SiteAssignmentDetail,
+  SiteAssignmentCrewResult,
   SiteAssignmentListItem,
   SubmitSiteAssignmentPayload,
 } from '@/lib/api/site-assignment.types';
@@ -70,7 +71,7 @@ export function useSubmitSiteAssignment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: SubmitSiteAssignmentPayload) =>
-      apiPost<SiteAssignmentDetail>(PATH, payload),
+      apiPost<SiteAssignmentDetail | SiteAssignmentCrewResult>(PATH, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: siteAssignmentKeys.all });
     },
