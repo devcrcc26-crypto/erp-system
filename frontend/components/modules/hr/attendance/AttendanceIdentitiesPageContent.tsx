@@ -1,19 +1,20 @@
 'use client';
 
+import './attendance-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Alert, App, Button, Input, Select, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import Link from 'next/link';
 import {
-  ArrowLeft,
-  Fingerprint,
-  Link2,
-  Pencil,
-  UserRoundX,
-  X,
-} from 'lucide-react';
+  LinkOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
+import Link from 'next/link';
+import { ArrowLeft, Fingerprint, Link2, Pencil, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -33,39 +34,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 type StatusFilter = AttendanceIdentityStatus | 'ALL';
 
 const IDENTITIES_KEY = ['attendance-identities'] as const;
-
-function StatTile({
-  label,
-  value,
-  icon,
-  chipClassName,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  chipClassName: string;
-  active: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
-      onClick={onClick}
-    >
-      <span className={`erp-users-stat-chip ${chipClassName}`} aria-hidden>
-        {icon}
-      </span>
-      <div className="min-w-0 text-left">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-      </div>
-    </button>
-  );
-}
+const PAGE_V2 = `erp-pro-list-page erp-users-page erp-attendance-v2 ${LIST_PAGE_V2}`;
 
 /**
  * HR maintenance page for attendance-machine identities: which machine name /
@@ -188,11 +157,11 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
       width: 110,
       render: (_: unknown, row: AttendanceIdentity) => (
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+          className={
             row.status === 'MAPPED'
-              ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-              : 'bg-slate-100 text-slate-700 ring-slate-200'
-          }`}
+              ? 'erp-users-role-tag'
+              : 'erp-users-id-chip'
+          }
         >
           {t(`pages.hr.attendance.identities.status${row.status}`)}
         </span>
@@ -326,7 +295,7 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
   const hasFilters = statusFilter !== 'ALL' || search.trim().length > 0;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_V2}>
       <Link
         href="/hr/attendance"
         className="inline-flex items-center gap-1.5 self-start rounded-md text-[13px] font-medium !text-slate-500 hover:!text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
@@ -349,27 +318,27 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
       ) : null}
 
       <div className="erp-users-stat-bar !grid-cols-1 sm:!grid-cols-3">
-        <StatTile
+        <EvaluationStat
           label={t('pages.hr.attendance.identities.statAll')}
           value={counts.ALL}
+          accent="slate"
           icon={<Fingerprint size={18} strokeWidth={2} />}
-          chipClassName="!bg-slate-100 !text-slate-700"
           active={statusFilter === 'ALL'}
           onClick={() => setStatusFilter('ALL')}
         />
-        <StatTile
+        <EvaluationStat
           label={t('pages.hr.attendance.identities.statMapped')}
           value={counts.MAPPED}
-          icon={<Link2 size={18} strokeWidth={2} />}
-          chipClassName="!bg-emerald-600/10 !text-emerald-700"
+          accent="green"
+          icon={<LinkOutlined />}
           active={statusFilter === 'MAPPED'}
           onClick={() => setStatusFilter('MAPPED')}
         />
-        <StatTile
+        <EvaluationStat
           label={t('pages.hr.attendance.identities.statIgnored')}
           value={counts.IGNORED}
-          icon={<UserRoundX size={18} strokeWidth={2} />}
-          chipClassName="!bg-amber-50 !text-amber-700"
+          accent="amber"
+          icon={<StopOutlined />}
           active={statusFilter === 'IGNORED'}
           onClick={() => setStatusFilter('IGNORED')}
         />
