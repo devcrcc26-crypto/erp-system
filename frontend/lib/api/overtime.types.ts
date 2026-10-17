@@ -64,6 +64,14 @@ export interface OvertimeEntry {
   taskDescription: string;
   attendanceWarning?: string | null;
   holidayName?: string | null;
+  /** Approved site assignment covering the date when the entry was priced. */
+  siteAssignmentId?: string | null;
+  siteName?: string | null;
+  /** Part of totalHours inside scheduled hours on a site day (already included). */
+  siteWithinScheduleHours?: number;
+  /** Site assignment cancelled/shortened after submission; hours were kept. */
+  siteReviewFlag?: 'ASSIGNMENT_CANCELLED' | 'ASSIGNMENT_SHORTENED' | null;
+  siteReviewFlaggedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   documents?: OvertimeAttachmentDocument[];
@@ -136,6 +144,9 @@ export interface PreviewOvertimeEntryResult {
   isHalfDay: boolean;
   scheduleNote: string | null;
   attendanceWarning: string | null;
+  /** Set when the date is inside an approved site assignment. */
+  siteName?: string | null;
+  siteWithinScheduleHours?: number;
 }
 
 export interface SelectableOvertimeWindowsParams {

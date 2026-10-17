@@ -193,7 +193,7 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
       prisma as never,
       { recalculateCompanyAttendanceMonth: recalc } as never,
       { hasPermission: jest.fn(async () => isHr.value) } as never,
-      { buildSiteAssignmentApprovalChain: jest.fn(async () => [{ approverId: 'dl' }]) } as never,
+      { buildWorkFromHomeApprovalChain: jest.fn(async () => [{ approverId: 'dl' }]) } as never,
       approvalsService as never,
       { register: jest.fn(), unregister: jest.fn() } as never,
       {

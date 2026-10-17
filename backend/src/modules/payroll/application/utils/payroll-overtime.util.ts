@@ -180,16 +180,20 @@ export function overtimeEndTimeLabel(
 
 /**
  * Build day context for OT classification from a schedule weekday + holiday flag.
+ * `scheduledHoursClaimable`: the entry was priced as a site-assignment day
+ * (stored siteWithinScheduleHours > 0), so payroll reproduces those hours.
  */
 export function buildOvertimeDayContext(
   weekday: OvertimeWeekdaySlice | undefined,
   isHoliday: boolean,
   lunchCountsAsOvertime: boolean = POLICY_DEFAULTS.lunchCountsAsOvertime,
+  scheduledHoursClaimable = false,
 ): OvertimeDayContext {
   const isWorkingDay = Boolean(weekday?.isWorkingDay);
   const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
   return {
     lunchCountsAsOvertime,
+    scheduledHoursClaimable,
     isHoliday,
     isWorkingDay,
     isHalfDay,

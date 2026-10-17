@@ -38,6 +38,21 @@ export const ON_BEHALF_AUTO_APPROVE_COMMENT =
 export { EXCLUDED_FROM_HR_MESSAGE };
 
 const CREATE_ON_BEHALF_ACTION = 'CREATE_ON_BEHALF';
+
+/**
+ * Modules where a delegate may not auto-approve their own tier. Site
+ * assignments make scheduled hours claimable as OT, so every tier is decided
+ * by its approver.
+ */
+const AUTO_APPROVE_BLOCKED_MODULES: ReadonlySet<HrOnBehalfModuleCode> = new Set([
+  'SITE_ASSIGNMENT',
+]);
+
+export function isOnBehalfAutoApproveAllowed(
+  moduleCode: HrOnBehalfModuleCode,
+): boolean {
+  return !AUTO_APPROVE_BLOCKED_MODULES.has(moduleCode);
+}
 const AUTO_APPROVE_ACTION = 'ON_BEHALF_AUTO_APPROVE';
 
 /** Audit module name and record type per on-behalf module. */
@@ -181,8 +196,13 @@ export class OnBehalfService {
     targetEmployeeId: string,
     companyId: string,
     moduleCode: HrOnBehalfModuleCode,
-  ): Promise<{ isInChain: boolean; tierLabel: string | null }> {
-    const notInChain = { isInChain: false, tierLabel: null };
+  ): Promise<{
+    isInChain: boolean;
+    tierLabel: string | null;
+    autoApproveAllowed: boolean;
+  }> {
+    const autoApproveAllowed = isOnBehalfAutoApproveAllowed(moduleCode);
+    const notInChain = { isInChain: false, tierLabel: null, autoApproveAllowed };
     if (
       targetEmployeeId === userId ||
       !(await this.isEligibleFor(userId, targetEmployeeId, companyId))
@@ -195,7 +215,9 @@ export class OnBehalfService {
       targetEmployeeId,
       companyId,
     );
-    return tier ? { isInChain: true, tierLabel: tier.label } : notInChain;
+    return tier
+      ? { isInChain: true, tierLabel: tier.label, autoApproveAllowed }
+      : notInChain;
   }
 
   /**
@@ -313,7 +335,9 @@ export class OnBehalfService {
       afterValue: {
         createdBy: input.actorUserId,
         onBehalfOf: input.employeeId,
-        autoApproveTier: input.autoApproveTier === true,
+        autoApproveTier:
+          input.autoApproveTier === true &&
+          isOnBehalfAutoApproveAllowed(input.moduleCode),
       },
     });
   }
@@ -356,6 +380,12 @@ export class OnBehalfService {
     autoApproveTier: boolean;
   }): Promise<void> {
     if (!input.autoApproveTier || input.employeeId === input.actorUserId) {
+      return;
+    }
+    if (!isOnBehalfAutoApproveAllowed(input.moduleCode)) {
+      this.logger.warn(
+        `On-behalf auto-approve is not allowed for ${input.moduleCode} (approval ${input.approvalRequestId})`,
+      );
       return;
     }
     try {

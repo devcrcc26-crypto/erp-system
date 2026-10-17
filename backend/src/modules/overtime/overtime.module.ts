@@ -5,6 +5,7 @@ import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { OvertimeImportService } from './application/services/overtime-import.service';
 import { OvertimeEntryService } from './application/services/overtime-entry.service';
 import { OvertimeService } from './application/services/overtime.service';
+import { OvertimeSiteSyncService } from './application/services/overtime-site-sync.service';
 import { OvertimeImportController } from './presentation/controllers/overtime-import.controller';
 import { OvertimeController } from './presentation/controllers/overtime.controller';
 
@@ -12,7 +13,12 @@ import { OvertimeController } from './presentation/controllers/overtime.controll
 @Module({
   imports: [ApprovalsModule, HrSharedModule, WorkScheduleModule],
   controllers: [OvertimeImportController, OvertimeController],
-  providers: [OvertimeService, OvertimeImportService, OvertimeEntryService],
-  exports: [OvertimeService, OvertimeEntryService],
+  providers: [
+    OvertimeService,
+    OvertimeImportService,
+    OvertimeEntryService,
+    OvertimeSiteSyncService,
+  ],
+  exports: [OvertimeService, OvertimeEntryService, OvertimeSiteSyncService],
 })
 export class OvertimeModule {}

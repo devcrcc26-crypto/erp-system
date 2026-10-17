@@ -614,7 +614,7 @@ export class WorkFromHomeDayService
     });
 
     const resolvedTiers =
-      await this.hrApprovalChain.buildSiteAssignmentApprovalChain(
+      await this.hrApprovalChain.buildWorkFromHomeApprovalChain(
         employeeId,
         companyId,
       );

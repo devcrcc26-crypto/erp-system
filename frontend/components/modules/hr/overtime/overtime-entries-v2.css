@@ -180,6 +180,7 @@
 .erp-ot-pill[data-kind='weekend'] { background: #fffbeb; color: #b45309; }
 .erp-ot-pill[data-kind='holiday'] { background: #fef2f2; color: #b91c1c; }
 .erp-ot-pill[data-kind='warning'] { background: #fffaeb; color: #b54708; }
+.erp-ot-pill[data-kind='site'] { background: #ecfdf3; color: #067647; }
 
 /* Task: two readable lines, then chips. */
 .erp-ot-task {

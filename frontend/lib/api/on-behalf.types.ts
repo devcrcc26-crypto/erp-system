@@ -34,6 +34,8 @@ export interface OnBehalfEligibleEmployee {
 export interface OnBehalfChainMembership {
   isInChain: boolean;
   tierLabel: string | null;
+  /** False for modules where a delegate may not auto-approve (site assignment). */
+  autoApproveAllowed?: boolean;
 }
 
 /** Optional on-behalf fields accepted by every HR request create payload. */

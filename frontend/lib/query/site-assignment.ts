@@ -9,6 +9,7 @@ import type {
   SubmitSiteAssignmentPayload,
 } from '@/lib/api/site-assignment.types';
 import type { PaginationMeta } from '@/lib/api/types';
+import { overtimeKeys } from '@/lib/query/overtime';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
 const PATH = '/hr/site-assignments';
@@ -22,7 +23,17 @@ export const siteAssignmentKeys = {
   detail: (id: string) => [...siteAssignmentKeys.details(), id] as const,
   employee: (employeeId: string) =>
     [...siteAssignmentKeys.all, 'employee', employeeId] as const,
+  overtimeImpact: (id: string, endDate: string | null) =>
+    [...siteAssignmentKeys.all, 'overtime-impact', id, endDate] as const,
 };
+
+/** Overtime entries a cancel (endDate null) or shorten would affect. */
+export interface SiteAssignmentOvertimeImpact {
+  /** Sheets not yet submitted: hours recalculated. */
+  unsubmitted: number;
+  /** Submitted/approved sheets: hours kept, entry flagged for HR. */
+  submitted: number;
+}
 
 export function useSiteAssignments(params: ListSiteAssignmentsParams) {
   return useQuery({
@@ -85,6 +96,8 @@ export function useCancelApprovedSiteAssignment(id: string) {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: siteAssignmentKeys.all });
+      // Overtime entries on those dates are re-priced or flagged.
+      void queryClient.invalidateQueries({ queryKey: overtimeKeys.all });
     },
   });
 }
@@ -96,7 +109,25 @@ export function useShortenSiteAssignment(id: string) {
       apiPost<SiteAssignmentDetail>(`${PATH}/${id}/shorten`, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: siteAssignmentKeys.all });
+      // Overtime entries on those dates are re-priced or flagged.
+      void queryClient.invalidateQueries({ queryKey: overtimeKeys.all });
     },
+  });
+}
+
+/** HR only. Pass endDate for a shorten, null for a cancel. */
+export function useSiteAssignmentOvertimeImpact(
+  id: string,
+  endDate: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: siteAssignmentKeys.overtimeImpact(id, endDate),
+    queryFn: () =>
+      apiGet<SiteAssignmentOvertimeImpact>(
+        `${PATH}/${id}/overtime-impact${endDate ? `?endDate=${endDate}` : ''}`,
+      ),
+    enabled: enabled && Boolean(id),
   });
 }
 

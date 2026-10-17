@@ -342,6 +342,11 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
       { recalculateCompanyAttendanceMonth: recalculate } as never,
       {} as never,
       {} as never,
+      {
+        create: jest.fn(async () => undefined),
+        buildFromRequestContext: (input: unknown) => input,
+      } as never,
+      { syncAfterApproval: jest.fn(async () => undefined) } as never,
     );
 
     await service.onApprovalDecision(REQUEST_ID, 'APPROVED');

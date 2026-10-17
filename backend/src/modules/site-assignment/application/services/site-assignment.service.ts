@@ -13,6 +13,7 @@ import {
   SiteAssignmentStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { getRequestContext } from '../../../../shared/context/request-context';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
@@ -21,6 +22,12 @@ import {
   buildPrismaPagination,
 } from '../../../../shared/utils/pagination.util';
 import { AttendanceService } from '../../../attendance/application/services/attendance.service';
+import { AuditService } from '../../../audit/application/services/audit.service';
+import {
+  type AffectedOvertimeCounts,
+  dayAfter,
+  OvertimeSiteSyncService,
+} from '../../../overtime/application/services/overtime-site-sync.service';
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import type {
@@ -116,6 +123,8 @@ export class SiteAssignmentService
     private readonly attendanceService: AttendanceService,
     private readonly dayCoverage: DayCoverageService,
     private readonly backdatingPolicy: BackdatingPolicyService,
+    private readonly audit: AuditService,
+    private readonly overtimeSiteSync: OvertimeSiteSyncService,
   ) {}
 
   onModuleInit(): void {
@@ -134,6 +143,11 @@ export class SiteAssignmentService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    if (dto.autoApproveTier === true) {
+      throw new BadRequestException(
+        'Auto-approve is not available for site assignments; every tier is decided by its approver.',
+      );
+    }
     const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
@@ -189,60 +203,12 @@ export class SiteAssignmentService
     const now = new Date();
     const recordId = randomUUID();
 
+    // Site assignments unlock scheduled hours as OT, so they are never
+    // auto-approved; the chain always has at least an HR tier.
     if (resolvedTiers.length === 0) {
-      const requestNumber = await this.nextStandaloneNumber(companyId);
-      await this.prisma.siteAssignment.create({
-        data: {
-          id: recordId,
-          companyId,
-          requestNumber,
-          employeeId,
-          siteName: dto.siteName.trim(),
-          projectId: dto.projectId ?? null,
-          startDate,
-          endDate,
-          reason: dto.reason?.trim() || null,
-          isLateSubmission: backdating.isLateSubmission,
-          lateReason: backdating.lateReason,
-          status: SiteAssignmentStatus.APPROVED,
-          submittedAt: now,
-          completedAt: now,
-          createdFromAttendanceImport:
-            dto.createdFromAttendanceImport === true,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-
-      await this.onBehalfService.recordOnBehalfCreate({
-        moduleCode: 'SITE_ASSIGNMENT',
-        companyId,
-        actorUserId: userId,
-        employeeId,
-        recordId,
-        recordReference: requestNumber,
-        autoApproveTier: dto.autoApproveTier,
-      });
-
-      await this.recalculateForRange(
-        companyId,
-        employeeId,
-        startDate,
-        endDate,
+      throw new BadRequestException(
+        'No approver is available for this site assignment - ask HR to assign an HR Manager.',
       );
-
-      if (backdating.isLateSubmission) {
-        for (const period of monthsTouchedByRange(startDate, endDate)) {
-          await markPayrollAttendanceSnapshotStale(
-            this.prisma,
-            companyId,
-            period.month,
-            period.year,
-          );
-        }
-      }
-
-      return this.getDetail(recordId, companyId, userId);
     }
 
     const approval = (await this.approvalsService.submitRequest(
@@ -321,14 +287,18 @@ export class SiteAssignmentService
       recordReference: approval.requestNumber,
       autoApproveTier: dto.autoApproveTier,
     });
-    await this.onBehalfService.applyAutoApprove({
-      moduleCode: 'SITE_ASSIGNMENT',
-      companyId,
-      actorUserId: userId,
+    await this.writeAudit(companyId, userId, 'create', recordId, approval.requestNumber, null, {
       employeeId,
+      siteName: dto.siteName.trim(),
+      projectId: dto.projectId ?? null,
+      startDate: formatDateOnly(startDate),
+      endDate: formatDateOnly(endDate),
+      status: SiteAssignmentStatus.SUBMITTED,
       approvalRequestId: approval.id,
-      autoApproveTier: dto.autoApproveTier === true,
+      approvers: resolvedTiers.map((tier) => tier.label),
+      onBehalf: employeeId !== userId,
     });
+    // No delegate auto-approve: rejected above and blocked in OnBehalfService.
 
     return this.getDetail(recordId, companyId, userId);
   }
@@ -470,8 +440,40 @@ export class SiteAssignmentService
         });
       }
     });
+    await this.writeAudit(
+      companyId,
+      userId,
+      'cancel',
+      row.id,
+      row.requestNumber,
+      { status: row.status },
+      { status: SiteAssignmentStatus.CANCELLED, by: 'EMPLOYEE' },
+    );
 
     return this.getDetail(id, companyId, userId);
+  }
+
+  /**
+   * Overtime entries a cancel (no endDate) or shorten (new endDate) would affect,
+   * for the HR confirmation screen.
+   */
+  async getOvertimeImpact(
+    id: string,
+    companyId: string,
+    userId: string,
+    endDate?: string,
+  ): Promise<AffectedOvertimeCounts> {
+    await this.assertHr(companyId, userId);
+    const row = await this.prisma.siteAssignment.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!row) {
+      throw new NotFoundException('Site assignment not found');
+    }
+    const removedFrom = endDate
+      ? dayAfter(parseUtcDateOnly(endDate))
+      : row.startDate;
+    return this.overtimeSiteSync.countAffected(row, removedFrom);
   }
 
   /**
@@ -521,6 +523,26 @@ export class SiteAssignmentService
       row.employeeId,
       prevStart,
       prevEnd,
+    );
+    const overtime = await this.overtimeSiteSync.syncAfterRemoval(
+      row,
+      row.startDate,
+      'ASSIGNMENT_CANCELLED',
+    );
+    await this.writeAudit(
+      companyId,
+      userId,
+      'cancel',
+      row.id,
+      row.requestNumber,
+      { status: row.status },
+      {
+        status: SiteAssignmentStatus.CANCELLED,
+        by: 'HR',
+        reason: trimmedReason,
+        overtimeReclassified: overtime.unsubmitted,
+        overtimeFlagged: overtime.submitted,
+      },
     );
 
     return this.getDetail(id, companyId, userId);
@@ -584,6 +606,25 @@ export class SiteAssignmentService
       row.employeeId,
       row.startDate,
       recalcEnd,
+    );
+    const overtime = await this.overtimeSiteSync.syncAfterRemoval(
+      { ...row, endDate: newEnd },
+      dayAfter(newEnd),
+      'ASSIGNMENT_SHORTENED',
+    );
+    await this.writeAudit(
+      companyId,
+      userId,
+      'shorten',
+      row.id,
+      row.requestNumber,
+      { endDate: formatDateOnly(prevEnd) },
+      {
+        endDate: formatDateOnly(newEnd),
+        reason: trimmedReason,
+        overtimeReclassified: overtime.unsubmitted,
+        overtimeFlagged: overtime.submitted,
+      },
     );
 
     return this.getDetail(id, companyId, userId);
@@ -659,6 +700,53 @@ export class SiteAssignmentService
       );
     }
 
+    if (decision === 'APPROVED') {
+      await this.overtimeSiteSync.syncAfterApproval(row);
+      if (row.isLateSubmission) {
+        for (const period of monthsTouchedByRange(row.startDate, row.endDate)) {
+          await markPayrollAttendanceSnapshotStale(
+            this.prisma,
+            row.companyId,
+            period.month,
+            period.year,
+          );
+        }
+      }
+    }
+
+    await this.writeAudit(
+      row.companyId,
+      getRequestContext()?.userId,
+      decision === 'APPROVED' ? 'approve' : decision === 'REJECTED' ? 'reject' : 'return',
+      row.id,
+      row.requestNumber,
+      { status: row.status },
+      { status: nextStatus, approvalRequestId },
+    );
+  }
+
+  private async writeAudit(
+    companyId: string,
+    userId: string | undefined,
+    action: 'create' | 'approve' | 'reject' | 'return' | 'cancel' | 'shorten',
+    recordId: string,
+    recordReference: string,
+    beforeValue: Record<string, unknown> | null,
+    afterValue: Record<string, unknown>,
+  ): Promise<void> {
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId,
+        companyId,
+        module: 'site_assignment',
+        action,
+        recordType: 'site_assignment',
+        recordId,
+        recordReference,
+        beforeValue: (beforeValue ?? undefined) as Prisma.InputJsonValue | undefined,
+        afterValue: afterValue as Prisma.InputJsonValue,
+      }),
+    );
   }
 
   private async assertNoOverlap(
@@ -712,13 +800,6 @@ export class SiteAssignmentService
         employeeId,
       );
     }
-  }
-
-  private async nextStandaloneNumber(companyId: string): Promise<string> {
-    const count = await this.prisma.siteAssignment.count({
-      where: { companyId },
-    });
-    return `SA-${String(count + 1).padStart(4, '0')}`;
   }
 
   private async assertHr(companyId: string, userId: string): Promise<void> {

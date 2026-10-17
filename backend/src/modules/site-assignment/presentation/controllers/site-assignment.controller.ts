@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -86,6 +87,28 @@ export class SiteAssignmentController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.siteAssignmentService.getDetail(id, companyId, user.userId);
+  }
+
+  @Get(':id/overtime-impact')
+  @ApiOperation({
+    summary:
+      'HR: overtime entries a cancel (no endDate) or shorten (endDate) would affect',
+  })
+  async overtimeImpact(
+    @Param('id') id: string,
+    @Query('endDate') endDate: string | undefined,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    if (endDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      throw new BadRequestException('endDate must be YYYY-MM-DD');
+    }
+    return this.siteAssignmentService.getOvertimeImpact(
+      id,
+      companyId,
+      user.userId,
+      endDate,
+    );
   }
 
   @Post(':id/cancel')

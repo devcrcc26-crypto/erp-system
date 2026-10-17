@@ -59,7 +59,11 @@ export class OnBehalfController {
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: OnBehalfChainQueryDto,
-  ): Promise<{ isInChain: boolean; tierLabel: string | null }> {
+  ): Promise<{
+    isInChain: boolean;
+    tierLabel: string | null;
+    autoApproveAllowed: boolean;
+  }> {
     return this.onBehalfService.isInApprovalChain(
       user.userId,
       query.employeeId,

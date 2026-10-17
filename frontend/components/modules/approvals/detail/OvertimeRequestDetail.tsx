@@ -13,6 +13,7 @@ import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeEntry } from '@/lib/api/overtime.types';
@@ -100,6 +101,7 @@ export default function OvertimeRequestDetail({
                 </span>
               </div>
             ) : null}
+            <OvertimeSiteChips entry={row} />
           </div>
         ),
       },

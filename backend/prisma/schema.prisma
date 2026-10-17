@@ -4023,6 +4023,7 @@ model SiteAssignment {
   project         Project?         @relation(fields: [projectId], references: [id])
   approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
   perDiemRequests PerDiemRequest[]
+  overtimeEntries OvertimeEntry[]
 
   @@unique([companyId, requestNumber], map: "uq_site_assignment_company_number")
   @@index([companyId], map: "idx_site_assignment_company")
@@ -4290,15 +4291,24 @@ model OvertimeEntry {
   totalHours      Decimal  @default(dbgenerated("(((regular_hours + night_hours) + weekend_hours) + holiday_hours)")) @map("total_hours") @db.Decimal(5, 2)
   taskDescription String   @map("task_description")
   attendanceWarning String? @map("attendance_warning") @db.VarChar(500)
+  /// Approved site assignment covering the entry date when it was classified ("Site assignment" label).
+  siteAssignmentId  String?  @map("site_assignment_id")
+  /// Part of the bucket hours that fell inside scheduled hours on a site day (already included in totalHours).
+  siteWithinScheduleHours Decimal @default(0) @map("site_within_schedule_hours") @db.Decimal(5, 2)
+  /// Set when the site assignment was cancelled/shortened after the sheet was submitted (stored hours kept).
+  siteReviewFlag      String?   @map("site_review_flag") @db.VarChar(40)
+  siteReviewFlaggedAt DateTime? @map("site_review_flagged_at")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
-  sheet     OvertimeSheet            @relation(fields: [sheetId], references: [id], onDelete: Cascade)
-  documents OvertimeEntryDocument[]
+  sheet          OvertimeSheet           @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  documents      OvertimeEntryDocument[]
+  siteAssignment SiteAssignment?         @relation(fields: [siteAssignmentId], references: [id], onDelete: SetNull)
 
   @@unique([sheetId, date, startTime, endTime])
   @@index([sheetId], map: "idx_overtime_entry_sheet")
   @@index([date], map: "idx_overtime_entry_date")
+  @@index([siteAssignmentId], map: "idx_overtime_entry_site_assignment")
   @@map("overtime_entry")
 }
 

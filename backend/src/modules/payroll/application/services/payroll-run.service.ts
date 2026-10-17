@@ -180,6 +180,8 @@ interface OvertimeSnapshot {
     nightHours: Decimal;
     weekendHours: Decimal;
     holidayHours: Decimal;
+    /** > 0 when the entry was priced as a site-assignment day. */
+    siteWithinScheduleHours: Decimal;
   }>;
 }
 
@@ -1379,6 +1381,7 @@ export class PayrollRunService {
               nightHours: true,
               weekendHours: true,
               holidayHours: true,
+              siteWithinScheduleHours: true,
             },
             orderBy: { date: 'asc' },
           },
@@ -1642,10 +1645,14 @@ export class PayrollRunService {
       const schedule = await loadSchedule(onDate);
       const isHoliday =
         entry.isHoliday || (await loadHoliday(onDate));
+      // Site-day entries keep the hours they were approved with, even if the
+      // assignment or policy changed later.
+      const siteClaimable = Number(entry.siteWithinScheduleHours ?? 0) > 0;
       const context = buildOvertimeDayContext(
         weekdaySlice(schedule, onDate),
         isHoliday,
         await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', onDate),
+        siteClaimable,
       );
 
       let nextDayContext: ReturnType<typeof buildOvertimeDayContext> | undefined;
@@ -1658,6 +1665,7 @@ export class PayrollRunService {
           weekdaySlice(nextSchedule, nextDate),
           nextHoliday,
           await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', nextDate),
+          siteClaimable,
         );
       }
 

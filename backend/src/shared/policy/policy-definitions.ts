@@ -43,6 +43,8 @@ export interface PolicyValues {
   holidayHoursDivisor: number;
   multipliers: { regular: number; night: number; weekend: number; holiday: number };
   lunchCountsAsOvertime: boolean;
+  /** On approved site-assignment days, scheduled office hours are claimable OT. */
+  siteDayScheduledHoursClaimable: boolean;
   // Separation (stored for phase 2; not used by calculations yet)
   /**
    * prorateCurrentYear: pay leave earned in the current leave year up to the
@@ -87,6 +89,7 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   holidayHoursDivisor: 196,
   multipliers: { regular: 1.5, night: 1.75, weekend: 2, holiday: 2.5 },
   lunchCountsAsOvertime: false,
+  siteDayScheduledHoursClaimable: true,
   unusedLeavePayout: { enabled: false, dailyRateBase: 'basic/30', prorateCurrentYear: true },
   severancePay: { enabled: false, parameters: {} },
   noticePay: { enabled: false, days: 0 },
@@ -250,6 +253,13 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     },
   },
   { key: 'lunchCountsAsOvertime', group: 'OVERTIME', adminOnly: false, kind: 'boolean', validate: isBool },
+  {
+    key: 'siteDayScheduledHoursClaimable',
+    group: 'OVERTIME',
+    adminOnly: true,
+    kind: 'boolean',
+    validate: isBool,
+  },
   {
     key: 'unusedLeavePayout',
     group: 'SEPARATION',

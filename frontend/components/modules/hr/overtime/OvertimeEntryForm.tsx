@@ -13,6 +13,7 @@ import {
 } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
+import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
@@ -480,6 +481,16 @@ export default function OvertimeEntryForm({
                 <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">
                   {preview.scheduleNote}
                 </p>
+              ) : null}
+              {preview.siteName ? (
+                <OvertimeSiteChips
+                  entry={{
+                    siteAssignmentId: preview.siteName,
+                    siteName: preview.siteName,
+                    siteWithinScheduleHours: preview.siteWithinScheduleHours,
+                    siteReviewFlag: null,
+                  }}
+                />
               ) : null}
             </div>
           ) : (

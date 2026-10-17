@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { LeaveRequestStatus } from '@prisma/client';
+import { LeaveRequestStatus, SiteAssignmentStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -25,7 +25,7 @@ import {
 } from '../dtos/overtime.dtos';
 import {
   buildOvertimeScheduleNote,
-  calculateOvertimeHours,
+  calculateOvertimeHoursDetailed,
   OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
   overtimeEntrySpanMinutes,
   totalOvertimeHours,
@@ -59,6 +59,18 @@ export interface ClassifiedOvertimeEntry extends OvertimeHoursBuckets {
   scheduleNote: string | null;
   totalHours: number;
   attendanceWarning: string | null;
+  /** Approved site assignment covering the entry date, if any. */
+  siteAssignmentId: string | null;
+  siteName: string | null;
+  /** Hours inside scheduled time made claimable by the site assignment. */
+  siteWithinScheduleHours: number;
+}
+
+/** Approved site assignment on a date and whether it unlocks scheduled hours. */
+export interface SiteDayContext {
+  siteAssignmentId: string | null;
+  siteName: string | null;
+  scheduledHoursClaimable: boolean;
 }
 
 /**
@@ -75,6 +87,8 @@ export class OvertimeEntryService {
   /**
    * Classifies an overtime interval for an employee on a date.
    * Pass `holidayOverride: true` to force holiday hours (Excel import).
+   * `enforceSelectableWindows: false` re-prices an existing entry (site
+   * assignment changed) without rejecting time that is no longer selectable.
    */
   async classifyEntry(
     employeeId: string,
@@ -82,7 +96,11 @@ export class OvertimeEntryService {
     date: Date,
     startTime: string,
     endTime: string,
-    options?: { holidayOverride?: boolean; isOvernight?: boolean },
+    options?: {
+      holidayOverride?: boolean;
+      isOvernight?: boolean;
+      enforceSelectableWindows?: boolean;
+    },
   ): Promise<ClassifiedOvertimeEntry> {
     const onDate = toUtcDateOnly(date);
     const employee = await this.prisma.user.findFirst({
@@ -94,6 +112,7 @@ export class OvertimeEntryService {
     }
     await assertWithinEmploymentWindow(this.prisma, employeeId, [onDate]);
     await assertNotInUnpaidInactivePeriod(this.prisma, companyId, employeeId, [onDate]);
+    const siteDay = await this.resolveSiteDay(employeeId, companyId, onDate);
 
     const calendar = await this.workScheduleService.isHolidayForEmployee(
       companyId,
@@ -131,9 +150,10 @@ export class OvertimeEntryService {
       isHoliday,
       leaveWindowsStart,
       lunchCountsAsOvertime,
+      siteDay.scheduledHoursClaimable,
     );
 
-    if (!isOvernight) {
+    if (!isOvernight && options?.enforceSelectableWindows !== false) {
       const selectable = computeSelectableOvertimeWindows({
         isHoliday,
         isWorkingDay: context.isWorkingDay,
@@ -144,6 +164,7 @@ export class OvertimeEntryService {
         afternoonEnd: context.afternoonEnd,
         leaveExcludedWindows: leaveWindowsStart,
         lunchCountsAsOvertime,
+        scheduledHoursClaimable: siteDay.scheduledHoursClaimable,
       });
       if (
         !isIntervalInsideSelectableWindows(
@@ -180,11 +201,17 @@ export class OvertimeEntryService {
         nextDate,
         nextWeekday,
       );
+      const nextSiteDay = await this.resolveSiteDay(
+        employeeId,
+        companyId,
+        nextDate,
+      );
       nextDayContext = this.buildDayContext(
         nextWeekday,
         nextCalendar.isHoliday,
         leaveNext.excludedWindows,
         await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', nextDate),
+        nextSiteDay.scheduledHoursClaimable,
       );
     }
 
@@ -199,7 +226,7 @@ export class OvertimeEntryService {
       isOvernight,
     });
 
-    const hours = calculateOvertimeHours(
+    const detailed = calculateOvertimeHoursDetailed(
       onDate,
       startTime,
       endTime,
@@ -207,6 +234,7 @@ export class OvertimeEntryService {
       isOvernight,
       nextDayContext,
     );
+    const hours = detailed.buckets;
     const totalHours = totalOvertimeHours(hours);
     const spanMinutes = overtimeEntrySpanMinutes(
       startTime,
@@ -229,6 +257,51 @@ export class OvertimeEntryService {
       isHalfDay: context.isHalfDay,
       scheduleNote,
       attendanceWarning,
+      siteAssignmentId: siteDay.siteAssignmentId,
+      siteName: siteDay.siteName,
+      siteWithinScheduleHours: detailed.withinScheduleHours,
+    };
+  }
+
+  /**
+   * Approved (not deleted) site assignment whose inclusive date range covers
+   * `onDate`, and whether the siteDayScheduledHoursClaimable policy is on then.
+   */
+  async resolveSiteDay(
+    employeeId: string,
+    companyId: string,
+    onDate: Date,
+  ): Promise<SiteDayContext> {
+    const day = toUtcDateOnly(onDate);
+    const assignment = await this.prisma.siteAssignment.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        status: SiteAssignmentStatus.APPROVED,
+        deletedAt: null,
+        startDate: { lte: day },
+        endDate: { gte: day },
+      },
+      select: { id: true, siteName: true },
+      orderBy: { startDate: 'desc' },
+    });
+    if (!assignment) {
+      return {
+        siteAssignmentId: null,
+        siteName: null,
+        scheduledHoursClaimable: false,
+      };
+    }
+    const claimable = await getPolicy(
+      this.prisma,
+      companyId,
+      'siteDayScheduledHoursClaimable',
+      day,
+    );
+    return {
+      siteAssignmentId: assignment.id,
+      siteName: assignment.siteName,
+      scheduledHoursClaimable: claimable,
     };
   }
 
@@ -280,11 +353,13 @@ export class OvertimeEntryService {
       'lunchCountsAsOvertime',
       onDate,
     );
+    const siteDay = await this.resolveSiteDay(employeeId, companyId, onDate);
     const context = this.buildDayContext(
       weekday,
       calendar.isHoliday,
       leaveResolved.excludedWindows,
       lunchCountsAsOvertime,
+      siteDay.scheduledHoursClaimable,
     );
 
     const base = computeSelectableOvertimeWindows({
@@ -297,6 +372,7 @@ export class OvertimeEntryService {
       afternoonEnd: context.afternoonEnd,
       leaveExcludedWindows: leaveResolved.excludedWindows,
       lunchCountsAsOvertime,
+      scheduledHoursClaimable: siteDay.scheduledHoursClaimable,
     });
 
     if (!dto.sheetId || base.windows.length === 0) {
@@ -395,6 +471,8 @@ export class OvertimeEntryService {
     isHalfDay: boolean;
     scheduleNote: string | null;
     attendanceWarning: string | null;
+    siteName: string | null;
+    siteWithinScheduleHours: number;
   }> {
     const employeeId = await this.resolvePreviewEmployee(
       dto.employeeId,
@@ -422,6 +500,8 @@ export class OvertimeEntryService {
       isHalfDay: classified.isHalfDay,
       scheduleNote: classified.scheduleNote,
       attendanceWarning: classified.attendanceWarning,
+      siteName: classified.siteName,
+      siteWithinScheduleHours: classified.siteWithinScheduleHours,
     };
   }
 
@@ -472,11 +552,13 @@ export class OvertimeEntryService {
     isHoliday: boolean,
     leaveExcludedWindows: Array<{ start: string; end: string }> = [],
     lunchCountsAsOvertime?: boolean,
+    scheduledHoursClaimable = false,
   ): OvertimeDayContext {
     const isWorkingDay = Boolean(weekday?.isWorkingDay);
     const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
     return {
       lunchCountsAsOvertime,
+      scheduledHoursClaimable,
       isHoliday,
       isWorkingDay,
       isHalfDay,

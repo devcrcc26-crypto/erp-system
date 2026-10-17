@@ -101,6 +101,9 @@ const SHEET_DETAIL_INCLUDE = {
   entries: {
     orderBy: [{ date: 'asc' as const }, { startTime: 'asc' as const }],
     include: {
+      siteAssignment: {
+        select: { id: true, siteName: true, requestNumber: true },
+      },
       documents: {
         where: { document: { deletedAt: null } },
         include: { document: { select: DOCUMENT_SELECT } },
@@ -499,6 +502,12 @@ export class OvertimeService
             holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
             attendanceWarning: classified.attendanceWarning,
+            siteAssignmentId: classified.siteAssignmentId,
+            siteWithinScheduleHours: new Prisma.Decimal(
+              classified.siteWithinScheduleHours,
+            ),
+            siteReviewFlag: null,
+            siteReviewFlaggedAt: null,
           },
         });
         await this.persistEndsAtEndOfDay(tx, entryId, endsAtEndOfDay);
@@ -587,6 +596,12 @@ export class OvertimeService
             holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
             attendanceWarning: classified.attendanceWarning,
+            siteAssignmentId: classified.siteAssignmentId,
+            siteWithinScheduleHours: new Prisma.Decimal(
+              classified.siteWithinScheduleHours,
+            ),
+            siteReviewFlag: null,
+            siteReviewFlaggedAt: null,
           },
         });
         await this.persistEndsAtEndOfDay(tx, entryId, endsAtEndOfDay);
@@ -1499,6 +1514,10 @@ export class OvertimeService
       weekendHours: this.decimalToNumber(row.weekendHours),
       holidayHours: this.decimalToNumber(row.holidayHours),
       totalHours: this.decimalToNumber(row.totalHours),
+      siteWithinScheduleHours: this.decimalToNumber(row.siteWithinScheduleHours),
+      siteName:
+        (row.siteAssignment as { siteName?: string } | null | undefined)
+          ?.siteName ?? null,
       documents,
     };
   }
