@@ -5,9 +5,10 @@ export const orgGapsKeys = {
   all: ['org-gaps'] as const,
 };
 
-export function useOrgGapReport() {
+export function useOrgGapReport(enabled = true) {
   return useQuery({
     queryKey: orgGapsKeys.all,
     queryFn: fetchOrgGapReport,
+    enabled,
   });
 }
