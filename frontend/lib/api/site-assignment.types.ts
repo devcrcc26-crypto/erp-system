@@ -71,6 +71,8 @@ export interface SiteAssignmentDetail extends SiteAssignmentListItem {
 }
 
 export interface SubmitSiteAssignmentPayload extends OnBehalfPayload {
+  /** Crew: one assignment (and approval) per listed employee. */
+  crewEmployeeIds?: string[];
   siteName: string;
   projectId?: string;
   startDate: string;
@@ -78,6 +80,12 @@ export interface SubmitSiteAssignmentPayload extends OnBehalfPayload {
   reason?: string;
   lateReason?: string;
   createdFromAttendanceImport?: boolean;
+}
+
+/** POST /hr/site-assignments with crewEmployeeIds. */
+export interface SiteAssignmentCrewResult {
+  crewId: string;
+  assignments: SiteAssignmentDetail[];
 }
 
 export interface ListSiteAssignmentsParams {

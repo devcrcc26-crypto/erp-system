@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { AuditModule } from '../audit/audit.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { PublicHolidayService } from './application/services/public-holiday.service';
 import { WorkScheduleCronService } from './application/services/work-schedule-cron.service';
@@ -13,6 +14,7 @@ import { WorkScheduleController } from './presentation/work-schedule.controller'
 @Module({
   imports: [
     ApprovalsModule,
+    AuditModule,
     forwardRef(() => HrSharedModule),
     forwardRef(() => AttendanceModule),
   ],

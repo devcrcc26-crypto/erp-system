@@ -381,6 +381,15 @@
       "noFormData": "无表单数据",
       "noComments": "暂无评论",
       "submittedByOn": "{{name}} 于 {{date}} 提交",
+      "submittedByFor": "由 {{by}} 代 {{for}} 提交",
+      "approvedOnBehalf": "由 {{by}} 代 {{for}} 审批",
+      "approveOnBehalf": "代 {{name}} 审批",
+      "returnedOnBehalf": "由 {{by}} 代 {{for}} 退回",
+      "returnOnBehalf": "代 {{name}} 退回",
+      "initiatedAs": {
+        "SUPERVISOR": "以直属上级身份",
+        "DELEGATE": "以代理人身份"
+      },
       "resubmittedCount": "已重新提交 {{count}} 次",
       "decide": "决策",
       "decideForTier": "决策 - {{label}}",
@@ -432,6 +441,12 @@
       },
       "dialog": {
         "approveTitle": "批准层级",
+        "approveOnBehalfTitle": "确认代 {{name}} 审批？",
+        "approveOnBehalfDescription": "您将审批分配给 {{name}} 的“{{label}}”层级。系统会通知 {{name}}，并记录为您代其审批。",
+        "approveOnBehalfConfirm": "代为审批",
+        "returnOnBehalfTitle": "确认代 {{name}} 退回？",
+        "returnOnBehalfDescription": "您将在分配给 {{name}} 的“{{label}}”层级退回此申请。系统会通知 {{name}} 和申请人，并记录为您代其退回。",
+        "returnOnBehalfConfirm": "代为退回",
         "approveDescription": "确认批准当前审批层级。",
         "approveConfirm": "批准",
         "approveSuccess": "层级已批准",
@@ -673,6 +688,11 @@
           "removePeriod": "删除时段",
           "periodRequired": "请至少选择一个日期范围。",
           "periodOverlap": "时段不能重叠。",
+          "crew": "派驻人员",
+          "crewHint": "可选。每人生成一条现场派驻，并分别审批。",
+          "crewPlaceholder": "选择直属下属或您可代为提交的员工",
+          "crewSummary": "共 {{count}} 人",
+          "targetRequired": "请选择此现场派驻对应的员工（或派驻人员）。",
           "calendarDays": "共 {{count}} 个自然日",
           "daysLabel": "天",
           "reason": "原因",
@@ -734,7 +754,22 @@
       "policySettings": {
         "title": "政策设置",
         "description": "考勤、薪资和加班所用的规则。每次修改从您选择的月份开始生效；之前的月份保持原有规则。",
+        "requestTypes": {
+          "SITE_ASSIGNMENT": "现场派驻",
+          "WORK_FROM_HOME": "居家办公",
+          "FLIGHT_APPLICATION": "机票申请",
+          "BUSINESS_TRIP": "第三国出差"
+        },
+        "initiators": {
+          "SELF": "员工本人",
+          "SUPERVISOR": "直属上级",
+          "DELEGATE": "代理人（人事、部门或专业负责人）"
+        },
+        "initiatorsRequired": "每种申请至少需要一种提交人。",
+        "initiatorsFullAccessNote": "总经理、董事总经理、人事经理、人事专员和系统管理员始终可为任何在职员工提交。",
+        "immediateHint": "保存后立即生效。",
         "groups": {
+          "REQUESTS": "申请",
           "ATTENDANCE": "考勤",
           "PAYROLL": "薪资",
           "OVERTIME": "加班",
@@ -908,6 +943,11 @@
             "title": "加班倍数",
             "description": "加班工资 = 时薪 × 小时数 × 对应时段或日期类型的倍数。",
             "example": "平时 1.5 倍：每小时 250，加班 2 小时 = 750。"
+          },
+          "allowedInitiators": {
+            "title": "申请提交人",
+            "description": "按申请类型设置：员工本人、直属上级（仅直属下属）或代理人（人事、部门或专业负责人）。保存后立即生效。仅系统管理员可修改。",
+            "example": "现场派驻 = 直属上级 + 代理人：员工不能自行提交现场派驻。"
           },
           "siteDayScheduledHoursClaimable": {
             "title": "现场派驻日的办公时间可计为加班",
@@ -6075,6 +6115,9 @@
       "title": "提交信息",
       "description": "为他人提交？请选择此申请所属的员工。",
       "toggle": "代其他员工提交",
+      "selfNotAllowed": "此申请须由员工的直属上级或代理人提交。请选择员工。",
+      "selfNotAllowedTitle": "您不能为自己提交此申请",
+      "selfNotAllowedNoEmployees": "请联系您的直属上级或人事为您提交。",
       "employee": "员工",
       "forYourself": "本人",
       "placeholder": "按姓名或工号搜索",

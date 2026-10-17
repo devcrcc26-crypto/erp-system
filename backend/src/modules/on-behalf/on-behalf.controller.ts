@@ -16,9 +16,21 @@ import {
   HrOnBehalfModuleCode,
 } from '../hr-shared/application/services/hr-approval-chain.service';
 import {
+  InitiableEmployee,
   OnBehalfEligibleEmployee,
   OnBehalfService,
 } from './on-behalf.service';
+import {
+  INITIATOR_REQUEST_TYPES,
+  type InitiatorRequestType,
+  type RequestInitiator,
+} from '../../shared/policy/policy-definitions';
+
+export class InitiableEmployeesQueryDto {
+  @ApiProperty({ enum: INITIATOR_REQUEST_TYPES })
+  @IsIn(INITIATOR_REQUEST_TYPES)
+  module!: InitiatorRequestType;
+}
 
 export class OnBehalfChainQueryDto {
   @ApiProperty({ description: 'Employee the request would be filed for' })
@@ -48,6 +60,27 @@ export class OnBehalfController {
     @CurrentCompany() companyId: string,
   ): Promise<OnBehalfEligibleEmployee[]> {
     return this.onBehalfService.getEligibleEmployees(user.userId, companyId);
+  }
+
+  @Get('initiable-employees')
+  @ApiOperation({
+    summary:
+      'Site assignment / WFH / flight / business trip: who the caller may file for (allowedInitiators), and whether they may file for themselves',
+  })
+  async initiableEmployees(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: InitiableEmployeesQueryDto,
+  ): Promise<{
+    allowed: RequestInitiator[];
+    selfAllowed: boolean;
+    employees: InitiableEmployee[];
+  }> {
+    const [allowed, employees] = await Promise.all([
+      this.onBehalfService.allowedInitiators(companyId, query.module),
+      this.onBehalfService.getInitiableEmployees(user.userId, companyId, query.module),
+    ]);
+    return { allowed, selfAllowed: allowed.includes('SELF'), employees };
   }
 
   @Get('is-in-chain')

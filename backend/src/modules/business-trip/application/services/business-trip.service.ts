@@ -16,6 +16,7 @@ import {
   FlightTripType,
   FolderContextType,
   Prisma,
+  RequestInitiatorType,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -131,7 +132,11 @@ export class BusinessTripService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    return this.hrApprovalChain.getSelectablePassengers(userId, companyId);
+    return this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'BUSINESS_TRIP',
+      );
   }
 
   /**
@@ -145,9 +150,10 @@ export class BusinessTripService
   ): Promise<unknown> {
     // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
     // Passengers are chosen independently - the target is not added automatically.
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const { employeeId, initiatedAs } = await this.onBehalfService.resolveInitiation(
       userId,
       companyId,
+      'BUSINESS_TRIP',
       dto.onBehalfOfEmployeeId,
     );
 
@@ -179,10 +185,11 @@ export class BusinessTripService
       await assertWithinEmploymentWindow(this.prisma, travellerId, tripDays);
     }
 
-    const selectablePassengers = await this.hrApprovalChain.getSelectablePassengers(
-      userId,
-      companyId,
-    );
+    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'BUSINESS_TRIP',
+      );
     const selectableSet = new Set(selectablePassengers.map((p) => p.id));
     const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
     if (invalidIds.length > 0) {
@@ -192,10 +199,18 @@ export class BusinessTripService
     }
 
     // --- Resolve approval chain ---
-    const resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
+    let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
       employeeId,
       companyId,
     );
+    if (initiatedAs === RequestInitiatorType.SUPERVISOR) {
+      // Supervisor filing: the chain starts above the supervisor, never with them.
+      resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
+        resolvedTiers,
+        userId,
+        companyId,
+      );
+    }
 
     // --- Direct APPROVED path (GM / MD / SysAdmin) ---
     if (resolvedTiers.length === 0) {
@@ -323,6 +338,7 @@ export class BusinessTripService
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        initiatedAs,
       },
     )) as { id: string; requestNumber: string };
 
@@ -831,9 +847,10 @@ export class BusinessTripService
     const trip = await this.assertDraftOwner(tripId, companyId, userId);
 
     const selectablePassengers =
-      await this.hrApprovalChain.getSelectablePassengers(
-        trip.submittedBy,
+      await this.onBehalfService.getSelectablePassengers(
+        userId,
         companyId,
+        'BUSINESS_TRIP',
       );
     const selectableSet = new Set(selectablePassengers.map((p) => p.id));
     if (!selectableSet.has(dto.employeeId)) {

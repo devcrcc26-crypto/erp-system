@@ -1,0 +1,234 @@
+import { describe, expect, it, jest } from '@jest/globals';
+import { ForbiddenException } from '@nestjs/common';
+import { OnBehalfService } from './on-behalf.service';
+
+const COMPANY = 'company-1';
+const SUPERVISOR = 'supervisor-1';
+const REPORT = 'report-1';
+const GRAND_REPORT = 'grand-report-1';
+const DEPT_MEMBER = 'dept-member-1';
+const HR_MANAGER = 'hr-manager-1';
+const DEPT_LEAD = 'dept-lead-1';
+const PLAIN = 'plain-1';
+
+type User = {
+  id: string;
+  reportsToUserId: string | null;
+  departmentId: string | null;
+  excludedFromHrProcesses: boolean;
+};
+
+const USERS: User[] = [
+  { id: SUPERVISOR, reportsToUserId: null, departmentId: 'dept-b', excludedFromHrProcesses: false },
+  { id: REPORT, reportsToUserId: SUPERVISOR, departmentId: 'dept-b', excludedFromHrProcesses: false },
+  { id: GRAND_REPORT, reportsToUserId: REPORT, departmentId: 'dept-b', excludedFromHrProcesses: false },
+  { id: DEPT_MEMBER, reportsToUserId: HR_MANAGER, departmentId: 'dept-a', excludedFromHrProcesses: false },
+  { id: HR_MANAGER, reportsToUserId: null, departmentId: null, excludedFromHrProcesses: false },
+  { id: DEPT_LEAD, reportsToUserId: null, departmentId: 'dept-a', excludedFromHrProcesses: false },
+  { id: PLAIN, reportsToUserId: null, departmentId: 'dept-c', excludedFromHrProcesses: false },
+];
+
+/** Minimal Prisma `where` evaluator for the filters OnBehalfService builds. */
+function matches(user: User, where: Record<string, unknown> | undefined): boolean {
+  if (!where) return true;
+  for (const [key, cond] of Object.entries(where)) {
+    if (key === 'AND') {
+      if (!(cond as Record<string, unknown>[]).every((w) => matches(user, w))) return false;
+      continue;
+    }
+    if (key === 'OR') {
+      if (!(cond as Record<string, unknown>[]).some((w) => matches(user, w))) return false;
+      continue;
+    }
+    if (['companyId', 'deletedAt', 'isActive'].includes(key)) continue;
+    const value = (user as unknown as Record<string, unknown>)[key];
+    if (cond && typeof cond === 'object') {
+      const c = cond as { in?: unknown[]; not?: unknown };
+      if (c.in && !c.in.includes(value)) return false;
+      if ('not' in c && value === c.not) return false;
+      continue;
+    }
+    if (value !== cond) return false;
+  }
+  return true;
+}
+
+function buildService(options?: {
+  policyRows?: Array<{ key: string; value: unknown }>;
+  fullAccess?: string[];
+  hrViewers?: string[];
+}) {
+  const prisma = {
+    policySetting: {
+      findMany: async () =>
+        (options?.policyRows ?? []).map((row) => ({
+          ...row,
+          effectiveFrom: new Date(Date.UTC(2026, 0, 1)),
+          createdAt: new Date(Date.UTC(2026, 0, 1)),
+        })),
+    },
+    user: {
+      findFirst: async (args: { where: Record<string, unknown>; select?: unknown }) => {
+        const where = args.where;
+        const found = USERS.find((u) => matches(u, where));
+        return found ?? null;
+      },
+      findMany: async (args: { where: Record<string, unknown> }) =>
+        USERS.filter((u) => matches(u, args.where)).map((u) => ({
+          ...u,
+          firstName: u.id,
+          middleName: null,
+          lastName: 'X',
+          employeeId: null,
+          department: null,
+          position: null,
+        })),
+    },
+    department: {
+      findMany: async (args: { where: { leaderUserId: string } }) =>
+        args.where.leaderUserId === DEPT_LEAD ? [{ id: 'dept-a' }] : [],
+    },
+    discipline: { findMany: async () => [] },
+  };
+  const fullAccess = new Set(options?.fullAccess ?? [HR_MANAGER]);
+  const hrViewers = new Set(options?.hrViewers ?? [HR_MANAGER]);
+  const service = new OnBehalfService(
+    prisma as never,
+    { hasPermission: jest.fn(async (userId: string) => hrViewers.has(userId)) } as never,
+    { isHrOrFullAccessActor: jest.fn(async (userId: string) => fullAccess.has(userId)) } as never,
+    {} as never,
+    { create: jest.fn(async () => undefined) } as never,
+  );
+  return service;
+}
+
+describe('OnBehalfService.resolveInitiation', () => {
+  it('SELF: allowed where the request type allows it (WFH default)', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(PLAIN, COMPANY, 'WORK_FROM_HOME', null),
+    ).resolves.toEqual({ employeeId: PLAIN, initiatedAs: 'SELF' });
+  });
+
+  it('SELF: refused for site assignments by default (supervisor or delegate only)', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(PLAIN, COMPANY, 'SITE_ASSIGNMENT', null),
+    ).rejects.toThrow("You can't file a site assignment for yourself");
+  });
+
+  it('SUPERVISOR: a direct report (reportsToUserId = submitter)', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(SUPERVISOR, COMPANY, 'SITE_ASSIGNMENT', REPORT),
+    ).resolves.toEqual({ employeeId: REPORT, initiatedAs: 'SUPERVISOR' });
+  });
+
+  it('SUPERVISOR: indirect reports are refused', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(SUPERVISOR, COMPANY, 'SITE_ASSIGNMENT', GRAND_REPORT),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('SUPERVISOR: refused when the request type does not allow it (flight default)', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(SUPERVISOR, COMPANY, 'FLIGHT_APPLICATION', REPORT),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('DELEGATE: a department head for their department', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(DEPT_LEAD, COMPANY, 'BUSINESS_TRIP', DEPT_MEMBER),
+    ).resolves.toEqual({ employeeId: DEPT_MEMBER, initiatedAs: 'DELEGATE' });
+  });
+
+  it('DELEGATE: refused outside the delegate scope', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(DEPT_LEAD, COMPANY, 'BUSINESS_TRIP', PLAIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('full-access role: DELEGATE for anyone, even when the setting allows only SELF', async () => {
+    const service = buildService({
+      policyRows: [
+        {
+          key: 'allowedInitiators',
+          value: {
+            SITE_ASSIGNMENT: ['SELF'],
+            WORK_FROM_HOME: ['SELF'],
+            FLIGHT_APPLICATION: ['SELF'],
+            BUSINESS_TRIP: ['SELF'],
+          },
+        },
+      ],
+    });
+    for (const type of [
+      'SITE_ASSIGNMENT',
+      'WORK_FROM_HOME',
+      'FLIGHT_APPLICATION',
+      'BUSINESS_TRIP',
+    ] as const) {
+      await expect(
+        service.resolveInitiation(HR_MANAGER, COMPANY, type, PLAIN),
+      ).resolves.toEqual({ employeeId: PLAIN, initiatedAs: 'DELEGATE' });
+    }
+  });
+
+  it('a full-access direct supervisor files as SUPERVISOR (chain starts above them)', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(HR_MANAGER, COMPANY, 'SITE_ASSIGNMENT', DEPT_MEMBER),
+    ).resolves.toEqual({ employeeId: DEPT_MEMBER, initiatedAs: 'SUPERVISOR' });
+  });
+
+  it('the setting takes effect immediately (current month version is read now)', async () => {
+    const service = buildService({
+      policyRows: [
+        {
+          key: 'allowedInitiators',
+          value: {
+            SITE_ASSIGNMENT: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+            WORK_FROM_HOME: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+            FLIGHT_APPLICATION: ['SELF', 'DELEGATE'],
+            BUSINESS_TRIP: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+          },
+        },
+      ],
+    });
+    await expect(
+      service.resolveInitiation(PLAIN, COMPANY, 'SITE_ASSIGNMENT', null),
+    ).resolves.toEqual({ employeeId: PLAIN, initiatedAs: 'SELF' });
+  });
+});
+
+describe('OnBehalfService initiable employees and passengers', () => {
+  it('supervisor sees only direct reports for site assignments (no self)', async () => {
+    const service = buildService();
+    const list = await service.getInitiableEmployees(SUPERVISOR, COMPANY, 'SITE_ASSIGNMENT');
+    expect(list.map((e) => [e.id, e.initiatedAs])).toEqual([[REPORT, 'SUPERVISOR']]);
+  });
+
+  it('flight passengers: self + delegate scope, no direct reports (SELF+DELEGATE)', async () => {
+    const service = buildService();
+    const passengers = await service.getSelectablePassengers(SUPERVISOR, COMPANY, 'FLIGHT_APPLICATION');
+    expect(passengers.map((p) => p.id)).toEqual([SUPERVISOR]);
+    const lead = await service.getSelectablePassengers(DEPT_LEAD, COMPANY, 'FLIGHT_APPLICATION');
+    expect(lead.map((p) => p.id).sort()).toEqual([DEPT_LEAD, DEPT_MEMBER].sort());
+  });
+
+  it('business-trip passengers include direct reports (SUPERVISOR allowed)', async () => {
+    const service = buildService();
+    const passengers = await service.getSelectablePassengers(SUPERVISOR, COMPANY, 'BUSINESS_TRIP');
+    expect(passengers.map((p) => p.id).sort()).toEqual([REPORT, SUPERVISOR].sort());
+  });
+
+  it('full-access roles may pick anyone', async () => {
+    const service = buildService();
+    const passengers = await service.getSelectablePassengers(HR_MANAGER, COMPANY, 'FLIGHT_APPLICATION');
+    expect(passengers).toHaveLength(USERS.length);
+  });
+});

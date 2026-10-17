@@ -135,7 +135,7 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
           ) ?? null,
         create: async ({ data }: { data: DayRow }) => {
           days.push({ ...data, deletedAt: null });
-          return data;
+          return { ...data, createdAt: new Date(), updatedAt: new Date() };
         },
         update: async ({ where, data }: { where: { id: string }; data: Partial<DayRow> }) => {
           const row = days.find((item) => item.id === where.id)!;
@@ -188,6 +188,10 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
       ),
     };
     const isHr = { value: false };
+    const audit = {
+      create: jest.fn(async (_entry: unknown) => undefined),
+      buildFromRequestContext: (i: unknown) => i,
+    };
 
     const service = new WorkFromHomeDayService(
       prisma as never,
@@ -198,6 +202,10 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
       { register: jest.fn(), unregister: jest.fn() } as never,
       {
         resolveHrProcessSubjectId: jest.fn(async (_u: string, _c: string, target?: string) => target ?? 'e1'),
+        resolveInitiation: jest.fn(async (_u: string, _c: string, _t: string, target?: string) => ({
+          employeeId: target ?? 'e1',
+          initiatedAs: target ? 'DELEGATE' : 'SELF',
+        })),
         recordOnBehalfCreate: jest.fn(async () => undefined),
       } as never,
       dayCoverage as never,
@@ -205,6 +213,7 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
         validateSubmissionDates: jest.fn(async () => ({ isLateSubmission: false, lateReason: null })),
       } as never,
       workScheduleService as never,
+      audit as never,
     );
 
     const activeDays = (): string[] =>
@@ -213,7 +222,7 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
         .map((row) => row.date.toISOString().slice(0, 10))
         .sort();
 
-    return { service, approvals, recalc, isHr, activeDays, approvalsService };
+    return { service, approvals, recalc, isHr, activeDays, approvalsService, audit };
   }
 
   it('one request for the range; approval creates exactly the previewed days, recalculated once', async () => {
@@ -296,5 +305,37 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
         'e1',
       ),
     ).rejects.toThrow('None of the selected days');
+  });
+
+  it('direct assign without approval: Discipline Leads and other non-HR users are refused', async () => {
+    const t = setup();
+    t.isHr.value = false;
+    await expect(
+      t.service.create(
+        { date: '2026-08-13', reason: 'Team offsite', scope: 'EMPLOYEES', employeeIds: ['e1'] } as never,
+        'c1',
+        'dl',
+      ),
+    ).rejects.toThrow('Only HR (hr.view) can assign work-from-home days directly');
+    await expect(t.service.listAssignableEmployees('dl', 'c1')).rejects.toThrow('Only HR (hr.view)');
+    expect(t.audit.create).not.toHaveBeenCalled();
+  });
+
+  it('direct assign by HR is applied immediately and audit-logged', async () => {
+    const t = setup();
+    t.isHr.value = true;
+    await t.service.create(
+      { date: '2026-08-13', reason: 'Power outage at HQ', scope: 'ALL' } as never,
+      'c1',
+      'hr',
+    );
+    expect(t.audit.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'hr',
+        module: 'work_from_home',
+        action: 'direct_assign_create',
+        afterValue: expect.objectContaining({ scope: 'ALL', days: 1 }),
+      }),
+    );
   });
 });

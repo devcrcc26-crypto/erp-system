@@ -9,6 +9,41 @@ export function formatAuditLogUserName(log: AuditLog): string {
   return formatUserName(log.user);
 }
 
+/**
+ * 'Submitted by Y for X' (on-behalf create) or 'Approved by Y on behalf of Z'
+ * / 'Returned by Y on behalf of Z' (approve / return on behalf) from the
+ * entry's afterValue; null for other entries.
+ */
+export function formatAuditLogOnBehalfSummary(
+  log: AuditLog,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string | null {
+  const after = log.afterValue as Record<string, unknown> | null | undefined;
+  if (!after || typeof after !== 'object') {
+    return null;
+  }
+  const text = (value: unknown): string =>
+    typeof value === 'string' && value.trim() ? value : '-';
+  if (log.action === 'approve_on_behalf' || log.action === 'return_on_behalf') {
+    return t(
+      log.action === 'approve_on_behalf'
+        ? 'pages.approvals.approvedOnBehalf'
+        : 'pages.approvals.returnedOnBehalf',
+      {
+        by: text(after.actingApproverName),
+        for: text(after.onBehalfOfApproverName),
+      },
+    );
+  }
+  if (log.action === 'CREATE_ON_BEHALF' && after.onBehalfOfName) {
+    return t('pages.approvals.submittedByFor', {
+      by: text(after.createdByName),
+      for: text(after.onBehalfOfName),
+    });
+  }
+  return null;
+}
+
 export function auditLogSourceVariant(
   source: AuditLogSource,
 ): StatusBadgeVariant {

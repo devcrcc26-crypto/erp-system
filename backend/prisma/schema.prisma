@@ -201,6 +201,14 @@ enum ApprovalRequestStatus {
   RETURNED
 }
 
+/// Capacity in which a request was filed: for yourself, as the direct supervisor
+/// (reportsToUserId = submitter), or as a delegate (on-behalf scope / full access).
+enum RequestInitiatorType {
+  SELF
+  SUPERVISOR
+  DELEGATE
+}
+
 enum ApprovalTierDecision {
   PENDING
   APPROVED
@@ -822,6 +830,8 @@ model User {
   approvalRequestsCreated  ApprovalRequest[]      @relation("ApprovalRequestCreator")
   approvalRequestsUpdated  ApprovalRequest[]      @relation("ApprovalRequestUpdater")
   approvalTiers            ApprovalTier[]         @relation("TierApprover")
+  approvalTiersActedFor    ApprovalTier[]         @relation("TierActingApprover")
+  approvalTiersActedForMe  ApprovalTier[]         @relation("TierOnBehalfOfApprover")
   approvalComments         ApprovalComment[]        @relation("ApprovalCommenter")
   approvalResponses        ApprovalResponse[]       @relation("ApprovalResponder")
   leaveRequestsAsEmployee  LeaveRequest[]         @relation("LeaveEmployee")
@@ -3753,6 +3763,8 @@ model ApprovalRequest {
   notes              String?
   isLateSubmission   Boolean               @default(false) @map("is_late_submission")
   lateReason         String?               @map("late_reason")
+  /// How createdBy (initiator) filed for requestedBy (subject). Null = before 2026-10-17.
+  initiatedAs        RequestInitiatorType? @map("initiated_as")
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
   createdBy          String                @map("created_by")
   updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
@@ -3807,10 +3819,16 @@ model ApprovalTier {
   comment    String?
   conditions Json                 @default("[]")
   decidedAt  DateTime?            @map("decided_at") @db.Timestamp(6)
+  /// Who clicked approve when a full-access user approved for the assigned approver.
+  actingApproverId     String? @map("acting_approver_id")
+  /// The assigned approver the tier was approved on behalf of (= approverId at the time).
+  onBehalfOfApproverId String? @map("on_behalf_of_approver_id")
   createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamp(6)
 
   request  ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approver User            @relation("TierApprover", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actingApprover     User? @relation("TierActingApprover", fields: [actingApproverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  onBehalfOfApprover User? @relation("TierOnBehalfOfApprover", fields: [onBehalfOfApproverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([approverId], map: "idx_approval_tier_approver")
   @@index([requestId], map: "idx_approval_tier_request")
@@ -4016,6 +4034,8 @@ model SiteAssignment {
   deletedAt         DateTime?            @map("deleted_at")
   deletedBy         String?              @map("deleted_by")
   createdFromAttendanceImport Boolean    @default(false) @map("created_from_attendance_import")
+  /// Shared by the assignments created from one crew submission.
+  crewId            String?              @map("crew_id")
 
   company         Company          @relation(fields: [companyId], references: [id])
   employee        User             @relation("SiteAssignmentEmployee", fields: [employeeId], references: [id])
@@ -4032,6 +4052,7 @@ model SiteAssignment {
   @@index([status], map: "idx_site_assignment_status")
   @@index([startDate, endDate], map: "idx_site_assignment_dates")
   @@index([projectId], map: "idx_site_assignment_project")
+  @@index([crewId], map: "idx_site_assignment_crew")
   @@map("site_assignment")
 }
 

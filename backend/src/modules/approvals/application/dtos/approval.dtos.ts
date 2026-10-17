@@ -3,6 +3,7 @@ import { ApprovalRequestStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
@@ -59,6 +60,14 @@ export class TierActionDto {
   @IsString()
   @MaxLength(2000)
   note?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Approve / return: full-access roles (GM, MD, HR Manager/Officer, System Administrator) act on the current tier on behalf of its assigned approver. Not accepted for reject.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  onBehalf?: boolean;
 }
 
 export class AddConditionDto {

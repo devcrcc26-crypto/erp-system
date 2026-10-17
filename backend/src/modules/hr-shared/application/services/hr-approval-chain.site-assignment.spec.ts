@@ -101,3 +101,75 @@ describe('buildSiteAssignmentApprovalChain', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('startChainAboveSubmitter (supervisor filings)', () => {
+  const SUBMITTER = '00000000-0000-4000-8000-000000000201';
+  const ABOVE = '00000000-0000-4000-8000-000000000202';
+  const HR = '00000000-0000-4000-8000-000000000203';
+  const GM = '00000000-0000-4000-8000-000000000204';
+  const OTHER = '00000000-0000-4000-8000-000000000205';
+
+  function build(reportsTo: { id: string; isActive: boolean; deletedAt: Date | null } | null) {
+    const service = new HrApprovalChainService({
+      user: { findFirst: jest.fn(async () => ({ reportsTo })) },
+    } as unknown as PrismaService);
+    jest.spyOn(service, 'getHRManager').mockResolvedValue({ id: HR });
+    jest.spyOn(service, 'getGeneralManager').mockResolvedValue({ id: GM });
+    return service;
+  }
+
+  const supervisorChain = [
+    { tierOrder: 1, label: 'Reports to', approverId: SUBMITTER, resolver: 'REPORTS_TO' },
+  ];
+
+  it("starts at the supervisor's own Reports to", async () => {
+    const service = build({ id: ABOVE, isActive: true, deletedAt: null });
+    const chain = await service.startChainAboveSubmitter(supervisorChain, SUBMITTER, COMPANY_ID);
+    expect(chain).toEqual([
+      { tierOrder: 1, label: "Submitter's Reports to", approverId: ABOVE, resolver: 'SUBMITTER_REPORTS_TO' },
+    ]);
+  });
+
+  it('goes to the HR Manager when the supervisor has no Reports to', async () => {
+    const service = build(null);
+    const chain = await service.startChainAboveSubmitter(supervisorChain, SUBMITTER, COMPANY_ID);
+    expect(chain.map((t) => t.approverId)).toEqual([HR]);
+  });
+
+  it('skips an inactive Reports to and never uses the submitter', async () => {
+    const service = build({ id: ABOVE, isActive: false, deletedAt: null });
+    const chain = await service.startChainAboveSubmitter(supervisorChain, SUBMITTER, COMPANY_ID);
+    expect(chain.map((t) => t.approverId)).toEqual([HR]);
+    expect(chain.some((t) => t.approverId === SUBMITTER)).toBe(false);
+  });
+
+  it('goes to the GM when the HR Manager is the submitting supervisor', async () => {
+    const service = build(null);
+    jest.spyOn(service, 'getHRManager').mockResolvedValue({ id: SUBMITTER });
+    const chain = await service.startChainAboveSubmitter(supervisorChain, SUBMITTER, COMPANY_ID);
+    expect(chain.map((t) => t.approverId)).toEqual([GM]);
+  });
+
+  it('multi-tier chains: only the submitter tier moves; duplicates collapse', async () => {
+    const service = build({ id: OTHER, isActive: true, deletedAt: null });
+    const chain = await service.startChainAboveSubmitter(
+      [
+        { tierOrder: 1, label: 'Reports to', approverId: SUBMITTER, resolver: 'REPORTS_TO' },
+        { tierOrder: 2, label: 'HR Officer', approverId: OTHER, resolver: 'ROLE:HR Officer' },
+        { tierOrder: 3, label: 'General Manager', approverId: GM, resolver: 'ROLE:General Manager' },
+      ],
+      SUBMITTER,
+      COMPANY_ID,
+    );
+    expect(chain.map((t) => [t.tierOrder, t.approverId])).toEqual([
+      [1, OTHER],
+      [2, GM],
+    ]);
+  });
+
+  it('leaves a chain without the submitter unchanged', async () => {
+    const service = build(null);
+    const chain = [{ tierOrder: 1, label: 'Reports to', approverId: OTHER, resolver: 'REPORTS_TO' }];
+    await expect(service.startChainAboveSubmitter(chain, SUBMITTER, COMPANY_ID)).resolves.toBe(chain);
+  });
+});

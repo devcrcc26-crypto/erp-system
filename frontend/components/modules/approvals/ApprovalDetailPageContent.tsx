@@ -63,6 +63,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import {
   findCurrentTier,
   formatApprovalUserName,
+  formatSubmittedFor,
   parseTierConditions,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
@@ -73,7 +74,14 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 
-type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
+type ActionModalKind =
+  | 'approve'
+  | 'approveOnBehalf'
+  | 'returnOnBehalf'
+  | 'conditional'
+  | 'return'
+  | 'reject'
+  | null;
 
 const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page erp-approvals-v2 ${DETAIL_PAGE_V2}`;
 
@@ -363,12 +371,15 @@ export default function ApprovalDetailPageContent({
     setConditionText('');
   }
 
-  async function handleApprove(): Promise<void> {
+  async function handleApprove(onBehalf = false): Promise<void> {
     if (!currentTier) return;
     try {
       await approveMutation.mutateAsync({
         tierId: currentTier.id,
-        payload: note.trim() ? { note: note.trim() } : undefined,
+        payload: {
+          ...(note.trim() ? { note: note.trim() } : {}),
+          ...(onBehalf ? { onBehalf: true } : {}),
+        },
       });
       messageApi.success(t('pages.approvals.dialog.approveSuccess'));
       closeModal();
@@ -406,12 +417,15 @@ export default function ApprovalDetailPageContent({
     }
   }
 
-  async function handleReturn(): Promise<void> {
+  async function handleReturn(onBehalf = false): Promise<void> {
     if (!currentTier) return;
     try {
       await returnMutation.mutateAsync({
         tierId: currentTier.id,
-        payload: note.trim() ? { note: note.trim() } : undefined,
+        payload: {
+          ...(note.trim() ? { note: note.trim() } : {}),
+          ...(onBehalf ? { onBehalf: true } : {}),
+        },
       });
       messageApi.success(t('pages.approvals.dialog.returnSuccess'));
       closeModal();
@@ -534,6 +548,10 @@ export default function ApprovalDetailPageContent({
     name: formatApprovalUserName(request.requester),
     date: submittedDate,
   });
+  const submittedFor = formatSubmittedFor(request, t);
+  const canApproveOnBehalf =
+    !isActiveApprover && request.canApproveOnBehalf === true && Boolean(currentTier);
+  const assignedApproverName = formatApprovalUserName(currentTier?.approver);
   const categoryName =
     formatApprovalCategoryName(
       request.categoryCode ?? request.category?.code,
@@ -556,6 +574,30 @@ export default function ApprovalDetailPageContent({
               {isNarrow ? undefined : t('pages.approvals.backToList')}
             </Button>
           </div>
+          {canApproveOnBehalf && currentTier ? (
+            <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="primary"
+                icon={<CheckOutlined />}
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? t('pages.approvals.resolveConditionsFirst')
+                    : undefined
+                }
+                onClick={() => setActionModal('approveOnBehalf')}
+              >
+                {t('pages.approvals.approveOnBehalf', { name: assignedApproverName })}
+              </Button>
+              <Button
+                icon={<RollbackOutlined />}
+                disabled={actionsDisabled}
+                onClick={() => setActionModal('returnOnBehalf')}
+              >
+                {t('pages.approvals.returnOnBehalf', { name: assignedApproverName })}
+              </Button>
+            </div>
+          ) : null}
           {isActiveApprover && currentTier ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
               <Dropdown
@@ -615,6 +657,11 @@ export default function ApprovalDetailPageContent({
             <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
               {submittedByOn}
             </p>
+            {submittedFor ? (
+              <p className="erp-users-email m-0 mt-0.5 break-words sm:text-left">
+                {submittedFor}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -732,6 +779,36 @@ export default function ApprovalDetailPageContent({
       </ConfirmDialog>
 
       <ConfirmDialog
+        open={actionModal === 'approveOnBehalf'}
+        className="erp-approval-modal"
+        tone="success"
+        icon={<CheckOutlined />}
+        title={t('pages.approvals.dialog.approveOnBehalfTitle', {
+          name: assignedApproverName,
+        })}
+        description={t('pages.approvals.dialog.approveOnBehalfDescription', {
+          name: assignedApproverName,
+          label: currentTier?.label ?? '',
+        })}
+        confirmLabel={t('pages.approvals.dialog.approveOnBehalfConfirm')}
+        confirmLoading={actionLoading}
+        onCancel={closeModal}
+        onConfirm={() => void handleApprove(true)}
+      >
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.noteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('pages.approvals.dialog.notePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
         open={actionModal === 'conditional'}
         className="erp-approval-modal"
         tone="warning"
@@ -778,6 +855,36 @@ export default function ApprovalDetailPageContent({
         confirmLoading={actionLoading}
         onCancel={closeModal}
         onConfirm={() => void handleReturn()}
+      >
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.returnNoteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={actionModal === 'returnOnBehalf'}
+        className="erp-approval-modal"
+        tone="warning"
+        icon={<RollbackOutlined />}
+        title={t('pages.approvals.dialog.returnOnBehalfTitle', {
+          name: assignedApproverName,
+        })}
+        description={t('pages.approvals.dialog.returnOnBehalfDescription', {
+          name: assignedApproverName,
+          label: currentTier?.label ?? '',
+        })}
+        confirmLabel={t('pages.approvals.dialog.returnOnBehalfConfirm')}
+        confirmLoading={actionLoading}
+        onCancel={closeModal}
+        onConfirm={() => void handleReturn(true)}
       >
         <div className="erp-confirm-dialog-field">
           <p className="erp-confirm-dialog-field-label">

@@ -518,6 +518,63 @@ export class HrApprovalChainService {
     );
   }
 
+  /**
+   * Supervisor-filed requests: the chain starts above the submitter. Every tier
+   * the submitter would hold goes to the submitter's own Reports to, or the HR
+   * Manager when they have none (General Manager if the HR Manager is the
+   * submitter). The submitter never approves their own filing.
+   */
+  async startChainAboveSubmitter(
+    tiers: ResolvedApprovalTier[],
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    if (!tiers.some((tier) => tier.approverId === submitterId)) {
+      return tiers;
+    }
+    const replacement = await this.approverAboveSubmitter(submitterId, companyId);
+    return this.finalizeTiers(
+      tiers.map((tier) =>
+        tier.approverId === submitterId
+          ? { order: tier.tierOrder, ...replacement }
+          : {
+              order: tier.tierOrder,
+              label: tier.label,
+              approverId: tier.approverId,
+              resolver: tier.resolver,
+            },
+      ),
+    );
+  }
+
+  private async approverAboveSubmitter(
+    submitterId: string,
+    companyId: string,
+  ): Promise<{ label: string; approverId: string; resolver: string }> {
+    const submitter = await this.prisma.user.findFirst({
+      where: activeOnly({ id: submitterId, companyId }),
+      select: {
+        reportsTo: {
+          select: { id: true, isActive: true, deletedAt: true },
+        },
+      },
+    });
+    const above = submitter?.reportsTo;
+    if (above && above.isActive && !above.deletedAt && above.id !== submitterId) {
+      return {
+        label: "Submitter's Reports to",
+        approverId: above.id,
+        resolver: 'SUBMITTER_REPORTS_TO',
+      };
+    }
+    const hrManager = await this.getHRManager(companyId);
+    if (hrManager.id !== submitterId) {
+      return { label: 'HR Manager', approverId: hrManager.id, resolver: 'ROLE:HR Manager' };
+    }
+    const gm = await this.getGeneralManager(companyId);
+    return { label: 'General Manager', approverId: gm.id, resolver: 'ROLE:General Manager' };
+  }
+
   private async buildReportsToOnlyChain(
     employeeId: string,
     companyId: string,
@@ -1730,83 +1787,6 @@ export class HrApprovalChainService {
     return this.finalizeTiers(tiers);
   
     });
-  }
-
-  /**
-   * Passengers the submitter may include on a flight application.
-   */
-  async getSelectablePassengers(
-    submitterId: string,
-    companyId: string,
-  ): Promise<
-    Array<{
-      id: string;
-      firstName: string;
-      lastName: string;
-      name: string;
-      position: string | null;
-    }>
-  > {
-    const submitter = await this.prisma.user.findFirst({
-      where: activeOnly({ id: submitterId, companyId }),
-      include: {
-        userRoles: {
-          where: activeOnly({ isPrimary: true }),
-          include: { role: true },
-        },
-        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
-      },
-    });
-
-    if (!submitter) {
-      throw new BadRequestException('Submitter not found');
-    }
-
-    const primaryRole = submitter.userRoles[0]?.role?.name ?? '';
-    const canSelectAll = [
-      'HR Officer',
-      'HR Manager',
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-    const isDisciplineLead = submitter.ledDisciplines.length > 0;
-
-    const where = canSelectAll
-      ? activeOnly({ companyId, isActive: true })
-      : isDisciplineLead
-        ? activeOnly({
-            companyId,
-            isActive: true,
-            OR: [
-              { id: submitterId },
-              {
-                engineeringDisciplineId: {
-                  in: submitter.ledDisciplines.map((d) => d.id),
-                },
-              },
-            ],
-          })
-        : activeOnly({ id: submitterId, companyId });
-
-    const users = await this.prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        position: { select: { title: true } },
-      },
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-    });
-
-    return users.map((user) => ({
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      name: `${user.firstName} ${user.lastName}`.trim(),
-      position: user.position?.title ?? null,
-    }));
   }
 
   /**

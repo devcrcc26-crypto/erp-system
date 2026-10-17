@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
@@ -20,6 +21,7 @@ import {
   PerDiemStatus,
   Prisma,
   PurchaseRequestStatus,
+  RequestInitiatorType,
   MaterialRequisitionStatus,
   ConsumablesRequisitionStatus,
   VehicleApplicationStatus,
@@ -28,6 +30,8 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { AuditService } from '../../../audit/application/services/audit.service';
+import { HR_OR_FULL_ACCESS_ROLES } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -77,6 +81,15 @@ const APPROVAL_PENDING_EVENT = 'approval.pending';
 const APPROVAL_CONDITION_RESPONSE_EVENT = 'approval.condition_response';
 const APPROVAL_APPROVED_EVENT = 'approval.approved';
 const APPROVAL_REJECTED_EVENT = 'approval.rejected';
+const APPROVAL_APPROVED_ON_BEHALF_EVENT = 'approval.approved_on_behalf';
+const APPROVAL_RETURNED_ON_BEHALF_EVENT = 'approval.returned_on_behalf';
+
+export const APPROVE_ON_BEHALF_ROLE_MESSAGE =
+  'Only the General Manager, Managing Director, HR Manager, HR Officer or System Administrator can approve or return on behalf of another approver';
+export const APPROVE_ON_BEHALF_OWN_SUBMISSION_MESSAGE =
+  "You can't approve or return on behalf of another approver on a request you submitted or filed for someone.";
+export const APPROVE_ON_BEHALF_OWN_REQUEST_MESSAGE =
+  "You can't approve or return on behalf of another approver on your own request.";
 
 export const RESPONSE_TYPE_RESUBMIT = 'RESUBMIT';
 export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
@@ -108,7 +121,11 @@ const REQUEST_DETAIL_INCLUDE = {
     },
   },
   tiers: {
-    include: { approver: { select: USER_SELECT } },
+    include: {
+      approver: { select: USER_SELECT },
+      actingApprover: { select: USER_SELECT },
+      onBehalfOfApprover: { select: USER_SELECT },
+    },
     orderBy: { tierOrder: 'asc' as const },
   },
   comments: {
@@ -193,6 +210,8 @@ export class ApprovalsService {
     private readonly leaveBalanceService: LeaveBalanceService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
+    @Optional()
+    private readonly audit?: AuditService,
   ) {}
 
   /**
@@ -291,6 +310,11 @@ export class ApprovalsService {
       resolvedTiers?: MatchedApprovalRule;
       /** On-behalf filings: the person who filed it (defaults to `userId`). */
       createdByUserId?: string;
+      /**
+       * Capacity the creator filed in. Defaults to SELF when creator = subject,
+       * otherwise DELEGATE (every other on-behalf path is delegate-scoped).
+       */
+      initiatedAs?: RequestInitiatorType;
       lateSubmission?: {
         isLateSubmission: boolean;
         lateReason: string | null;
@@ -408,6 +432,10 @@ export class ApprovalsService {
             isLateSubmission:
               options?.lateSubmission?.isLateSubmission === true,
             lateReason: options?.lateSubmission?.lateReason ?? null,
+            initiatedAs:
+              (options?.createdByUserId ?? userId) === userId
+                ? RequestInitiatorType.SELF
+                : (options?.initiatedAs ?? RequestInitiatorType.DELEGATE),
             createdBy: options?.createdByUserId ?? userId,
             updatedBy: options?.createdByUserId ?? userId,
             tiers: {
@@ -551,11 +579,32 @@ export class ApprovalsService {
       formData: request.formData,
     });
 
+    const currentTier = request.tiers.find(
+      (tier) =>
+        tier.tierOrder === request.currentTier &&
+        (tier.decision === ApprovalTierDecision.PENDING ||
+          tier.decision === ApprovalTierDecision.CONDITIONALLY_APPROVED),
+    );
+    // Full-access roles may approve the current tier for its assigned approver,
+    // never on a request they filed or are the subject of.
+    const canApproveOnBehalf =
+      Boolean(currentTier) &&
+      currentTier!.approverId !== userId &&
+      request.createdBy !== userId &&
+      request.requestedBy !== userId &&
+      [
+        ApprovalRequestStatus.PENDING,
+        ApprovalRequestStatus.IN_REVIEW,
+        ApprovalRequestStatus.SUBMITTED,
+      ].includes(request.status as 'PENDING') &&
+      (await this.isFullAccessApprover(userId, companyId));
+
     return {
       ...request,
       categoryCode: request.category?.code ?? null,
       sourceId,
       onBehalf,
+      canApproveOnBehalf,
       lateSubmission,
       leaveRequest: undefined,
       overtimeSheet: undefined,
@@ -797,6 +846,7 @@ export class ApprovalsService {
         select: { id: true, code: true, name: true, icon: true },
       },
       requester: { select: USER_SELECT },
+      creator: { select: USER_SELECT },
       tiers: {
         select: {
           id: true,
@@ -805,6 +855,8 @@ export class ApprovalsService {
           decision: true,
           approverId: true,
           conditions: true,
+          actingApprover: { select: USER_SELECT },
+          onBehalfOfApprover: { select: USER_SELECT },
         },
         orderBy: { tierOrder: 'asc' as const },
       },
@@ -861,6 +913,7 @@ export class ApprovalsService {
             select: { id: true, code: true, name: true, icon: true },
           },
           requester: { select: USER_SELECT },
+          creator: { select: USER_SELECT },
           tiers: {
             select: {
               id: true,
@@ -868,6 +921,8 @@ export class ApprovalsService {
               label: true,
               decision: true,
               approverId: true,
+              actingApprover: { select: USER_SELECT },
+              onBehalfOfApprover: { select: USER_SELECT },
             },
             orderBy: { tierOrder: 'asc' },
           },
@@ -993,19 +1048,34 @@ export class ApprovalsService {
     tierId: string,
     userId: string,
     note?: string,
-    options?: { bypassApproverCheck?: boolean },
+    options?: {
+      bypassApproverCheck?: boolean;
+      /** Full-access roles approve the current tier for its assigned approver. */
+      onBehalf?: boolean;
+    },
   ): Promise<unknown> {
     const { tier, request } = await this.loadTierForAction(
       requestId,
       tierId,
       userId,
-      options,
+      {
+        bypassApproverCheck:
+          options?.bypassApproverCheck === true || options?.onBehalf === true,
+      },
     );
+    const actingOnBehalf =
+      options?.bypassApproverCheck !== true && tier.approverId !== userId;
+    if (actingOnBehalf) {
+      await this.assertCanApproveOnBehalf(request, userId);
+    }
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
     if (options?.bypassApproverCheck !== true) {
       await this.assertNotOnBehalfCreator(request.id, userId);
     }
+    const onBehalfData = actingOnBehalf
+      ? { actingApproverId: userId, onBehalfOfApproverId: tier.approverId }
+      : {};
 
     const conditions = this.parseConditions(tier.conditions);
     const unresolved = conditions.filter((c) => !c.resolved);
@@ -1027,8 +1097,12 @@ export class ApprovalsService {
           decision: ApprovalTierDecision.CONDITIONALLY_APPROVED,
           comment: note ?? tier.comment,
           decidedAt: new Date(),
+          ...onBehalfData,
         },
       });
+      if (actingOnBehalf) {
+        await this.afterActedOnBehalf('approve', request, tier, userId);
+      }
       return this.getRequest(request.id, request.companyId, userId);
     }
 
@@ -1040,12 +1114,16 @@ export class ApprovalsService {
             decision: ApprovalTierDecision.APPROVED,
             comment: note ?? tier.comment,
             decidedAt: new Date(),
+            ...onBehalfData,
           },
         });
         return this.advanceAfterTierApproval(tx, request.id, userId);
       },
       PRISMA_TX_OPTIONS,
     );
+    if (actingOnBehalf) {
+      await this.afterActedOnBehalf('approve', request, tier, userId);
+    }
 
     if (nextApprover) {
       await this.notifySafe(request.companyId, userId, {
@@ -1246,12 +1324,21 @@ export class ApprovalsService {
     tierId: string,
     userId: string,
     note?: string,
+    options?: {
+      /** Full-access roles return the current tier for its assigned approver. */
+      onBehalf?: boolean;
+    },
   ): Promise<unknown> {
     const { tier, request } = await this.loadTierForAction(
       requestId,
       tierId,
       userId,
+      { bypassApproverCheck: options?.onBehalf === true },
     );
+    const actingOnBehalf = tier.approverId !== userId;
+    if (actingOnBehalf) {
+      await this.assertCanApproveOnBehalf(request, userId);
+    }
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
 
@@ -1272,6 +1359,9 @@ export class ApprovalsService {
             decision: ApprovalTierDecision.RETURNED,
             comment: note ?? null,
             decidedAt: new Date(),
+            ...(actingOnBehalf
+              ? { actingApproverId: userId, onBehalfOfApproverId: tier.approverId }
+              : {}),
           },
         });
         await tx.approvalRequest.update({
@@ -1298,6 +1388,10 @@ export class ApprovalsService {
         requestNumber: request.requestNumber,
       },
     });
+
+    if (actingOnBehalf) {
+      await this.afterActedOnBehalf('return', request, tier, userId);
+    }
 
     await this.dispatchFinalDecision(request.id, 'RETURNED');
 
@@ -2104,6 +2198,100 @@ export class ApprovalsService {
   }
 
   /**
+   * Approve on behalf: full-access roles only, never on a request the actor
+   * submitted/filed (createdBy) or is the subject of (requestedBy).
+   */
+  private async assertCanApproveOnBehalf(
+    request: { companyId: string; requestedBy: string; createdBy: string },
+    userId: string,
+  ): Promise<void> {
+    if (!(await this.isFullAccessApprover(userId, request.companyId))) {
+      throw new ForbiddenException(APPROVE_ON_BEHALF_ROLE_MESSAGE);
+    }
+    if (request.createdBy === userId) {
+      throw new ForbiddenException(APPROVE_ON_BEHALF_OWN_SUBMISSION_MESSAGE);
+    }
+    if (request.requestedBy === userId) {
+      throw new ForbiddenException(APPROVE_ON_BEHALF_OWN_REQUEST_MESSAGE);
+    }
+  }
+
+  /** Primary role GM, MD, HR Manager, HR Officer or System Administrator. */
+  private async isFullAccessApprover(userId: string, companyId: string): Promise<boolean> {
+    const primary = await this.prisma.userRole.findFirst({
+      where: activeOnly({
+        userId,
+        isPrimary: true,
+        role: activeOnly({ companyId }),
+      }),
+      select: { role: { select: { name: true } } },
+    });
+    return primary !== null && HR_OR_FULL_ACCESS_ROLES.includes(primary.role.name);
+  }
+
+  /** Approve / return on behalf: tells the assigned approver and writes the audit entry. */
+  private async afterActedOnBehalf(
+    action: 'approve' | 'return',
+    request: { id: string; companyId: string; requestNumber: string },
+    tier: { id: string; label: string; approverId: string },
+    actingUserId: string,
+  ): Promise<void> {
+    const people = await this.prisma.user.findMany({
+      where: { id: { in: [actingUserId, tier.approverId] } },
+      select: { id: true, firstName: true, middleName: true, lastName: true },
+    });
+    const nameOf = (id: string): string => {
+      const user = people.find((row) => row.id === id);
+      return user
+        ? [user.firstName, user.middleName, user.lastName]
+            .filter((part) => Boolean(part && part.trim()))
+            .join(' ')
+        : id;
+    };
+    const actingName = nameOf(actingUserId);
+    const assignedName = nameOf(tier.approverId);
+
+    const verb = action === 'approve' ? 'approved' : 'returned';
+    await this.notifySafe(request.companyId, actingUserId, {
+      recipientId: tier.approverId,
+      eventType:
+        action === 'approve'
+          ? APPROVAL_APPROVED_ON_BEHALF_EVENT
+          : APPROVAL_RETURNED_ON_BEHALF_EVENT,
+      subject: `${action === 'approve' ? 'Approved' : 'Returned'} on your behalf - ${request.requestNumber}`,
+      body: `${actingName} ${verb} the "${tier.label}" tier of ${request.requestNumber} on your behalf.`,
+      link: `/approvals/${request.id}`,
+      variables: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        actingApproverName: actingName,
+      },
+    });
+
+    if (this.audit) {
+      await this.audit.create(
+        this.audit.buildFromRequestContext({
+          userId: actingUserId,
+          companyId: request.companyId,
+          module: 'approvals',
+          action: `${action}_on_behalf`,
+          recordType: 'approval_tier',
+          recordId: tier.id,
+          recordReference: request.requestNumber,
+          afterValue: {
+            requestId: request.id,
+            tierLabel: tier.label,
+            actingApproverId: actingUserId,
+            actingApproverName: actingName,
+            onBehalfOfApproverId: tier.approverId,
+            onBehalfOfApproverName: assignedName,
+          } as Prisma.InputJsonValue,
+        }),
+      );
+    }
+  }
+
+  /**
    * The person who filed a field movement log on someone's behalf may not
    * approve it, even when they hold a tier in that employee's chain.
    * (AUTO_APPROVE_ALL bypasses approver checks and is unaffected.)
@@ -2130,6 +2318,7 @@ export class ApprovalsService {
     tier: {
       id: string;
       tierOrder: number;
+      label: string;
       approverId: string;
       decision: ApprovalTierDecision;
       comment: string | null;
@@ -2142,6 +2331,7 @@ export class ApprovalsService {
       status: ApprovalRequestStatus;
       currentTier: number;
       requestedBy: string;
+      createdBy: string;
       requestNumber: string;
     };
   }> {
@@ -2155,6 +2345,7 @@ export class ApprovalsService {
             status: true,
             currentTier: true,
             requestedBy: true,
+            createdBy: true,
             requestNumber: true,
             deletedAt: true,
           },
@@ -2199,6 +2390,7 @@ export class ApprovalsService {
       tier: {
         id: tier.id,
         tierOrder: tier.tierOrder,
+        label: tier.label,
         approverId: tier.approverId,
         decision: tier.decision,
         comment: tier.comment,
@@ -2211,6 +2403,7 @@ export class ApprovalsService {
         status: tier.request.status,
         currentTier: tier.request.currentTier,
         requestedBy: tier.request.requestedBy,
+        createdBy: tier.request.createdBy,
         requestNumber: tier.request.requestNumber,
       },
     };

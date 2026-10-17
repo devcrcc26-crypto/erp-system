@@ -1,6 +1,12 @@
 import { apiGet, apiPost } from '@/lib/api/client';
 
-export type PolicyGroup = 'ATTENDANCE' | 'PAYROLL' | 'OVERTIME' | 'SEPARATION' | 'INACTIVE';
+export type PolicyGroup =
+  | 'ATTENDANCE'
+  | 'PAYROLL'
+  | 'OVERTIME'
+  | 'REQUESTS'
+  | 'SEPARATION'
+  | 'INACTIVE';
 
 export type PolicyKind =
   | 'integer'
@@ -11,6 +17,7 @@ export type PolicyKind =
   | 'nullableInteger'
   | 'taxBrackets'
   | 'multipliers'
+  | 'initiators'
   | 'json';
 
 export interface TaxBracket {
@@ -37,6 +44,8 @@ export interface PolicyItem {
   adminOnly: boolean;
   informational: boolean;
   locked: boolean;
+  /** Takes effect when saved (no effective month). */
+  immediate?: boolean;
   defaultValue: unknown;
   currentValue: unknown;
   currentSource: 'DEFAULT' | 'SETTING';

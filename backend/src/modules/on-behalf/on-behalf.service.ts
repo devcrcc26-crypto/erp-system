@@ -5,7 +5,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, RequestInitiatorType } from '@prisma/client';
+import { getPolicy } from '../../shared/policy/policy-reader.util';
+import type {
+  InitiatorRequestType,
+  RequestInitiator,
+} from '../../shared/policy/policy-definitions';
 import { PermissionService } from '../../shared/permissions/permission.service';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { activeOnly } from '../../shared/prisma/soft-delete.util';
@@ -31,6 +36,32 @@ export interface OnBehalfEligibleEmployee {
   discipline: string | null;
   gender: 'MALE' | 'FEMALE' | null;
 }
+
+/** Who a request is for, and the capacity the actor filed it in. */
+export interface RequestInitiation {
+  employeeId: string;
+  initiatedAs: RequestInitiatorType;
+}
+
+/** Employee the actor may pick (on-behalf target, crew member or passenger). */
+export interface InitiableEmployee {
+  id: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  employeeId: string | null;
+  department: string | null;
+  position: string | null;
+  /** How the actor may file for them. */
+  initiatedAs: RequestInitiatorType;
+}
+
+const REQUEST_TYPE_LABEL: Record<InitiatorRequestType, string> = {
+  SITE_ASSIGNMENT: 'site assignment',
+  WORK_FROM_HOME: 'work-from-home request',
+  FLIGHT_APPLICATION: 'flight application',
+  BUSINESS_TRIP: 'business trip',
+};
 
 export const ON_BEHALF_AUTO_APPROVE_COMMENT =
   'Auto-approved by creator (on-behalf submission)';
@@ -251,6 +282,213 @@ export class OnBehalfService {
   }
 
   /**
+   * allowedInitiators policy for a request type, read now (the key takes
+   * effect when saved).
+   */
+  async allowedInitiators(
+    companyId: string,
+    requestType: InitiatorRequestType,
+  ): Promise<RequestInitiator[]> {
+    const policy = await getPolicy(this.prisma, companyId, 'allowedInitiators', new Date());
+    return policy[requestType];
+  }
+
+  /**
+   * Who a Site Assignment / WFH / Flight / Business Trip request is for, and in
+   * what capacity the actor files it:
+   * - SELF: no target (or own id), if the request type allows SELF.
+   * - SUPERVISOR: target.reportsToUserId = actor (direct reports only), if allowed.
+   * - DELEGATE: full-access role (any active employee, whatever the setting),
+   *   or the on-behalf scope (HR / department head / discipline lead) if allowed.
+   * SUPERVISOR wins over DELEGATE so the approval chain starts above the supervisor.
+   * `hrProcess`: the subject must take part in HR processes (site, WFH).
+   */
+  async resolveInitiation(
+    actorUserId: string,
+    companyId: string,
+    requestType: InitiatorRequestType,
+    targetEmployeeId?: string | null,
+    options?: { hrProcess?: boolean },
+  ): Promise<RequestInitiation> {
+    const allowed = await this.allowedInitiators(companyId, requestType);
+    const label = REQUEST_TYPE_LABEL[requestType];
+
+    if (!targetEmployeeId || targetEmployeeId === actorUserId) {
+      if (!allowed.includes('SELF')) {
+        throw new ForbiddenException(
+          `You can't file a ${label} for yourself. Ask your supervisor or HR to file it for you.`,
+        );
+      }
+      if (options?.hrProcess) {
+        await this.assertTakesPartInHrProcesses(actorUserId, companyId);
+      }
+      return { employeeId: actorUserId, initiatedAs: RequestInitiatorType.SELF };
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: targetEmployeeId, companyId, isActive: true }),
+      select: { id: true, excludedFromHrProcesses: true, reportsToUserId: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (isExcludedFromHrProcesses(employee)) {
+      throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
+    }
+
+    const initiatedAs = await this.initiatorFor(
+      actorUserId,
+      employee,
+      companyId,
+      allowed,
+    );
+    if (!initiatedAs) {
+      throw new ForbiddenException(
+        `You can't file a ${label} for this employee. Allowed: ${allowed
+          .map((a) => a.toLowerCase())
+          .join(', ')}.`,
+      );
+    }
+    return { employeeId: employee.id, initiatedAs };
+  }
+
+  /**
+   * Employees the actor may pick for a request type (excluding themselves unless
+   * `includeSelf` and SELF is allowed). `includeApproverOnly`: keep approver-only
+   * accounts (flight / business-trip passengers are not HR-process subjects).
+   */
+  async getInitiableEmployees(
+    actorUserId: string,
+    companyId: string,
+    requestType: InitiatorRequestType,
+    options?: { includeSelf?: boolean; includeApproverOnly?: boolean },
+  ): Promise<InitiableEmployee[]> {
+    const allowed = await this.allowedInitiators(companyId, requestType);
+    const fullAccess = await this.hrApprovalChain.isHrOrFullAccessActor(
+      actorUserId,
+      companyId,
+    );
+    const base: Prisma.UserWhereInput = activeOnly({
+      companyId,
+      isActive: true,
+      ...(options?.includeApproverOnly ? {} : { excludedFromHrProcesses: false }),
+    });
+
+    const scopes: Prisma.UserWhereInput[] = [];
+    if (options?.includeSelf && allowed.includes('SELF')) {
+      scopes.push({ id: actorUserId });
+    }
+    if (fullAccess) {
+      scopes.push({ id: { not: actorUserId } });
+    } else {
+      if (allowed.includes('SUPERVISOR')) {
+        scopes.push({ reportsToUserId: actorUserId });
+      }
+      if (allowed.includes('DELEGATE')) {
+        const delegate = await this.delegateScopeWhere(actorUserId, companyId);
+        if (delegate) {
+          scopes.push({ AND: [{ id: { not: actorUserId } }, delegate] });
+        }
+      }
+    }
+    if (scopes.length === 0) {
+      return [];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { AND: [base, { OR: scopes }] },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        employeeId: true,
+        reportsToUserId: true,
+        department: { select: { name: true } },
+        position: { select: { title: true } },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      employeeId: user.employeeId,
+      department: user.department?.name ?? null,
+      position: user.position?.title ?? null,
+      initiatedAs:
+        user.id === actorUserId
+          ? RequestInitiatorType.SELF
+          : user.reportsToUserId === actorUserId && allowed.includes('SUPERVISOR')
+            ? RequestInitiatorType.SUPERVISOR
+            : RequestInitiatorType.DELEGATE,
+    }));
+  }
+
+  /**
+   * Flight / business-trip passengers the actor may include: the same initiator
+   * rules as filing the request (self if allowed, direct reports if SUPERVISOR,
+   * delegate scope, or anyone for full-access roles). Approver-only accounts
+   * stay selectable - passengers are not HR-process subjects.
+   */
+  async getSelectablePassengers(
+    actorUserId: string,
+    companyId: string,
+    requestType: 'FLIGHT_APPLICATION' | 'BUSINESS_TRIP',
+  ): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      name: string;
+      position: string | null;
+    }>
+  > {
+    const employees = await this.getInitiableEmployees(
+      actorUserId,
+      companyId,
+      requestType,
+      { includeSelf: true, includeApproverOnly: true },
+    );
+    return employees.map((employee) => ({
+      id: employee.id,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      name: `${employee.firstName} ${employee.lastName}`.trim(),
+      position: employee.position,
+    }));
+  }
+
+  private async initiatorFor(
+    actorUserId: string,
+    employee: { id: string; reportsToUserId: string | null },
+    companyId: string,
+    allowed: readonly RequestInitiator[],
+  ): Promise<RequestInitiatorType | null> {
+    if (employee.reportsToUserId === actorUserId && allowed.includes('SUPERVISOR')) {
+      return RequestInitiatorType.SUPERVISOR;
+    }
+    if (await this.hrApprovalChain.isHrOrFullAccessActor(actorUserId, companyId)) {
+      return RequestInitiatorType.DELEGATE;
+    }
+    if (allowed.includes('DELEGATE')) {
+      const delegate = await this.delegateScopeWhere(actorUserId, companyId);
+      if (delegate) {
+        const match = await this.prisma.user.findFirst({
+          where: { AND: [delegate, { id: employee.id }] },
+          select: { id: true },
+        });
+        if (match) {
+          return RequestInitiatorType.DELEGATE;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Throws when the employee is an approver-only account (no HR processes of
    * their own) - used for self-submissions, which skip the on-behalf checks.
    */
@@ -324,6 +562,18 @@ export class OnBehalfService {
       return;
     }
     const audit = MODULE_AUDIT[input.moduleCode];
+    const people = await this.prisma.user.findMany({
+      where: { id: { in: [input.actorUserId, input.employeeId] } },
+      select: { id: true, firstName: true, middleName: true, lastName: true },
+    });
+    const nameOf = (id: string): string | null => {
+      const user = people.find((row) => row.id === id);
+      return user
+        ? [user.firstName, user.middleName, user.lastName]
+            .filter((part) => Boolean(part && part.trim()))
+            .join(' ')
+        : null;
+    };
     await this.auditService.create({
       userId: input.actorUserId,
       companyId: input.companyId,
@@ -334,7 +584,9 @@ export class OnBehalfService {
       recordReference: input.recordReference,
       afterValue: {
         createdBy: input.actorUserId,
+        createdByName: nameOf(input.actorUserId),
         onBehalfOf: input.employeeId,
+        onBehalfOfName: nameOf(input.employeeId),
         autoApproveTier:
           input.autoApproveTier === true &&
           isOnBehalfAutoApproveAllowed(input.moduleCode),
@@ -435,13 +687,28 @@ export class OnBehalfService {
         id: { not: userId },
       }),
     );
+    const scope = await this.delegateScopeWhere(userId, companyId);
+    if (!scope) {
+      return null;
+    }
+    return { ...base, ...scope };
+  }
 
+  /**
+   * Delegate (on-behalf) scope only, without the active/company/self filters:
+   * {} = anyone (hr.view or full-access role), department/discipline members
+   * for leads, null = nobody.
+   */
+  private async delegateScopeWhere(
+    userId: string,
+    companyId: string,
+  ): Promise<Prisma.UserWhereInput | null> {
     const [isHrViewer, isFullAccess] = await Promise.all([
       this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
       this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId),
     ]);
     if (isHrViewer || isFullAccess) {
-      return base;
+      return {};
     }
 
     const [ledDepartments, ledDisciplines] = await Promise.all([
@@ -469,6 +736,6 @@ export class OnBehalfService {
     if (scopes.length === 0) {
       return null;
     }
-    return { ...base, OR: scopes };
+    return { OR: scopes };
   }
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PolicySettingsService } from './policy-settings.service';
+import { todayInAddisUtc } from '../../../shared/employment/separation-dates.util';
+import { policyMonthStart } from '../../../shared/policy/policy-reader.util';
 
 const COMPANY = 'company-1';
 
@@ -186,6 +188,52 @@ describe('PolicySettingsService', () => {
       expect(audit.create).toHaveBeenCalledWith(
         expect.objectContaining({ module: 'policy_settings', beforeValue: { key: 'forgotToClockFlagThreshold', value: 4 } }),
       );
+    });
+  });
+
+  describe('allowedInitiators (immediate)', () => {
+    const value = {
+      SITE_ASSIGNMENT: ['SUPERVISOR', 'DELEGATE'],
+      WORK_FROM_HOME: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+      FLIGHT_APPLICATION: ['SELF'],
+      BUSINESS_TRIP: ['SELF', 'SUPERVISOR', 'DELEGATE'],
+    };
+
+    it('System Administrator only', async () => {
+      const { service } = makeService({ roles: ['HR Manager'] });
+      await expect(
+        service.save(ctx, 'allowedInitiators', { value, effectiveFrom: '2027-01-01', reason: 'Tighter flights' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('takes effect when saved: dated to the current month, no payroll runs touched, audited', async () => {
+      const runs = [run('oct', 10, 'PAID')];
+      const { service, settings, prisma, audit } = makeService({ roles: ['System Administrator'], runs });
+      const saved = await service.save(ctx, 'allowedInitiators', {
+        value,
+        effectiveFrom: '2027-01-01',
+        reason: 'Tighter flights',
+      });
+      expect(settings[0]!.effectiveFrom).toEqual(policyMonthStart(todayInAddisUtc()));
+      expect(prisma.payrollRun.updateMany).not.toHaveBeenCalled();
+      expect(saved.currentValue).toEqual(value);
+      expect(saved.immediate).toBe(true);
+      expect(audit.create).toHaveBeenCalled();
+      await expect(service.preview(ctx, 'allowedInitiators', '2026-10-01')).resolves.toEqual({ affectedRuns: [] });
+    });
+
+    it('rejects empty, duplicate or unknown initiators', async () => {
+      const { service } = makeService({ roles: ['System Administrator'] });
+      for (const bad of [
+        { ...value, FLIGHT_APPLICATION: [] },
+        { ...value, FLIGHT_APPLICATION: ['SELF', 'SELF'] },
+        { ...value, FLIGHT_APPLICATION: ['MANAGER'] },
+        { ...value, LEAVE: ['SELF'] },
+      ]) {
+        await expect(
+          service.save(ctx, 'allowedInitiators', { value: bad, effectiveFrom: '2026-10-01', reason: 'x y z' }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      }
     });
   });
 });

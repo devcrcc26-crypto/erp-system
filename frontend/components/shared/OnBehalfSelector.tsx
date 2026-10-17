@@ -5,12 +5,14 @@ import { Avatar, Checkbox, Select, Typography } from 'antd';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type {
-  OnBehalfEligibleEmployee,
-  OnBehalfModuleCode,
-  OnBehalfPayload,
+import {
+  isInitiatorModule,
+  type OnBehalfEligibleEmployee,
+  type OnBehalfModuleCode,
+  type OnBehalfPayload,
 } from '@/lib/api/on-behalf.types';
 import {
+  useInitiableEmployees,
   useOnBehalfChainMembership,
   useOnBehalfEligibleEmployees,
 } from '@/lib/query/on-behalf';
@@ -34,7 +36,47 @@ export function formatOnBehalfEmployeeName(
   return name;
 }
 
-function initials(employee: OnBehalfEligibleEmployee): string {
+type PickableEmployee = Pick<
+  OnBehalfEligibleEmployee,
+  'id' | 'firstName' | 'middleName' | 'lastName' | 'employeeId' | 'department'
+> & {
+  /** Present on the general on-behalf list (used by leave). */
+  gender?: OnBehalfEligibleEmployee['gender'];
+};
+
+/**
+ * Employees the signed-in user may file for. Site assignment, WFH, flight and
+ * business trip follow allowedInitiators (direct reports, delegate scope, full
+ * access); `selfAllowed` is false when the user may not file for themselves.
+ */
+export function useOnBehalfEmployees(moduleCode: OnBehalfModuleCode): {
+  employees: PickableEmployee[];
+  selfAllowed: boolean;
+  isLoading: boolean;
+} {
+  const currentUser = useCurrentUser();
+  const governed = isInitiatorModule(moduleCode) ? moduleCode : null;
+  const eligibleQuery = useOnBehalfEligibleEmployees(
+    currentUser.data?.id,
+    currentUser.data?.companyId,
+    governed === null,
+  );
+  const initiableQuery = useInitiableEmployees(currentUser.data?.id, governed);
+  if (governed) {
+    return {
+      employees: initiableQuery.data?.employees ?? [],
+      selfAllowed: initiableQuery.data?.selfAllowed ?? true,
+      isLoading: initiableQuery.isLoading,
+    };
+  }
+  return {
+    employees: eligibleQuery.data ?? [],
+    selfAllowed: true,
+    isLoading: eligibleQuery.isLoading,
+  };
+}
+
+function initials(employee: PickableEmployee): string {
   const last = employee.lastName || employee.middleName || '';
   return `${employee.firstName.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }
@@ -47,14 +89,11 @@ export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
   const currentUser = useCurrentUser();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [autoApproveTier, setAutoApproveTier] = useState(false);
-  const eligibleQuery = useOnBehalfEligibleEmployees(
-    currentUser.data?.id,
-    currentUser.data?.companyId,
-  );
+  const pickable = useOnBehalfEmployees(moduleCode);
 
   const employee = useMemo(
-    () => eligibleQuery.data?.find((row) => row.id === employeeId),
-    [eligibleQuery.data, employeeId],
+    () => pickable.employees.find((row) => row.id === employeeId),
+    [pickable.employees, employeeId],
   );
 
   const payload: OnBehalfPayload = employeeId
@@ -70,6 +109,10 @@ export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
     setAutoApproveTier,
     /** Selected target employee (undefined for self-submission). */
     employee,
+    /** False when this request type may not be filed for yourself. */
+    selfAllowed: pickable.selfAllowed,
+    /** Must pick an employee before submitting (self not allowed). */
+    targetRequired: !pickable.selfAllowed && !employeeId,
     /** Target for employee-scoped lookups: the selected employee, else the signed-in user. */
     effectiveEmployeeId: employeeId ?? currentUser.data?.id,
     payload,
@@ -86,7 +129,7 @@ interface OnBehalfSelectorProps {
   /** Selected employee id (undefined = submitting for yourself). */
   value?: string;
   onChange: (id: string | undefined) => void;
-  /** Scopes the cached eligible list; defaults to the signed-in user's company. */
+  /** @deprecated Ignored: the lists are always scoped to the signed-in user's company. */
   companyId?: string;
   moduleCode: OnBehalfModuleCode;
   autoApproveTier: boolean;
@@ -100,21 +143,18 @@ interface OnBehalfSelectorProps {
 export default function OnBehalfSelector({
   value,
   onChange,
-  companyId,
   moduleCode,
   autoApproveTier,
   onAutoApproveTierChange,
 }: OnBehalfSelectorProps): React.ReactNode {
   const { t } = useEpcTranslation();
-  const currentUser = useCurrentUser();
-  const eligibleQuery = useOnBehalfEligibleEmployees(
-    currentUser.data?.id,
-    companyId ?? currentUser.data?.companyId,
-  );
+  const pickable = useOnBehalfEmployees(moduleCode);
   const chainQuery = useOnBehalfChainMembership(value, moduleCode);
-  const [enabled, setEnabled] = useState(Boolean(value));
+  const [toggled, setEnabled] = useState(Boolean(value));
+  // Self not allowed (e.g. site assignment): filing for someone is the only option.
+  const enabled = toggled || !pickable.selfAllowed;
 
-  const employees = useMemo(() => eligibleQuery.data ?? [], [eligibleQuery.data]);
+  const employees = pickable.employees;
   const selected = employees.find((row) => row.id === value);
 
   const options = useMemo(
@@ -145,6 +185,15 @@ export default function OnBehalfSelector({
   );
 
   if (employees.length === 0) {
+    if (!pickable.selfAllowed && !pickable.isLoading) {
+      return (
+        <ErpNotice
+          tone="warning"
+          title={t('hr.onBehalf.selfNotAllowedTitle')}
+          description={t('hr.onBehalf.selfNotAllowedNoEmployees')}
+        />
+      );
+    }
     return null;
   }
 
@@ -161,18 +210,24 @@ export default function OnBehalfSelector({
         title={t('hr.onBehalf.title')}
         description={t('hr.onBehalf.description')}
       >
-        <Checkbox
-          checked={enabled}
-          onChange={(event) => {
-            const next = event.target.checked;
-            setEnabled(next);
-            if (!next) {
-              onChange(undefined);
-            }
-          }}
-        >
-          {t('hr.onBehalf.toggle')}
-        </Checkbox>
+        {pickable.selfAllowed ? (
+          <Checkbox
+            checked={enabled}
+            onChange={(event) => {
+              const next = event.target.checked;
+              setEnabled(next);
+              if (!next) {
+                onChange(undefined);
+              }
+            }}
+          >
+            {t('hr.onBehalf.toggle')}
+          </Checkbox>
+        ) : (
+          <Typography.Paragraph type="secondary" className="!mb-0 text-sm">
+            {t('hr.onBehalf.selfNotAllowed')}
+          </Typography.Paragraph>
+        )}
 
         {enabled ? (
           <div className="mt-4 flex flex-col gap-3">
