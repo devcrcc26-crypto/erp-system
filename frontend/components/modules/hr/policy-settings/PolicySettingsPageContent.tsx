@@ -1,11 +1,14 @@
 'use client';
 
+import './policy-settings-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   Checkbox,
   DatePicker,
+  Form,
   Input,
   InputNumber,
   Modal,
@@ -14,8 +17,6 @@ import {
   Space,
   Switch,
   Table,
-  Tabs,
-  Tag,
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -30,9 +31,18 @@ import {
   type TaxBracket,
 } from '@/lib/api/policy-settings';
 import { usePolicySettings, useSavePolicy } from '@/lib/query/policy-settings';
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 
-const GROUPS: PolicyGroup[] = ['ATTENDANCE', 'PAYROLL', 'OVERTIME', 'SEPARATION', 'INACTIVE'];
+const PAGE_V2 = `erp-pro-list-page erp-users-page erp-policy-settings-v2 ${LIST_PAGE_V2}`;
+
+const GROUPS: PolicyGroup[] = ['ATTENDANCE', 'PAYROLL', 'OVERTIME', 'REQUESTS', 'SEPARATION', 'INACTIVE'];
+const INITIATOR_REQUEST_TYPES = [
+  'SITE_ASSIGNMENT',
+  'WORK_FROM_HOME',
+  'FLIGHT_APPLICATION',
+  'BUSINESS_TRIP',
+] as const;
+const REQUEST_INITIATORS = ['SELF', 'SUPERVISOR', 'DELEGATE'] as const;
 const INACTIVE_TYPES = ['SUSPENDED', 'LONG_LEAVE', 'OTHER'] as const;
 const MULTIPLIER_KEYS = ['regular', 'night', 'weekend', 'holiday'] as const;
 const P = 'pages.hr.policySettings';
@@ -61,6 +71,15 @@ function formatValue(item: Pick<PolicyItem, 'key' | 'kind'>, value: unknown, t: 
     case 'multipliers': {
       const m = value as Record<string, number>;
       return MULTIPLIER_KEYS.map((k) => `${t(`${P}.multiplier.${k}`)} ${m[k]}×`).join(' · ');
+    }
+    case 'initiators': {
+      const v = value as Record<string, string[]>;
+      return INITIATOR_REQUEST_TYPES.map(
+        (type) =>
+          `${t(`${P}.requestTypes.${type}`)}: ${(v[type] ?? [])
+            .map((i) => t(`${P}.initiators.${i}`))
+            .join(', ')}`,
+      ).join(' · ');
     }
     case 'integer':
       return item.key.endsWith('Minutes') ? `${String(value)} ${t(`${P}.minutes`)}` : String(value);
@@ -191,6 +210,43 @@ function ValueEditor({
         </div>
       );
     }
+    case 'initiators': {
+      const v = value as Record<string, string[]>;
+      return (
+        <div className="flex flex-col gap-3">
+          {INITIATOR_REQUEST_TYPES.map((type) => (
+            <fieldset key={type} className="m-0 border-0 p-0">
+              <legend className="mb-1 text-sm font-medium">
+                {t(`${P}.requestTypes.${type}`)}
+              </legend>
+              <Checkbox.Group
+                value={v[type] ?? []}
+                onChange={(next) => {
+                  const list = REQUEST_INITIATORS.filter((i) =>
+                    (next as string[]).includes(i),
+                  );
+                  onChange({ ...v, [type]: list });
+                  onError(
+                    INITIATOR_REQUEST_TYPES.some(
+                      (k) => (k === type ? list : (v[k] ?? [])).length === 0,
+                    )
+                      ? t(`${P}.initiatorsRequired`)
+                      : null,
+                  );
+                }}
+                options={REQUEST_INITIATORS.map((i) => ({
+                  value: i,
+                  label: t(`${P}.initiators.${i}`),
+                }))}
+              />
+            </fieldset>
+          ))}
+          <span className="text-xs text-[var(--erp-text-secondary,#4B5563)]">
+            {t(`${P}.initiatorsFullAccessNote`)}
+          </span>
+        </div>
+      );
+    }
     case 'taxBrackets': {
       const bands = value as TaxBracket[];
       const update = (index: number, patch: Partial<TaxBracket>) =>
@@ -318,7 +374,9 @@ function EditPolicyModal({
   const messageApi = useAppMessage();
   const save = useSavePolicy();
   const [value, setValue] = useState<unknown>(() => structuredClone(item.currentValue));
-  const [month, setMonth] = useState<Dayjs>(() => dayjs().add(1, 'month').startOf('month'));
+  const [month, setMonth] = useState<Dayjs>(() =>
+    item.immediate ? dayjs().startOf('month') : dayjs().add(1, 'month').startOf('month'),
+  );
   const [reason, setReason] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -326,6 +384,8 @@ function EditPolicyModal({
   const preview = useQuery({
     queryKey: ['policy-settings', 'preview', item.key, effectiveFrom],
     queryFn: () => previewPolicyChange(item.key, effectiveFrom),
+    // Immediate keys never affect payroll runs.
+    enabled: !item.immediate,
   });
   const affected = preview.data?.affectedRuns ?? [];
   const name = t(`${P}.keys.${item.key}.title`);
@@ -353,6 +413,8 @@ function EditPolicyModal({
   return (
     <Modal
       open
+      centered
+      width={520}
       title={t(`${P}.editTitle`, { name })}
       okText={t(`${P}.save`)}
       okButtonProps={{ disabled: !canSave }}
@@ -360,101 +422,165 @@ function EditPolicyModal({
       onOk={() => void submit()}
       onCancel={onClose}
       destroyOnHidden
+      rootClassName="erp-policy-modal"
+      className="erp-policy-modal"
     >
-      <div className="flex flex-col gap-4">
-        <p className="m-0 text-sm text-[var(--erp-text-secondary,#4B5563)]">
-          {t(`${P}.keys.${item.key}.description`)}
-        </p>
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium">{t(`${P}.newValue`)}</span>
-          <ValueEditor item={item} value={value} onChange={setValue} onError={setJsonError} />
-          {jsonError ? <span className="text-sm text-[#B42318]">{jsonError}</span> : null}
-        </div>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t(`${P}.effectiveFrom`)}
-          <DatePicker
-            picker="month"
-            allowClear={false}
-            value={month}
-            onChange={(v) => {
-              if (v) {
-                setMonth(v);
-                setConfirmed(false);
-              }
-            }}
+      <p className="erp-policy-modal-hint">
+        {t(`${P}.keys.${item.key}.description`)}
+      </p>
+      <Form layout="vertical" requiredMark={false}>
+        <Form.Item
+          label={t(`${P}.newValue`)}
+          validateStatus={jsonError ? 'error' : undefined}
+          help={jsonError ?? undefined}
+        >
+          <ValueEditor
+            item={item}
+            value={value}
+            onChange={setValue}
+            onError={setJsonError}
           />
-          <span className="text-xs font-normal text-[var(--erp-text-secondary,#4B5563)]">
-            {t(`${P}.effectiveFromHint`)}
-          </span>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t(`${P}.reason`)}
+        </Form.Item>
+        {item.immediate ? (
+          <Form.Item label={t(`${P}.effectiveFrom`)}>
+            <span className="text-sm">{t(`${P}.immediateHint`)}</span>
+          </Form.Item>
+        ) : (
+          <Form.Item
+            label={t(`${P}.effectiveFrom`)}
+            extra={t(`${P}.effectiveFromHint`)}
+          >
+            <DatePicker
+              picker="month"
+              allowClear={false}
+              className="w-full"
+              value={month}
+              onChange={(v) => {
+                if (v) {
+                  setMonth(v);
+                  setConfirmed(false);
+                }
+              }}
+            />
+          </Form.Item>
+        )}
+        <Form.Item label={t(`${P}.reason`)}>
           <Input.TextArea
             rows={3}
             maxLength={1000}
+            showCount
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t(`${P}.reasonRequired`)}
           />
-        </label>
-        {affected.length > 0 ? (
-          <Alert
-            type="warning"
-            showIcon
-            title={t(`${P}.affectedRunsTitle`, { count: affected.length })}
-            description={
-              <div className="flex flex-col gap-2">
-                <ul className="m-0 pl-4">
-                  {affected.map((run) => (
-                    <li key={run.id}>
-                      {run.effect === 'STALE'
-                        ? t(`${P}.affectedRunStale`, { run: run.runNumber, status: run.status })
-                        : t(`${P}.affectedRunReview`, { run: run.runNumber, status: run.status })}
-                    </li>
-                  ))}
-                </ul>
-                <Checkbox checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)}>
-                  {t(`${P}.confirmAffected`)}
-                </Checkbox>
-              </div>
-            }
-          />
-        ) : null}
-      </div>
+        </Form.Item>
+      </Form>
+      {affected.length > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="erp-policy-modal-alert"
+          title={t(`${P}.affectedRunsTitle`, { count: affected.length })}
+          description={
+            <div className="flex flex-col gap-2">
+              <ul className="m-0 pl-4">
+                {affected.map((run) => (
+                  <li key={run.id}>
+                    {run.effect === 'STALE'
+                      ? t(`${P}.affectedRunStale`, {
+                          run: run.runNumber,
+                          status: run.status,
+                        })
+                      : t(`${P}.affectedRunReview`, {
+                          run: run.runNumber,
+                          status: run.status,
+                        })}
+                  </li>
+                ))}
+              </ul>
+              <Checkbox
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              >
+                {t(`${P}.confirmAffected`)}
+              </Checkbox>
+            </div>
+          }
+        />
+      ) : null}
     </Modal>
   );
 }
 
-function HistoryModal({ item, onClose }: { item: PolicyItem; onClose: () => void }): React.ReactNode {
+function HistoryModal({
+  item,
+  onClose,
+}: {
+  item: PolicyItem;
+  onClose: () => void;
+}): React.ReactNode {
   const { t } = useEpcTranslation();
   return (
     <Modal
       open
-      width={820}
-      title={t(`${P}.historyTitle`, { name: t(`${P}.keys.${item.key}.title`) })}
+      centered
+      width={860}
+      title={t(`${P}.historyTitle`, {
+        name: t(`${P}.keys.${item.key}.title`),
+      })}
       footer={null}
       onCancel={onClose}
+      destroyOnHidden
+      rootClassName="erp-policy-modal"
+      className="erp-policy-modal"
     >
       {item.history.length === 0 ? (
-        <p className="m-0">{t(`${P}.historyEmpty`)}</p>
+        <p className="erp-policy-history-empty">{t(`${P}.historyEmpty`)}</p>
       ) : (
         <Table
-          size="small"
+          className="erp-policy-history-table erp-pro-table"
+          size="middle"
           rowKey="id"
           pagination={false}
           dataSource={item.history}
-          scroll={{ x: 700 }}
+          scroll={{ x: 740 }}
           columns={[
-            { title: t(`${P}.historyFrom`), dataIndex: 'effectiveFrom', render: (v: string) => monthLabel(v) },
+            {
+              title: t(`${P}.historyFrom`),
+              dataIndex: 'effectiveFrom',
+              width: 110,
+              render: (v: string) => monthLabel(v),
+            },
             {
               title: t(`${P}.historyChange`),
               key: 'change',
-              render: (_, row) =>
-                `${formatValue(item, row.previousValue, t)} → ${formatValue(item, row.value, t)}`,
+              render: (_, row) => (
+                <span className="erp-policy-history-change">
+                  {formatValue(item, row.previousValue, t)} →{' '}
+                  {formatValue(item, row.value, t)}
+                </span>
+              ),
             },
-            { title: t(`${P}.historyBy`), key: 'by', render: (_, row) => row.createdBy?.name ?? t(`${P}.unknownUser`) },
-            { title: t(`${P}.historyWhen`), dataIndex: 'createdAt', render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm') },
-            { title: t(`${P}.historyReason`), dataIndex: 'reason' },
+            {
+              title: t(`${P}.historyBy`),
+              key: 'by',
+              width: 140,
+              render: (_, row) =>
+                row.createdBy?.name ?? t(`${P}.unknownUser`),
+            },
+            {
+              title: t(`${P}.historyWhen`),
+              dataIndex: 'createdAt',
+              width: 150,
+              render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
+            },
+            {
+              title: t(`${P}.historyReason`),
+              dataIndex: 'reason',
+              render: (reason: string) => (
+                <span className="erp-policy-history-reason">{reason}</span>
+              ),
+            },
           ]}
         />
       )}
@@ -479,39 +605,67 @@ function PolicyCard({
   const editable = canEdit && !item.locked && (!item.adminOnly || canEditAdminOnly);
   const headingId = `policy-${item.key}`;
   return (
-    <section className="erp-pro-card p-4" aria-labelledby={headingId}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="erp-policy-card p-5" aria-labelledby={headingId}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 id={headingId} className="m-0 text-base font-semibold">
+            <h3 id={headingId} className="erp-policy-card-title">
               {t(`${P}.keys.${item.key}.title`)}
             </h3>
-            <Tag className="m-0" color={item.currentSource === 'SETTING' ? 'green' : 'default'}>
-              {item.currentSource === 'SETTING' ? t(`${P}.setByHr`) : t(`${P}.default`)}
-            </Tag>
-            {item.adminOnly ? <Tag className="m-0" color="purple">{t(`${P}.adminOnly`)}</Tag> : null}
-            {item.informational ? <Tag className="m-0" color="blue">{t(`${P}.informational`)}</Tag> : null}
-            {item.locked ? <Tag className="m-0">{t(`${P}.locked`)}</Tag> : null}
+            <span
+              className={`erp-policy-tag ${
+                item.currentSource === 'SETTING'
+                  ? 'erp-policy-tag--set'
+                  : 'erp-policy-tag--default'
+              }`}
+            >
+              {item.currentSource === 'SETTING'
+                ? t(`${P}.setByHr`)
+                : t(`${P}.default`)}
+            </span>
+            {item.adminOnly ? (
+              <span className="erp-policy-tag erp-policy-tag--admin">
+                {t(`${P}.adminOnly`)}
+              </span>
+            ) : null}
+            {item.informational ? (
+              <span className="erp-policy-tag erp-policy-tag--info">
+                {t(`${P}.informational`)}
+              </span>
+            ) : null}
+            {item.locked ? (
+              <span className="erp-policy-tag erp-policy-tag--locked">
+                {t(`${P}.locked`)}
+              </span>
+            ) : null}
           </div>
-          <p className="m-0 mt-1 text-sm text-[var(--erp-text-secondary,#4B5563)]">
+          <p className="erp-policy-card-desc mt-2">
             {t(`${P}.keys.${item.key}.description`)}
           </p>
-          <p className="m-0 mt-1 text-sm text-[var(--erp-text-secondary,#4B5563)]">
-            <span className="font-medium">{t(`${P}.example`)}:</span> {t(`${P}.keys.${item.key}.example`)}
+          <p className="erp-policy-card-example mt-1.5">
+            <span className="font-semibold text-slate-700">
+              {t(`${P}.example`)}:
+            </span>{' '}
+            {t(`${P}.keys.${item.key}.example`)}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 text-right">
-          <span className="text-xs text-[var(--erp-text-secondary,#4B5563)]">{t(`${P}.currentValue`)}</span>
-          <strong className="text-base">{formatValue(item, item.currentValue, t)}</strong>
+        <div className="flex min-w-[180px] flex-col items-end gap-2.5 text-right">
+          <span className="erp-policy-value-label">{t(`${P}.currentValue`)}</span>
+          <strong className="erp-policy-value">
+            {formatValue(item, item.currentValue, t)}
+          </strong>
           {item.scheduled.map((s) => (
-            <Tag key={s.effectiveFrom} color="gold" className="m-0">
+            <span
+              key={s.effectiveFrom}
+              className="erp-policy-tag erp-policy-tag--scheduled"
+            >
               {t(`${P}.scheduledFrom`, {
                 value: formatValue(item, s.value, t),
                 month: monthLabel(s.effectiveFrom),
               })}
-            </Tag>
+            </span>
           ))}
-          <div className="flex gap-2">
+          <div className="erp-policy-actions flex flex-wrap justify-end gap-2">
             <Button size="small" onClick={onHistory}>
               {t(`${P}.history`, { count: item.history.length })}
             </Button>
@@ -532,21 +686,35 @@ export default function PolicySettingsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const canViewHr = useCanViewHr();
   const query = usePolicySettings(canViewHr);
+  const [activeGroup, setActiveGroup] = useState<PolicyGroup>('ATTENDANCE');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [historyKey, setHistoryKey] = useState<string | null>(null);
   const data = query.data;
-  const byKey = useMemo(() => new Map((data?.items ?? []).map((i) => [i.key, i])), [data]);
+  const byKey = useMemo(
+    () => new Map((data?.items ?? []).map((i) => [i.key, i])),
+    [data],
+  );
+  const groupCounts = useMemo(() => {
+    const counts = Object.fromEntries(GROUPS.map((g) => [g, 0])) as Record<
+      PolicyGroup,
+      number
+    >;
+    for (const item of data?.items ?? []) {
+      counts[item.group] += 1;
+    }
+    return counts;
+  }, [data]);
 
   if (!canViewHr) {
     return (
-      <div className={`erp-pro-list-page ${DETAIL_PAGE_V2}`}>
+      <div className={PAGE_V2}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
   if (query.isLoading || !data) {
     return (
-      <div className={`erp-pro-list-page ${DETAIL_PAGE_V2}`}>
+      <div className={PAGE_V2}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -556,34 +724,63 @@ export default function PolicySettingsPageContent(): React.ReactNode {
 
   const editing = editingKey ? byKey.get(editingKey) : undefined;
   const historyItem = historyKey ? byKey.get(historyKey) : undefined;
+  const groupItems = data.items.filter((item) => item.group === activeGroup);
 
   return (
-    <div className={`erp-pro-list-page ${DETAIL_PAGE_V2}`}>
-      {!data.canEdit ? <Alert type="info" showIcon title={t(`${P}.readOnlyNotice`)} /> : null}
-      <Tabs
-        items={GROUPS.map((group) => ({
-          key: group,
-          label: t(`${P}.groups.${group}`),
-          children: (
-            <div className="flex flex-col gap-3">
-              {data.items
-                .filter((item) => item.group === group)
-                .map((item) => (
-                  <PolicyCard
-                    key={item.key}
-                    item={item}
-                    canEdit={data.canEdit}
-                    canEditAdminOnly={data.canEditAdminOnly}
-                    onEdit={() => setEditingKey(item.key)}
-                    onHistory={() => setHistoryKey(item.key)}
-                  />
-                ))}
-            </div>
-          ),
-        }))}
-      />
-      {editing ? <EditPolicyModal item={editing} onClose={() => setEditingKey(null)} /> : null}
-      {historyItem ? <HistoryModal item={historyItem} onClose={() => setHistoryKey(null)} /> : null}
+    <div className={PAGE_V2}>
+      {!data.canEdit ? (
+        <Alert type="info" showIcon title={t(`${P}.readOnlyNotice`)} />
+      ) : null}
+
+      <div className="erp-policy-tabbar-card">
+        <div
+          className="erp-policy-tabbar"
+          role="tablist"
+          aria-label={t(`${P}.title`)}
+        >
+          {GROUPS.map((group) => (
+            <button
+              key={group}
+              type="button"
+              role="tab"
+              id={`policy-tab-${group}`}
+              aria-selected={activeGroup === group}
+              aria-controls={`policy-panel-${group}`}
+              onClick={() => setActiveGroup(group)}
+            >
+              {t(`${P}.groups.${group}`)}
+              <span className="erp-policy-tab-count">
+                {groupCounts[group]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`policy-panel-${activeGroup}`}
+        aria-labelledby={`policy-tab-${activeGroup}`}
+        className="flex flex-col gap-4"
+      >
+        {groupItems.map((item) => (
+          <PolicyCard
+            key={item.key}
+            item={item}
+            canEdit={data.canEdit}
+            canEditAdminOnly={data.canEditAdminOnly}
+            onEdit={() => setEditingKey(item.key)}
+            onHistory={() => setHistoryKey(item.key)}
+          />
+        ))}
+      </div>
+
+      {editing ? (
+        <EditPolicyModal item={editing} onClose={() => setEditingKey(null)} />
+      ) : null}
+      {historyItem ? (
+        <HistoryModal item={historyItem} onClose={() => setHistoryKey(null)} />
+      ) : null}
     </div>
   );
 }
