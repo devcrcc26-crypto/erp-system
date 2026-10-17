@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -9,7 +11,6 @@ import {
   Input,
   Select,
   Spin,
-  Tabs,
   Tooltip,
 } from 'antd';
 import {
@@ -354,19 +355,35 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     : t('pages.hr.perDiem.myListDescription');
 
   const listTabs = (
-    <Tabs
-      activeKey={listTab}
-      onChange={(key) => setListTab(key as 'advances' | 'settlements')}
-      items={[
-        { key: 'advances', label: t('pages.hr.perDiem.advancesTab') },
-        { key: 'settlements', label: t('pages.hr.perDiem.settlementsTab') },
-      ]}
-    />
+    <div className="erp-hr-travel-tabbar-card">
+      <div
+        className="erp-hr-travel-tabbar"
+        role="tablist"
+        aria-label={pageTitle}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={listTab === 'advances'}
+          onClick={() => setListTab('advances')}
+        >
+          {t('pages.hr.perDiem.advancesTab')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={listTab === 'settlements'}
+          onClick={() => setListTab('settlements')}
+        >
+          {t('pages.hr.perDiem.settlementsTab')}
+        </button>
+      </div>
+    </div>
   );
 
   if (listTab === 'settlements') {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
         <PerDiemSettlementsList />
       </div>
@@ -375,9 +392,9 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="erp-pro-card flex justify-center p-12">
           <Spin />
         </div>
       </div>
@@ -385,7 +402,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
       {listTabs}
       {importOpen ? (
         <HrImportModal

@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
 import {
@@ -245,7 +247,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -255,7 +257,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isError || !application) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -278,7 +280,7 @@ export default function FlightApplicationDetailPageContent({
   const tripTypeLabel = formatTripType(application.tripType, t);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="flightPassengers"
@@ -480,6 +482,7 @@ export default function FlightApplicationDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelFlightApplicationTitle')}
         description={t('hr.dialog.cancelFlightApplicationDesc')}
         confirmLabel={t('hr.buttons.cancel')}

@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useRouter } from 'next/navigation';
 import ExpenseClaimForm from '@/components/modules/hr/expense-claim/ExpenseClaimForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -22,7 +24,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-expense-claim-form-page">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page">
       <HrFormPageShell
         title={t('pages.hr.expenseClaim.new')}
         description={t('pages.hr.expenseClaim.formDescription')}

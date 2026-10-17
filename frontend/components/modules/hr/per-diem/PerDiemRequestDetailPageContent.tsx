@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Alert, Button, Form, Grid, Input, InputNumber, Modal, Skeleton, Space } from 'antd';
 import { StopOutlined } from '@ant-design/icons';
@@ -135,7 +137,7 @@ export default function PerDiemRequestDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -145,7 +147,7 @@ export default function PerDiemRequestDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -172,7 +174,7 @@ export default function PerDiemRequestDetailPageContent({
       : null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -459,6 +461,8 @@ export default function PerDiemRequestDetailPageContent({
 
       <Modal
         open={markPaidOpen}
+        centered
+        width={520}
         title={t('pages.hr.perDiem.markPaidTitle')}
         onCancel={() => {
           setMarkPaidOpen(false);
@@ -467,8 +471,11 @@ export default function PerDiemRequestDetailPageContent({
         onOk={() => void handleMarkPaid()}
         confirmLoading={markPaidMutation.isPending}
         okText={t('pages.hr.perDiem.markPaid')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
       >
-        <p className="erp-users-cell-sub mb-3">
+        <p className="erp-hr-travel-modal-hint">
           {t('pages.hr.perDiem.markPaidDescription')}
         </p>
         <Form
@@ -500,6 +507,7 @@ export default function PerDiemRequestDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelPerDiemTitle')}
         description={t('hr.dialog.cancelPerDiemDesc')}
         confirmLabel={t('hr.buttons.cancel')}

@@ -189,7 +189,7 @@ export function StepperForm({
 
   return (
     <div
-      className={`erp-stepper-form flex w-full min-h-0 flex-1 flex-col ${
+      className={`erp-stepper-form flex w-full min-h-0 min-w-0 max-w-full flex-1 flex-col ${
         isSections ? 'erp-advanced-form' : ''
       } ${compact ? 'erp-stepper-form--compact' : ''}`}
       style={{
@@ -222,7 +222,7 @@ export function StepperForm({
       </div>
 
       <div
-        className={`min-h-0 ${compact ? 'shrink-0' : 'flex-1'} overflow-y-auto px-0 ${
+        className={`min-h-0 min-w-0 max-w-full ${compact ? 'shrink-0' : 'flex-1'} overflow-y-auto overflow-x-hidden px-0 ${
           compact ? 'py-2' : 'py-4'
         }`}
         style={{ background: isSections ? 'transparent' : tokens.colorPageBg }}

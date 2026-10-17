@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { Alert, Button, Grid, Skeleton } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
@@ -41,7 +43,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (!canManagePerDiemRates) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -49,7 +51,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isLoading || rateQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -59,7 +61,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -86,7 +88,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
   const employeeName = formatUserName(employee);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

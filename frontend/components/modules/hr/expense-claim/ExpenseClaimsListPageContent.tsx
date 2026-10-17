@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -396,7 +398,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-expense-claims-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -405,7 +407,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-expense-claims-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
       <ConfirmDialog
         open={Boolean(deletingClaim)}
         title={t('hr.empty.deleteExpenseClaimTitle')}

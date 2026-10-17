@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useRouter } from 'next/navigation';
 import PerDiemSettlementForm from '@/components/modules/hr/per-diem/PerDiemSettlementForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -18,7 +20,7 @@ export default function PerDiemSettlementFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-per-diem-form-page">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-per-diem-form-page">
       <HrFormPageShell
         title={t('pages.hr.perDiemSettlement.new')}
         description={t('pages.hr.perDiemSettlement.formDescription')}

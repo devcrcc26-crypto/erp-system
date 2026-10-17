@@ -1,5 +1,8 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/hr/overtime/overtime-entries-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -481,7 +484,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -491,7 +494,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isError || !claim) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -516,7 +519,7 @@ export default function ExpenseClaimDetailPageContent({
     claim.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -557,7 +560,7 @@ export default function ExpenseClaimDetailPageContent({
         : 420;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -717,81 +720,93 @@ export default function ExpenseClaimDetailPageContent({
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection
-              title={t('hr.section.items')}
-              bodyClassName="!p-0"
-              action={
-                <Space.Compact>
-                  <Button
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    loading={exporting}
-                    onClick={() => void handleExportItems()}
-                  >
-                    {t('pages.hr.expenseClaim.exportItems')}
-                  </Button>
-                  {canEditItems ? (
-                    <>
-                      <Button
-                        size="small"
-                        icon={<UploadOutlined />}
-                        onClick={() => setImportOpen(true)}
-                      >
-                        {t('common.importFromExcel')}
-                      </Button>
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={openAddItem}
-                      >
-                        {t('hr.buttons.addItem')}
-                      </Button>
-                    </>
-                  ) : null}
-                </Space.Compact>
-              }
+        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+          <section
+            className="erp-pro-card erp-ot-entries min-w-0"
+            aria-labelledby="expense-items-title"
+          >
+            <div className="erp-ot-entries-header">
+              <h3 id="expense-items-title" className="erp-ot-entries-title">
+                {t('hr.section.items')}
+                <span className="erp-ot-entries-count">
+                  {claim.items.length.toLocaleString()}
+                </span>
+              </h3>
+              <div className="erp-ot-entries-actions">
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  disabled={claim.items.length === 0}
+                  onClick={() => void handleExportItems()}
+                  aria-label={t('pages.hr.expenseClaim.exportItems')}
+                >
+                  {isNarrow
+                    ? undefined
+                    : t('pages.hr.expenseClaim.exportItems')}
+                </Button>
+                {canEditItems ? (
+                  <>
+                    <Button
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                      aria-label={t('common.importFromExcel')}
+                    >
+                      {isNarrow ? undefined : t('common.importFromExcel')}
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={openAddItem}
+                    >
+                      {t('hr.buttons.addItem')}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+            <DocumentPreviewGroup
+              documents={claim.items.flatMap((item) =>
+                item.receipt ? [item.receipt] : [],
+              )}
             >
-              <DocumentPreviewGroup documents={claim.items.flatMap((item) => (item.receipt ? [item.receipt] : []))}>
-                <DataTable<ExpenseClaimItem>
-                  rowKey="id"
-                  className="erp-pro-table erp-users-table"
-                  size="small"
-                  columns={columns}
-                  dataSource={claim.items}
-                  pagination={false}
-                  scroll={{ x: tableScrollX }}
-                  locale={{
-                    emptyText: (
-                      <TableEmptyState
-                        icon={<Receipt size={28} strokeWidth={1.5} />}
-                        title={t('hr.empty.noItems')}
-                        description={t('pages.hr.expenseClaim.itemsStepDescription')}
-                        action={
-                          canEditItems
-                            ? {
-                                label: t('hr.buttons.addItem'),
-                                onClick: openAddItem,
-                              }
-                            : undefined
-                        }
-                      />
-                    ),
-                  }}
-                />
-              </DocumentPreviewGroup>
-            </DetailSection>
+              <DataTable<ExpenseClaimItem>
+                rowKey="id"
+                className="erp-pro-table erp-users-table"
+                size="middle"
+                columns={columns}
+                dataSource={claim.items}
+                pagination={false}
+                scroll={{ x: tableScrollX }}
+                locale={{
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<Receipt size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t(
+                        'pages.hr.expenseClaim.itemsStepDescription',
+                      )}
+                      action={
+                        canEditItems
+                          ? {
+                              label: t('hr.buttons.addItem'),
+                              onClick: openAddItem,
+                            }
+                          : undefined
+                      }
+                    />
+                  ),
+                }}
+              />
+            </DocumentPreviewGroup>
+          </section>
 
-            {claim.description?.trim() ? (
-              <DetailSection title={t('hr.form.description')}>
-                <p className="m-0 whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
-                  {claim.description}
-                </p>
-              </DetailSection>
-            ) : null}
-          </div>
+          {claim.description?.trim() ? (
+            <DetailSection title={t('hr.form.description')}>
+              <p className="m-0 whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
+                {claim.description}
+              </p>
+            </DetailSection>
+          ) : null}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
@@ -824,6 +839,7 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={confirmSubmit}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.submitExpenseClaimTitle')}
         description={t('hr.dialog.submitExpenseClaimDesc')}
         confirmLabel={t('hr.buttons.submitClaim')}
@@ -834,6 +850,7 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelExpenseClaimTitle')}
         description={t('hr.dialog.cancelExpenseClaimDesc')}
         confirmLabel={t('hr.buttons.cancelClaim')}
@@ -845,6 +862,7 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={confirmDeleteClaim}
+        className="erp-hr-travel-modal"
         title={t('hr.empty.deleteExpenseClaimTitle')}
         description={t('hr.empty.deleteExpenseClaimDescription')}
         confirmLabel={t('common.delete')}
@@ -856,6 +874,7 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.deleteExpenseClaimItemTitle')}
         description={t('hr.dialog.deleteExpenseClaimItemDesc')}
         confirmLabel={t('common.delete')}

@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Alert, Button, DatePicker, Form, Grid, Input, Modal, Skeleton } from 'antd';
 import { StopOutlined } from '@ant-design/icons';
@@ -116,7 +118,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -126,7 +128,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isError || !settlement) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -146,7 +148,7 @@ export default function PerDiemSettlementDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="flex min-w-0 items-center gap-2">
@@ -313,6 +315,7 @@ export default function PerDiemSettlementDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.messages.confirmCancelPerDiemSettlement')}
         description={t('hr.messages.confirmCancelPerDiemSettlementDesc')}
         confirmLabel={t('hr.buttons.cancel')}
@@ -324,11 +327,16 @@ export default function PerDiemSettlementDetailPageContent({
 
       <Modal
         open={cashOpen}
+        centered
+        width={520}
         title={t('pages.hr.perDiemSettlement.recordCashReturned')}
         onCancel={() => setCashOpen(false)}
         onOk={() => void handleCash()}
         confirmLoading={cashMutation.isPending}
         okText={t('common.save')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
       >
         <Form form={cashForm} layout="vertical">
           <Form.Item
