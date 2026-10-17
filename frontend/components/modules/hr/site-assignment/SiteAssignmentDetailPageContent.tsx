@@ -13,6 +13,7 @@ import { ArrowLeft, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import SiteAssignmentOvertimeImpact from '@/components/modules/hr/site-assignment/SiteAssignmentOvertimeImpact';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -77,6 +78,9 @@ export default function SiteAssignmentDetailPageContent({
   const [confirmCancelSubmitted, setConfirmCancelSubmitted] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [shortenForm] = Form.useForm();
+  const shortenEndDate = Form.useWatch('endDate', shortenForm) as
+    | { format: (s: string) => string }
+    | undefined;
 
   const row = detailQuery.data;
   const isOwner = row?.employeeId === currentUser.data?.id;
@@ -340,6 +344,12 @@ export default function SiteAssignmentDetailPageContent({
         onOk={() => shortenForm.submit()}
         confirmLoading={shortenMutation.isPending}
       >
+        <SiteAssignmentOvertimeImpact
+          id={id}
+          mode="shorten"
+          endDate={shortenEndDate ? shortenEndDate.format('YYYY-MM-DD') : null}
+          open={shortenOpen}
+        />
         <Form
           form={shortenForm}
           layout="vertical"
@@ -414,6 +424,12 @@ export default function SiteAssignmentDetailPageContent({
         }}
         confirmLoading={cancelApprovedMutation.isPending}
       >
+        <SiteAssignmentOvertimeImpact
+          id={id}
+          mode="cancel"
+          endDate={null}
+          open={cancelHrOpen}
+        />
         <Input.TextArea
           rows={3}
           value={cancelReason}

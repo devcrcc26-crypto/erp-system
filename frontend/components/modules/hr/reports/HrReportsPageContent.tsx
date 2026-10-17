@@ -640,6 +640,29 @@ export default function HrReportsPageContent(): React.ReactNode {
                 data={overtimeMixChart}
                 emptyDescription={chartEmpty}
               />
+              {report.overtime.siteAssignmentHours > 0 ? (
+                <dl
+                  className="m-0 mt-3 grid grid-cols-1 gap-2 border-t border-[var(--color-border-tertiary)] pt-3 text-[13px] sm:grid-cols-3"
+                  aria-label={t(`${PAGE}.sections.siteBreakdown`)}
+                >
+                  {(
+                    [
+                      ['siteAssignmentHours', report.overtime.siteAssignmentHours],
+                      ['withinScheduleSite', report.overtime.siteWithinScheduleHours],
+                      ['otherOvertime', report.overtime.otherHours],
+                    ] as const
+                  ).map(([key, hours]) => (
+                    <div key={key} className="min-w-0">
+                      <dt className="text-[12px] text-[var(--color-text-secondary)]">
+                        {t(`${PAGE}.sections.${key}`)}
+                      </dt>
+                      <dd className="m-0 font-semibold tabular-nums">
+                        {hours.toLocaleString()}h
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
             </ChartCard>
           </div>
 

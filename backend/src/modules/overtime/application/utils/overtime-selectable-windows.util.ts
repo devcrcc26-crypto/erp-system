@@ -42,6 +42,11 @@ export interface SelectableWindowsInput {
   hasFullDayLeave?: boolean;
   /** Policy lunchCountsAsOvertime as of the date; when false the lunch gap is not selectable. */
   lunchCountsAsOvertime?: boolean;
+  /**
+   * Site-assignment day with siteDayScheduledHoursClaimable on: scheduled hours
+   * are selectable too (lunch and leave rules unchanged).
+   */
+  scheduledHoursClaimable?: boolean;
 }
 
 export interface SelectableWindowsResult {
@@ -221,8 +226,21 @@ export function computeSelectableOvertimeWindows(
     : null;
 
   let base: Array<{ start: number; end: number }> = [];
+  const lunchCounts =
+    input.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime;
 
-  if (input.isHalfDay) {
+  if (input.scheduledHoursClaimable) {
+    // Site day: the whole calendar day, minus lunch when it does not count.
+    base = [{ start: 0, end: END_OF_DAY_MINUTES }];
+    if (
+      !input.isHalfDay &&
+      !lunchCounts &&
+      morningEnd != null &&
+      afternoonStart != null
+    ) {
+      base = subtractWindows(base, [{ start: morningEnd, end: afternoonStart }]);
+    }
+  } else if (input.isHalfDay) {
     // Half day: OT before morning (Night/Regular classification) + after morning
     // end through 24:00 (Weekend). Morning itself is not selectable.
     if (morningStart != null && morningStart > 0) {
@@ -246,8 +264,6 @@ export function computeSelectableOvertimeWindows(
     if (dutyEnd != null && dutyEnd < END_OF_DAY_MINUTES) {
       base.push({ start: dutyEnd, end: END_OF_DAY_MINUTES });
     }
-    const lunchCounts =
-      input.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime;
     if (lunchCounts && morningEnd != null && afternoonStart != null) {
       base.push({ start: morningEnd, end: afternoonStart });
     }

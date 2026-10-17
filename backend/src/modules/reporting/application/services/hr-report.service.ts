@@ -77,6 +77,12 @@ export interface HrReport {
     nightHours: number;
     weekendHours: number;
     holidayHours: number;
+    /** Approved OT on site-assignment days (label "Site assignment"). */
+    siteAssignmentHours: number;
+    /** Subtotal: site-day OT inside scheduled hours ("Within scheduled hours — site"). */
+    siteWithinScheduleHours: number;
+    /** Approved OT outside that subtotal. */
+    otherHours: number;
     byStatus: Record<string, number>;
     topEmployees: HrReportEmployeeOvertimeRow[];
   };
@@ -302,6 +308,10 @@ export class HrReportService {
           totalWeekendHours: true,
           totalHolidayHours: true,
           totalHours: true,
+          entries: {
+            where: { siteAssignmentId: { not: null } },
+            select: { totalHours: true, siteWithinScheduleHours: true },
+          },
           employee: {
             select: {
               firstName: true,
@@ -579,6 +589,10 @@ export class HrReportService {
       totalWeekendHours: Prisma.Decimal;
       totalHolidayHours: Prisma.Decimal;
       totalHours: Prisma.Decimal | null;
+      entries?: Array<{
+        totalHours: Prisma.Decimal | null;
+        siteWithinScheduleHours: Prisma.Decimal;
+      }>;
       employee: {
         firstName: string;
         middleName?: string | null;
@@ -598,6 +612,8 @@ export class HrReportService {
     let nightHours = 0;
     let weekendHours = 0;
     let holidayHours = 0;
+    let siteAssignmentHours = 0;
+    let siteWithinScheduleHours = 0;
 
     for (const row of rows) {
       byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
@@ -612,6 +628,10 @@ export class HrReportService {
       nightHours += toNumber(row.totalNightHours);
       weekendHours += toNumber(row.totalWeekendHours);
       holidayHours += toNumber(row.totalHolidayHours);
+      for (const entry of row.entries ?? []) {
+        siteAssignmentHours += toNumber(entry.totalHours);
+        siteWithinScheduleHours += toNumber(entry.siteWithinScheduleHours);
+      }
 
       const employee = employeeTotals.get(row.employeeId) ?? {
         employeeId: row.employeeId,
@@ -635,6 +655,9 @@ export class HrReportService {
       nightHours: round(nightHours),
       weekendHours: round(weekendHours),
       holidayHours: round(holidayHours),
+      siteAssignmentHours: round(siteAssignmentHours),
+      siteWithinScheduleHours: round(siteWithinScheduleHours),
+      otherHours: round(approvedHours - siteWithinScheduleHours),
       byStatus,
       topEmployees: [...employeeTotals.values()]
         .map((row) => ({ ...row, totalHours: round(row.totalHours) }))

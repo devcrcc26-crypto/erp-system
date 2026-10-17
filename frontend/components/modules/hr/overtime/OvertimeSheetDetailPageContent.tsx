@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
+import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
@@ -413,6 +414,7 @@ export default function OvertimeSheetDetailPageContent({
                 </span>
               </div>
             ) : null}
+            <OvertimeSiteChips entry={row} />
           </div>
         ),
       },

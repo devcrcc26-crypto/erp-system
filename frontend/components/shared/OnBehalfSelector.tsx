@@ -149,7 +149,10 @@ export default function OnBehalfSelector({
   }
 
   const isOnBehalf = enabled && Boolean(selected);
-  const showAutoApprove = isOnBehalf && chainQuery.data?.isInChain === true;
+  const showAutoApprove =
+    isOnBehalf &&
+    chainQuery.data?.isInChain === true &&
+    chainQuery.data?.autoApproveAllowed !== false;
 
   return (
     <div className="flex flex-col gap-4">

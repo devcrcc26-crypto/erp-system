@@ -35,6 +35,11 @@ export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
  *
  * Overnight: each block uses the calendar day it falls on (start-day context, then
  * nextDayContext for minutes on the following day).
+ *
+ * Site-assignment day (`scheduledHoursClaimable`): scheduled morning/afternoon
+ * blocks are not skipped; they fall through to Night/Regular like any other time
+ * (a half-day morning is Regular). Lunch (lunchCountsAsOvertime) and leave
+ * windows stay excluded. Such blocks are also counted in `withinScheduleHours`.
  */
 
 export interface OvertimeDayContext {
@@ -49,6 +54,11 @@ export interface OvertimeDayContext {
   excludedWindows?: Array<{ start: string; end: string }>;
   /** Policy lunchCountsAsOvertime as of the entry date (default: policy default). */
   lunchCountsAsOvertime?: boolean;
+  /**
+   * Date is inside an approved site assignment and the
+   * siteDayScheduledHoursClaimable policy is on: scheduled hours are claimable.
+   */
+  scheduledHoursClaimable?: boolean;
 }
 
 export interface OvertimeHoursBuckets {
@@ -56,6 +66,12 @@ export interface OvertimeHoursBuckets {
   nightHours: number;
   weekendHours: number;
   holidayHours: number;
+}
+
+export interface OvertimeHoursDetailed {
+  buckets: OvertimeHoursBuckets;
+  /** Bucket hours that fell inside scheduled hours on a site day (subset, not extra). */
+  withinScheduleHours: number;
 }
 
 const BLOCK_MINUTES = 15;
@@ -88,6 +104,29 @@ export function calculateOvertimeHours(
   nextDayContext?: OvertimeDayContext,
   options?: { round?: boolean },
 ): OvertimeHoursBuckets {
+  return calculateOvertimeHoursDetailed(
+    date,
+    startTime,
+    endTime,
+    context,
+    isOvernight,
+    nextDayContext,
+    options,
+  ).buckets;
+}
+
+/**
+ * Same as {@link calculateOvertimeHours}, plus the site-day within-schedule subtotal.
+ */
+export function calculateOvertimeHoursDetailed(
+  date: Date,
+  startTime: string,
+  endTime: string,
+  context: OvertimeDayContext,
+  isOvernight = false,
+  nextDayContext?: OvertimeDayContext,
+  options?: { round?: boolean },
+): OvertimeHoursDetailed {
   void date;
   const shouldRound = options?.round !== false;
   const startMinutes = parseTimeToMinutes(startTime);
@@ -107,6 +146,7 @@ export function calculateOvertimeHours(
     weekendHours: 0,
     holidayHours: 0,
   };
+  let withinScheduleHours = 0;
 
   for (let m = startMinutes; m < endMinutes; m += BLOCK_MINUTES) {
     const blockLength = Math.min(BLOCK_MINUTES, endMinutes - m);
@@ -118,20 +158,26 @@ export function calculateOvertimeHours(
       isOvernight,
     );
     const minutesInDay = ((m % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-    const category = classifyBlock(minutesInDay, blockContext);
-    if (category) {
-      buckets[category] += blockLength / 60;
+    const block = classifyBlock(minutesInDay, blockContext);
+    if (block) {
+      buckets[block.category] += blockLength / 60;
+      if (block.withinSchedule) {
+        withinScheduleHours += blockLength / 60;
+      }
     }
   }
 
   if (!shouldRound) {
-    return { ...buckets };
+    return { buckets: { ...buckets }, withinScheduleHours };
   }
   return {
-    regularHours: roundHours(buckets.regularHours),
-    nightHours: roundHours(buckets.nightHours),
-    weekendHours: roundHours(buckets.weekendHours),
-    holidayHours: roundHours(buckets.holidayHours),
+    buckets: {
+      regularHours: roundHours(buckets.regularHours),
+      nightHours: roundHours(buckets.nightHours),
+      weekendHours: roundHours(buckets.weekendHours),
+      holidayHours: roundHours(buckets.holidayHours),
+    },
+    withinScheduleHours: roundHours(withinScheduleHours),
   };
 }
 
@@ -204,47 +250,66 @@ function resolveBlockContext(
   throw new BadRequestException(OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE);
 }
 
+interface ClassifiedBlock {
+  category: OvertimeCategory;
+  /** Scheduled time made claimable by a site assignment. */
+  withinSchedule: boolean;
+}
+
 function classifyBlock(
   minutesInDay: number,
   context: OvertimeDayContext,
-): OvertimeCategory | null {
+): ClassifiedBlock | null {
   if (context.isHoliday) {
-    return 'holidayHours';
+    return { category: 'holidayHours', withinSchedule: false };
   }
   if (!context.isWorkingDay) {
-    return 'weekendHours';
+    return { category: 'weekendHours', withinSchedule: false };
   }
 
   const morningStart = parseHhMmToMinutes(context.morningStart);
   const morningEnd = parseHhMmToMinutes(context.morningEnd);
+  const claimable = Boolean(context.scheduledHoursClaimable);
 
   if (context.isHalfDay) {
     if (isInsideWindow(minutesInDay, morningStart, morningEnd)) {
-      return null;
+      if (!claimable || isInsideExcludedWindow(minutesInDay, context)) {
+        return null;
+      }
+      // Site day: the half-day morning is normal-band OT, not Weekend.
+      return { category: dayBand(minutesInDay), withinSchedule: true };
     }
     // After the half-day morning ends → Weekend (incl. evening/night).
     if (morningEnd != null && minutesInDay >= morningEnd) {
-      return 'weekendHours';
+      return { category: 'weekendHours', withinSchedule: false };
     }
     // Before morning: same as a weekday (Night then Regular).
-    if (isNightBlock(minutesInDay)) {
-      return 'nightHours';
-    }
-    return 'regularHours';
+    return { category: dayBand(minutesInDay), withinSchedule: false };
   }
 
-  if (isInsideScheduledWorkingTime(minutesInDay, context)) {
+  if (
+    isInsideExcludedWindow(minutesInDay, context) ||
+    isInsideExcludedLunch(minutesInDay, context)
+  ) {
     return null;
   }
 
-  if (isNightBlock(minutesInDay)) {
-    return 'nightHours';
+  if (isInsideScheduledDutyWindow(minutesInDay, context)) {
+    if (!claimable) {
+      return null;
+    }
+    return { category: dayBand(minutesInDay), withinSchedule: true };
   }
 
-  return 'regularHours';
+  return { category: dayBand(minutesInDay), withinSchedule: false };
 }
 
-function isInsideScheduledWorkingTime(
+/** Night (22:00–06:00) or Regular for a working-day block. */
+function dayBand(minutesInDay: number): OvertimeCategory {
+  return isNightBlock(minutesInDay) ? 'nightHours' : 'regularHours';
+}
+
+function isInsideScheduledDutyWindow(
   minutesInDay: number,
   context: OvertimeDayContext,
 ): boolean {
@@ -253,28 +318,37 @@ function isInsideScheduledWorkingTime(
   const afternoonStart = parseHhMmToMinutes(context.afternoonStart);
   const afternoonEnd = parseHhMmToMinutes(context.afternoonEnd);
 
-  if (isInsideWindow(minutesInDay, morningStart, morningEnd)) {
-    return true;
-  }
-  if (isInsideWindow(minutesInDay, afternoonStart, afternoonEnd)) {
-    return true;
-  }
-  // Lunch gap between morning and afternoon is not overtime when the policy is off.
-  if (
+  return (
+    isInsideWindow(minutesInDay, morningStart, morningEnd) ||
+    isInsideWindow(minutesInDay, afternoonStart, afternoonEnd)
+  );
+}
+
+/** Lunch gap between morning and afternoon is not overtime when the policy is off. */
+function isInsideExcludedLunch(
+  minutesInDay: number,
+  context: OvertimeDayContext,
+): boolean {
+  const morningEnd = parseHhMmToMinutes(context.morningEnd);
+  const afternoonStart = parseHhMmToMinutes(context.afternoonStart);
+  return (
     !(context.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime) &&
     morningEnd != null &&
     afternoonStart != null &&
     isInsideWindow(minutesInDay, morningEnd, afternoonStart)
-  ) {
-    return true;
-  }
-  if (context.excludedWindows?.length) {
-    for (const window of context.excludedWindows) {
-      const start = parseHhMmToMinutes(window.start);
-      const end = parseHhMmToMinutes(window.end);
-      if (isInsideWindow(minutesInDay, start, end)) {
-        return true;
-      }
+  );
+}
+
+/** Leave (or other) windows that are never overtime, site day or not. */
+function isInsideExcludedWindow(
+  minutesInDay: number,
+  context: OvertimeDayContext,
+): boolean {
+  for (const window of context.excludedWindows ?? []) {
+    const start = parseHhMmToMinutes(window.start);
+    const end = parseHhMmToMinutes(window.end);
+    if (isInsideWindow(minutesInDay, start, end)) {
+      return true;
     }
   }
   return false;

@@ -1,6 +1,8 @@
 import type { OvertimeDayContext } from '../../../overtime/application/utils/overtime-hours.util';
 import {
   assignOvertimeToSalaryPeriods,
+  buildOvertimeDayContext,
+  datedEntryFromExactMinutes,
   calculateOvertimePay,
   datedEntriesFromExactMinutes,
   OVERNIGHT_OT_DATE_ASSIGNMENT,
@@ -320,5 +322,32 @@ describe('datedEntriesFromExactMinutes (payroll pricing)', () => {
       },
     ]);
     expect(evening[0]!.normalHours).toBeCloseTo(1 + 50 / 60, 10);
+  });
+});
+
+describe('site-assignment entries in payroll', () => {
+  const weekday = {
+    isWorkingDay: true,
+    isHalfDay: false,
+    morningStart: '08:30',
+    morningEnd: '12:30',
+    afternoonStart: '13:30',
+    afternoonEnd: '17:30',
+  };
+  const entry = (claimable: boolean) =>
+    datedEntryFromExactMinutes({
+      date: utc(2026, 9, 9),
+      startTime: '09:00',
+      endTime: '12:00',
+      isOvernight: false,
+      context: buildOvertimeDayContext(weekday, false, false, claimable),
+    });
+
+  it('entry priced as a site day (stored within-schedule hours) is paid as normal OT', () => {
+    expect(entry(true).normalHours).toBe(3);
+  });
+
+  it('office-day entries keep excluding scheduled hours', () => {
+    expect(entry(false).normalHours).toBe(0);
   });
 });

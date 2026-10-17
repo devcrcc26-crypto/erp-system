@@ -489,7 +489,8 @@ export class HrApprovalChainService {
   /**
    * Site assignment: Employee → Reports to only.
    * No Department Head / HR Manager / GM fallbacks.
-   * GM / Managing Director / System Administrator → empty chain (auto-approve).
+   * GM / Managing Director / System Administrator → HR Manager (never an empty
+   * chain: approved assignments make scheduled hours claimable as OT).
    * Missing Reports to → BadRequestException.
    */
   async buildSiteAssignmentApprovalChain(
@@ -497,13 +498,47 @@ export class HrApprovalChainService {
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     // AUTO_APPROVE_WRAP:buildSiteAssignmentApprovalChain
-    return this.withAutoApproveFallback(async () => {
+    return this.withAutoApproveFallback(() =>
+      this.buildReportsToOnlyChain(employeeId, companyId, 'HR_MANAGER'),
+    );
+  }
 
+  /**
+   * Work from home: Employee → Reports to only.
+   * GM / Managing Director / System Administrator → empty chain (auto-approve).
+   * Missing Reports to → BadRequestException.
+   */
+  async buildWorkFromHomeApprovalChain(
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildWorkFromHomeApprovalChain
+    return this.withAutoApproveFallback(() =>
+      this.buildReportsToOnlyChain(employeeId, companyId, 'AUTO_APPROVE'),
+    );
+  }
+
+  private async buildReportsToOnlyChain(
+    employeeId: string,
+    companyId: string,
+    executives: 'AUTO_APPROVE' | 'HR_MANAGER',
+  ): Promise<ResolvedApprovalTier[]> {
     const primaryRole =
       (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
 
     if (AUTO_APPROVE_ROLES.includes(primaryRole)) {
-      return [];
+      if (executives === 'AUTO_APPROVE') {
+        return [];
+      }
+      const hrManager = await this.getHRManager(companyId);
+      return this.finalizeTiers([
+        {
+          order: 1,
+          label: 'HR Manager',
+          approverId: hrManager.id,
+          resolver: 'ROLE:HR Manager',
+        },
+      ]);
     }
 
     const reportsTo = await this.getReportsToRequired(employeeId, companyId);
@@ -516,8 +551,6 @@ export class HrApprovalChainService {
         resolver: 'REPORTS_TO',
       },
     ]);
-  
-    });
   }
 
   /**
@@ -645,8 +678,9 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
       case 'SITE_ASSIGNMENT':
-      case 'WORK_FROM_HOME':
         return this.buildSiteAssignmentApprovalChain(employeeId, companyId);
+      case 'WORK_FROM_HOME':
+        return this.buildWorkFromHomeApprovalChain(employeeId, companyId);
 
       case 'LEAVE_REQUEST':
       case 'OVERTIME_APPLICATION':

@@ -180,6 +180,12 @@ export interface HrReport {
     nightHours: number;
     weekendHours: number;
     holidayHours: number;
+    /** Approved OT on site-assignment days. */
+    siteAssignmentHours: number;
+    /** Subtotal: site-day OT inside scheduled hours. */
+    siteWithinScheduleHours: number;
+    /** Approved OT outside that subtotal. */
+    otherHours: number;
     byStatus: Record<string, number>;
     topEmployees: HrReportEmployeeOvertimeRow[];
   };
