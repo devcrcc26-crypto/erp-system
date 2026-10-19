@@ -9,9 +9,6 @@ export const LeavePolicyImportController = createHrImportController({
   tag: 'HR Leave Policy Import',
   templateFileName: 'leave-policy-import-template.xlsx',
   entityLabel: 'leave policy',
-  permissions: [
-    { module: 'hr', action: 'edit' },
-    { module: 'hr', action: 'create' },
-  ],
+  permissions: [{ module: 'leave', action: 'manage' }],
   service: LeavePolicyImportService,
 });

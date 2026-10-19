@@ -31,7 +31,7 @@ export class LeavePolicyController {
 
   @Get('active')
   @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
+    { module: 'leave', action: 'manage' },
     { module: 'users', action: 'view' },
     { module: 'users', action: 'create' },
     { module: 'users', action: 'edit' },
@@ -44,14 +44,14 @@ export class LeavePolicyController {
   }
 
   @Get()
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'List leave policies with rules and employee counts' })
   list(@CurrentCompany() companyId: string): Promise<unknown[]> {
     return this.leavePolicyService.listPolicies(companyId);
   }
 
   @Post('refresh-balances')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'Manually refresh leave balances for a year' })
   refreshBalances(
     @CurrentCompany() companyId: string,
@@ -62,7 +62,7 @@ export class LeavePolicyController {
   }
 
   @Get(':id')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'Get a leave policy with rules' })
   get(
     @CurrentCompany() companyId: string,
@@ -72,7 +72,7 @@ export class LeavePolicyController {
   }
 
   @Post()
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'Create a leave policy with rules' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -83,7 +83,7 @@ export class LeavePolicyController {
   }
 
   @Patch(':id')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'Update a leave policy and replace rules' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -100,7 +100,7 @@ export class LeavePolicyController {
   }
 
   @Delete(':id')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('leave', 'manage')
   @ApiOperation({ summary: 'Soft-delete a leave policy' })
   async remove(
     @CurrentUser() user: AuthenticatedUser,
