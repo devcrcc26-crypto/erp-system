@@ -84,3 +84,4 @@ AGENTS.md
 .VSCodeCounter/2026-10-15_13-52-21/results.json
 .VSCodeCounter/2026-10-15_13-52-21/results.md
 .VSCodeCounter/2026-10-15_13-52-21/results.txt
+backend/.env.test
