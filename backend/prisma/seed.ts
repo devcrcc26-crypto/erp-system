@@ -1369,7 +1369,7 @@ async function main(): Promise<void> {
     // ── HR Manager (Ms. Dong) - full access to all HR modules ──
     { roleName: 'HR Manager', module: 'hr', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'users', flags: hrManagerFlags() },
-    { roleName: 'HR Manager', module: 'departments', flags: viewOnlyFlags() },
+    { roleName: 'HR Manager', module: 'departments', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'roles', flags: viewOnlyFlags() },
     { roleName: 'HR Manager', module: 'leave', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'overtime', flags: hrManagerFlags() },
@@ -1390,7 +1390,7 @@ async function main(): Promise<void> {
     // ── Local HR Manager (Mekides) - full HR access except approve ──
     { roleName: 'Local HR Manager', module: 'hr', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'users', flags: localHrManagerFlags() },
-    { roleName: 'Local HR Manager', module: 'departments', flags: viewOnlyFlags() },
+
     { roleName: 'Local HR Manager', module: 'roles', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'leave', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'overtime', flags: localHrManagerFlags() },
@@ -1615,9 +1615,6 @@ async function main(): Promise<void> {
   );
   const hrOrgRoleId = roleMap.get('HR Officer');
   if (hrOrgRoleId) {
-    if (departmentsView) {
-      await upsertRolePermission(hrOrgRoleId, departmentsView.id, viewOnlyFlags());
-    }
     if (rolesView) {
       await upsertRolePermission(hrOrgRoleId, rolesView.id, viewOnlyFlags());
     }
@@ -1661,6 +1658,65 @@ async function main(): Promise<void> {
         canApprove: false,
         canExport: false,
       });
+    }
+  }
+
+  // Org structure (branches + departments) — consolidated grant table.
+  const orgStructureGrants: Array<{
+    perm: (typeof permissions)[number] | undefined;
+    roleNames: string[];
+    flags: PermissionFlags;
+  }> = [
+    {
+      perm: permissions.find((p) => p.module === 'branches' && p.action === 'view'),
+      roleNames: ['HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+      flags: viewOnlyFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'branches' && p.action === 'create'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'branches' && p.action === 'edit'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'branches' && p.action === 'delete'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+    {
+      perm: departmentsView,
+      roleNames: ['HR Assistant', 'HR Officer', 'General Manager', 'Managing Director', 'System Administrator'],
+      flags: viewOnlyFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'departments' && p.action === 'create'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'departments' && p.action === 'edit'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'departments' && p.action === 'delete'),
+      roleNames: ['System Administrator'],
+      flags: hrManagerFlags(),
+    },
+  ];
+  for (const { perm, roleNames, flags } of orgStructureGrants) {
+    if (!perm) {
+      continue;
+    }
+    for (const roleName of roleNames) {
+      const roleId = roleMap.get(roleName);
+      if (roleId) {
+        await upsertRolePermission(roleId, perm.id, flags);
+      }
     }
   }
 
