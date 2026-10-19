@@ -317,6 +317,9 @@ describe('WorkFromHomeDayService - range request lifecycle', () => {
         'dl',
       ),
     ).rejects.toThrow('Only users with wfh.manage can assign work-from-home days directly');
+    await expect(t.service.listAssignableEmployees('dl', 'c1')).rejects.toThrow(
+      'Only users with wfh.manage can assign work-from-home days directly',
+    );
     expect(t.audit.create).not.toHaveBeenCalled();
   });
 

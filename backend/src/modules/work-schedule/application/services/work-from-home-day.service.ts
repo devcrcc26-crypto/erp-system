@@ -235,6 +235,8 @@ export class WorkFromHomeDayService
     isDisciplineLead: boolean;
     employees: AssignableEmployee[];
   }> {
+    await this.assertCanManageWfh(userId, companyId);
+
     const where: Prisma.UserWhereInput = activeOnly(
       hrProcessEmployeeWhere({ companyId, isActive: true }),
     );

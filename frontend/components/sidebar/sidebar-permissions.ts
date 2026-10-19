@@ -99,8 +99,9 @@ export function resolveSidebarPermissions(
   );
   grant('org.vehicles', hr);
 
-  // Project management — hidden when company module toggle is off.
-  const pmModuleOn = caps.modulesProjectManagementEnabled;
+  // Project management — company module toggle; sidebar limited to System Administrator for now.
+  const pmModuleOn =
+    caps.modulesProjectManagementEnabled && caps.isSystemAdministrator;
   const portfolio = pm.projects.canView;
   grant('pm.projects', pmModuleOn && global('/projects', portfolio));
   grant(
