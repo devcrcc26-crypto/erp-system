@@ -1380,7 +1380,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'flight', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'business-trip', flags: hrManagerFlags() },
-    { roleName: 'HR Manager', module: 'payroll', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'HR Manager', module: 'approvals', flags: hrManagerFlags() },
@@ -1410,7 +1409,6 @@ async function main(): Promise<void> {
     },
     { roleName: 'Local HR Manager', module: 'flight', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'business-trip', flags: viewExportFlags() },
-    { roleName: 'Local HR Manager', module: 'payroll', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'approvals', flags: viewOnlyFlags() },
@@ -1440,7 +1438,6 @@ async function main(): Promise<void> {
       },
     },
     { roleName: 'HR Specialist', module: 'business-trip', flags: viewExportFlags() },
-    { roleName: 'HR Specialist', module: 'payroll', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'notifications', flags: viewOnlyFlags() },
@@ -1458,7 +1455,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'employee-contract', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'flight', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'business-trip', flags: viewOnlyFlags() },
-    { roleName: 'HR Assistant', module: 'payroll', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'notifications', flags: viewOnlyFlags() },
@@ -1532,7 +1528,6 @@ async function main(): Promise<void> {
       module: 'per-diem',
       flags: viewApproveExportFlags(),
     },
-    { roleName: 'General Manager', module: 'payroll', flags: viewApproveExportFlags() },
     {
       roleName: 'General Manager',
       module: 'approvals',
@@ -1544,7 +1539,6 @@ async function main(): Promise<void> {
     { roleName: 'Employee', module: 'field-movement', flags: viewCreateFlags() },
     { roleName: 'Employee', module: 'exit-permit', flags: viewCreateFlags() },
     { roleName: 'Employee', module: 'per-diem', flags: viewCreateFlags() },
-    { roleName: 'Employee', module: 'payroll', flags: viewOnlyFlags() },
     { roleName: 'Employee', module: 'approvals', flags: viewCreateFlags() },
   ];
 
@@ -1943,6 +1937,166 @@ async function main(): Promise<void> {
         continue;
       }
       await upsertRolePermission(roleId, saManage.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  const payrollView = permissions.find(
+    (p) => p.module === 'payroll' && p.action === 'view',
+  );
+  const payrollCreate = permissions.find(
+    (p) => p.module === 'payroll' && p.action === 'create',
+  );
+  const payrollEdit = permissions.find(
+    (p) => p.module === 'payroll' && p.action === 'edit',
+  );
+  const payrollApprove = permissions.find(
+    (p) => p.module === 'payroll' && p.action === 'approve',
+  );
+  const payrollExport = permissions.find(
+    (p) => p.module === 'payroll' && p.action === 'export',
+  );
+  const companySettingsView = permissions.find(
+    (p) => p.module === 'company_settings' && p.action === 'view',
+  );
+  const companySettingsEdit = permissions.find(
+    (p) => p.module === 'company_settings' && p.action === 'edit',
+  );
+
+  const payrollViewRoleNames = [
+    'Employee',
+    'Team Lead',
+    'Department Head',
+    'Discipline Lead',
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+  const payrollCreateEditRoleNames = [
+    'HR Assistant',
+    'HR Manager',
+    'System Administrator',
+  ] as const;
+  const payrollApproveRoleNames = [
+    'HR Manager',
+    'General Manager',
+    'System Administrator',
+  ] as const;
+  const payrollExportRoleNames = [
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+  const companySettingsViewRoleNames = [
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+  const companySettingsEditRoleNames = [
+    'HR Manager',
+    'System Administrator',
+  ] as const;
+
+  if (payrollView) {
+    for (const roleName of payrollViewRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, payrollView.id, viewOnlyFlags());
+    }
+  }
+  if (payrollCreate) {
+    for (const roleName of payrollCreateEditRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, payrollCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (payrollEdit) {
+    for (const roleName of payrollCreateEditRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, payrollEdit.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (payrollApprove) {
+    for (const roleName of payrollApproveRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, payrollApprove.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: true,
+        canExport: false,
+      });
+    }
+  }
+  if (payrollExport) {
+    for (const roleName of payrollExportRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, payrollExport.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: true,
+      });
+    }
+  }
+  if (companySettingsView) {
+    for (const roleName of companySettingsViewRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, companySettingsView.id, viewOnlyFlags());
+    }
+  }
+  if (companySettingsEdit) {
+    for (const roleName of companySettingsEditRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, companySettingsEdit.id, {
         canView: true,
         canCreate: false,
         canEdit: true,

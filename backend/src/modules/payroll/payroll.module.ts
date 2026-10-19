@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PermissionsModule } from '../../shared/permissions/permissions.module';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
 import { AuditModule } from '../audit/audit.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
@@ -16,7 +17,13 @@ import { PayrollRunService } from './application/services/payroll-run.service';
  * in AppModule via NotificationsModule.register()).
  */
 @Module({
-  imports: [PrismaModule, WorkScheduleModule, AuditModule, LeavePolicyModule],
+  imports: [
+    PrismaModule,
+    PermissionsModule,
+    WorkScheduleModule,
+    AuditModule,
+    LeavePolicyModule,
+  ],
   controllers: [PayrollController],
   providers: [
     PayrollCalculationService,

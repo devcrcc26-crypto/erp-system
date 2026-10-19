@@ -32,6 +32,9 @@ function makeService(status: 'REVIEWED' | 'SUBMITTED' | 'APPROVED', rows = entry
     userRole: { findFirst: jest.fn(async () => ({ id: 'ur-1' })), findMany: jest.fn(async () => []) },
   };
   const audit = { create: jest.fn(async () => undefined), buildFromRequestContext: (x: any) => x };
+  const permissions = {
+    hasPermission: jest.fn(async () => true),
+  };
   const service = new PayrollRunService(
     prisma,
     {} as never,
@@ -39,6 +42,7 @@ function makeService(status: 'REVIEWED' | 'SUBMITTED' | 'APPROVED', rows = entry
     {} as never,
     {} as never,
     audit as never,
+    permissions as never,
   );
   return { service, run, audit };
 }

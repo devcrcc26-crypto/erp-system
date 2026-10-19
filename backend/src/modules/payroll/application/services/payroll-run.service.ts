@@ -53,6 +53,7 @@ import {
   type EmploymentReviewFlag,
 } from '../utils/payroll-employment-flag.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   computeFinalSettlement,
   unusedLeaveDaysAtLeaving,
@@ -220,17 +221,6 @@ const ENTRY_WRITE_CHUNK = 50;
 const HR_MANAGER_ROLE = 'HR Manager';
 const LOCAL_HR_MANAGER_ROLE = 'Local HR Manager';
 const GENERAL_MANAGER_ROLE = 'General Manager';
-const SYSTEM_ADMINISTRATOR_ROLE = 'System Administrator';
-
-const APPROVE_ROLES: readonly string[] = [
-  HR_MANAGER_ROLE,
-  SYSTEM_ADMINISTRATOR_ROLE,
-];
-
-const GM_APPROVE_ROLES: readonly string[] = [
-  GENERAL_MANAGER_ROLE,
-  SYSTEM_ADMINISTRATOR_ROLE,
-];
 
 @Injectable()
 export class PayrollRunService {
@@ -243,6 +233,7 @@ export class PayrollRunService {
     private readonly workScheduleService: WorkScheduleService,
     private readonly leaveLedger: LeaveLedgerService,
     private readonly audit: AuditService,
+    private readonly permissions: PermissionService,
   ) {}
 
   /**
@@ -995,7 +986,7 @@ export class PayrollRunService {
     ctx: ServiceContext,
     options?: ApproveRunOptions,
   ): Promise<PayrollRun> {
-    await this.assertHasAnyRole(ctx, APPROVE_ROLES);
+    await this.assertPayrollApprove(ctx);
     const run = await this.requireRun(runId, ctx.companyId);
     if (run.status !== 'SUBMITTED') {
       throw new BadRequestException(
@@ -1042,7 +1033,7 @@ export class PayrollRunService {
     ctx: ServiceContext,
     options?: ApproveRunOptions,
   ): Promise<PayrollRun> {
-    await this.assertHasAnyRole(ctx, GM_APPROVE_ROLES);
+    await this.assertPayrollApprove(ctx);
     const run = await this.requireRun(runId, ctx.companyId);
     if (run.status !== 'APPROVED') {
       throw new BadRequestException(
@@ -2513,26 +2504,15 @@ export class PayrollRunService {
     return run;
   }
 
-  private async assertHasAnyRole(
-    ctx: ServiceContext,
-    roleNames: readonly string[],
-  ): Promise<void> {
-    const match = await this.prisma.userRole.findFirst({
-      where: {
-        userId: ctx.userId,
-        deletedAt: null,
-        role: {
-          companyId: ctx.companyId,
-          deletedAt: null,
-          name: { in: [...roleNames] },
-        },
-      },
-      select: { id: true },
-    });
-    if (!match) {
-      throw new ForbiddenException(
-        `Requires one of: ${roleNames.join(', ')}`,
-      );
+  private async assertPayrollApprove(ctx: ServiceContext): Promise<void> {
+    const ok = await this.permissions.hasPermission(
+      ctx.userId,
+      ctx.companyId,
+      'payroll',
+      'approve',
+    );
+    if (!ok) {
+      throw new ForbiddenException('Missing permission: payroll.approve');
     }
   }
 

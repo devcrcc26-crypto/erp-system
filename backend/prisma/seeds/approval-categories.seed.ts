@@ -792,7 +792,7 @@ const CATEGORIES: CategorySeedDef[] = [
       {
         name: 'Default',
         tiers: [
-          tier('HR Manager', 'HR', 1),
+          tier('HR Manager', 'HR Manager', 1),
           tier('General Manager', 'GENERAL_MANAGER', 2),
         ],
       },
