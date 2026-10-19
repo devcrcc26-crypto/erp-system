@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -21,6 +22,8 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { canManageUserImport } from '../../application/utils/user-import-access.util';
 import {
   ImportCommitResponseDto,
   ImportPreviewResponseDto,
@@ -33,10 +36,25 @@ import { UserImportService } from '../../application/services/user-import.servic
 @UseGuards(PermissionsGuard)
 @Controller('users/import')
 export class UsersImportController {
-  constructor(private readonly userImportService: UserImportService) {}
+  constructor(
+    private readonly userImportService: UserImportService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManageUserImport(user: AuthenticatedUser): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManageUserImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage user imports',
+      );
+    }
   }
 
   @Get('template')
@@ -69,10 +87,11 @@ export class UsersImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportPreviewResponseDto> {
+    await this.assertCanManageUserImport(user);
     return this.userImportService.previewImport(this.ctx(user), file);
   }
 
@@ -96,11 +115,12 @@ export class UsersImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Body() options: ImportUsersOptionsDto,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManageUserImport(user);
     return this.userImportService.commitImport(
       this.ctx(user),
       file,

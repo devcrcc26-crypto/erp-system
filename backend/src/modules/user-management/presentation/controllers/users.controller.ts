@@ -167,7 +167,7 @@ export class UsersController {
   }
 
   @Get('org-gaps')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('users', 'view')
   @ApiOperation({ summary: 'Org structure gap report (read-only)' })
   async getOrgGaps(
     @CurrentUser() user: AuthenticatedUser,

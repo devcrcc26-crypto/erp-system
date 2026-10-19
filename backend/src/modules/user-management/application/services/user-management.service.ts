@@ -1295,7 +1295,7 @@ export class UserManagementService {
   }
 
   /**
-   * Login name is visible to HR/admin (users.view or hr.view) and to the employee themself.
+   * Login name is visible to HR/admin (users.view) and to the employee themself.
    * Pass targetUserId=null for list endpoints (viewer permissions only).
    */
   private async canViewLoginName(
@@ -1305,21 +1305,12 @@ export class UserManagementService {
     if (targetUserId != null && targetUserId === ctx.userId) {
       return true;
     }
-    const [usersView, hrView] = await Promise.all([
-      this.permissionService.hasPermission(
-        ctx.userId,
-        ctx.companyId,
-        'users',
-        'view',
-      ),
-      this.permissionService.hasPermission(
-        ctx.userId,
-        ctx.companyId,
-        'hr',
-        'view',
-      ),
-    ]);
-    return usersView || hrView;
+    return this.permissionService.hasPermission(
+      ctx.userId,
+      ctx.companyId,
+      'users',
+      'view',
+    );
   }
 
   private applyLoginNameVisibility<
@@ -2123,7 +2114,7 @@ export class UserManagementService {
   }
 
   /**
-   * Full bank account numbers only for hr.view or the employee themself.
+   * Full bank account numbers only for users.edit (HR staff) or the employee themself.
    */
   private async canViewFullBankDetails(
     ctx: AuditContext,
@@ -2135,8 +2126,8 @@ export class UserManagementService {
     return this.permissionService.hasPermission(
       ctx.userId,
       ctx.companyId,
-      'hr',
-      'view',
+      'users',
+      'edit',
     );
   }
 
