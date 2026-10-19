@@ -31,8 +31,9 @@ import { EvaluationSchedulerService } from '../../application/services/evaluatio
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
-  { module: 'hr', action: 'create' },
+  { module: 'evaluation', action: 'view' },
+  { module: 'evaluation', action: 'manage' },
+  { module: 'evaluation', action: 'manage' },
 )
 @Controller('evaluation/evaluations')
 export class EvaluationController {
@@ -71,14 +72,14 @@ export class EvaluationController {
         (await this.permissionService.hasPermission(
           user.userId,
           companyId,
-          'hr',
-          'view',
+          'evaluation',
+          'manage',
         )) ||
         (await this.permissionService.hasPermission(
           user.userId,
           companyId,
-          'hr',
-          'create',
+          'evaluation',
+          'manage',
         ));
       if (!hasHr) {
         throw new ForbiddenException(
@@ -154,7 +155,7 @@ export class EvaluationController {
   }
 
   @Post()
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Create an employee evaluation' })
   createEvaluation(
     @Body() dto: CreateEmployeeEvaluationDto,
@@ -168,7 +169,7 @@ export class EvaluationController {
   }
 
   @Post('cycle/:cycleId/bulk-create')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Bulk-create evaluations for all active employees' })
   createEvaluationsForCycle(
     @Param('cycleId') cycleId: string,
@@ -182,7 +183,7 @@ export class EvaluationController {
   }
 
   @Post('admin/auto-resolve')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({
     summary: 'Manually trigger auto-resolve of expired evaluation deadlines',
   })
@@ -238,7 +239,7 @@ export class EvaluationController {
   }
 
   @Post(':id/share-result')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Share consolidated result with employee' })
   shareResult(
     @Param('id') id: string,
@@ -311,7 +312,7 @@ export class EvaluationController {
   }
 
   @Post(':id/hr-decide')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'HR decides escalated dispute' })
   hrDecideDispute(
     @Param('id') id: string,
@@ -326,7 +327,7 @@ export class EvaluationController {
   }
 
   @Post(':id/lock')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Lock an accepted or HR-decided evaluation' })
   lockEvaluation(
     @Param('id') id: string,

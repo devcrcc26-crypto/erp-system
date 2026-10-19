@@ -23,8 +23,8 @@ import { EvaluationCycleService } from '../../application/services/evaluation-cy
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
-  { module: 'hr', action: 'create' },
+  { module: 'evaluation', action: 'manage' },
+  { module: 'evaluation', action: 'manage' },
 )
 @Controller('evaluation/cycles')
 export class EvaluationCycleController {
@@ -46,7 +46,7 @@ export class EvaluationCycleController {
   }
 
   @Post()
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Create an evaluation cycle' })
   createCycle(
     @Body() dto: CreateEvaluationCycleDto,
@@ -60,7 +60,7 @@ export class EvaluationCycleController {
   }
 
   @Patch(':id')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Update an evaluation cycle' })
   updateCycle(
     @Param('id') id: string,
@@ -75,7 +75,7 @@ export class EvaluationCycleController {
   }
 
   @Post(':id/activate')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Activate a DRAFT evaluation cycle' })
   activateCycle(
     @Param('id') id: string,
@@ -89,7 +89,7 @@ export class EvaluationCycleController {
   }
 
   @Post(':id/close')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Close an ACTIVE evaluation cycle' })
   closeCycle(
     @Param('id') id: string,

@@ -25,8 +25,8 @@ import { EvaluationTemplateService } from '../../application/services/evaluation
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
-  { module: 'hr', action: 'create' },
+  { module: 'evaluation', action: 'manage' },
+  { module: 'evaluation', action: 'manage' },
 )
 @Controller('evaluation/templates')
 export class EvaluationTemplateController {
@@ -56,7 +56,7 @@ export class EvaluationTemplateController {
   }
 
   @Post()
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Create an evaluation template' })
   createTemplate(
     @Body() dto: CreateEvaluationTemplateDto,
@@ -70,7 +70,7 @@ export class EvaluationTemplateController {
   }
 
   @Post('sections/:sectionId/criteria')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Add a criterion to a template section' })
   addCriteria(
     @Param('sectionId') sectionId: string,
@@ -85,7 +85,7 @@ export class EvaluationTemplateController {
   }
 
   @Patch('criteria/:criteriaId')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Update an evaluation criterion' })
   updateCriteria(
     @Param('criteriaId') criteriaId: string,
@@ -100,7 +100,7 @@ export class EvaluationTemplateController {
   }
 
   @Patch(':id')
-  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @RequireAnyPermission({ module: 'evaluation', action: 'manage' })
   @ApiOperation({ summary: 'Update an evaluation template' })
   updateTemplate(
     @Param('id') id: string,
