@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewSessionStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PmModuleSettingsService } from '../../../project-management/application/services/pm-module-settings.service';
 import { PermissionFlags } from '../../../../shared/permissions/permission.types';
 import {
   PROJECT_ADMINISTRATOR_ROLE,
@@ -66,6 +67,7 @@ export class SessionCapabilitiesService {
   constructor(
     private readonly permissionService: PermissionService,
     private readonly prisma: PrismaService,
+    private readonly pmModuleSettings: PmModuleSettingsService,
   ) {}
 
   /**
@@ -90,7 +92,7 @@ export class SessionCapabilitiesService {
       ...PM_MODULE_BINDINGS.map((binding) => binding.module),
     ];
 
-    const [roleNames, permissionMap, hasAssignedReviewInbox, navProbes] =
+    const [roleNames, permissionMap, hasAssignedReviewInbox, navProbes, pmModuleEnabled] =
       await Promise.all([
         this.permissionService.getUserRoleNames(userId, companyId),
         this.permissionService.getUserModulePermissionsMap(
@@ -100,6 +102,7 @@ export class SessionCapabilitiesService {
         ),
         this.hasActiveReviewInboxAssignment(userId, companyId),
         this.resolveNavAssignmentProbes(userId, companyId),
+        this.pmModuleSettings.isEnabled(companyId),
       ]);
 
     const systemAdministrator = isSystemAdministrator(roleNames);
@@ -149,6 +152,7 @@ export class SessionCapabilitiesService {
       canViewBusinessTrip: businessTrip.canView,
       canCreateBusinessTrip: businessTrip.canCreate,
       canManageBusinessTrip: businessTrip.canEdit,
+      modulesProjectManagementEnabled: pmModuleEnabled,
       isSystemAdministrator: systemAdministrator,
       isSystemAdmin,
       pm,

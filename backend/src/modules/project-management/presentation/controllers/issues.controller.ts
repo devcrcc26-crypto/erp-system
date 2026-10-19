@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -31,6 +32,7 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Issues')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard, PmModuleAccessGuard)
 @RequirePmModule('issues')
 @Controller('projects/:projectId/issues')
@@ -93,7 +95,7 @@ export class IssuesController {
 
   @Patch(':issueId/start')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Start working on an issue (OPEN â†’ IN_PROGRESS)' })
+  @ApiOperation({ summary: 'Start working on an issue (OPEN â†?IN_PROGRESS)' })
   start(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -111,7 +113,7 @@ export class IssuesController {
   @Patch(':issueId/close')
   @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'Close an in-progress issue (IN_PROGRESS â†’ CLOSED)',
+    summary: 'Close an in-progress issue (IN_PROGRESS â†?CLOSED)',
   })
   close(
     @CurrentUser() user: AuthenticatedUser,
@@ -129,7 +131,7 @@ export class IssuesController {
 
   @Patch(':issueId/reopen')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Reopen a closed issue â†’ IN_PROGRESS' })
+  @ApiOperation({ summary: 'Reopen a closed issue â†?IN_PROGRESS' })
   reopen(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

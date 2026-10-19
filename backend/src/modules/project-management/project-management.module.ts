@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PermissionsModule } from '../../shared/permissions/permissions.module';
+import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DocumentsModule } from '../documents/documents.module';
 import {
@@ -71,6 +72,9 @@ import { EpcReviewRepository } from './infrastructure/repositories/epc-review.re
 import { EpcSubmittalRepository } from './infrastructure/repositories/epc-submittal.repository';
 import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflow.repository';
 import { PmModuleAccessGuard } from './presentation/guards/pm-module-access.guard';
+import { PmModuleEnabledGuard } from './presentation/guards/pm-module-enabled.guard';
+import { PmModuleSettingsService } from './application/services/pm-module-settings.service';
+import { PmModuleSettingsController } from './presentation/controllers/pm-module-settings.controller';
 import { CloseoutController } from './presentation/controllers/closeout.controller';
 import { ChangeRequestsController } from './presentation/controllers/change-requests.controller';
 import { ExternalReleasesController } from './presentation/controllers/external-releases.controller';
@@ -123,6 +127,7 @@ const workflowBullProcessors = redisEnabled
 @Module({
   imports: [
     PermissionsModule,
+    AuditModule,
     NotificationsModule,
     DocumentsModule,
     ScheduleModule.forRoot(),
@@ -160,6 +165,7 @@ const workflowBullProcessors = redisEnabled
     ChangeRequestsController,
     MyChangeRequestsController,
     DeliverablesController,
+    PmModuleSettingsController,
   ],
   providers: [
     TaskAccessScopeService,
@@ -223,9 +229,12 @@ const workflowBullProcessors = redisEnabled
     PunchItemsService,
     CloseoutService,
     PmModuleAccessGuard,
+    PmModuleEnabledGuard,
+    PmModuleSettingsService,
     ...workflowBullProcessors,
   ],
   exports: [
+    PmModuleSettingsService,
     ProjectsService,
     ProjectScopeService,
     DocumentNumberService,

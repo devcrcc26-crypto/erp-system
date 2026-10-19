@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -12,6 +13,7 @@ import { SubmittalsService } from '../../application/services/submittals.service
  */
 @ApiTags('External Releases')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('external-releases')
 export class ExternalReleasesController {

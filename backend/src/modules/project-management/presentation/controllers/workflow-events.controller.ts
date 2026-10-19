@@ -1,4 +1,5 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
@@ -21,6 +22,7 @@ class WorkflowCorrectionBodyDto {
 
 @ApiTags('Workflow Events')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('workflow-events')
 export class WorkflowEventsController {

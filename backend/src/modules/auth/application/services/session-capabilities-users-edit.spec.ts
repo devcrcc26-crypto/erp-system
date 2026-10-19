@@ -29,7 +29,14 @@ function serviceWith(grants: Record<string, Partial<Flags>>): SessionCapabilitie
         ),
     ),
   };
-  return new SessionCapabilitiesService(permissionService as never, emptyPrisma as never);
+  const pmModuleSettings = {
+    isEnabled: jest.fn().mockResolvedValue(false),
+  };
+  return new SessionCapabilitiesService(
+    permissionService as never,
+    emptyPrisma as never,
+    pmModuleSettings as never,
+  );
 }
 
 describe('SessionCapabilitiesService - canEditUsers', () => {

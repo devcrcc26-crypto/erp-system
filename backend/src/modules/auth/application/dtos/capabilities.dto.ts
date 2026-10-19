@@ -230,6 +230,12 @@ export class CapabilitiesDto {
 
   @ApiProperty({
     description:
+      'Company toggle modules.projectManagement.enabled (env default when unset).',
+  })
+  modulesProjectManagementEnabled!: boolean;
+
+  @ApiProperty({
+    description:
       'System Administrator - bypasses project team module gates and receives full RBAC.',
   })
   isSystemAdministrator!: boolean;

@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -13,6 +14,7 @@ import { DailyLogsService } from '../../application/services/daily-logs.service'
  */
 @ApiTags('Daily Logs')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('daily-logs')
 export class MyDailyLogsController {

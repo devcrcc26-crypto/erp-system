@@ -351,8 +351,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
     {
       kind: 'folder',
       id: 'pm',
-      // Visible only to System Administrator (pm.* tokens gated in
-      // sidebar-permissions.ts). Hosts project workspace nav on /projects/:id.
+      // pm.* tokens gated in sidebar-permissions.ts (company module toggle).
+      // Hosts project workspace nav on /projects/:id.
       labelKey: 'nav.groups.projectManagement',
       shortLabelKey: 'nav.short.projectManagement',
       icon: 'domain-projects',

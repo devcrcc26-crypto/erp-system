@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuditModule } from '../audit/audit.module';
 import { DocumentsModule } from '../documents/documents.module';
+import { ProjectManagementModule } from '../project-management/project-management.module';
 import { AUTH_REPOSITORY } from './domain/repositories/auth.repository.interface';
 import { AuthRepository } from './infrastructure/repositories/auth.repository';
 import { ActivateAccountHandler } from './application/commands/activate-account.handler';
@@ -38,6 +39,7 @@ const CommandHandlers = [
   imports: [
     AuditModule,
     forwardRef(() => DocumentsModule),
+    forwardRef(() => ProjectManagementModule),
     CqrsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

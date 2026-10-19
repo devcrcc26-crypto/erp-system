@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -37,6 +38,7 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Submittals')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard, PmModuleAccessGuard)
 @RequirePmModule('submittals')
 @Controller('projects/:projectId/submittals')
@@ -432,6 +434,7 @@ export class SubmittalsController {
  */
 @ApiTags('Submittals')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('submittals')
 export class MySubmittalsController {

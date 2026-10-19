@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -29,6 +30,7 @@ import { ExternalReviewTriggerListQueryDto, ConfigureRevisionTriggerDto } from '
 
 @ApiTags('Engineering Batch')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('projects/:projectId')
 export class EngineeringBatchController {

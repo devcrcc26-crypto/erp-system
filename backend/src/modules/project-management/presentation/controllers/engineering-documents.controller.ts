@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { WorkflowEntityType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -30,6 +31,7 @@ import { WorkflowEventLogService } from '../../application/services/workflow-eve
 
 @ApiTags('Engineering Documents')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller(
   'projects/:projectId/task-disciplines/:taskDisciplineId/engineering-documents',

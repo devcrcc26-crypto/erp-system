@@ -2,7 +2,7 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   DatePicker,
@@ -10,28 +10,19 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
-  Typography,
 } from 'antd';
 import dayjs from 'dayjs';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { disableFutureDates } from '@/lib/utils/date-validation';
-import type {
-  ExpenseClaimItem,
-  SupportedCurrency,
-} from '@/lib/api/expense-claim.types';
-import { useCurrencyRates } from '@/lib/query/currency';
+import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
 import {
   useAddExpenseClaimItem,
   useUpdateExpenseClaimItem,
 } from '@/lib/query/expense-claim';
 import { detailDrawerStyles } from '@/lib/theme/layout';
-import {
-  formatCurrencyAmount,
-  formatEtbAmount,
-} from '@/lib/utils/expense-claim-display';
+
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ItemFormValues {
@@ -39,14 +30,7 @@ interface ItemFormValues {
   description: string;
   expenseDate: dayjs.Dayjs;
   amount: number;
-  currency: SupportedCurrency;
 }
-
-const CURRENCY_OPTIONS = [
-  { value: 'ETB', label: 'ETB - Ethiopian Birr' },
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'CNY', label: 'CNY - Chinese Yuan' },
-];
 
 function DrawerSection({
   title,
@@ -83,14 +67,8 @@ export default function ExpenseClaimItemModal({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<ItemFormValues>();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const ratesQuery = useCurrencyRates(open);
   const addMutation = useAddExpenseClaimItem(claimId);
   const updateMutation = useUpdateExpenseClaimItem(claimId);
-
-  const amount = Form.useWatch('amount', form);
-  const currency = Form.useWatch('currency', form) as
-    | SupportedCurrency
-    | undefined;
 
   useEffect(() => {
     if (!open) {
@@ -102,28 +80,12 @@ export default function ExpenseClaimItemModal({
         description: editingItem.description,
         expenseDate: dayjs(editingItem.expenseDate),
         amount: Number(editingItem.amount),
-        currency: editingItem.currency,
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ currency: 'ETB' });
     }
     setSelectedFiles([]);
   }, [open, editingItem, form]);
-
-  const etbPreview = useMemo(() => {
-    if (!amount || !currency) {
-      return null;
-    }
-    if (currency === 'ETB') {
-      return amount;
-    }
-    const rate = ratesQuery.data?.[currency];
-    if (!rate) {
-      return null;
-    }
-    return amount * rate;
-  }, [amount, currency, ratesQuery.data]);
 
   async function handleSubmit(values: ItemFormValues): Promise<void> {
     const payload = {
@@ -131,7 +93,7 @@ export default function ExpenseClaimItemModal({
       description: values.description.trim(),
       expenseDate: values.expenseDate.format('YYYY-MM-DD'),
       amount: values.amount,
-      currency: values.currency,
+      currency: 'ETB' as const,
       file: selectedFiles[0],
     };
     try {
@@ -258,56 +220,19 @@ export default function ExpenseClaimItemModal({
             </Form.Item>
           </DrawerSection>
 
-          <DrawerSection title={t('hr.section.amountAndCurrency')}>
-            <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
-              <Form.Item
-                name="amount"
-                label={t('hr.form.amount')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.amountRequired'),
-                  },
-                ]}
-              >
-                <InputNumber className="w-full" min={0.01} precision={2} />
-              </Form.Item>
-              <Form.Item
-                name="currency"
-                label={t('hr.form.currency')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.currencyRequired'),
-                  },
-                ]}
-              >
-                <Select options={CURRENCY_OPTIONS} />
-              </Form.Item>
-            </div>
-
-            {etbPreview !== null ? (
-              <div className="rounded-lg border border-[#1D9E75]/30] bg-[#E1F5EE] px-3 py-2.5">
-                <p className="m-0 text-[10px] font-medium uppercase tracking-[0.04em] text-[#0F6E56]">
-                  {t('hr.form.etbEquivalent')}
-                </p>
-                <p className="m-0 mt-0.5 text-[15px] font-semibold tabular-nums text-[#0F6E56]">
-                  {formatEtbAmount(etbPreview)}
-                </p>
-                {currency && currency !== 'ETB' && amount ? (
-                  <p className="m-0 mt-0.5 text-[12px] text-[#0F6E56]/80">
-                    {formatCurrencyAmount(amount, currency)}
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <Typography.Paragraph
-                type="secondary"
-                className="!mb-0 text-[13px]"
-              >
-                {t('hr.labels.etbPreviewEmpty')}
-              </Typography.Paragraph>
-            )}
+          <DrawerSection title={t('hr.form.amount')}>
+            <Form.Item
+              name="amount"
+              className="!mb-0"
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.amountRequired'),
+                },
+              ]}
+            >
+              <InputNumber className="w-full" min={0.01} precision={2} addonAfter="ETB" />
+            </Form.Item>
           </DrawerSection>
 
           <DrawerSection title={t('hr.form.receipt')}>

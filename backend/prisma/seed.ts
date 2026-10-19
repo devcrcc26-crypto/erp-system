@@ -2156,6 +2156,13 @@ async function main(): Promise<void> {
     { module: 'auth', key: 'mfa_required', value: 'false', dataType: 'BOOLEAN', isPublic: false },
     { module: 'documents', key: 'max_upload_mb', value: '50', dataType: 'NUMBER', isPublic: false },
     { module: 'notifications', key: 'email_enabled', value: 'true', dataType: 'BOOLEAN', isPublic: false },
+    {
+      module: 'modules',
+      key: 'projectManagement.enabled',
+      value: process.env.PM_MODULE_ENABLED === 'true' ? 'true' : 'false',
+      dataType: 'BOOLEAN',
+      isPublic: true,
+    },
   ];
 
   for (const setting of settings) {

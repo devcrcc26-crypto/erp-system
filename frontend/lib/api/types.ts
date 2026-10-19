@@ -691,6 +691,8 @@ export interface AuthCapabilities {
   canViewBusinessTrip: boolean;
   canCreateBusinessTrip: boolean;
   canManageBusinessTrip: boolean;
+  /** Company setting modules.projectManagement.enabled */
+  modulesProjectManagementEnabled: boolean;
   isSystemAdministrator: boolean;
   /** True System Administrator role only (not Project Administrator). */
   isSystemAdmin: boolean;
@@ -760,6 +762,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewBusinessTrip: false,
   canCreateBusinessTrip: false,
   canManageBusinessTrip: false,
+  modulesProjectManagementEnabled: false,
   isSystemAdministrator: false,
   isSystemAdmin: false,
   pm: createEmptyPmCapabilities(),

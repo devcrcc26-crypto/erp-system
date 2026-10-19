@@ -61,7 +61,6 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   expenseClaimStatusVariant,
-  formatCurrencyAmount,
   formatEtbAmount,
   formatExpenseClaimEmployeeName,
   formatExpenseClaimStatus,
@@ -331,7 +330,7 @@ export default function ExpenseClaimDetailPageContent({
               {row.category}
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums lg:hidden">
-              {formatCurrencyAmount(row.amount, row.currency)}
+              {formatEtbAmount(row.amount)}
             </p>
           </div>
         ),
@@ -339,24 +338,11 @@ export default function ExpenseClaimDetailPageContent({
       {
         title: t('hr.table.amount'),
         key: 'amount',
-        width: 120,
-        align: 'right',
-        responsive: ['lg'],
-        render: (_: unknown, row: ExpenseClaimItem) => (
-          <span className="erp-users-cell-sub tabular-nums">
-            {formatCurrencyAmount(row.amount, row.currency)}
-          </span>
-        ),
-      },
-      {
-        title: isNarrow ? 'ETB' : t('hr.table.etbEquivalent'),
-        dataIndex: 'amountEtb',
-        key: 'amountEtb',
         width: isNarrow ? 96 : isCompact ? 112 : 140,
         align: 'right',
-        render: (v: number | string) => (
+        render: (_: unknown, row: ExpenseClaimItem) => (
           <span className="erp-users-cell-strong tabular-nums">
-            {formatEtbAmount(v)}
+            {formatEtbAmount(row.amount)}
           </span>
         ),
       },

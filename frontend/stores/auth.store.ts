@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { syncCapabilityCookies } from '@/lib/auth/session';
 import type { AuthTokens, AuthUser, Capabilities } from '@/lib/api/types';
 import { EMPTY_CAPABILITIES } from '@/lib/api/types';
 
@@ -60,8 +61,16 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
       setCapabilities: (capabilities: Capabilities) => {
+        const normalized = {
+          ...capabilities,
+          canViewNotifications: true,
+        };
+        syncCapabilityCookies({
+          pmModuleEnabled: normalized.modulesProjectManagementEnabled,
+          isSystemAdministrator: normalized.isSystemAdministrator,
+        });
         set({
-          capabilities: { ...capabilities, canViewNotifications: true },
+          capabilities: normalized,
           capabilitiesReady: true,
         });
       },

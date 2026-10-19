@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -31,6 +32,7 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Daily Logs')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard, PmModuleAccessGuard)
 @RequirePmModule('daily_logs')
 @Controller('projects/:projectId/daily-logs')
@@ -66,7 +68,7 @@ export class DailyLogsController {
   // Child routes must be registered before the generic :id routes.
   @Post(':id/submit')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Submit daily log for approval (DRAFT â†’ SUBMITTED)' })
+  @ApiOperation({ summary: 'Submit daily log for approval (DRAFT â†?SUBMITTED)' })
   submit(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -77,7 +79,7 @@ export class DailyLogsController {
 
   @Post(':id/approve')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Approve submitted daily log (SUBMITTED â†’ APPROVED)' })
+  @ApiOperation({ summary: 'Approve submitted daily log (SUBMITTED â†?APPROVED)' })
   approve(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -88,7 +90,7 @@ export class DailyLogsController {
 
   @Post(':id/recall')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Recall submitted daily log to draft (SUBMITTED â†’ DRAFT)' })
+  @ApiOperation({ summary: 'Recall submitted daily log to draft (SUBMITTED â†?DRAFT)' })
   recall(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

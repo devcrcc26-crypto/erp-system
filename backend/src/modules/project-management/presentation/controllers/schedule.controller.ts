@@ -10,6 +10,7 @@ import {
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -34,6 +35,7 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard, PmModuleAccessGuard)
 @RequirePmModule('schedule')
 @Controller('projects/:projectId/schedule')

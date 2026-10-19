@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -28,6 +29,7 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('RFIs')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard, PmModuleAccessGuard)
 @RequirePmModule('rfis')
 @Controller('projects/:projectId/rfis')

@@ -1,26 +1,29 @@
 'use client';
 
+import '@/components/modules/hr/overtime/overtime-entries-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
+  Drawer,
   Form,
   Grid,
   Input,
   InputNumber,
-  Select,
   Space,
   Table,
   Tooltip,
-  Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Receipt } from 'lucide-react';
 import dayjs from 'dayjs';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
   OnBehalfSection,
   useOnBehalf,
@@ -33,18 +36,14 @@ import { apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AddExpenseClaimItemPayload,
   ExpenseClaimDetail,
-  SupportedCurrency,
 } from '@/lib/api/expense-claim.types';
-import { useCurrencyRates } from '@/lib/query/currency';
 import {
   buildExpenseClaimItemFormData,
   useCreateExpenseClaim,
 } from '@/lib/query/expense-claim';
+import { detailDrawerStyles } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
-import {
-  formatCurrencyAmount,
-  formatEtbAmount,
-} from '@/lib/utils/expense-claim-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 
@@ -58,7 +57,6 @@ interface ItemFormValues {
   description: string;
   expenseDate: dayjs.Dayjs;
   amount: number;
-  currency: SupportedCurrency;
 }
 
 interface ClientItem extends AddExpenseClaimItemPayload {
@@ -68,12 +66,6 @@ interface ClientItem extends AddExpenseClaimItemPayload {
 interface ExpenseClaimFormProps {
   onSuccess: (result: ExpenseClaimDetail) => void;
 }
-
-const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
-  { value: 'ETB', label: 'ETB - Ethiopian Birr' },
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'CNY', label: 'CNY - Chinese Yuan' },
-];
 
 const DETAILS_FIELDS = ['title'] as const;
 
@@ -108,6 +100,23 @@ function ReviewItem({
   );
 }
 
+function DrawerSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="erp-expense-item-section">
+      <div className="erp-expense-item-section-header">
+        <h3 className="erp-expense-item-section-title">{title}</h3>
+      </div>
+      <div className="erp-expense-item-section-body">{children}</div>
+    </div>
+  );
+}
+
 /**
  * Expense claim create form - same StepperForm chrome as Add Employee.
  */
@@ -131,28 +140,12 @@ export default function ExpenseClaimForm({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const ratesQuery = useCurrencyRates();
   const createMutation = useCreateExpenseClaim();
 
-  function getRate(currency: SupportedCurrency): number {
-    if (currency === 'ETB') {
-      return 1;
-    }
-    return ratesQuery.data?.[currency] ?? 1;
-  }
-
   const totalEtb = useMemo(
-    () =>
-      items.reduce((sum, item) => {
-        return sum + Number(item.amount) * getRate(item.currency);
-      }, 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, ratesQuery.data],
+    () => items.reduce((sum, item) => sum + Number(item.amount), 0),
+    [items],
   );
-
-  function itemEtb(item: ClientItem): number {
-    return Number(item.amount) * getRate(item.currency);
-  }
 
   function resetForm(): void {
     onBehalf.reset();
@@ -194,7 +187,6 @@ export default function ExpenseClaimForm({
   function openAddItem(): void {
     setEditingKey(null);
     itemForm.resetFields();
-    itemForm.setFieldsValue({ currency: 'ETB' });
     setReceiptFile(null);
     setShowItemForm(true);
   }
@@ -206,7 +198,6 @@ export default function ExpenseClaimForm({
       description: item.description,
       expenseDate: dayjs(item.expenseDate),
       amount: item.amount,
-      currency: item.currency,
     });
     setReceiptFile(item.file ?? null);
     setShowItemForm(true);
@@ -239,7 +230,7 @@ export default function ExpenseClaimForm({
         description: values.description.trim(),
         expenseDate: values.expenseDate.format('YYYY-MM-DD'),
         amount: Number(values.amount),
-        currency: values.currency,
+        currency: 'ETB',
         file: receiptFile ?? undefined,
       };
       if (editingKey) {
@@ -355,18 +346,9 @@ export default function ExpenseClaimForm({
     {
       title: t('hr.table.amount'),
       key: 'amount',
-      width: 120,
-      align: 'right',
-      responsive: ['lg'],
-      render: (_: unknown, row: ClientItem) =>
-        formatCurrencyAmount(row.amount, row.currency),
-    },
-    {
-      title: t('hr.table.etbEquivalent'),
-      key: 'amountEtb',
       width: isNarrow ? 110 : 130,
       align: 'right',
-      render: (_: unknown, row: ClientItem) => formatEtbAmount(itemEtb(row)),
+      render: (_: unknown, row: ClientItem) => formatEtbAmount(row.amount),
     },
     {
       title: t('hr.table.receipt'),
@@ -419,19 +401,6 @@ export default function ExpenseClaimForm({
     (column) => column.key !== 'actions',
   );
 
-  const watchedAmount = Form.useWatch('amount', itemForm);
-  const watchedCurrency = Form.useWatch('currency', itemForm) as
-    | SupportedCurrency
-    | undefined;
-
-  const liveEtbPreview = useMemo(() => {
-    if (!watchedAmount || !watchedCurrency) {
-      return null;
-    }
-    return Number(watchedAmount) * getRate(watchedCurrency);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedAmount, watchedCurrency, ratesQuery.data]);
-
   const steps = useMemo(
     () => [
       {
@@ -481,12 +450,21 @@ export default function ExpenseClaimForm({
         title: t('hr.section.items'),
         validate: () => validateItemsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.items')}
-            description={t('pages.hr.expenseClaim.itemsStepDescription')}
-            extra={
-              !showItemForm ? (
+          <section
+            className="erp-pro-card erp-ot-entries min-w-0"
+            aria-labelledby="expense-claim-items-title"
+          >
+            <div className="erp-ot-entries-header">
+              <h3
+                id="expense-claim-items-title"
+                className="erp-ot-entries-title"
+              >
+                {t('hr.section.items')}
+                <span className="erp-ot-entries-count">
+                  {items.length.toLocaleString()}
+                </span>
+              </h3>
+              <div className="erp-ot-entries-actions">
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -494,146 +472,31 @@ export default function ExpenseClaimForm({
                 >
                   {t('hr.buttons.addItem')}
                 </Button>
-              ) : undefined
-            }
-          >
-            <div
-              className={
-                showItemForm
-                  ? 'mb-4 rounded-[12px] border border-[#e8ebef] p-4'
-                  : 'hidden'
-              }
-              style={
-                showItemForm ? { background: tokens.colorPageBg } : undefined
-              }
-              aria-hidden={!showItemForm}
-            >
-              <Typography.Text
-                strong
-                style={{ display: 'block', marginBottom: 12 }}
-              >
-                {editingKey ? t('hr.form.editItem') : t('hr.form.newItem')}
-              </Typography.Text>
-              <Form
-                form={itemForm}
-                layout="vertical"
-                requiredMark={false}
-                component={false}
-              >
-                <div className="erp-form-grid-2">
-                  <Form.Item
-                    name="category"
-                    label={t('hr.form.category')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.categoryRequired'),
-                      },
-                    ]}
-                  >
-                    <Input
-                      placeholder={t('hr.placeholder.enterCategory')}
-                      maxLength={100}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="expenseDate"
-                    label={t('hr.form.expenseDate')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.expenseDateRequired'),
-                      },
-                    ]}
-                  >
-                    <DatePicker
-                      className="w-full"
-                      format="DD/MM/YYYY"
-                      disabledDate={disableFutureDates}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="description"
-                    label={t('hr.form.description')}
-                    className="sm:col-span-2"
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.descriptionRequired'),
-                      },
-                    ]}
-                  >
-                    <Input.TextArea
-                      rows={2}
-                      maxLength={500}
-                      showCount
-                      placeholder={t('hr.placeholder.enterDescription')}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="amount"
-                    label={t('hr.form.amount')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.amountRequired'),
-                      },
-                    ]}
-                  >
-                    <InputNumber className="w-full" min={0.01} precision={2} />
-                  </Form.Item>
-                  <Form.Item
-                    name="currency"
-                    label={t('hr.form.currency')}
-                    initialValue="ETB"
-                    rules={[{ required: true }]}
-                  >
-                    <Select options={CURRENCY_OPTIONS} />
-                  </Form.Item>
-                  {liveEtbPreview != null ? (
-                    <div className="sm:col-span-2 mb-3 rounded-lg border border-[#1D9E75]/30] bg-[#E1F5EE] px-3 py-2.5">
-                      <p className="m-0 text-[10px] font-medium uppercase tracking-[0.04em] text-[#0F6E56]">
-                        {t('hr.form.etbEquivalent')}
-                      </p>
-                      <p className="m-0 mt-0.5 text-[15px] font-semibold tabular-nums text-[#0F6E56]">
-                        {formatEtbAmount(liveEtbPreview)}
-                      </p>
-                    </div>
-                  ) : null}
-                  <Form.Item
-                    label={t('hr.form.receipt')}
-                    required
-                    className="sm:col-span-2 !mb-0"
-                    extra={t('hr.hints.receiptRequired')}
-                  >
-                    <FileUploadInput
-                      files={receiptFile ? [receiptFile] : []}
-                      onChange={(nextFiles) =>
-                        setReceiptFile(nextFiles[0] ?? null)
-                      }
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      multiple={false}
-                    />
-                  </Form.Item>
-                </div>
-              </Form>
-              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end erp-expense-item-form-actions">
-                <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
-                <Button type="primary" onClick={() => void saveItem()}>
-                  {editingKey ? t('common.save') : t('hr.buttons.addItem')}
-                </Button>
               </div>
             </div>
-
             <Table<ClientItem>
               rowKey="_key"
-              size="small"
+              size="middle"
               className="erp-pro-table erp-users-table"
               columns={itemColumns}
               dataSource={items}
               pagination={false}
               scroll={{ x: isNarrow ? 480 : isCompact ? 720 : 900 }}
-              locale={{ emptyText: t('hr.empty.noItems') }}
+              locale={{
+                emptyText: (
+                  <TableEmptyState
+                    icon={<Receipt size={28} strokeWidth={1.5} />}
+                    title={t('hr.empty.noItems')}
+                    description={t(
+                      'pages.hr.expenseClaim.itemsStepDescription',
+                    )}
+                    action={{
+                      label: t('hr.buttons.addItem'),
+                      onClick: openAddItem,
+                    }}
+                  />
+                ),
+              }}
               footer={
                 items.length > 0
                   ? () => (
@@ -650,7 +513,7 @@ export default function ExpenseClaimForm({
                   : undefined
               }
             />
-          </FormLayout>
+          </section>
         ),
       },
       {
@@ -682,14 +545,24 @@ export default function ExpenseClaimForm({
               </div>
             </FormLayout>
 
-            <FormLayout
-              variant="pro"
-              title={t('hr.section.items')}
-              description={t('hr.form.itemCount', { count: items.length })}
+            <section
+              className="erp-pro-card erp-ot-entries min-w-0"
+              aria-labelledby="expense-claim-review-items-title"
             >
+              <div className="erp-ot-entries-header">
+                <h3
+                  id="expense-claim-review-items-title"
+                  className="erp-ot-entries-title"
+                >
+                  {t('hr.section.items')}
+                  <span className="erp-ot-entries-count">
+                    {items.length.toLocaleString()}
+                  </span>
+                </h3>
+              </div>
               <Table<ClientItem>
                 rowKey="_key"
-                size="small"
+                size="middle"
                 className="erp-pro-table erp-users-table"
                 columns={reviewItemColumns}
                 dataSource={items}
@@ -705,7 +578,7 @@ export default function ExpenseClaimForm({
                   </div>
                 )}
               />
-            </FormLayout>
+            </section>
           </div>
         ),
       },
@@ -713,16 +586,11 @@ export default function ExpenseClaimForm({
     [
       onBehalf,
       t,
-      showItemForm,
-      editingKey,
-      itemForm,
-      receiptFile,
       itemColumns,
       reviewItemColumns,
       items,
       totalEtb,
       detailsSnapshot,
-      liveEtbPreview,
       isNarrow,
       isCompact,
     ],
@@ -754,6 +622,133 @@ export default function ExpenseClaimForm({
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitClaim')}
       />
+      <Drawer
+        open={showItemForm}
+        title={
+          <div className="min-w-0 py-1">
+            <div className="text-[15px] font-semibold leading-snug text-[var(--color-text-primary)]">
+              {editingKey ? t('hr.form.editItem') : t('hr.form.newItem')}
+            </div>
+            <div className="mt-0.5 text-[12px] font-normal text-[var(--color-text-secondary)]">
+              {editingKey
+                ? t('hr.dialog.editExpenseItemHint')
+                : t('hr.dialog.addExpenseItemHint')}
+            </div>
+          </div>
+        }
+        size={520}
+        className="erp-responsive-drawer erp-expense-item-drawer"
+        styles={detailDrawerStyles}
+        onClose={cancelItemForm}
+        destroyOnHidden
+        footer={
+          <div className="erp-expense-item-drawer-footer flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
+            <Button type="primary" onClick={() => void saveItem()}>
+              {editingKey ? t('common.save') : t('hr.buttons.addItem')}
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          form={itemForm}
+          layout="vertical"
+          requiredMark={false}
+          component={false}
+          className="erp-drawer-form"
+        >
+          <div className="flex flex-col gap-4">
+            <DrawerSection title={t('hr.section.itemDetails')}>
+              <Form.Item
+                name="category"
+                label={t('hr.form.category')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.categoryRequired'),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t('hr.placeholder.enterCategory')}
+                  maxLength={100}
+                />
+              </Form.Item>
+              <Form.Item
+                name="description"
+                label={t('hr.form.description')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.descriptionRequired'),
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  rows={2}
+                  maxLength={500}
+                  showCount
+                  placeholder={t('hr.placeholder.enterDescription')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="expenseDate"
+                label={t('hr.form.expenseDate')}
+                className="!mb-0"
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.expenseDateRequired'),
+                  },
+                ]}
+              >
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  disabledDate={disableFutureDates}
+                />
+              </Form.Item>
+            </DrawerSection>
+
+            <DrawerSection title={t('hr.form.amount')}>
+              <Form.Item
+                name="amount"
+                className="!mb-0"
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.amountRequired'),
+                  },
+                ]}
+              >
+                <InputNumber
+                  className="w-full"
+                  min={0.01}
+                  precision={2}
+                  addonAfter="ETB"
+                />
+              </Form.Item>
+            </DrawerSection>
+
+            <DrawerSection title={t('hr.form.receipt')}>
+              <Form.Item
+                required
+                className="!mb-0"
+                extra={t('hr.hints.receiptRequired')}
+              >
+                <FileUploadInput
+                  files={receiptFile ? [receiptFile] : []}
+                  onChange={(nextFiles) =>
+                    setReceiptFile(nextFiles[0] ?? null)
+                  }
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  multiple={false}
+                />
+              </Form.Item>
+            </DrawerSection>
+          </div>
+        </Form>
+      </Drawer>
     </Form>
   );
 }

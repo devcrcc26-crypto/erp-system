@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -23,6 +24,7 @@ import { ReviewCommentsService } from '../../application/services/review-comment
 
 @ApiTags('Review Comments')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('review-comments')
 export class ReviewCommentsController {
@@ -80,7 +82,7 @@ export class ReviewCommentsController {
 
   @Post(':commentId/verify')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Verify RESOLVED comment (RESOLVED â†’ VERIFIED)' })
+  @ApiOperation({ summary: 'Verify RESOLVED comment (RESOLVED â†?VERIFIED)' })
   verify(
     @CurrentUser() user: AuthenticatedUser,
     @Param('commentId') commentId: string,

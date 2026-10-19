@@ -12,6 +12,7 @@ import {
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import { PmApi } from '../decorators/pm-api.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -31,6 +32,7 @@ import { ProjectsService } from '../../application/services/projects.service';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
+@PmApi()
 @UseGuards(PermissionsGuard)
 @Controller('projects')
 export class ProjectsController {

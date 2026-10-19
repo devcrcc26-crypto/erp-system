@@ -33,13 +33,15 @@ function modelFor(overrides: Partial<Capabilities>, ready = true): SidebarModel 
   return buildSidebarModel(SIDEBAR_CONFIG, permissions);
 }
 
-/** System Administrator with portfolio project access (sees Project Management). */
-function systemAdminWithProjects(): Partial<Capabilities> {
+/** PM module enabled with portfolio project access (sees Project Management). */
+function pmModuleWithProjects(
+  overrides: Partial<Capabilities> = {},
+): Partial<Capabilities> {
   return {
     canViewHr: true,
-    isSystemAdministrator: true,
-    isSystemAdmin: true,
+    modulesProjectManagementEnabled: true,
     ...withProjects(),
+    ...overrides,
   };
 }
 
@@ -115,7 +117,7 @@ describe('sidebar permissions and filtering', () => {
   });
 
   it('keeps every rail panel short', () => {
-    const model = modelFor({ ...systemAdminWithProjects(), canManageUsers: true, canAccessPayroll: true });
+    const model = modelFor({ ...pmModuleWithProjects(), canManageUsers: true, canAccessPayroll: true });
     for (const entry of model.primary) {
       if (entry.kind !== 'folder' || entry.id === 'pm') {
         continue;
@@ -193,9 +195,10 @@ describe('sidebar permissions and filtering', () => {
     expect(manageIds(model)).toEqual(['manage-announcements']);
   });
 
-  it('hides Project Management for non-admins, even with full project access', () => {
+  it('hides Project Management when the company module toggle is off', () => {
     const model = modelFor({
       canViewHr: true,
+      modulesProjectManagementEnabled: false,
       epc: { ...structuredClone(EMPTY_CAPABILITIES.epc), navFullAccess: true },
       ...withProjects(),
     });
@@ -205,8 +208,8 @@ describe('sidebar permissions and filtering', () => {
     expect(results.some((result) => result.link.id === 'projects')).toBe(false);
   });
 
-  it('shows Project Management to System Administrator with project access', () => {
-    const model = modelFor(systemAdminWithProjects());
+  it('shows Project Management when the module is enabled with project access', () => {
+    const model = modelFor(pmModuleWithProjects());
     expect(ids(model.primary)).toContain('pm');
     expect(folder(model, 'pm')?.groups.some((group) =>
       group.items.some((item) => item.id === 'projects'),
@@ -220,7 +223,7 @@ describe('sidebar permissions and filtering', () => {
 
   it('prepends project groups and collapses portfolio groups inside a project', () => {
     const permissions = resolveSidebarPermissions({
-      capabilities: capabilities(systemAdminWithProjects()),
+      capabilities: capabilities(pmModuleWithProjects()),
       ready: true,
       hasProjectAdministratorRole: false,
     });

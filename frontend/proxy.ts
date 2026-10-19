@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import {
+  AUTH_COOKIE_NAME,
+  PM_MODULE_COOKIE,
+  SYSADMIN_COOKIE,
+  shouldRedirectPmRoute,
+} from '@/lib/auth/session';
 
 const PUBLIC_PATHS = [
   '/login',
@@ -42,6 +47,22 @@ export function proxy(request: NextRequest): NextResponse {
     !hasExplicitLoginIntent(request.nextUrl.searchParams)
   ) {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  if (isAuthenticated) {
+    const pmModuleEnabled =
+      request.cookies.get(PM_MODULE_COOKIE)?.value === '1';
+    const isSystemAdministrator =
+      request.cookies.get(SYSADMIN_COOKIE)?.value === '1';
+    if (
+      shouldRedirectPmRoute({
+        pathname,
+        pmModuleEnabled,
+        isSystemAdministrator,
+      })
+    ) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return NextResponse.next();

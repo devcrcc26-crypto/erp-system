@@ -53,4 +53,8 @@ export const envValidationSchema = Joi.object({
   AUTO_APPROVE_ACTOR_ID: Joi.string()
     .uuid()
     .default('16040ab7-b923-4fe4-87cf-cc3a916c7325'),
+  PM_MODULE_ENABLED: Joi.boolean()
+    .truthy('true', '1', 1)
+    .falsy('false', '0', 0)
+    .default(false),
 });

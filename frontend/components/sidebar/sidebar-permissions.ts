@@ -99,28 +99,27 @@ export function resolveSidebarPermissions(
   );
   grant('org.vehicles', hr);
 
-  // Project management - sidebar entry is System Administrator only for now.
-  // Capability checks still apply so links match what the pages allow.
-  const adminPm = caps.isSystemAdministrator;
+  // Project management — hidden when company module toggle is off.
+  const pmModuleOn = caps.modulesProjectManagementEnabled;
   const portfolio = pm.projects.canView;
-  grant('pm.projects', adminPm && global('/projects', portfolio));
+  grant('pm.projects', pmModuleOn && global('/projects', portfolio));
   grant(
     'pm.reviewInbox',
-    adminPm && global('/review-inbox', epc.canViewReviewInbox),
+    pmModuleOn && global('/review-inbox', epc.canViewReviewInbox),
   );
   grant(
     'pm.myComments',
-    adminPm && global('/my-comments', epc.canViewMyComments),
+    pmModuleOn && global('/my-comments', epc.canViewMyComments),
   );
-  grant('pm.myWork', adminPm && global('/my-work', epc.canViewMyWork));
+  grant('pm.myWork', pmModuleOn && global('/my-work', epc.canViewMyWork));
   grant(
     'pm.submittals',
-    adminPm &&
+    pmModuleOn &&
       global('/submittals', epc.navFullAccess || isFkUser || pm.submittals.canView),
   );
   grant(
     'pm.externalReleases',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/external-releases',
         epc.navFullAccess || isFkUser || pm.submittals.canView,
@@ -128,7 +127,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.changeRequests',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/change-requests',
         epc.navFullAccess || isFkUser || pm.change_requests.canView,
@@ -136,7 +135,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.rfis',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/rfis',
         epc.navFullAccess || isFkUser || ((pm.rfis?.canView ?? false) && !portfolio),
@@ -144,7 +143,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.issues',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/issues',
         epc.navFullAccess || isFkUser || (pm.issues.canView && !portfolio),
@@ -152,7 +151,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.risks',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/risks',
         epc.navFullAccess || epc.navDisciplineLeader || (pm.risks.canView && !portfolio),
@@ -160,7 +159,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.punchList',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/punch-list',
         epc.navDisciplineLeader || (pm.punchItems.canView && !portfolio),
@@ -168,7 +167,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.dailyLogs',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/daily-logs',
         epc.navFullAccess || isFkUser || (pm.dailyLogs.canView && !portfolio),
@@ -176,7 +175,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.meetings',
-    adminPm &&
+    pmModuleOn &&
       global(
         '/meetings',
         epc.navFullAccess || isFkUser || (pm.meetings.canView && !portfolio),
@@ -184,7 +183,7 @@ export function resolveSidebarPermissions(
   );
   grant(
     'pm.correspondence',
-    adminPm && global('/correspondence', epc.navFullAccess),
+    pmModuleOn && global('/correspondence', epc.navFullAccess),
   );
 
   return granted;
