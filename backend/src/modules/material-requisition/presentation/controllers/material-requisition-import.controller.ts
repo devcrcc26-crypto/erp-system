@@ -28,9 +28,7 @@ import { MaterialRequisitionImportService } from '../../application/services/mat
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'material-requisition', action: 'create' },
+  { module: 'material-requisition', action: 'manage' },
 )
 @Controller('hr/material-requisition/import')
 export class MaterialRequisitionImportController {
