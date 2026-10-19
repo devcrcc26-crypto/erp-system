@@ -2151,7 +2151,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Employee contracts: view for employees and leadership; manage for HR Officer.
+  // Employee contracts: view for all roles; create/edit for HR roles.
   const employeeContractView = permissions.find(
     (permission) =>
       permission.module === 'employee-contract' &&
@@ -2168,10 +2168,16 @@ async function main(): Promise<void> {
   );
   if (employeeContractView) {
     for (const roleName of [
+      'Employee',
+      'Team Lead',
+      'Department Head',
+      'Discipline Leader',
+      'HR Assistant',
+      'HR Officer',
+      'HR Manager',
       'General Manager',
       'Managing Director',
-      'HR Officer',
-      'Employee',
+      'System Administrator',
     ] as const) {
       const roleId = roleMap.get(roleName);
       if (!roleId) {
@@ -2181,9 +2187,17 @@ async function main(): Promise<void> {
     }
   }
   if (employeeContractCreate && employeeContractEdit) {
-    const hrOfficerRoleId = roleMap.get('HR Officer');
-    if (hrOfficerRoleId) {
-      await upsertRolePermission(hrOfficerRoleId, employeeContractCreate.id, {
+    for (const roleName of [
+      'HR Assistant',
+      'HR Officer',
+      'HR Manager',
+      'System Administrator',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, employeeContractCreate.id, {
         canView: true,
         canCreate: true,
         canEdit: false,
@@ -2191,7 +2205,7 @@ async function main(): Promise<void> {
         canApprove: false,
         canExport: false,
       });
-      await upsertRolePermission(hrOfficerRoleId, employeeContractEdit.id, {
+      await upsertRolePermission(roleId, employeeContractEdit.id, {
         canView: true,
         canCreate: false,
         canEdit: true,

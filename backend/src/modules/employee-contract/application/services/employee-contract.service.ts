@@ -755,14 +755,14 @@ export class EmployeeContractService {
         companyId: string,
         userId: string,
     ): Promise<void>{
-        const isHrViewer = await this.permissionService.hasPermission(
+        const canView = await this.permissionService.hasPermission(
             userId,
             companyId,
-            'hr',
+            'employee-contract',
             'view',
         );
 
-        if(isHrViewer || contract.employeeId === userId){
+        if(canView || contract.employeeId === userId){
             return;
         }
         throw new ForbiddenException(
@@ -779,7 +779,7 @@ export class EmployeeContractService {
         const isHrViewer = await this.permissionService.hasPermission(
             userId,
             companyId,
-            'hr',
+            'employee-contract',
             'view',
         );
 
@@ -1077,19 +1077,13 @@ export class EmployeeContractService {
         companyId: string,
         userId: string,
     ): Promise<void>{
-        const canManage = 
-        (await this.permissionService.hasPermission(
-            userId,
-            companyId,
-            'hr',
-            'view'
-        ))  || 
+        const canManage =
         (await this.permissionService.hasPermission(
             userId,
             companyId,
             'employee-contract',
             'create',
-        )) || 
+        )) ||
         (await this.permissionService.hasPermission(
             userId,
             companyId,

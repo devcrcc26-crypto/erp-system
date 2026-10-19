@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -20,26 +21,39 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { EmployeeContractImportPreviewResponseDto } from '../../application/dtos/employee-contract-import.dtos';
 import { EmployeeContractImportService } from '../../application/services/employee-contract-import.service';
+import { canManageContractImport } from '../../application/utils/employee-contract-import-access.util';
 
 @ApiTags('HR Employee Contract Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'employee-contract', action: 'create' },
-)
+@RequireAnyPermission({ module: 'employee-contract', action: 'create' })
 @Controller('hr/employee-contracts/import')
 export class EmployeeContractImportController {
   constructor(
     private readonly employeeContractImportService: EmployeeContractImportService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManageContractImport(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManageContractImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage employee contract imports',
+      );
+    }
   }
 
   @Get('template')
@@ -72,10 +86,11 @@ export class EmployeeContractImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<EmployeeContractImportPreviewResponseDto> {
+    await this.assertCanManageContractImport(user);
     return this.employeeContractImportService.previewImport(this.ctx(user), file);
   }
 
@@ -97,10 +112,11 @@ export class EmployeeContractImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManageContractImport(user);
     return this.employeeContractImportService.commitImport(this.ctx(user), file);
   }
 }

@@ -58,7 +58,6 @@ async function parseDto<T extends object>(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
     { module: 'employee-contract', action: 'view' },
     { module: 'employee-contract', action: 'create' },
 )
@@ -71,7 +70,6 @@ export class EmployeeContractController {
     @Post()
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'create' },
     )
     @ApiOperation({ summary: 'Create an employee contract (HR)' })
@@ -122,7 +120,6 @@ export class EmployeeContractController {
     @Post('salary-preview')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'create' },
     )
     @ApiOperation({
@@ -145,7 +142,6 @@ export class EmployeeContractController {
     @Post('bonus-from-net')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'create' },
     )
     @ApiOperation({
@@ -196,6 +192,9 @@ export class EmployeeContractController {
 
     @Get('my/active')
     @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'employee-contract', action: 'view' },
+    )
     @ApiOperation({
         summary: 'My active contract without salary fields (any authenticated user)',
     })
@@ -226,7 +225,6 @@ export class EmployeeContractController {
     @Post(':id/attachments')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'edit' },
         { module: 'employee-contract', action: 'create' },
     )
@@ -263,7 +261,6 @@ export class EmployeeContractController {
     @Delete(':id/attachments/:documentId')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'edit' },
         { module: 'employee-contract', action: 'create' },
     )
@@ -285,7 +282,6 @@ export class EmployeeContractController {
     @Patch(':id')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'edit' },
     )
     @ApiOperation({ summary: 'Update an employee contract' })
@@ -307,7 +303,6 @@ export class EmployeeContractController {
     @Patch(':id/terminate')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'edit' },
     )
     @ApiOperation({ summary: 'Terminate an employee contract' })
@@ -329,7 +324,6 @@ export class EmployeeContractController {
     @Delete(':id')
     @DelegatePermissionCheck()
     @RequireAnyPermission(
-        { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'edit' },
     )
     @ApiOperation({ summary: 'Delete an employee contract' })
