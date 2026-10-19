@@ -24,6 +24,7 @@ import {
 } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
   ALLOWED_UPLOAD_MIME_TYPES,
   STORAGE_BUCKETS,
@@ -856,7 +857,7 @@ export class OvertimeService
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       sheet.employeeId,
       companyId,
-      totalHours > 4,
+      false,
     );
 
     const monthLabel = `${sheet.year}-${String(sheet.month).padStart(2, '0')}`;
@@ -1009,14 +1010,17 @@ export class OvertimeService
       throw new NotFoundException('Overtime sheet not found');
     }
 
-    const isHrViewer = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'hr',
-      'view',
-    );
-    if (!isHrViewer) {
-      throw new ForbiddenException('Only HR can delete overtime sheets');
+    const roleNames = await this.permissionService.getUserRoleNames(userId, companyId);
+    if (!isTrueSystemAdministrator(roleNames)) {
+      const canDelete = await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'overtime',
+        'delete',
+      );
+      if (!canDelete) {
+        throw new ForbiddenException('Only HR can delete overtime sheets');
+      }
     }
 
     const now = new Date();

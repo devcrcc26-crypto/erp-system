@@ -599,21 +599,21 @@ const CATEGORIES: CategorySeedDef[] = [
       {
         name: 'Short overtime (≤ 4 hours)',
         when: { hours: { lte: 4 } },
-        tiers: [tier('Department Head', 'DEPARTMENT_HEAD', 1)],
+        tiers: [tier('Project Manager', 'DEPARTMENT_HEAD', 1)],
       },
       {
         name: 'Extended overtime (> 4 hours)',
         when: { hours: { gt: 4 } },
         tiers: [
-          tier('Department Head', 'DEPARTMENT_HEAD', 1),
-          tier('HR Manager', 'HR_MANAGER', 2),
+          tier('Project Manager', 'DEPARTMENT_HEAD', 1),
+          tier('HR Officer', 'HR_MANAGER', 2),
         ],
       },
       {
         name: 'Default',
         tiers: [
-          tier('Department Head', 'DEPARTMENT_HEAD', 1),
-          tier('HR Manager', 'HR_MANAGER', 2),
+          tier('Project Manager', 'DEPARTMENT_HEAD', 1),
+          tier('HR Officer', 'HR_MANAGER', 2),
         ],
       },
     ],

@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -20,9 +21,11 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { OvertimeImportPreviewResponseDto } from '../../application/dtos/overtime-import.dtos';
 import { OvertimeImportService } from '../../application/services/overtime-import.service';
+import { canManageOvertimeImport } from '../../application/utils/overtime-import-access.util';
 
 @ApiTags('HR Overtime Import')
 @ApiBearerAuth()
@@ -34,10 +37,27 @@ import { OvertimeImportService } from '../../application/services/overtime-impor
 )
 @Controller('hr/overtime/import')
 export class OvertimeImportController {
-  constructor(private readonly overtimeImportService: OvertimeImportService) {}
+  constructor(
+    private readonly overtimeImportService: OvertimeImportService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManageOvertimeImport(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManageOvertimeImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage overtime imports',
+      );
+    }
   }
 
   @Get('template')
@@ -73,10 +93,11 @@ export class OvertimeImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<OvertimeImportPreviewResponseDto> {
+    await this.assertCanManageOvertimeImport(user);
     return this.overtimeImportService.previewCompanyImport(
       this.ctx(user),
       file,
@@ -104,10 +125,11 @@ export class OvertimeImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManageOvertimeImport(user);
     return this.overtimeImportService.commitCompanyImport(this.ctx(user), file);
   }
 }

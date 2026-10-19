@@ -46,7 +46,6 @@ import { OvertimeService } from '../../application/services/overtime.service';
 @RequireAnyPermission(
   { module: 'hr', action: 'view' },
   { module: 'overtime', action: 'view' },
-  { module: 'overtime', action: 'create' },
 )
 @Controller('hr/overtime')
 export class OvertimeController {
@@ -88,6 +87,7 @@ export class OvertimeController {
   }
 
   @Post('sheets')
+  @RequireAnyPermission({ module: 'overtime', action: 'create' })
   @ApiOperation({
     summary:
       'Open or create a month sheet for the caller, or on behalf of an eligible employee',
@@ -216,7 +216,6 @@ export class OvertimeController {
     { module: 'hr', action: 'view' },
     { module: 'overtime', action: 'view' },
     { module: 'overtime', action: 'create' },
-    { module: 'approvals', action: 'view' },
   )
   @ApiOperation({ summary: 'Get an overtime sheet with entries and tiers' })
   getOne(
@@ -228,6 +227,7 @@ export class OvertimeController {
   }
 
   @Post(':id/entries')
+  @RequireAnyPermission({ module: 'overtime', action: 'edit' })
   @ApiOperation({ summary: 'Add an overtime entry to a draft/returned sheet' })
   addEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -239,6 +239,7 @@ export class OvertimeController {
   }
 
   @Patch(':id/entries/:entryId')
+  @RequireAnyPermission({ module: 'overtime', action: 'edit' })
   @ApiOperation({ summary: 'Update an overtime entry' })
   updateEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -257,6 +258,7 @@ export class OvertimeController {
   }
 
   @Post(':id/entries/:entryId/attachments')
+  @RequireAnyPermission({ module: 'overtime', action: 'edit' })
   @ApiOperation({ summary: 'Upload attachments for an overtime entry' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -290,6 +292,7 @@ export class OvertimeController {
   }
 
   @Delete(':id/entries/:entryId/attachments/:documentId')
+  @RequireAnyPermission({ module: 'overtime', action: 'edit' })
   @ApiOperation({ summary: 'Remove an attachment from an overtime entry' })
   removeEntryAttachment(
     @CurrentUser() user: AuthenticatedUser,
@@ -308,6 +311,7 @@ export class OvertimeController {
   }
 
   @Delete(':id/entries/:entryId')
+  @RequireAnyPermission({ module: 'overtime', action: 'delete' })
   @ApiOperation({ summary: 'Delete an overtime entry' })
   deleteEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -324,6 +328,7 @@ export class OvertimeController {
   }
 
   @Post(':id/submit')
+  @RequireAnyPermission({ module: 'overtime', action: 'create' })
   @ApiOperation({ summary: 'Submit an overtime sheet for approval' })
   submit(
     @CurrentUser() user: AuthenticatedUser,
@@ -334,6 +339,7 @@ export class OvertimeController {
   }
 
   @Patch(':id/cancel')
+  @RequireAnyPermission({ module: 'overtime', action: 'create' })
   @ApiOperation({ summary: 'Cancel a draft or submitted overtime sheet' })
   cancel(
     @CurrentUser() user: AuthenticatedUser,
@@ -344,6 +350,7 @@ export class OvertimeController {
   }
 
   @Delete(':id')
+  @RequireAnyPermission({ module: 'overtime', action: 'delete' })
   @ApiOperation({ summary: 'Soft-delete an overtime sheet (HR only)' })
   async deleteSheet(
     @CurrentUser() user: AuthenticatedUser,
