@@ -149,7 +149,11 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'WORK_FROM_HOME',
     name: 'Work From Home',
     description:
-      'Employee request to work from home on a specific date. Approval chain is Employee → Discipline Lead only. Discipline Leads and HR may also assign WFH days directly (no approval). Runtime chain is built in code, not from these rules.',
+      'Employee request to work from home on a specific date. ' +
+      'Approval chain is Employee → Reports to (tier 1) → HR Officer (tier 2). ' +
+      'Chain changed from single Discipline Lead tier on 2026-10-19 ' +
+      '(was: Employee → Discipline Lead only). ' +
+      'Runtime chain is built in HrApprovalChainService.buildWorkFromHomeApprovalChain, not from these rules.',
     module: 'HR',
     numberPrefix: 'WFH',
     icon: 'HomeOutlined',
@@ -162,8 +166,11 @@ const CATEGORIES: CategorySeedDef[] = [
     },
     approvalRules: [
       {
-        name: 'Employee → Discipline Lead only',
-        tiers: [tier('Discipline Lead', 'DISCIPLINE_LEAD', 1)],
+        name: 'Employee → Reports to → HR Officer',
+        tiers: [
+          tier('Reports to', 'EMPLOYEE', 1),
+          tier('HR Officer', 'HR', 2),
+        ],
       },
     ],
   },
@@ -741,7 +748,7 @@ const CATEGORIES: CategorySeedDef[] = [
       {
         name: 'Default',
         tiers: [
-          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('Project Manager', 'DEPARTMENT_HEAD', 1),
           tier('HR Officer', 'HR', 2),
         ],
       },

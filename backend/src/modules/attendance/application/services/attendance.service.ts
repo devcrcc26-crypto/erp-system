@@ -4647,8 +4647,7 @@ export class AttendanceService
   }
 
   /**
-   * Flagged days for an employee the actor may file field movement for (self,
-   * or on behalf). Approver-only employees are rejected.
+   * Flagged days for an employee (HR only for cross-employee lookup).
    */
   async getFlaggedDaysOnBehalf(
     actorUserId: string,
@@ -4657,13 +4656,18 @@ export class AttendanceService
     year: number,
     companyId: string,
   ): Promise<unknown> {
-    if (
-      employeeId !== actorUserId &&
-      !(await this.onBehalfService.isEligibleFor(actorUserId, employeeId, companyId))
-    ) {
-      throw new ForbiddenException(
-        'You do not have permission to submit on behalf of this employee',
+    if (employeeId !== actorUserId) {
+      const isHr = await this.permissionService.hasPermission(
+        actorUserId,
+        companyId,
+        'hr',
+        'view',
       );
+      if (!isHr) {
+        throw new ForbiddenException(
+          'You do not have access to this employee\'s attendance',
+        );
+      }
     }
     await this.onBehalfService.assertTakesPartInHrProcesses(employeeId, companyId);
 

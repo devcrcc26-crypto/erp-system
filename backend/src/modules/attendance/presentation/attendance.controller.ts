@@ -60,7 +60,7 @@ export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Post('import/preview')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'create' })
   @ApiOperation({ summary: 'Preview a Deli e+ attendance Excel import' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -93,7 +93,7 @@ export class AttendanceController {
   }
 
   @Post('import/confirm')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'create' })
   @ApiOperation({ summary: 'Confirm and persist a cached attendance preview' })
   async confirmImport(
     @CurrentUser() user: AuthenticatedUser,
@@ -104,14 +104,14 @@ export class AttendanceController {
   }
 
   @Get('import/history')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'List attendance import batches for the company' })
   importHistory(@CurrentCompany() companyId: string): Promise<unknown> {
     return this.attendanceService.getImportHistory(companyId);
   }
 
   @Get('employees/search')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary: 'Search active employees for manual attendance assignment',
   })
@@ -123,7 +123,7 @@ export class AttendanceController {
   }
 
   @Get('awaiting-enrolment')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary:
       'Employees marked "Needs enrolment" with no scan in any later import',
@@ -135,7 +135,7 @@ export class AttendanceController {
   }
 
   @Get('identities')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'List attendance device identities' })
   listIdentities(
     @CurrentCompany() companyId: string,
@@ -145,7 +145,7 @@ export class AttendanceController {
   }
 
   @Patch('identities/:id')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'edit' })
   @ApiOperation({ summary: 'Update an attendance identity mapping' })
   updateIdentity(
     @CurrentUser() user: AuthenticatedUser,
@@ -162,7 +162,7 @@ export class AttendanceController {
   }
 
   @Get('imports/:batchId/details')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary: 'Unmatched and missing rows for an import batch',
   })
@@ -174,7 +174,7 @@ export class AttendanceController {
   }
 
   @Post('imports/:batchId/missing/:missingId/resolve')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'create' })
   @ApiOperation({
     summary: 'Resolve an employee missing from the attendance file',
   })
@@ -195,7 +195,7 @@ export class AttendanceController {
   }
 
   @Get('monthly-approvals')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'List monthly attendance approvals' })
   listMonthlyApprovals(
     @CurrentCompany() companyId: string,
@@ -205,7 +205,7 @@ export class AttendanceController {
   }
 
   @Get('monthly-approvals/:month/:year')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Get monthly attendance approval for a period' })
   getMonthlyApproval(
     @CurrentCompany() companyId: string,
@@ -220,7 +220,7 @@ export class AttendanceController {
   }
 
   @Post('monthly-approvals/:id/review')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'approve' })
   @ApiOperation({ summary: 'Mark a monthly attendance as reviewed' })
   markAsReviewed(
     @CurrentUser() user: AuthenticatedUser,
@@ -231,7 +231,7 @@ export class AttendanceController {
   }
 
   @Post('monthly-approvals/:id/approve')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'approve' })
   @ApiOperation({ summary: 'Approve and lock a monthly attendance period' })
   approveMonth(
     @CurrentUser() user: AuthenticatedUser,
@@ -242,7 +242,7 @@ export class AttendanceController {
   }
 
   @Post('monthly-approvals/:id/unlock')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'approve' })
   @ApiOperation({ summary: 'Unlock an approved monthly attendance period' })
   unlockMonth(
     @CurrentUser() user: AuthenticatedUser,
@@ -258,7 +258,7 @@ export class AttendanceController {
   }
 
   @Post('daily-logs/correct')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'edit' })
   @ApiOperation({ summary: 'Correct clock times on a daily attendance log' })
   correctDailyLog(
     @CurrentUser() user: AuthenticatedUser,
@@ -269,7 +269,7 @@ export class AttendanceController {
   }
 
   @Get('scan-reviews')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary:
       'SCAN_ONLY schedules: scans after the latest scan time for a month, with per-employee counts',
@@ -282,7 +282,7 @@ export class AttendanceController {
   }
 
   @Patch('scan-reviews/:dailyLogId')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'edit' })
   @ApiOperation({
     summary: 'Excuse or mark late a SCAN_AFTER_DEADLINE flag (no pay effect)',
   })
@@ -302,6 +302,7 @@ export class AttendanceController {
 
   @Get('flagged-days/me')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary: 'List unresolved flagged days for the signed-in employee',
   })
@@ -320,9 +321,9 @@ export class AttendanceController {
 
   @Get('flagged-days/employee/:employeeId')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
-    summary:
-      'Unresolved flagged days for an employee the caller may file field movement for (self or on behalf)',
+    summary: 'Unresolved flagged days for an employee (HR only)',
   })
   getEmployeeFlaggedDays(
     @CurrentUser() user: AuthenticatedUser,
@@ -341,6 +342,7 @@ export class AttendanceController {
 
   @Post('field-movement-logs')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Create a draft field movement / early departure log' })
   createFieldMovementLog(
     @CurrentUser() user: AuthenticatedUser,
@@ -356,6 +358,7 @@ export class AttendanceController {
 
   @Post('field-movement-logs/draft-entries')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary:
       'Upsert draft field-movement entries for a month (progressive explain)',
@@ -374,6 +377,7 @@ export class AttendanceController {
 
   @Post('field-movement-logs/draft-entries/remove-day')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary: 'Remove one day from the month draft field-movement log',
   })
@@ -391,6 +395,7 @@ export class AttendanceController {
 
   @Get('field-movement-logs')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'List field movement logs' })
   listFieldMovementLogs(
     @CurrentUser() user: AuthenticatedUser,
@@ -406,6 +411,7 @@ export class AttendanceController {
 
   @Get('field-movement-logs/:id')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Get a field movement log by id' })
   getFieldMovementLog(
     @CurrentUser() user: AuthenticatedUser,
@@ -421,6 +427,7 @@ export class AttendanceController {
 
   @Post('field-movement-logs/:id/submit')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Submit a field movement log for approval' })
   submitFieldMovementLog(
     @CurrentUser() user: AuthenticatedUser,
@@ -438,6 +445,7 @@ export class AttendanceController {
 
   @Patch('field-movement-logs/:id/cancel')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Cancel a draft or submitted field movement log' })
   cancelFieldMovementLog(
     @CurrentUser() user: AuthenticatedUser,
@@ -453,6 +461,7 @@ export class AttendanceController {
 
   @Get()
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary:
       'List attendance records (company-wide for hr.view; own otherwise)',
@@ -467,6 +476,7 @@ export class AttendanceController {
 
   @Get('me')
   @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Get my attendance records for a year' })
   getMyAttendance(
     @CurrentUser() user: AuthenticatedUser,
@@ -482,7 +492,7 @@ export class AttendanceController {
   }
 
   @Get(':employeeId/month/:month/year/:year/daily-logs')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({
     summary: 'Get employee daily logs for a month (HR review)',
   })
@@ -501,7 +511,7 @@ export class AttendanceController {
   }
 
   @Get(':employeeId/year/:year')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Get an employee attendance year (HR)' })
   getEmployeeAttendance(
     @CurrentUser() user: AuthenticatedUser,

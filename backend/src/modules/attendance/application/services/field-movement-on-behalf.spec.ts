@@ -191,11 +191,14 @@ function buildOnBehalf(prisma: ReturnType<typeof buildPrisma>['prisma'], audits:
 function buildAttendance() {
   const { prisma, created, audits } = buildPrisma();
   const onBehalf = buildOnBehalf(prisma, audits);
+  const permissionService = {
+    hasPermission: jest.fn(async (userId: unknown) => userId === ADMIN),
+  };
   const service = new AttendanceService(
     prisma as never,
     {} as never,
     {} as never,
-    {} as never,
+    permissionService as never,
     {} as never,
     {} as never,
     {} as never,

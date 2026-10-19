@@ -504,7 +504,7 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Work from home: Employee → Reports to only.
+   * Work from home: Employee → Reports to (tier 1) → HR Officer (tier 2).
    * GM / Managing Director / System Administrator → empty chain (auto-approve).
    * Missing Reports to → BadRequestException.
    */
@@ -513,9 +513,40 @@ export class HrApprovalChainService {
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     // AUTO_APPROVE_WRAP:buildWorkFromHomeApprovalChain
-    return this.withAutoApproveFallback(() =>
-      this.buildReportsToOnlyChain(employeeId, companyId, 'AUTO_APPROVE'),
-    );
+    return this.withAutoApproveFallback(async () => {
+      const primaryRole =
+        (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+      if (AUTO_APPROVE_ROLES.includes(primaryRole)) {
+        return [];
+      }
+
+      let reportsTo: { id: string };
+      try {
+        reportsTo = await this.getReportsToRequired(employeeId, companyId);
+      } catch {
+        throw new BadRequestException(
+          'No direct supervisor assigned — contact HR',
+        );
+      }
+
+      const hrOfficer = await this.getHROfficer(companyId);
+
+      return this.finalizeTiers([
+        {
+          order: 1,
+          label: 'Reports to',
+          approverId: reportsTo.id,
+          resolver: 'REPORTS_TO',
+        },
+        {
+          order: 2,
+          label: 'HR Officer',
+          approverId: hrOfficer.id,
+          resolver: 'ROLE:HR Officer',
+        },
+      ]);
+    });
   }
 
   /**
