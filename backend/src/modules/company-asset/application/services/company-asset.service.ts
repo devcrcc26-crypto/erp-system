@@ -542,12 +542,9 @@ export class CompanyAssetService {
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const [hrView, assetsView] = await Promise.all([
-      this.permissionService.hasPermission(userId, companyId, "hr", "view"),
-      this.permissionService.hasPermission(userId, companyId, "assets", "view"),
-    ]);
+    const assetsView = await this.permissionService.hasPermission(userId, companyId, "assets", "view");
 
-    if (hrView || assetsView) {
+    if (assetsView) {
       return;
     }
 

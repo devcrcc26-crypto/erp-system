@@ -64,7 +64,6 @@ async function parseDto<T extends object>(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: "hr", action: "view" },
   { module: "assets", action: "view" },
 )
 @Controller("organization/assets")
@@ -84,7 +83,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Create a new company asset" })
   async create(
@@ -130,7 +128,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Update asset details" })
   async update(
@@ -152,7 +149,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Update asset status" })
   async updateStatus(
@@ -174,7 +170,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Soft-delete an asset" })
   async remove(
@@ -204,7 +199,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Issue asset to an employee" })
   async issueAssignment(
@@ -226,7 +220,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Return asset from an assignment" })
   async returnAssignment(
@@ -269,7 +262,6 @@ export class CompanyAssetController {
   @RequireAnyPermission(
     { module: "documents", action: "create" },
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Upload a photo for an asset" })
   @ApiConsumes("multipart/form-data")
@@ -305,7 +297,6 @@ export class CompanyAssetController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
-    { module: "hr", action: "edit" },
   )
   @ApiOperation({ summary: "Remove an asset photo" })
   removePhoto(

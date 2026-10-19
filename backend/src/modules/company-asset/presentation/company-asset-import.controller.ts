@@ -11,7 +11,6 @@ export const CompanyAssetImportController = createHrImportController({
   entityLabel: 'company asset',
   permissions: [
     { module: 'assets', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   ],
   service: CompanyAssetImportService,
 });
