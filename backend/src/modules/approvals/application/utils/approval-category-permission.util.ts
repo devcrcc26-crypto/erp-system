@@ -8,7 +8,7 @@ export const APPROVAL_CATEGORY_PERMISSION_MODULE: Readonly<
   Record<string, string>
 > = {
   LEAVE_REQUEST: 'leave',
-  SITE_ASSIGNMENT: 'leave',
+  SITE_ASSIGNMENT: 'site-assignment',
   WORK_FROM_HOME: 'wfh',
   OVERTIME_APPLICATION: 'overtime',
   FIELD_MOVEMENT_LOG: 'field-movement',

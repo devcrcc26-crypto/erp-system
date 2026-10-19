@@ -124,7 +124,9 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'SITE_ASSIGNMENT',
     name: 'Site Assignment',
     description:
-      'Request paid on-site days when working at a project location without HQ scanner coverage. Approval chain is Employee → Discipline Lead only. A Discipline Lead must be assigned; there is no HR Manager or Department Head fallback. Runtime chain is built in code, not from these rules.',
+      'Request paid on-site days when working at a project location without HQ scanner coverage. ' +
+      'Runtime approval chain (HrApprovalChainService.buildSiteAssignmentApprovalChain): ' +
+      'typical employee → Reports to (supervisor); GM, Managing Director, and System Administrator → HR Manager.',
     module: 'HR',
     numberPrefix: 'SA',
     icon: 'EnvironmentOutlined',
@@ -140,8 +142,12 @@ const CATEGORIES: CategorySeedDef[] = [
     },
     approvalRules: [
       {
-        name: 'Employee → Discipline Lead only',
-        tiers: [tier('Discipline Lead', 'DISCIPLINE_LEAD', 1)],
+        name: 'Employee → Reports to',
+        tiers: [tier('Reports to', 'EMPLOYEE', 1)],
+      },
+      {
+        name: 'Executive → HR Manager',
+        tiers: [tier('HR Manager', 'HR_MANAGER', 1)],
       },
     ],
   },

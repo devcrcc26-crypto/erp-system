@@ -7,6 +7,7 @@ const COMPANY_ID = '00000000-0000-4000-8000-000000000002';
 const SUPERVISOR_ID = '00000000-0000-4000-8000-000000000101';
 const ARCH_EMP_ID = '00000000-0000-4000-8000-000000000102';
 const HR_MANAGER_ID = '00000000-0000-4000-8000-000000000103';
+const HR_OFFICER_ID = '00000000-0000-4000-8000-000000000104';
 
 describe('buildSiteAssignmentApprovalChain', () => {
   let service: HrApprovalChainService;
@@ -77,17 +78,21 @@ describe('buildSiteAssignmentApprovalChain', () => {
     ).resolves.toEqual([]);
   });
 
-  it('Work from home employee → Reports to only', async () => {
+  it('Work from home employee → Reports to then HR Officer', async () => {
     jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
     jest
       .spyOn(service, 'getReportsToRequired')
       .mockResolvedValue({ id: SUPERVISOR_ID });
+    jest.spyOn(service, 'getHROfficer').mockResolvedValue({ id: HR_OFFICER_ID });
 
     const chain = await service.buildWorkFromHomeApprovalChain(
       ARCH_EMP_ID,
       COMPANY_ID,
     );
-    expect(chain.map((tier) => tier.approverId)).toEqual([SUPERVISOR_ID]);
+    expect(chain.map((tier) => tier.approverId)).toEqual([
+      SUPERVISOR_ID,
+      HR_OFFICER_ID,
+    ]);
   });
 
   it('GM with no HR Manager / HR Officer → BadRequestException', async () => {

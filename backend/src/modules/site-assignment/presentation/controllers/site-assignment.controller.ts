@@ -15,9 +15,9 @@ import {
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
-import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
+import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   ListSiteAssignmentsDto,
@@ -29,11 +29,6 @@ import { SiteAssignmentService } from '../../application/services/site-assignmen
 @ApiTags('HR Site Assignments')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'view' },
-  { module: 'leave', action: 'view' },
-  { module: 'leave', action: 'create' },
-)
 @Controller('hr/site-assignments')
 export class SiteAssignmentController {
   constructor(
@@ -41,7 +36,7 @@ export class SiteAssignmentController {
   ) {}
 
   @Post()
-  @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'site-assignment', action: 'create' })
   @ApiOperation({ summary: 'Submit a site assignment request' })
   async submit(
     @Body() dto: SubmitSiteAssignmentDto,
@@ -52,6 +47,7 @@ export class SiteAssignmentController {
   }
 
   @Get()
+  @RequireAnyPermission({ module: 'site-assignment', action: 'view' })
   @ApiOperation({ summary: 'List site assignments' })
   async list(
     @Query() query: ListSiteAssignmentsDto,
@@ -66,6 +62,7 @@ export class SiteAssignmentController {
   }
 
   @Get('employee/:employeeId')
+  @RequireAnyPermission({ module: 'site-assignment', action: 'view' })
   @ApiOperation({ summary: 'Site assignments for employee profile' })
   async listForEmployee(
     @Param('employeeId') employeeId: string,
@@ -80,6 +77,7 @@ export class SiteAssignmentController {
   }
 
   @Get(':id')
+  @RequireAnyPermission({ module: 'site-assignment', action: 'view' })
   @ApiOperation({ summary: 'Site assignment detail' })
   async getOne(
     @Param('id') id: string,
@@ -90,6 +88,7 @@ export class SiteAssignmentController {
   }
 
   @Get(':id/overtime-impact')
+  @RequirePermission('site-assignment', 'manage')
   @ApiOperation({
     summary:
       'HR: overtime entries a cancel (no endDate) or shorten (endDate) would affect',
@@ -112,6 +111,7 @@ export class SiteAssignmentController {
   }
 
   @Post(':id/cancel')
+  @RequireAnyPermission({ module: 'site-assignment', action: 'create' })
   @ApiOperation({ summary: 'Employee cancel (SUBMITTED only)' })
   async cancelSubmitted(
     @Param('id') id: string,
@@ -126,6 +126,7 @@ export class SiteAssignmentController {
   }
 
   @Post(':id/cancel-approved')
+  @RequirePermission('site-assignment', 'manage')
   @ApiOperation({ summary: 'HR cancel an approved assignment' })
   async cancelApproved(
     @Param('id') id: string,
@@ -142,6 +143,7 @@ export class SiteAssignmentController {
   }
 
   @Post(':id/shorten')
+  @RequirePermission('site-assignment', 'manage')
   @ApiOperation({ summary: 'HR shorten approved assignment end date' })
   async shorten(
     @Param('id') id: string,

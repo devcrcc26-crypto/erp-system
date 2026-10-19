@@ -485,11 +485,11 @@ export class SiteAssignmentService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const isHr = await this.permissionService.hasPermission(
+    const canManageAll = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'site-assignment',
+      'manage',
     );
 
     const page = query.page ?? 1;
@@ -498,7 +498,7 @@ export class SiteAssignmentService
 
     const where: Prisma.SiteAssignmentWhereInput = activeOnly({ companyId });
 
-    if (!isHr) {
+    if (!canManageAll) {
       where.employeeId = userId;
     } else if (query.employeeId) {
       where.employeeId = query.employeeId;
@@ -980,8 +980,8 @@ export class SiteAssignmentService
     const ok = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'site-assignment',
+      'manage',
     );
     if (!ok) {
       throw new ForbiddenException('HR access required');
@@ -996,13 +996,13 @@ export class SiteAssignmentService
     if (employeeId === userId) {
       return;
     }
-    const isHr = await this.permissionService.hasPermission(
+    const canViewOthers = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
+      'site-assignment',
       'view',
     );
-    if (!isHr) {
+    if (!canViewOthers) {
       throw new ForbiddenException('You do not have access to this record');
     }
   }

@@ -157,6 +157,22 @@ const PERMISSION_DEFINITIONS: Array<{
     description: 'Directly assign and manage work-from-home calendar days',
   },
 
+  {
+    module: 'site-assignment',
+    action: 'view',
+    description: 'View site assignment requests',
+  },
+  {
+    module: 'site-assignment',
+    action: 'create',
+    description: 'Submit and cancel site assignment requests',
+  },
+  {
+    module: 'site-assignment',
+    action: 'manage',
+    description: 'HR manage site assignments (cancel approved, shorten, OT impact)',
+  },
+
   { module: 'employee-contract', action: 'view', description: 'View employee contracts' },
   { module: 'employee-contract', action: 'create', description: 'Create employee contracts' },
   {
@@ -1876,6 +1892,57 @@ async function main(): Promise<void> {
         continue;
       }
       await upsertRolePermission(roleId, wfhManage.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  const saView = permissions.find(
+    (p) => p.module === 'site-assignment' && p.action === 'view',
+  );
+  const saCreate = permissions.find(
+    (p) => p.module === 'site-assignment' && p.action === 'create',
+  );
+  const saManage = permissions.find(
+    (p) => p.module === 'site-assignment' && p.action === 'manage',
+  );
+  if (saView) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, saView.id, viewOnlyFlags());
+    }
+  }
+  if (saCreate) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, saCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (saManage) {
+    for (const roleName of wsPhWfhManageRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, saManage.id, {
         canView: true,
         canCreate: false,
         canEdit: true,
