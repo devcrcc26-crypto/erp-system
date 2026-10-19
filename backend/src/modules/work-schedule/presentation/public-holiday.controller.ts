@@ -12,8 +12,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
-import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
+import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import { CreatePublicHolidayDto } from '../application/dtos/create-public-holiday.dto';
@@ -29,12 +29,12 @@ import { PublicHolidayService } from '../application/services/public-holiday.ser
 @ApiTags('HR Public Holidays')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequirePermission('hr', 'view')
 @Controller('hr/public-holidays')
 export class PublicHolidayController {
   constructor(private readonly publicHolidayService: PublicHolidayService) {}
 
   @Get()
+  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
   @ApiOperation({ summary: 'List public holidays' })
   list(
     @CurrentCompany() companyId: string,
@@ -44,10 +44,10 @@ export class PublicHolidayController {
   }
 
   @Get('my/upcoming')
-  @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
   @ApiOperation({
     summary:
-      'Upcoming active holidays that apply to the current user (any authenticated user; filtered by own nationality)',
+      'Upcoming active holidays that apply to the current user (filtered by own nationality)',
   })
   myUpcoming(
     @CurrentUser() user: AuthenticatedUser,
@@ -62,6 +62,7 @@ export class PublicHolidayController {
   }
 
   @Post('bulk-status')
+  @RequirePermission('public-holiday', 'manage')
   @ApiOperation({ summary: 'Activate or deactivate multiple holidays' })
   bulkStatus(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,6 +73,7 @@ export class PublicHolidayController {
   }
 
   @Post('duplicate-year')
+  @RequirePermission('public-holiday', 'manage')
   @ApiOperation({
     summary: 'Copy a year of holidays into another year (skips conflicts)',
   })
@@ -84,6 +86,7 @@ export class PublicHolidayController {
   }
 
   @Get(':id')
+  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
   @ApiOperation({ summary: 'Get a public holiday' })
   get(
     @CurrentCompany() companyId: string,
@@ -93,6 +96,7 @@ export class PublicHolidayController {
   }
 
   @Post()
+  @RequirePermission('public-holiday', 'manage')
   @ApiOperation({ summary: 'Create a public holiday' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -103,6 +107,7 @@ export class PublicHolidayController {
   }
 
   @Patch(':id')
+  @RequirePermission('public-holiday', 'manage')
   @ApiOperation({ summary: 'Update a public holiday' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -114,6 +119,7 @@ export class PublicHolidayController {
   }
 
   @Delete(':id')
+  @RequirePermission('public-holiday', 'manage')
   @ApiOperation({
     summary:
       'Delete a public holiday (to keep it on record instead, PATCH isActive:false)',

@@ -1240,14 +1240,14 @@ export class WorkScheduleService {
     if (!requestedId || requestedId === actorUserId) {
       return actorUserId;
     }
-    const isHr = await this.permissionService.hasPermission(
+    const canEditSchedules = await this.permissionService.hasPermission(
       actorUserId,
       companyId,
-      'hr',
-      'view',
+      'work-schedule',
+      'edit',
     );
     const canFileOnBehalf =
-      isHr ||
+      canEditSchedules ||
       (await this.onBehalfService.isEligibleFor(
         actorUserId,
         requestedId,

@@ -12,8 +12,9 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
-import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
+import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
+import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import {
   CancelWorkFromHomeRequestDto,
@@ -28,13 +29,13 @@ import { WorkFromHomeDayService } from '../application/services/work-from-home-d
 @ApiTags('HR Work From Home')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@DelegatePermissionCheck()
 @Controller('hr/attendance/work-from-home')
 export class WorkFromHomeDayController {
   constructor(private readonly service: WorkFromHomeDayService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List work-from-home days (HR or Discipline Lead)' })
+  @RequireAnyPermission({ module: 'wfh', action: 'view' })
+  @ApiOperation({ summary: 'List work-from-home days (wfh.manage holders)' })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
@@ -49,9 +50,9 @@ export class WorkFromHomeDayController {
   }
 
   @Get('assignable-employees')
+  @RequireAnyPermission({ module: 'wfh', action: 'view' })
   @ApiOperation({
-    summary:
-      'Employees the current user may assign WFH to (HR: all; Discipline Lead: their reports)',
+    summary: 'Employees eligible for work-from-home (HR direct assign or request)',
   })
   listAssignable(
     @CurrentUser() user: AuthenticatedUser,
@@ -61,6 +62,7 @@ export class WorkFromHomeDayController {
   }
 
   @Post('preview')
+  @RequireAnyPermission({ module: 'wfh', action: 'create' })
   @ApiOperation({
     summary:
       'Preview a work-from-home range: working days to create and skipped days with the reason',
@@ -74,6 +76,7 @@ export class WorkFromHomeDayController {
   }
 
   @Post('requests/:approvalRequestId/cancel')
+  @RequireAnyPermission({ module: 'wfh', action: 'create' })
   @ApiOperation({
     summary:
       'Cancel a work-from-home request (pending: employee / filer / HR; approved: HR - removes its day rows)',
@@ -93,9 +96,10 @@ export class WorkFromHomeDayController {
   }
 
   @Post('request')
+  @RequireAnyPermission({ module: 'wfh', action: 'create' })
   @ApiOperation({
     summary:
-      'Submit a work-from-home request for a date range (Employee → Discipline Lead)',
+      'Submit a work-from-home request for a date range (Reports to → HR Officer)',
   })
   request(
     @CurrentUser() user: AuthenticatedUser,
@@ -106,7 +110,8 @@ export class WorkFromHomeDayController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Assign a work-from-home day (HR or Discipline Lead)' })
+  @RequirePermission('wfh', 'manage')
+  @ApiOperation({ summary: 'Assign work-from-home days directly (wfh.manage)' })
   create(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
@@ -116,6 +121,7 @@ export class WorkFromHomeDayController {
   }
 
   @Patch(':id')
+  @RequirePermission('wfh', 'manage')
   @ApiOperation({ summary: 'Update a work-from-home day' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -127,6 +133,7 @@ export class WorkFromHomeDayController {
   }
 
   @Delete(':id')
+  @RequirePermission('wfh', 'manage')
   @ApiOperation({ summary: 'Soft-delete a work-from-home day' })
   remove(
     @CurrentUser() user: AuthenticatedUser,

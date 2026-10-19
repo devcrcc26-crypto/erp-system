@@ -22,7 +22,9 @@ async function main(): Promise<void> {
     const data = {
       name: 'Work From Home',
       description:
-        'Employee request to work from home on a specific date. Approval chain is Employee → Discipline Lead only.',
+        'Employee request to work from home on a specific date. ' +
+        'Runtime approval chain: Employee → Reports to (direct supervisor) → HR Officer. ' +
+        'Tier resolution is built in HrApprovalChainService.buildWorkFromHomeApprovalChain, not from these seed rules.',
       icon: 'HomeOutlined',
       module: 'HR',
       formSchema: {
@@ -33,9 +35,10 @@ async function main(): Promise<void> {
       },
       approvalRules: [
         {
-          name: 'Employee → Discipline Lead only',
+          name: 'Employee → Reports to → HR Officer',
           tiers: [
-            { label: 'Discipline Lead', resolver: 'DISCIPLINE_LEAD', order: 1 },
+            { label: 'Reports to', resolver: 'EMPLOYEE', order: 1 },
+            { label: 'HR Officer', resolver: 'HR', order: 2 },
           ],
         },
       ],

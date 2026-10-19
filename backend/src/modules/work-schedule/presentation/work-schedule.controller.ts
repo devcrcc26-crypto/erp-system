@@ -11,7 +11,6 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
-import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
@@ -32,10 +31,10 @@ export class WorkScheduleController {
   constructor(private readonly workScheduleService: WorkScheduleService) {}
 
   @Post('preview-days')
-  @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
   @ApiOperation({
     summary:
-      'Preview working-day weights for leave periods (weekends, half days, holidays). Any authenticated user; non-HR may only preview self.',
+      'Preview working-day weights for leave periods (weekends, half days, holidays). Non-HR may only preview self.',
   })
   previewDays(
     @CurrentUser() user: AuthenticatedUser,
@@ -46,10 +45,10 @@ export class WorkScheduleController {
   }
 
   @Get('my')
-  @DelegatePermissionCheck()
+  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
   @ApiOperation({
     summary:
-      "Current user's active work schedule (assignment, else company default). Any authenticated user; null when none exists.",
+      "Current user's active work schedule (assignment, else company default); null when none exists.",
   })
   mySchedule(
     @CurrentUser() user: AuthenticatedUser,
@@ -59,10 +58,7 @@ export class WorkScheduleController {
   }
 
   @Get('employees/:employeeId')
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'users', action: 'view' },
-  )
+  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
   @ApiOperation({
     summary: 'Current work schedule and assignment history for an employee',
   })
@@ -74,17 +70,14 @@ export class WorkScheduleController {
   }
 
   @Get()
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'users', action: 'view' },
-  )
+  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
   @ApiOperation({ summary: 'List work schedules' })
   list(@CurrentCompany() companyId: string): Promise<unknown[]> {
     return this.workScheduleService.listSchedules(companyId);
   }
 
   @Get(':id')
-  @RequirePermission('hr', 'view')
+  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
   @ApiOperation({ summary: 'Get a work schedule with weekday breakdown' })
   get(
     @CurrentCompany() companyId: string,
@@ -94,7 +87,7 @@ export class WorkScheduleController {
   }
 
   @Post()
-  @RequirePermission('hr', 'view')
+  @RequirePermission('work-schedule', 'edit')
   @ApiOperation({ summary: 'Create a work schedule' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -105,7 +98,7 @@ export class WorkScheduleController {
   }
 
   @Patch(':id')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('work-schedule', 'edit')
   @ApiOperation({ summary: 'Update a work schedule' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -122,7 +115,7 @@ export class WorkScheduleController {
   }
 
   @Delete(':id')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('work-schedule', 'edit')
   @ApiOperation({
     summary:
       'Delete a work schedule and move its employees to the company default (the default itself cannot be deleted; to keep a schedule on record instead, PATCH isActive:false)',
@@ -140,7 +133,7 @@ export class WorkScheduleController {
   }
 
   @Post(':id/set-default')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('work-schedule', 'edit')
   @ApiOperation({ summary: 'Set a work schedule as the company default' })
   setDefault(
     @CurrentUser() user: AuthenticatedUser,
@@ -151,7 +144,7 @@ export class WorkScheduleController {
   }
 
   @Post(':id/assign')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('work-schedule', 'edit')
   @ApiOperation({ summary: 'Assign a work schedule to an employee' })
   assign(
     @CurrentUser() user: AuthenticatedUser,

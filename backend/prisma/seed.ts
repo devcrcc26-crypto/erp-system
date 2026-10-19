@@ -129,6 +129,34 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'overtime', action: 'view', description: 'View overtime requests' },
   { module: 'overtime', action: 'create', description: 'Submit and cancel overtime requests' },
 
+  {
+    module: 'work-schedule',
+    action: 'view',
+    description: 'View work schedules and preview working days',
+  },
+  {
+    module: 'work-schedule',
+    action: 'edit',
+    description: 'Create and manage work schedules and assignments',
+  },
+  {
+    module: 'public-holiday',
+    action: 'view',
+    description: 'View public holidays',
+  },
+  {
+    module: 'public-holiday',
+    action: 'manage',
+    description: 'Create and manage public holidays',
+  },
+  { module: 'wfh', action: 'view', description: 'View work-from-home days and assignable employees' },
+  { module: 'wfh', action: 'create', description: 'Submit and cancel work-from-home requests' },
+  {
+    module: 'wfh',
+    action: 'manage',
+    description: 'Directly assign and manage work-from-home calendar days',
+  },
+
   { module: 'employee-contract', action: 'view', description: 'View employee contracts' },
   { module: 'employee-contract', action: 'create', description: 'Create employee contracts' },
   {
@@ -1723,6 +1751,135 @@ async function main(): Promise<void> {
         canCreate: false,
         canEdit: false,
         canDelete: true,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  // Work schedule, public holidays, and WFH permission matrix.
+  const wsView = permissions.find(
+    (p) => p.module === 'work-schedule' && p.action === 'view',
+  );
+  const wsEdit = permissions.find(
+    (p) => p.module === 'work-schedule' && p.action === 'edit',
+  );
+  const phView = permissions.find(
+    (p) => p.module === 'public-holiday' && p.action === 'view',
+  );
+  const phManage = permissions.find(
+    (p) => p.module === 'public-holiday' && p.action === 'manage',
+  );
+  const wfhView = permissions.find((p) => p.module === 'wfh' && p.action === 'view');
+  const wfhCreate = permissions.find((p) => p.module === 'wfh' && p.action === 'create');
+  const wfhManage = permissions.find((p) => p.module === 'wfh' && p.action === 'manage');
+
+  const wsPhWfhViewCreateRoleNames = [
+    'Employee',
+    'Team Lead',
+    'Department Head',
+    'Discipline Lead',
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+
+  const wsPhWfhManageRoleNames = [
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+
+  if (wsView) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, wsView.id, viewOnlyFlags());
+    }
+  }
+  if (wsEdit) {
+    for (const roleName of wsPhWfhManageRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, wsEdit.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (phView) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, phView.id, viewOnlyFlags());
+    }
+  }
+  if (phManage) {
+    for (const roleName of wsPhWfhManageRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, phManage.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (wfhView) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, wfhView.id, viewOnlyFlags());
+    }
+  }
+  if (wfhCreate) {
+    for (const roleName of wsPhWfhViewCreateRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, wfhCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (wfhManage) {
+    for (const roleName of wsPhWfhManageRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, wfhManage.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
         canApprove: false,
         canExport: false,
       });

@@ -84,13 +84,8 @@ const OPEN_WFH_STATUSES: ApprovalRequestStatus[] = [
   ApprovalRequestStatus.RETURNED,
 ];
 
-interface AssignerContext {
-  userId: string;
-  isHr: boolean;
-}
-
-const WFH_DIRECT_ASSIGN_HR_ONLY =
-  'Only HR (hr.view) can assign work-from-home days directly. Others submit a work-from-home request.';
+const WFH_DIRECT_ASSIGN_MANAGE_ONLY =
+  'Only users with wfh.manage can assign work-from-home days directly. Others submit a work-from-home request.';
 
 interface AssignableEmployee {
   id: string;
@@ -123,10 +118,9 @@ const WFH_USER_NAME_SELECT = {
 
 /**
  * Work-from-home calendar days (attendance credit).
- * - Employees request a date range → Discipline Lead approval. One approval
- *   request per range; approval creates the per-day rows for its working days.
- * - Discipline Leads assign employees under their disciplines (multi-select).
- * - HR assigns anyone / departments / company-wide.
+ * - Employees request a date range → Reports to → HR Officer approval. One
+ *   approval request per range; approval creates the per-day rows for working days.
+ * - Users with wfh.manage assign directly (anyone / departments / company-wide).
  */
 @Injectable()
 export class WorkFromHomeDayService
@@ -227,8 +221,6 @@ export class WorkFromHomeDayService
     month?: number,
     year?: number,
   ): Promise<unknown[]> {
-    const ctx = await this.resolveAssigner(userId, companyId);
-    this.assertCanAssign(ctx);
     return this.list(companyId, month, year);
   }
 
@@ -243,9 +235,6 @@ export class WorkFromHomeDayService
     isDisciplineLead: boolean;
     employees: AssignableEmployee[];
   }> {
-    const ctx = await this.resolveAssigner(userId, companyId);
-    this.assertCanAssign(ctx);
-
     const where: Prisma.UserWhereInput = activeOnly(
       hrProcessEmployeeWhere({ companyId, isActive: true }),
     );
@@ -287,8 +276,7 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const ctx = await this.resolveAssigner(userId, companyId);
-    this.assertCanAssign(ctx);
+    await this.assertCanManageWfh(userId, companyId);
 
     const startKey = dto.startDate ?? dto.date;
     const endKey = dto.endDate ?? dto.date ?? dto.startDate;
@@ -414,8 +402,7 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const ctx = await this.resolveAssigner(userId, companyId);
-    this.assertCanAssign(ctx);
+    await this.assertCanManageWfh(userId, companyId);
 
     const existing = await this.findOrThrow(id, companyId);
 
@@ -480,8 +467,7 @@ export class WorkFromHomeDayService
    * Soft-deletes a WFH day (HR only; audit-logged).
    */
   async remove(id: string, companyId: string, userId: string): Promise<void> {
-    const ctx = await this.resolveAssigner(userId, companyId);
-    this.assertCanAssign(ctx);
+    await this.assertCanManageWfh(userId, companyId);
     const existing = await this.findOrThrow(id, companyId);
 
     await this.prisma.workFromHomeDay.update({
@@ -566,7 +552,7 @@ export class WorkFromHomeDayService
 
   /**
    * Employee (or on-behalf) request for a date range - opens one
-   * Employee → Discipline Lead approval carrying the list of working days.
+   * Reports to → HR Officer approval carrying the list of working days.
    */
   async submitRequest(
     dto: RequestWorkFromHomeDayDto,
@@ -668,7 +654,7 @@ export class WorkFromHomeDayService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Work from home - Discipline Lead only',
+          ruleName: 'Work from home - Reports to → HR Officer',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
@@ -1069,22 +1055,18 @@ export class WorkFromHomeDayService
     return false;
   }
 
-  private async resolveAssigner(
+  private async assertCanManageWfh(
     userId: string,
     companyId: string,
-  ): Promise<AssignerContext> {
-    const isHr = await this.permissionService.hasPermission(
+  ): Promise<void> {
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'wfh',
+      'manage',
     );
-    return { userId, isHr };
-  }
-
-  private assertCanAssign(ctx: AssignerContext): void {
-    if (!ctx.isHr) {
-      throw new ForbiddenException(WFH_DIRECT_ASSIGN_HR_ONLY);
+    if (!canManage) {
+      throw new ForbiddenException(WFH_DIRECT_ASSIGN_MANAGE_ONLY);
     }
   }
 
