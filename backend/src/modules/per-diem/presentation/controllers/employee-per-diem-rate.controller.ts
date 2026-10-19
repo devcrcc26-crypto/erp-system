@@ -33,7 +33,7 @@ export class EmployeePerDiemRateController {
   ) {}
 
   @Get()
-  @RequirePermission('hr', 'view')
+  @RequirePermission('per-diem', 'view')
   @ApiOperation({ summary: 'List employee per diem rates (HR)' })
   list(
     @Query() query: ListEmployeePerDiemRatesQueryDto,
@@ -94,7 +94,7 @@ export class EmployeePerDiemRateController {
   }
 
   @Get('employee/:employeeId')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('per-diem', 'view')
   @ApiOperation({ summary: 'Get per diem rates for an employee (HR)' })
   getForEmployee(
     @Param('employeeId') employeeId: string,
@@ -107,7 +107,7 @@ export class EmployeePerDiemRateController {
   }
 
   @Put('employee/:employeeId')
-  @RequirePermission('hr', 'view')
+  @RequirePermission('per-diem', 'manage')
   @ApiOperation({ summary: 'Create or update per diem rates for an employee (HR)' })
   upsertForEmployee(
     @CurrentUser() user: AuthenticatedUser,

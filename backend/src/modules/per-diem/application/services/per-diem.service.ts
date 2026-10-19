@@ -137,13 +137,13 @@ export class PerDiemService
     companyId: string,
     actorUserId: string,
   ): Promise<unknown> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       actorUserId,
       companyId,
-      'hr',
-      'view',
+      'per-diem',
+      'manage',
     );
-    if (!isHrViewer && employeeId !== actorUserId) {
+    if (!canManage && employeeId !== actorUserId) {
       throw new ForbiddenException(
         'You do not have permission to submit per diem on behalf of this employee',
       );
@@ -393,19 +393,19 @@ export class PerDiemService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'per-diem',
+      'manage',
     );
 
     const where: Prisma.PerDiemRequestWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -535,18 +535,15 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const [canEditPerDiem, canEditHr] = await Promise.all([
-      this.permissionService.hasPermission(
-        userId,
-        companyId,
-        'per-diem',
-        'edit',
-      ),
-      this.permissionService.hasPermission(userId, companyId, 'hr', 'edit'),
-    ]);
-    if (!canEditPerDiem && !canEditHr) {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (!canManage) {
       throw new ForbiddenException(
-        'Missing permission (any of): per-diem.edit, hr.edit',
+        'Missing permission: per-diem.manage',
       );
     }
 
@@ -662,13 +659,13 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'per-diem',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner = request.employeeId === userId || request.createdBy === userId;
     const isTierApprover =

@@ -10,8 +10,7 @@ export const EmployeePerDiemRateImportController = createHrImportController({
   templateFileName: 'employee-per-diem-rate-import-template.xlsx',
   entityLabel: 'employee per diem rate',
   permissions: [
-    { module: 'hr', action: 'edit' },
-    { module: 'hr', action: 'create' },
+    { module: 'per-diem', action: 'manage' },
   ],
   service: EmployeePerDiemRateImportService,
 });

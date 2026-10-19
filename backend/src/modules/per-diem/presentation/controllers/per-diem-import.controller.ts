@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -20,6 +21,8 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { canManagePerDiemImport } from '../../application/utils/per-diem-import-access.util';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { PerDiemImportPreviewResponseDto } from '../../application/dtos/per-diem-import.dtos';
 import { PerDiemImportService } from '../../application/services/per-diem-import.service';
@@ -27,17 +30,28 @@ import { PerDiemImportService } from '../../application/services/per-diem-import
 @ApiTags('HR Per Diem Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'per-diem', action: 'create' },
-)
+@RequireAnyPermission({ module: 'per-diem', action: 'manage' })
 @Controller('hr/per-diem/import')
 export class PerDiemImportController {
-  constructor(private readonly perDiemImportService: PerDiemImportService) {}
+  constructor(
+    private readonly perDiemImportService: PerDiemImportService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManagePerDiemImport(user: AuthenticatedUser): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManagePerDiemImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage per diem imports',
+      );
+    }
   }
 
   @Get('template')
@@ -70,10 +84,11 @@ export class PerDiemImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<PerDiemImportPreviewResponseDto> {
+    await this.assertCanManagePerDiemImport(user);
     return this.perDiemImportService.previewImport(this.ctx(user), file);
   }
 
@@ -98,10 +113,11 @@ export class PerDiemImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManagePerDiemImport(user);
     return this.perDiemImportService.commitImport(this.ctx(user), file);
   }
 }

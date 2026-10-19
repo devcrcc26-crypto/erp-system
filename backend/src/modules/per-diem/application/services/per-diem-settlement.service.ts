@@ -344,19 +344,19 @@ export class PerDiemSettlementService
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'per-diem',
+      'manage',
     );
 
     const where: Prisma.PerDiemSettlementWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -464,14 +464,14 @@ export class PerDiemSettlementService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const canEdit = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'edit',
+      'per-diem',
+      'manage',
     );
-    if (!canEdit) {
-      throw new ForbiddenException('Missing permission: hr.edit');
+    if (!canManage) {
+      throw new ForbiddenException('Missing permission: per-diem.manage');
     }
 
     const settlement = await this.prisma.perDiemSettlement.findFirst({
@@ -592,13 +592,13 @@ export class PerDiemSettlementService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'per-diem',
+      'manage',
     );
-    if (isHrViewer) {
+    if (canManage) {
       return;
     }
 

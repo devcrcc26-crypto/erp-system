@@ -1396,7 +1396,6 @@ async function main(): Promise<void> {
       flags: localHrManagerFlags(),
     },
     { roleName: 'Local HR Manager', module: 'exit-permit', flags: localHrManagerFlags() },
-    { roleName: 'Local HR Manager', module: 'per-diem', flags: localHrManagerFlags() },
     {
       roleName: 'Local HR Manager',
       module: 'employee-contract',
@@ -1415,7 +1414,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Specialist', module: 'attendance', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'field-movement', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'exit-permit', flags: viewOnlyFlags() },
-    { roleName: 'HR Specialist', module: 'per-diem', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'employee-contract', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
@@ -1429,7 +1427,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'attendance', flags: viewCreateFlags() },
     { roleName: 'HR Assistant', module: 'field-movement', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'exit-permit', flags: viewOnlyFlags() },
-    { roleName: 'HR Assistant', module: 'per-diem', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'per-diem', flags: viewCreateFlags() },
     { roleName: 'HR Assistant', module: 'employee-contract', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
@@ -1475,7 +1473,7 @@ async function main(): Promise<void> {
     {
       roleName: 'Discipline Lead',
       module: 'per-diem',
-      flags: viewApproveExportFlags(),
+      flags: viewCreateFlags(),
     },
     {
       roleName: 'Discipline Lead',
@@ -1500,7 +1498,7 @@ async function main(): Promise<void> {
     {
       roleName: 'General Manager',
       module: 'per-diem',
-      flags: viewApproveExportFlags(),
+      flags: viewOnlyFlags(),
     },
     {
       roleName: 'General Manager',

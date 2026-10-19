@@ -26,7 +26,6 @@ import { PerDiemSettlementService } from '../../application/services/per-diem-se
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'per-diem', action: 'view' },
   { module: 'per-diem', action: 'create' },
 )
