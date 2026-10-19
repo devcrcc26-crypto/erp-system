@@ -383,8 +383,8 @@ export class VehicleApplicationService
       (await this.permissionService.hasPermission(
         userId,
         companyId,
-        'hr',
-        'view',
+        'vehicle-application',
+        'manage',
       )) ||
       (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId));
     if (!canBackdate) {
@@ -436,19 +436,19 @@ export class VehicleApplicationService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'vehicle-application',
+      'manage',
     );
 
     const where: Prisma.VehicleApplicationWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -746,13 +746,13 @@ export class VehicleApplicationService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'vehicle-application',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner = application.employeeId === userId || application.createdBy === userId;
     const isTierApprover =

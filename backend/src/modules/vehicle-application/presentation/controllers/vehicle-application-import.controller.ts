@@ -10,9 +10,7 @@ export const VehicleApplicationImportController = createHrImportController({
   templateFileName: 'vehicle-application-import-template.xlsx',
   entityLabel: 'vehicle application',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'vehicle-application', action: 'create' },
+    { module: 'vehicle-application', action: 'manage' },
   ],
   service: VehicleApplicationImportService,
 });

@@ -1,5 +1,5 @@
 /**
- * Upserts vehicle-related permissions and grants them to all roles.
+ * Upserts vehicle-related permissions and grants them to roles.
  * Also seeds 5 sample company vehicles.
  * Usage: npx ts-node --transpile-only prisma/seed-vehicle-permissions.ts
  */
@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+// vehicles.* and vehicle-refueling.* — flat grant to all roles (unchanged)
 const PERMISSION_DEFS = [
   {
     module: 'vehicles',
@@ -20,16 +21,6 @@ const PERMISSION_DEFS = [
     description: 'Create, update and delete company vehicles',
   },
   {
-    module: 'vehicle-application',
-    action: 'view',
-    description: 'View vehicle applications',
-  },
-  {
-    module: 'vehicle-application',
-    action: 'create',
-    description: 'Submit and cancel vehicle applications',
-  },
-  {
     module: 'vehicle-refueling',
     action: 'view',
     description: 'View vehicle refueling requests',
@@ -40,6 +31,46 @@ const PERMISSION_DEFS = [
     description: 'Submit and cancel vehicle refueling requests',
   },
 ] as const;
+
+// vehicle-application.* — role-differentiated grants
+type Flags = {
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canApprove: boolean;
+  canExport: boolean;
+};
+
+const viewOnly: Flags = { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const viewCreate: Flags = { canView: true, canCreate: true, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const manage: Flags = { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false };
+
+const VA_GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
+  {
+    module: 'vehicle-application', action: 'view',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewOnly,
+  },
+  {
+    module: 'vehicle-application', action: 'create',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewCreate,
+  },
+  {
+    module: 'vehicle-application', action: 'manage',
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    flags: manage,
+  },
+];
 
 const SAMPLE_VEHICLES: Array<{
   plateNumber: string;
@@ -100,7 +131,7 @@ const SAMPLE_VEHICLES: Array<{
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    // ── Permissions ──────────────────────────────────────────────────────────
+    // ── Flat permissions (vehicles.*, vehicle-refueling.*) ────────────────────
 
     const permissions = [];
     for (const def of PERMISSION_DEFS) {
@@ -170,6 +201,38 @@ async function main(): Promise<void> {
     console.log(
       `Vehicle permissions seeded for ${roles.length} role(s) (${permissions.length} permissions)`,
     );
+
+    // ── Vehicle-application grants (role-differentiated) ─────────────────────
+
+    const allVaRoleNames = [...new Set(VA_GRANTS.flatMap((g) => g.roles))];
+    const vaRoles = await prisma.role.findMany({
+      where: { companyId: company.id, deletedAt: null, name: { in: allVaRoleNames } },
+      select: { id: true, name: true },
+    });
+    const roleMap = new Map(vaRoles.map((r) => [r.name, r.id]));
+
+    for (const { module, action, roles: grantRoles, flags } of VA_GRANTS) {
+      const perm = await prisma.permission.upsert({
+        where: { module_action: { module, action } },
+        update: {},
+        create: { module, action, description: `${action} vehicle applications` },
+        select: { id: true },
+      });
+      for (const roleName of grantRoles) {
+        const roleId = roleMap.get(roleName);
+        if (!roleId) {
+          console.warn(`Role not found: ${roleName}`);
+          continue;
+        }
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId, permissionId: perm.id } },
+          update: { ...flags, deletedAt: null, deletedBy: null, updatedBy: SYSTEM_USER_ID },
+          create: { roleId, permissionId: perm.id, ...flags, createdBy: SYSTEM_USER_ID, updatedBy: SYSTEM_USER_ID },
+        });
+      }
+    }
+
+    console.log(`Vehicle application permissions seeded for ${vaRoles.length} role(s): ${vaRoles.map((r) => r.name).join(', ')}`);
 
     // ── Sample vehicles ──────────────────────────────────────────────────────
 
