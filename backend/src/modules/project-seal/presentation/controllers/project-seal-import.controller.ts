@@ -10,9 +10,7 @@ export const ProjectSealImportController = createHrImportController({
   templateFileName: 'project-seal-import-template.xlsx',
   entityLabel: 'project seal usage',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'project-seal', action: 'create' },
+    { module: 'project-seal', action: 'manage' },
   ],
   service: ProjectSealImportService,
 });

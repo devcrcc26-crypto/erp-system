@@ -302,19 +302,19 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         const { skip, take } = buildPrismaPagination(page, limit);
         const statuses = this.normalizeStatuses(filters.status)
 
-        const isHrViewer = await this.permissionService.hasPermission(
+        const canManage = await this.permissionService.hasPermission(
             userId,
             companyId,
-            'hr',
-            'view',
+            'project-seal',
+            'manage',
         );
 
         const where: Prisma.ProjectSealWhereInput = {
             companyId,
             deletedAt: null,
-            ...(isHrViewer ? {} : { employeeId: userId }),
+            ...(canManage ? {} : { employeeId: userId }),
             ...(statuses ? { status: { in: statuses } } : {}),
-            ...(isHrViewer && filters.employeeId
+            ...(canManage && filters.employeeId
                 ? { employeeId: filters.employeeId }
                 : {}),
             ...(filters.search?.trim()
@@ -471,8 +471,8 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         const canIssue = await this.permissionService.hasPermission(
             userId,
             companyId,
-            'hr',
-            'view',
+            'project-seal',
+            'manage',
         );
         if (!canIssue) {
             throw new ForbiddenException('You do not have permission to issue this project seal');
@@ -566,14 +566,14 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         companyId: string,
         userId: string,
     ): Promise<void> {
-        const isHrViewer = await this.permissionService.hasPermission(
+        const canManage = await this.permissionService.hasPermission(
             userId,
             companyId,
-            'hr',
-            'view',
+            'project-seal',
+            'manage',
         );
 
-        if (isHrViewer) return;
+        if (canManage) return;
 
         const isOwner = projectSeal.employeeId === userId || projectSeal.createdBy === userId;
         const isTierApprover =
