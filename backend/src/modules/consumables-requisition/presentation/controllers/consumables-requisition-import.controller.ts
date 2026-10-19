@@ -28,9 +28,7 @@ import { ConsumablesRequisitionImportService } from '../../application/services/
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'consumables', action: 'create' },
+  { module: 'consumables', action: 'manage' },
 )
 @Controller('hr/consumables/import')
 export class ConsumablesRequisitionImportController {

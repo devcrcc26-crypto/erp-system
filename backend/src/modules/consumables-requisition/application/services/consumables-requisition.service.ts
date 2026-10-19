@@ -570,19 +570,19 @@ export class ConsumablesRequisitionService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'consumables',
+      'manage',
     );
 
     const where: Prisma.ConsumablesRequisitionWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -769,13 +769,13 @@ export class ConsumablesRequisitionService
     if (await this.onBehalfService.canActForRecord(userId, companyId, record)) {
       return;
     }
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'consumables',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'You do not have permission to modify this consumables requisition',
       );
@@ -814,13 +814,13 @@ export class ConsumablesRequisitionService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'consumables',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner =
       requisition.employeeId === userId || requisition.createdBy === userId;
