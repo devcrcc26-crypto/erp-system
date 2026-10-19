@@ -1,44 +1,54 @@
 /**
- * Upserts flight.view / flight.create / flight.manage and grants to roles.
+ * Upserts flight.* role grants.
+ * Keys are already defined in seed.ts (lines 184–186).
  * Usage: npx ts-node --transpile-only prisma/seed-flight-permissions.ts
  */
 import { PrismaClient } from '@prisma/client';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+type Flags = {
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canApprove: boolean;
+  canExport: boolean;
+};
+
+const viewOnly: Flags = { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const viewCreate: Flags = { canView: true, canCreate: true, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const manage: Flags = { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false };
+
+const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
+  {
+    module: 'flight', action: 'view',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewOnly,
+  },
+  {
+    module: 'flight', action: 'create',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator',
+    ],
+    flags: viewCreate,
+  },
+  {
+    module: 'flight', action: 'manage',
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    flags: manage,
+  },
+];
+
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    const defs = [
-      {
-        module: 'flight',
-        action: 'view',
-        description: 'View flight applications',
-      },
-      {
-        module: 'flight',
-        action: 'create',
-        description: 'Submit and cancel flight applications',
-      },
-      {
-        module: 'flight',
-        action: 'manage',
-        description: 'Attach flight tickets after approval',
-      },
-    ] as const;
-
-    const permissions = [];
-    for (const def of defs) {
-      permissions.push(
-        await prisma.permission.upsert({
-          where: {
-            module_action: { module: def.module, action: def.action },
-          },
-          update: { description: def.description },
-          create: { ...def },
-        }),
-      );
-    }
+    const allRoleNames = [...new Set(GRANTS.flatMap((g) => g.roles))];
 
     const company = await prisma.company.findFirst({
       where: { deletedAt: null },
@@ -50,86 +60,35 @@ async function main(): Promise<void> {
     }
 
     const roles = await prisma.role.findMany({
-      where: { companyId: company.id, deletedAt: null },
+      where: { companyId: company.id, deletedAt: null, name: { in: allRoleNames } },
       select: { id: true, name: true },
     });
+    const roleMap = new Map(roles.map((r) => [r.name, r.id]));
 
-    const view = permissions.find((p) => p.action === 'view')!;
-    const create = permissions.find((p) => p.action === 'create')!;
-    const manage = permissions.find((p) => p.action === 'manage')!;
-
-    for (const role of roles) {
-      const isAdmin = role.name === 'System Administrator';
-      const isHr = role.name === 'HR Officer';
-
-      for (const permission of [view, create]) {
-        await prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: role.id,
-              permissionId: permission.id,
-            },
-          },
-          update: {
-            canView: true,
-            canCreate: permission.action === 'create' || isAdmin,
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            updatedBy: SYSTEM_USER_ID,
-          },
-          create: {
-            roleId: role.id,
-            permissionId: permission.id,
-            canView: true,
-            canCreate: permission.action === 'create' || isAdmin,
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            createdBy: SYSTEM_USER_ID,
-            updatedBy: SYSTEM_USER_ID,
-          },
-        });
+    for (const { module, action, roles: grantRoles, flags } of GRANTS) {
+      const perm = await prisma.permission.findUnique({
+        where: { module_action: { module, action } },
+        select: { id: true },
+      });
+      if (!perm) {
+        console.warn(`Permission not found: ${module}.${action}`);
+        continue;
       }
-
-      if (isAdmin || isHr) {
+      for (const roleName of grantRoles) {
+        const roleId = roleMap.get(roleName);
+        if (!roleId) {
+          console.warn(`Role not found: ${roleName}`);
+          continue;
+        }
         await prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: role.id,
-              permissionId: manage.id,
-            },
-          },
-          update: {
-            canView: true,
-            canCreate: true,
-            canEdit: true,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            updatedBy: SYSTEM_USER_ID,
-          },
-          create: {
-            roleId: role.id,
-            permissionId: manage.id,
-            canView: true,
-            canCreate: true,
-            canEdit: true,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            createdBy: SYSTEM_USER_ID,
-            updatedBy: SYSTEM_USER_ID,
-          },
+          where: { roleId_permissionId: { roleId, permissionId: perm.id } },
+          update: { ...flags, deletedAt: null, deletedBy: null, updatedBy: SYSTEM_USER_ID },
+          create: { roleId, permissionId: perm.id, ...flags, createdBy: SYSTEM_USER_ID, updatedBy: SYSTEM_USER_ID },
         });
       }
     }
 
-    console.log(
-      `Flight permissions seeded for ${roles.length} role(s)`,
-    );
+    console.log(`Flight permissions seeded for ${roles.length} role(s): ${roles.map((r) => r.name).join(', ')}`);
   } finally {
     await prisma.$disconnect();
   }

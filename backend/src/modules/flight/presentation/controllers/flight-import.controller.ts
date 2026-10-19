@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -20,6 +21,8 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { canManageFlightImport } from '../../application/utils/flight-import-access.util';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { FlightImportPreviewResponseDto } from '../../application/dtos/flight-import.dtos';
 import { FlightImportService } from '../../application/services/flight-import.service';
@@ -27,17 +30,28 @@ import { FlightImportService } from '../../application/services/flight-import.se
 @ApiTags('HR Flight Application Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'flight', action: 'create' },
-)
+@RequireAnyPermission({ module: 'flight', action: 'manage' })
 @Controller('hr/flight-applications/import')
 export class FlightImportController {
-  constructor(private readonly flightImportService: FlightImportService) {}
+  constructor(
+    private readonly flightImportService: FlightImportService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManageFlightImport(user: AuthenticatedUser): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManageFlightImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage flight application imports',
+      );
+    }
   }
 
   @Get('template')
@@ -74,10 +88,11 @@ export class FlightImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<FlightImportPreviewResponseDto> {
+    await this.assertCanManageFlightImport(user);
     return this.flightImportService.previewCompanyImport(this.ctx(user), file);
   }
 
@@ -102,10 +117,11 @@ export class FlightImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManageFlightImport(user);
     return this.flightImportService.commitCompanyImport(this.ctx(user), file);
   }
 }

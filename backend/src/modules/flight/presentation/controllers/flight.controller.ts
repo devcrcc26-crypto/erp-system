@@ -108,7 +108,6 @@ async function parseFlightSubmitDto(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'flight', action: 'view' },
   { module: 'flight', action: 'create' },
 )
@@ -314,7 +313,6 @@ export class FlightController {
 
   @Get(':id')
   @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
     { module: 'flight', action: 'view' },
     { module: 'flight', action: 'create' },
     { module: 'approvals', action: 'view' },
@@ -343,6 +341,7 @@ export class FlightController {
   }
 
   @Post(':id/tickets/combined')
+  @RequireAnyPermission({ module: 'flight', action: 'manage' })
   @ApiOperation({
     summary:
       'Attach combined ticket file(s) covering all passengers (HR viewers only)',
@@ -378,6 +377,7 @@ export class FlightController {
   }
 
   @Post(':id/passengers/:passengerId/ticket')
+  @RequireAnyPermission({ module: 'flight', action: 'manage' })
   @ApiOperation({
     summary:
       'Attach individual ticket file(s) for a specific passenger (HR viewers only)',
@@ -415,6 +415,7 @@ export class FlightController {
   }
 
   @Delete(':id/tickets/combined')
+  @RequireAnyPermission({ module: 'flight', action: 'manage' })
   @ApiOperation({
     summary: 'Remove combined ticket and reset passenger acknowledgements (HR)',
   })
@@ -431,6 +432,7 @@ export class FlightController {
   }
 
   @Delete(':id/passengers/:passengerId/ticket')
+  @RequireAnyPermission({ module: 'flight', action: 'manage' })
   @ApiOperation({
     summary:
       'Remove an individual passenger ticket and reset acknowledgement (HR)',

@@ -1377,7 +1377,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
-    { roleName: 'HR Manager', module: 'flight', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'business-trip', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
@@ -1404,7 +1403,6 @@ async function main(): Promise<void> {
       module: 'employee-contract',
       flags: localHrManagerFlags(),
     },
-    { roleName: 'Local HR Manager', module: 'flight', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
@@ -1421,18 +1419,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Specialist', module: 'exit-permit', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'per-diem', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'employee-contract', flags: viewOnlyFlags() },
-    {
-      roleName: 'HR Specialist',
-      module: 'flight',
-      flags: {
-        canView: true,
-        canCreate: false,
-        canEdit: true, // ticket attachment
-        canDelete: false,
-        canApprove: false,
-        canExport: true,
-      },
-    },
     { roleName: 'HR Specialist', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
@@ -1448,7 +1434,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'exit-permit', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'per-diem', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'employee-contract', flags: viewOnlyFlags() },
-    { roleName: 'HR Assistant', module: 'flight', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'business-trip', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
@@ -2258,50 +2243,44 @@ async function main(): Promise<void> {
     }
   }
 
-  // Flight: view+create for all core roles; manage (tickets) for HR / SysAdmin.
-  const flightView = permissions.find(
-    (permission) =>
-      permission.module === 'flight' && permission.action === 'view',
-  );
-  const flightCreate = permissions.find(
-    (permission) =>
-      permission.module === 'flight' && permission.action === 'create',
-  );
-  const flightManage = permissions.find(
-    (permission) =>
-      permission.module === 'flight' && permission.action === 'manage',
-  );
-  if (flightView && flightCreate) {
-    for (const roleName of CORE_ROLES) {
-      const roleId = roleMap.get(roleName);
-      if (!roleId) {
-        continue;
-      }
-      await upsertRolePermission(roleId, flightView.id, viewOnlyFlags());
-      await upsertRolePermission(roleId, flightCreate.id, {
-        canView: true,
-        canCreate: true,
-        canEdit: false,
-        canDelete: false,
-        canApprove: false,
-        canExport: false,
-      });
+  // Flight — consolidated grant table.
+  const flightGrants: Array<{
+    perm: (typeof permissions)[number] | undefined;
+    roleNames: string[];
+    flags: PermissionFlags;
+  }> = [
+    {
+      perm: permissions.find((p) => p.module === 'flight' && p.action === 'view'),
+      roleNames: [
+        'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+        'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+        'Managing Director', 'System Administrator',
+      ],
+      flags: viewOnlyFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'flight' && p.action === 'create'),
+      roleNames: [
+        'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+        'HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator',
+      ],
+      flags: viewCreateFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'flight' && p.action === 'manage'),
+      roleNames: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+      flags: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false },
+    },
+  ];
+  for (const { perm, roleNames, flags } of flightGrants) {
+    if (!perm) {
+      continue;
     }
-  }
-  if (flightManage) {
-    for (const roleName of ['System Administrator', 'HR Officer'] as const) {
+    for (const roleName of roleNames) {
       const roleId = roleMap.get(roleName);
-      if (!roleId) {
-        continue;
+      if (roleId) {
+        await upsertRolePermission(roleId, perm.id, flags);
       }
-      await upsertRolePermission(roleId, flightManage.id, {
-        canView: true,
-        canCreate: true,
-        canEdit: true,
-        canDelete: false,
-        canApprove: false,
-        canExport: false,
-      });
     }
   }
 

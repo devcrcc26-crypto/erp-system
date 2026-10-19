@@ -426,11 +426,12 @@ export class FlightService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const [isHrViewer, isFlightManager] = await Promise.all([
-      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
-      this.permissionService.hasPermission(userId, companyId, 'flight', 'manage'),
-    ]);
-    const canViewAll = isHrViewer || isFlightManager;
+    const canViewAll = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'flight',
+      'manage',
+    );
 
     const scopeClause: Prisma.FlightApplicationWhereInput[] = canViewAll
       ? []
@@ -631,16 +632,13 @@ export class FlightService
       return { total: 0 };
     }
 
-    const [hrView, flightManage] = await Promise.all([
-      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
-      this.permissionService.hasPermission(
-        userId,
-        companyId,
-        'flight',
-        'manage',
-      ),
-    ]);
-    if (!hrView && !flightManage) {
+    const flightManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'flight',
+      'manage',
+    );
+    if (!flightManage) {
       return { total: 0 };
     }
 
@@ -1363,7 +1361,7 @@ export class FlightService
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   /**
-   * Throws ForbiddenException unless caller is the submitter or has hr.view.
+   * Throws ForbiddenException unless caller is the submitter or has flight.manage.
    */
   private async assertCanManageApplication(
     submitterId: string,
@@ -1373,13 +1371,13 @@ export class FlightService
     if (submitterId === userId) {
       return;
     }
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'flight',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'You do not have permission to modify this flight application',
       );
@@ -1430,8 +1428,8 @@ export class FlightService
       (await this.permissionService.hasPermission(
         userId,
         companyId,
-        'hr',
-        'view',
+        'flight',
+        'manage',
       )) ||
       (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId));
     if (!canBackdate) {
@@ -1485,13 +1483,13 @@ export class FlightService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'flight',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isSubmitter =
       app.submittedBy === userId || app.createdBy === userId;
@@ -1507,19 +1505,19 @@ export class FlightService
   }
 
   /**
-   * Throws ForbiddenException unless the caller has hr.view permission.
+   * Throws ForbiddenException unless the caller has flight.manage permission.
    */
   private async assertHrManager(
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'flight',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'Only HR managers may perform this action',
       );
