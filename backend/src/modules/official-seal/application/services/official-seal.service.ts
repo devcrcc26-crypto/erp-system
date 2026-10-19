@@ -313,19 +313,19 @@ export class OfficialSealService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      "hr",
-      "view",
+      "official-seal",
+      "manage",
     );
 
     const where: Prisma.OfficialSealWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -503,8 +503,8 @@ export class OfficialSealService
     const canIssue = await this.permissionService.hasPermission(
       userId,
       companyId,
-      "hr",
-      "view",
+      "official-seal",
+      "manage",
     );
     if (!canIssue) {
       throw new ForbiddenException("Only HR can issue the seal");
@@ -605,13 +605,13 @@ export class OfficialSealService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      "hr",
-      "view",
+      "official-seal",
+      "manage",
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner = officialSeal.employeeId === userId || officialSeal.createdBy === userId;
     const isTierApprover =

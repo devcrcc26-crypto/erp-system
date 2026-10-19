@@ -10,9 +10,7 @@ export const OfficialSealImportController = createHrImportController({
   templateFileName: 'official-seal-import-template.xlsx',
   entityLabel: 'official seal usage',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'official-seal', action: 'create' },
+    { module: 'official-seal', action: 'manage' },
   ],
   service: OfficialSealImportService,
 });
