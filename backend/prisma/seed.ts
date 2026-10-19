@@ -123,6 +123,8 @@ const PERMISSION_DEFINITIONS: Array<{
 
   { module: 'leave', action: 'view', description: 'View leave requests and balances' },
   { module: 'leave', action: 'create', description: 'Submit and cancel leave requests' },
+  { module: 'leave', action: 'edit', description: 'Edit leave requests' },
+  { module: 'leave', action: 'delete', description: 'Delete leave requests' },
 
   { module: 'overtime', action: 'view', description: 'View overtime requests' },
   { module: 'overtime', action: 'create', description: 'Submit and cancel overtime requests' },
@@ -1624,7 +1626,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Leave: create for Employee (own requests); HR Officer / leadership via hr.view.
+  // Leave module permission matrix (leave.view / create / edit / delete).
   const leaveView = permissions.find(
     (permission) =>
       permission.module === 'leave' && permission.action === 'view',
@@ -1633,12 +1635,44 @@ async function main(): Promise<void> {
     (permission) =>
       permission.module === 'leave' && permission.action === 'create',
   );
+  const leaveEdit = permissions.find(
+    (permission) =>
+      permission.module === 'leave' && permission.action === 'edit',
+  );
+  const leaveDelete = permissions.find(
+    (permission) =>
+      permission.module === 'leave' && permission.action === 'delete',
+  );
+
+  const leaveViewCreateRoleNames = [
+    'Employee',
+    'Team Lead',
+    'Department Head',
+    'Discipline Lead',
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+
+  const leaveEditRoleNames = [
+    'HR Assistant',
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+
+  const leaveDeleteRoleNames = [
+    'HR Manager',
+    'General Manager',
+    'Managing Director',
+    'System Administrator',
+  ] as const;
+
   if (leaveView) {
-    for (const roleName of [
-      'General Manager',
-      'Managing Director',
-      'HR Officer',
-    ] as const) {
+    for (const roleName of leaveViewCreateRoleNames) {
       const roleId = roleMap.get(roleName);
       if (!roleId) {
         continue;
@@ -1647,12 +1681,7 @@ async function main(): Promise<void> {
     }
   }
   if (leaveCreate) {
-    for (const roleName of [
-      'General Manager',
-      'Managing Director',
-      'HR Officer',
-      'Employee',
-    ] as const) {
+    for (const roleName of leaveViewCreateRoleNames) {
       const roleId = roleMap.get(roleName);
       if (!roleId) {
         continue;
@@ -1662,6 +1691,38 @@ async function main(): Promise<void> {
         canCreate: true,
         canEdit: false,
         canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (leaveEdit) {
+    for (const roleName of leaveEditRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, leaveEdit.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (leaveDelete) {
+    for (const roleName of leaveDeleteRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, leaveDelete.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: true,
         canApprove: false,
         canExport: false,
       });

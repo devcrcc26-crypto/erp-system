@@ -204,6 +204,12 @@ export class LeaveService
     actorUserId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
+    await this.assertOnBehalfLeaveSubmitScope(
+      actorUserId,
+      employeeId,
+      companyId,
+    );
+
     if (dto.leaveType === LeaveType.MATERNITY) {
       const employee = await this.prisma.user.findFirst({
         where: { id: employeeId, companyId, deletedAt: null },
@@ -700,6 +706,80 @@ export class LeaveService
         leave.employeeId,
         periods,
       );
+    }
+  }
+
+  /**
+   * Tightens on-behalf leave submit scope for department / discipline leaders
+   * after eligibility checks (full-access roles bypass).
+   */
+  private async assertOnBehalfLeaveSubmitScope(
+    actorUserId: string,
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    if (actorUserId === employeeId) {
+      return;
+    }
+
+    const primaryRole = await this.hrApprovalChain.getPrimaryRoleName(
+      actorUserId,
+      companyId,
+    );
+    const fullAccessRoles = new Set([
+      'General Manager',
+      'Managing Director',
+      'HR Manager',
+      'System Administrator',
+    ]);
+    if (primaryRole !== null && fullAccessRoles.has(primaryRole)) {
+      return;
+    }
+
+    if (primaryRole === 'Department Head') {
+      const users = await this.prisma.user.findMany({
+        where: {
+          id: { in: [actorUserId, employeeId] },
+          companyId,
+          deletedAt: null,
+        },
+        select: { id: true, departmentId: true },
+      });
+      const initiator = users.find((user) => user.id === actorUserId);
+      const target = users.find((user) => user.id === employeeId);
+      if (
+        !initiator?.departmentId ||
+        !target?.departmentId ||
+        initiator.departmentId !== target.departmentId
+      ) {
+        throw new ForbiddenException(
+          'You may only submit leave on behalf of employees in your department',
+        );
+      }
+      return;
+    }
+
+    if (primaryRole === 'Discipline Lead') {
+      const ledDisciplines = await this.prisma.discipline.findMany({
+        where: activeOnly({
+          companyId,
+          OR: [{ leaderId: actorUserId }, { localLeaderId: actorUserId }],
+        }),
+        select: { id: true },
+      });
+      const disciplineIds = ledDisciplines.map((discipline) => discipline.id);
+      const target = await this.prisma.user.findFirst({
+        where: activeOnly({ id: employeeId, companyId }),
+        select: { engineeringDisciplineId: true },
+      });
+      if (
+        !target?.engineeringDisciplineId ||
+        !disciplineIds.includes(target.engineeringDisciplineId)
+      ) {
+        throw new ForbiddenException(
+          'You may only submit leave on behalf of employees in your discipline',
+        );
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -17,12 +18,14 @@ import {
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { LeaveRequestImportPreviewResponseDto } from '../../application/dtos/leave-request-import.dtos';
 import { LeaveRequestImportService } from '../../application/services/leave-request-import.service';
+import { canEditLeaveRequests } from '../../application/utils/leave-request-access.util';
 
 @ApiTags('HR Leave Request Import')
 @ApiBearerAuth()
@@ -36,10 +39,25 @@ import { LeaveRequestImportService } from '../../application/services/leave-requ
 export class LeaveRequestImportController {
   constructor(
     private readonly leaveRequestImportService: LeaveRequestImportService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanEditLeaveRequests(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canEditLeaveRequests(roleNames)) {
+      throw new ForbiddenException(
+        'Only System Administrator, General Manager, Managing Director, or HR can import leave requests',
+      );
+    }
   }
 
   @Get('template')
@@ -72,10 +90,11 @@ export class LeaveRequestImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<LeaveRequestImportPreviewResponseDto> {
+    await this.assertCanEditLeaveRequests(user);
     return this.leaveRequestImportService.previewImport(this.ctx(user), file);
   }
 
@@ -99,10 +118,11 @@ export class LeaveRequestImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanEditLeaveRequests(user);
     return this.leaveRequestImportService.commitImport(this.ctx(user), file);
   }
 }

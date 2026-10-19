@@ -1,29 +1,66 @@
 /**
- * Upserts leave.view / leave.create permissions and grants them to System Administrator + Employee.
+ * Upserts leave.view / leave.create / leave.edit / leave.delete and role grants.
  * Usage: npx ts-node --transpile-only prisma/seed-leave-permissions.ts
  */
 import { PrismaClient } from '@prisma/client';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+const PERMISSION_DEFS = [
+  {
+    module: 'leave',
+    action: 'view',
+    description: 'View leave requests and balances',
+  },
+  {
+    module: 'leave',
+    action: 'create',
+    description: 'Submit and cancel leave requests',
+  },
+  {
+    module: 'leave',
+    action: 'edit',
+    description: 'Edit leave requests',
+  },
+  {
+    module: 'leave',
+    action: 'delete',
+    description: 'Delete leave requests',
+  },
+] as const;
+
+const VIEW_CREATE_ROLES = [
+  'Employee',
+  'Team Lead',
+  'Department Head',
+  'Discipline Lead',
+  'HR Assistant',
+  'HR Manager',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+] as const;
+
+const EDIT_ROLES = [
+  'HR Assistant',
+  'HR Manager',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+] as const;
+
+const DELETE_ROLES = [
+  'HR Manager',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+] as const;
+
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    const defs = [
-      {
-        module: 'leave',
-        action: 'view',
-        description: 'View leave requests and balances',
-      },
-      {
-        module: 'leave',
-        action: 'create',
-        description: 'Submit and cancel leave requests',
-      },
-    ] as const;
-
     const permissions = [];
-    for (const def of defs) {
+    for (const def of PERMISSION_DEFS) {
       permissions.push(
         await prisma.permission.upsert({
           where: {
@@ -35,6 +72,8 @@ async function main(): Promise<void> {
       );
     }
 
+    const byAction = new Map(permissions.map((p) => [p.action, p]));
+
     const company = await prisma.company.findFirst({
       where: { deletedAt: null },
       orderBy: { createdAt: 'asc' },
@@ -44,43 +83,162 @@ async function main(): Promise<void> {
       throw new Error('No company found');
     }
 
+    const roleNames = [
+      ...new Set([
+        ...VIEW_CREATE_ROLES,
+        ...EDIT_ROLES,
+        ...DELETE_ROLES,
+      ]),
+    ];
     const roles = await prisma.role.findMany({
       where: {
         companyId: company.id,
         deletedAt: null,
-        name: { in: ['System Administrator', 'Employee', 'HR Officer'] },
+        name: { in: [...roleNames] },
       },
       select: { id: true, name: true },
     });
 
     for (const role of roles) {
-      for (const permission of permissions) {
-        const isAdmin = role.name === 'System Administrator';
+      const viewPerm = byAction.get('view');
+      const createPerm = byAction.get('create');
+      const editPerm = byAction.get('edit');
+      const deletePerm = byAction.get('delete');
+
+      if (
+        viewPerm &&
+        VIEW_CREATE_ROLES.includes(role.name as (typeof VIEW_CREATE_ROLES)[number])
+      ) {
         await prisma.rolePermission.upsert({
           where: {
             roleId_permissionId: {
               roleId: role.id,
-              permissionId: permission.id,
+              permissionId: viewPerm.id,
             },
           },
           update: {
             canView: true,
-            canCreate: isAdmin || permission.action === 'create',
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
+            canCreate: false,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
             updatedBy: SYSTEM_USER_ID,
           },
           create: {
             roleId: role.id,
-            permissionId: permission.id,
+            permissionId: viewPerm.id,
             canView: true,
-            canCreate: isAdmin || permission.action === 'create',
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
+            canCreate: false,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            createdBy: SYSTEM_USER_ID,
+            updatedBy: SYSTEM_USER_ID,
+          },
+        });
+      }
+
+      if (
+        createPerm &&
+        VIEW_CREATE_ROLES.includes(role.name as (typeof VIEW_CREATE_ROLES)[number])
+      ) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: createPerm.id,
+            },
+          },
+          update: {
+            canView: true,
+            canCreate: true,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            updatedBy: SYSTEM_USER_ID,
+          },
+          create: {
+            roleId: role.id,
+            permissionId: createPerm.id,
+            canView: true,
+            canCreate: true,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            createdBy: SYSTEM_USER_ID,
+            updatedBy: SYSTEM_USER_ID,
+          },
+        });
+      }
+
+      if (
+        editPerm &&
+        EDIT_ROLES.includes(role.name as (typeof EDIT_ROLES)[number])
+      ) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: editPerm.id,
+            },
+          },
+          update: {
+            canView: true,
+            canCreate: false,
+            canEdit: true,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            updatedBy: SYSTEM_USER_ID,
+          },
+          create: {
+            roleId: role.id,
+            permissionId: editPerm.id,
+            canView: true,
+            canCreate: false,
+            canEdit: true,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            createdBy: SYSTEM_USER_ID,
+            updatedBy: SYSTEM_USER_ID,
+          },
+        });
+      }
+
+      if (
+        deletePerm &&
+        DELETE_ROLES.includes(role.name as (typeof DELETE_ROLES)[number])
+      ) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: deletePerm.id,
+            },
+          },
+          update: {
+            canView: true,
+            canCreate: false,
+            canEdit: false,
+            canDelete: true,
+            canApprove: false,
+            canExport: false,
+            updatedBy: SYSTEM_USER_ID,
+          },
+          create: {
+            roleId: role.id,
+            permissionId: deletePerm.id,
+            canView: true,
+            canCreate: false,
+            canEdit: false,
+            canDelete: true,
+            canApprove: false,
+            canExport: false,
             createdBy: SYSTEM_USER_ID,
             updatedBy: SYSTEM_USER_ID,
           },

@@ -96,6 +96,7 @@ export class LeaveController {
   }
 
   @Post()
+  @RequireAnyPermission({ module: 'leave', action: 'create' })
   @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Submit a leave request (any authenticated user, own record)',
@@ -153,6 +154,7 @@ export class LeaveController {
   }
 
   @Get('my')
+  @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List my leave requests' })
   listMine(
@@ -164,6 +166,7 @@ export class LeaveController {
   }
 
   @Get('balance')
+  @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
@@ -192,6 +195,7 @@ export class LeaveController {
   }
 
   @Get('balances/me')
+  @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Get my leave balances for a year (alias of GET balance)',
@@ -218,6 +222,7 @@ export class LeaveController {
   }
 
   @Get('balance-ledger')
+  @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
@@ -297,6 +302,7 @@ export class LeaveController {
   }
 
   @Get(':id')
+  @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
@@ -311,10 +317,7 @@ export class LeaveController {
   }
 
   @Patch(':id')
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'leave', action: 'create' },
-  )
+  @RequireAnyPermission({ module: 'leave', action: 'edit' })
   @ApiOperation({
     summary:
       'Update a draft or returned leave request (owner or HR)',
@@ -346,7 +349,7 @@ export class LeaveController {
   }
 
   @Delete(':id')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'leave', action: 'delete' })
   @ApiOperation({
     summary: 'Soft-delete a leave request (HR only) and reverse balance impact',
   })
