@@ -1,9 +1,9 @@
 import {
   INestApplication,
-  NotFoundException,
   ValidationPipe,
   type CanActivate,
   type ExecutionContext,
+  type Type,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -15,13 +15,21 @@ import { PmModuleSettingsService } from '../../../application/services/pm-module
 import { ProjectExportService } from '../../../application/services/project-export.service';
 import { ProjectsService } from '../../../application/services/projects.service';
 import { ProjectsController } from '../projects.controller';
+import { SubmittalsController } from '../submittals.controller';
+import { SubmittalsService } from '../../../application/services/submittals.service';
 import { PmModuleEnabledGuard } from '../../guards/pm-module-enabled.guard';
+import { PmModuleAccessGuard } from '../../guards/pm-module-access.guard';
 import { EpcWorkspaceController } from '../epc-workspace.controller';
 import { EpcWorkspaceService } from '../../../application/services/epc-workspace.service';
 import { MyWorkService } from '../../../application/services/my-work.service';
 import { ProjectChangeRequestService } from '../../../application/services/project-change-request.service';
 
-const testUser = { userId: 'user-1', companyId: 'company-1', email: 'u@test.com', sessionId: 's-1' };
+const testUser = {
+  userId: 'user-1',
+  companyId: 'company-1',
+  email: 'u@test.com',
+  sessionId: 's-1',
+};
 
 class TestUserGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
@@ -31,132 +39,174 @@ class TestUserGuard implements CanActivate {
   }
 }
 
-describe('PmModuleEnabledGuard', () => {
-  describe('ProjectsController', () => {
-    let app: INestApplication;
-    let isEnabled: jest.Mock;
-    let getUserRoleNames: jest.Mock;
+class AllowPmModuleAccessGuard implements CanActivate {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
+interface PmGuardHarness {
+  app: INestApplication;
+  isEnabled: jest.Mock;
+  getUserRoleNames: jest.Mock;
+}
+
+async function createPmGuardHarness(
+  controller: Type,
+  extraProviders: unknown[],
+  overridePmModuleAccess: boolean,
+): Promise<PmGuardHarness> {
+  const isEnabled = jest.fn();
+  const getUserRoleNames = jest.fn();
+
+  let moduleBuilder = Test.createTestingModule({
+    controllers: [controller],
+    providers: [
+      ...(extraProviders as []),
+      PmModuleEnabledGuard,
+      { provide: PmModuleSettingsService, useValue: { isEnabled } },
+      PermissionsGuard,
+      {
+        provide: PermissionService,
+        useValue: {
+          hasPermission: jest.fn().mockResolvedValue(true),
+          getUserRoleNames,
+        },
+      },
+      Reflector,
+    ],
+  });
+
+  if (overridePmModuleAccess) {
+    moduleBuilder = moduleBuilder
+      .overrideGuard(PmModuleAccessGuard)
+      .useClass(AllowPmModuleAccessGuard);
+  }
+
+  const moduleRef: TestingModule = await moduleBuilder.compile();
+  const app = moduleRef.createNestApplication();
+  app.useGlobalGuards(new TestUserGuard());
+  app.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, transform: true }),
+  );
+  await app.init();
+
+  return { app, isEnabled, getUserRoleNames };
+}
+
+function assertPmModuleMatrix(
+  harness: () => PmGuardHarness,
+  getPath: () => string,
+): void {
+  it('disabled + non-sysadmin → 404', async () => {
+    const { app, isEnabled, getUserRoleNames } = harness();
+    isEnabled.mockResolvedValue(false);
+    getUserRoleNames.mockResolvedValue(['Employee']);
+
+    await request(app.getHttpServer()).get(getPath()).expect(404);
+  });
+
+  it('disabled + sysadmin → 200', async () => {
+    const { app, isEnabled, getUserRoleNames } = harness();
+    isEnabled.mockResolvedValue(false);
+    getUserRoleNames.mockResolvedValue(['System Administrator']);
+
+    await request(app.getHttpServer()).get(getPath()).expect(200);
+  });
+
+  it('enabled + non-sysadmin → 200 (passes to next guard)', async () => {
+    const { app, isEnabled, getUserRoleNames } = harness();
+    isEnabled.mockResolvedValue(true);
+    getUserRoleNames.mockResolvedValue(['Employee']);
+
+    await request(app.getHttpServer()).get(getPath()).expect(200);
+  });
+}
+
+describe('PmModuleEnabledGuard — controller groups', () => {
+  describe('ProjectsController GET /projects', () => {
+    let harness: PmGuardHarness;
 
     beforeEach(async () => {
-      isEnabled = jest.fn();
-      getUserRoleNames = jest.fn();
-      const projectsService = {
-        listProjects: jest.fn().mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 20, pages: 0 } }),
-      };
-
-      const moduleRef: TestingModule = await Test.createTestingModule({
-        controllers: [ProjectsController],
-        providers: [
-          { provide: ProjectsService, useValue: projectsService },
+      harness = await createPmGuardHarness(
+        ProjectsController,
+        [
+          {
+            provide: ProjectsService,
+            useValue: {
+              listProjects: jest.fn().mockResolvedValue({
+                data: [],
+                meta: { total: 0, page: 1, limit: 20, pages: 0 },
+              }),
+            },
+          },
           { provide: ProjectExportService, useValue: {} },
-          PmModuleEnabledGuard,
-          { provide: PmModuleSettingsService, useValue: { isEnabled } },
-          PermissionsGuard,
-          {
-            provide: PermissionService,
-            useValue: { hasPermission: jest.fn().mockResolvedValue(true), getUserRoleNames },
-          },
-          Reflector,
         ],
-      }).compile();
-
-      app = moduleRef.createNestApplication();
-      app.useGlobalGuards(new TestUserGuard());
-      app.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
-      app.useGlobalPipes(
-        new ValidationPipe({ whitelist: true, transform: true }),
+        false,
       );
-      await app.init();
     });
 
     afterEach(async () => {
-      await app.close();
+      await harness.app.close();
     });
 
-    it('returns 404 for non-admin when PM is disabled', async () => {
-      isEnabled.mockResolvedValue(false);
-      getUserRoleNames.mockResolvedValue(['Employee']);
-
-      await request(app.getHttpServer()).get('/projects').expect(404);
-    });
-
-    it('allows System Administrator when PM is disabled', async () => {
-      isEnabled.mockResolvedValue(false);
-      getUserRoleNames.mockResolvedValue(['System Administrator']);
-
-      await request(app.getHttpServer()).get('/projects').expect(200);
-    });
-
-    it('allows any user when PM is enabled', async () => {
-      isEnabled.mockResolvedValue(true);
-      getUserRoleNames.mockResolvedValue(['Employee']);
-
-      await request(app.getHttpServer()).get('/projects').expect(200);
-    });
+    assertPmModuleMatrix(() => harness, () => '/projects');
   });
 
-  describe('EpcWorkspaceController global routes', () => {
-    let app: INestApplication;
-    let isEnabled: jest.Mock;
-    let getUserRoleNames: jest.Mock;
+  describe('SubmittalsController GET /projects/:projectId/submittals', () => {
+    const projectId = 'project-1';
+    let harness: PmGuardHarness;
 
     beforeEach(async () => {
-      isEnabled = jest.fn();
-      getUserRoleNames = jest.fn();
-
-      const moduleRef: TestingModule = await Test.createTestingModule({
-        controllers: [EpcWorkspaceController],
-        providers: [
-          { provide: EpcWorkspaceService, useValue: { getReviewInbox: jest.fn().mockResolvedValue([]) } },
-          { provide: MyWorkService, useValue: { getMyWork: jest.fn().mockResolvedValue([]) } },
-          { provide: ProjectChangeRequestService, useValue: {} },
-          PmModuleEnabledGuard,
-          { provide: PmModuleSettingsService, useValue: { isEnabled } },
-          PermissionsGuard,
+      harness = await createPmGuardHarness(
+        SubmittalsController,
+        [
           {
-            provide: PermissionService,
-            useValue: { hasPermission: jest.fn().mockResolvedValue(true), getUserRoleNames },
+            provide: SubmittalsService,
+            useValue: {
+              listSubmittals: jest.fn().mockResolvedValue([]),
+            },
           },
-          Reflector,
         ],
-      }).compile();
-
-      app = moduleRef.createNestApplication();
-      app.useGlobalGuards(new TestUserGuard());
-      app.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
-      await app.init();
+        true,
+      );
     });
 
     afterEach(async () => {
-      await app.close();
+      await harness.app.close();
     });
 
-    it('blocks /my-work with 404 when disabled for non-admin', async () => {
-      isEnabled.mockResolvedValue(false);
-      getUserRoleNames.mockResolvedValue(['Employee']);
-
-      await request(app.getHttpServer()).get('/my-work').expect(404);
-    });
-
-    it('allows /review-inbox for admin when disabled', async () => {
-      isEnabled.mockResolvedValue(false);
-      getUserRoleNames.mockResolvedValue(['System Administrator']);
-
-      await request(app.getHttpServer()).get('/review-inbox').expect(200);
-    });
+    assertPmModuleMatrix(
+      () => harness,
+      () => `/projects/${projectId}/submittals`,
+    );
   });
 
-  it('throws NotFoundException from guard when disabled', async () => {
-    const guard = new PmModuleEnabledGuard(
-      { isEnabled: async () => false } as PmModuleSettingsService,
-      { getUserRoleNames: async () => ['Employee'] } as unknown as PermissionService,
-    );
-    const context = {
-      switchToHttp: () => ({
-        getRequest: () => ({ user: testUser }),
-      }),
-    } as ExecutionContext;
+  describe('EpcWorkspaceController GET /my-work', () => {
+    let harness: PmGuardHarness;
 
-    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(NotFoundException);
+    beforeEach(async () => {
+      harness = await createPmGuardHarness(
+        EpcWorkspaceController,
+        [
+          { provide: EpcWorkspaceService, useValue: {} },
+          {
+            provide: MyWorkService,
+            useValue: {
+              getMyWork: jest.fn().mockResolvedValue([]),
+            },
+          },
+          { provide: ProjectChangeRequestService, useValue: {} },
+        ],
+        false,
+      );
+    });
+
+    afterEach(async () => {
+      await harness.app.close();
+    });
+
+    assertPmModuleMatrix(() => harness, () => '/my-work');
   });
 });
