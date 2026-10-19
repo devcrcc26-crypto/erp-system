@@ -67,7 +67,6 @@ async function parseDto<T extends object>(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'expense-claim', action: 'view' },
   { module: 'expense-claim', action: 'create' },
 )
@@ -322,6 +321,7 @@ export class ExpenseClaimController {
   }
 
   @Delete(':id')
+  @RequireAnyPermission({ module: 'expense-claim', action: 'manage' })
   @ApiOperation({ summary: 'Soft-delete an expense claim (HR only)' })
   async delete(
     @CurrentUser() user: AuthenticatedUser,

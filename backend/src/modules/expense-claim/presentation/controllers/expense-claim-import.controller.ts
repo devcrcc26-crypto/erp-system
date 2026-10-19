@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -20,6 +21,8 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { canManageExpenseClaimImport } from '../../application/utils/expense-claim-import-access.util';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { ExpenseClaimImportPreviewResponseDto } from '../../application/dtos/expense-claim-import.dtos';
 import { ExpenseClaimImportService } from '../../application/services/expense-claim-import.service';
@@ -27,19 +30,28 @@ import { ExpenseClaimImportService } from '../../application/services/expense-cl
 @ApiTags('HR Expense Claim Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'expense-claim', action: 'create' },
-)
+@RequireAnyPermission({ module: 'expense-claim', action: 'manage' })
 @Controller('hr/expense-claims/import')
 export class ExpenseClaimImportController {
   constructor(
     private readonly expenseClaimImportService: ExpenseClaimImportService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanManageExpenseClaimImport(user: AuthenticatedUser): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canManageExpenseClaimImport(roleNames)) {
+      throw new ForbiddenException(
+        'Only HR management roles can manage expense claim imports',
+      );
+    }
   }
 
   @Get('template')
@@ -75,10 +87,11 @@ export class ExpenseClaimImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ExpenseClaimImportPreviewResponseDto> {
+    await this.assertCanManageExpenseClaimImport(user);
     return this.expenseClaimImportService.previewCompanyImport(
       this.ctx(user),
       file,
@@ -106,10 +119,11 @@ export class ExpenseClaimImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanManageExpenseClaimImport(user);
     return this.expenseClaimImportService.commitCompanyImport(
       this.ctx(user),
       file,

@@ -473,19 +473,19 @@ export class ExpenseClaimService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'expense-claim',
+      'manage',
     );
 
     const where: Prisma.ExpenseClaimWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.search?.trim()
@@ -615,13 +615,13 @@ export class ExpenseClaimService
       throw new NotFoundException('Expense claim not found');
     }
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'expense-claim',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException('Only HR can delete expense claims');
     }
 
@@ -748,13 +748,13 @@ export class ExpenseClaimService
     if (await this.onBehalfService.canActForRecord(userId, companyId, claim)) {
       return;
     }
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'expense-claim',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'You do not have permission to modify this expense claim',
       );
@@ -796,13 +796,13 @@ export class ExpenseClaimService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'expense-claim',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner = claim.employeeId === userId || claim.createdBy === userId;
     const isTierApprover =
