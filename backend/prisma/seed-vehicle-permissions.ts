@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       select: { id: true, name: true },
     });
 
-    const editRoles = new Set(['HR Officer', 'System Administrator']);
+    const editRoles = new Set(['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator']);
 
     for (const role of roles) {
       const isEditRole = editRoles.has(role.name);

@@ -30,11 +30,7 @@ import { canManageOvertimeImport } from '../../application/utils/overtime-import
 @ApiTags('HR Overtime Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'overtime', action: 'create' },
-)
+@RequireAnyPermission({ module: 'overtime', action: 'manage' })
 @Controller('hr/overtime/import')
 export class OvertimeImportController {
   constructor(

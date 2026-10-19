@@ -660,8 +660,8 @@ export class OvertimeEntryService {
     const isHr = await this.permissionService.hasPermission(
       actorUserId,
       companyId,
-      'hr',
-      'view',
+      'overtime',
+      'manage',
     );
     if (!isHr) {
       throw new BadRequestException(

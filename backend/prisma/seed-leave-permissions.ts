@@ -27,6 +27,18 @@ const PERMISSION_DEFS = [
     action: 'delete',
     description: 'Delete leave requests',
   },
+  {
+    module: 'leave',
+    action: 'manage',
+    description: 'Manage leave company-wide, balances, and imports',
+  },
+] as const;
+
+const MANAGE_ROLES = [
+  'HR Assistant',
+  'HR Officer',
+  'HR Manager',
+  'System Administrator',
 ] as const;
 
 const VIEW_CREATE_ROLES = [
@@ -88,6 +100,7 @@ async function main(): Promise<void> {
         ...VIEW_CREATE_ROLES,
         ...EDIT_ROLES,
         ...DELETE_ROLES,
+        ...MANAGE_ROLES,
       ]),
     ];
     const roles = await prisma.role.findMany({
@@ -104,6 +117,7 @@ async function main(): Promise<void> {
       const createPerm = byAction.get('create');
       const editPerm = byAction.get('edit');
       const deletePerm = byAction.get('delete');
+      const managePerm = byAction.get('manage');
 
       if (
         viewPerm &&
@@ -239,6 +253,41 @@ async function main(): Promise<void> {
             canDelete: true,
             canApprove: false,
             canExport: false,
+            createdBy: SYSTEM_USER_ID,
+            updatedBy: SYSTEM_USER_ID,
+          },
+        });
+      }
+
+      if (
+        managePerm &&
+        MANAGE_ROLES.includes(role.name as (typeof MANAGE_ROLES)[number])
+      ) {
+        await prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: role.id,
+              permissionId: managePerm.id,
+            },
+          },
+          update: {
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+            canApprove: true,
+            canExport: true,
+            updatedBy: SYSTEM_USER_ID,
+          },
+          create: {
+            roleId: role.id,
+            permissionId: managePerm.id,
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+            canApprove: true,
+            canExport: true,
             createdBy: SYSTEM_USER_ID,
             updatedBy: SYSTEM_USER_ID,
           },

@@ -63,7 +63,6 @@ function parseDateOnlyUtc(value: string): Date {
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'leave', action: 'view' },
   { module: 'leave', action: 'create' },
 )
@@ -209,7 +208,7 @@ export class LeaveController {
   }
 
   @Get('balances')
-  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @RequireAnyPermission({ module: 'leave', action: 'manage' })
   @ApiOperation({
     summary:
       'List employee leave balances (HR only - annual, maternity, compassionate)',
@@ -242,7 +241,7 @@ export class LeaveController {
   }
 
   @Post('balance-ledger/adjustments')
-  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @RequireAnyPermission({ module: 'leave', action: 'manage' })
   @ApiOperation({
     summary:
       'HR: adjust a leave balance (+/− days, reason required). Appends an ADJUSTMENT entry; audit-logged.',
@@ -261,7 +260,7 @@ export class LeaveController {
   }
 
   @Post('balance-ledger/opening')
-  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @RequireAnyPermission({ module: 'leave', action: 'manage' })
   @ApiOperation({
     summary:
       'HR go-live: set the opening balance for the current leave year (once per leave type); audit-logged.',
@@ -280,7 +279,7 @@ export class LeaveController {
   }
 
   @Post('balance-ledger/snapshot')
-  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @RequireAnyPermission({ module: 'leave', action: 'manage' })
   @ApiOperation({
     summary:
       'HR: set entitled, brought-forward and used for leave types on a leave year; remaining is calculated.',
@@ -332,10 +331,7 @@ export class LeaveController {
   }
 
   @Patch(':id/cancel')
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'leave', action: 'create' },
-  )
+  @RequireAnyPermission({ module: 'leave', action: 'create' })
   @ApiOperation({
     summary:
       'Cancel a draft, submitted or in-review leave request (owner or HR), or an approved one (HR - reverses used days)',

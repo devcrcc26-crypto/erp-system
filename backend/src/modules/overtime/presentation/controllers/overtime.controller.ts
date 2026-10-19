@@ -44,7 +44,7 @@ import { OvertimeService } from '../../application/services/overtime.service';
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
+  { module: 'overtime', action: 'manage' },
   { module: 'overtime', action: 'view' },
 )
 @Controller('hr/overtime')
@@ -213,7 +213,7 @@ export class OvertimeController {
 
   @Get(':id')
   @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
+    { module: 'overtime', action: 'manage' },
     { module: 'overtime', action: 'view' },
     { module: 'overtime', action: 'create' },
   )

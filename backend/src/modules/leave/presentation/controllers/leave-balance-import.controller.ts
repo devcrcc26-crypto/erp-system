@@ -30,10 +30,7 @@ import { canEditLeaveBalances } from '../../application/utils/leave-balance-acce
 @ApiTags('HR Leave Balance Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'edit' },
-)
+@RequireAnyPermission({ module: 'leave', action: 'manage' })
 @Controller('hr/leave-balances/import')
 export class LeaveBalanceImportController {
   constructor(

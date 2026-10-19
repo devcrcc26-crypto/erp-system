@@ -30,11 +30,7 @@ import { canEditLeaveRequests } from '../../application/utils/leave-request-acce
 @ApiTags('HR Leave Request Import')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'leave', action: 'create' },
-)
+@RequireAnyPermission({ module: 'leave', action: 'manage' })
 @Controller('hr/leave-requests/import')
 export class LeaveRequestImportController {
   constructor(

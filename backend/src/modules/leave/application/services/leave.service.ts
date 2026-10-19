@@ -496,8 +496,8 @@ export class LeaveService
       const isHr = await this.permissionService.hasPermission(
         userId,
         companyId,
-        'hr',
-        'view',
+        'leave',
+        'manage',
       );
       if (!isHr) {
         throw new ForbiddenException(
@@ -650,8 +650,8 @@ export class LeaveService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'leave',
+      'manage',
     );
     if (!isHrViewer) {
       throw new ForbiddenException(
@@ -797,8 +797,8 @@ export class LeaveService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'leave',
+      'manage',
     );
     if (!isHrViewer) {
       throw new ForbiddenException(
@@ -916,8 +916,8 @@ export class LeaveService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'leave',
+      'manage',
     );
 
     const where = activeOnly({
@@ -1016,8 +1016,8 @@ export class LeaveService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'leave',
+      'manage',
     );
     if (isHrViewer) {
       return;

@@ -11,7 +11,6 @@ export const CompanyVehicleImportController = createHrImportController({
   entityLabel: 'company vehicle',
   permissions: [
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   ],
   service: CompanyVehicleImportService,
 });

@@ -14,6 +14,13 @@ const PERMISSIONS: { action: string; description: string }[] = [
   { action: 'delete', description: 'Delete overtime sheets and entries' },
 ];
 
+const MANAGE_ROLES: string[] = [
+  'HR Assistant',
+  'HR Officer',
+  'HR Manager',
+  'System Administrator',
+];
+
 const GRANT_ROLES: string[] = [
   'Employee',
   'Team Lead',
@@ -50,13 +57,26 @@ async function main(): Promise<void> {
       throw new Error('No company found');
     }
 
+    const roleNames = [...new Set([...GRANT_ROLES, ...MANAGE_ROLES])];
     const roles = await prisma.role.findMany({
       where: {
         companyId: company.id,
         deletedAt: null,
-        name: { in: GRANT_ROLES },
+        name: { in: roleNames },
       },
       select: { id: true, name: true },
+    });
+
+    const managePerm = await prisma.permission.upsert({
+      where: { module_action: { module: 'overtime', action: 'manage' } },
+      update: {
+        description: 'Manage overtime company-wide and imports',
+      },
+      create: {
+        module: 'overtime',
+        action: 'manage',
+        description: 'Manage overtime company-wide and imports',
+      },
     });
 
     // 3. Grant all four permissions to every resolved role
@@ -93,8 +113,42 @@ async function main(): Promise<void> {
       }
     }
 
+    for (const role of roles) {
+      if (!MANAGE_ROLES.includes(role.name)) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: { roleId: role.id, permissionId: managePerm.id },
+        },
+        update: {
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+          canApprove: true,
+          canExport: true,
+          deletedAt: null,
+          deletedBy: null,
+          updatedBy: SYSTEM_USER_ID,
+        },
+        create: {
+          roleId: role.id,
+          permissionId: managePerm.id,
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+          canApprove: true,
+          canExport: true,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
+
     console.log(
-      `Overtime permissions seeded — keys: ${perms.map((p) => `overtime.${p.action}`).join(', ')}; roles: ${roles.map((r) => r.name).join(', ')}`,
+      `Overtime permissions seeded — keys: ${[...perms.map((p) => `overtime.${p.action}`), 'overtime.manage'].join(', ')}; roles: ${roles.map((r) => r.name).join(', ')}`,
     );
   } finally {
     await prisma.$disconnect();

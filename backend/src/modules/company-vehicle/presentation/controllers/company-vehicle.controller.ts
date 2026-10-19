@@ -62,7 +62,6 @@ async function parseDto<T extends object>(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'vehicles', action: 'view' },
 )
 @Controller('organization/vehicles')
@@ -84,7 +83,6 @@ export class CompanyVehicleController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Create a new company vehicle' })
   async create(
@@ -120,7 +118,6 @@ export class CompanyVehicleController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Update vehicle details' })
   async update(
@@ -142,7 +139,6 @@ export class CompanyVehicleController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Update vehicle status' })
   async updateStatus(
@@ -164,7 +160,6 @@ export class CompanyVehicleController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Soft-delete a vehicle' })
   async remove(
@@ -196,9 +191,7 @@ export class CompanyVehicleController {
   @Post(':id/photo')
   @DelegatePermissionCheck()
   @RequireAnyPermission(
-    { module: 'documents', action: 'create' },
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Upload a photo for a vehicle' })
   @ApiConsumes('multipart/form-data')
@@ -233,7 +226,6 @@ export class CompanyVehicleController {
   @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
-    { module: 'hr', action: 'edit' },
   )
   @ApiOperation({ summary: 'Remove a vehicle photo' })
   async deletePhoto(

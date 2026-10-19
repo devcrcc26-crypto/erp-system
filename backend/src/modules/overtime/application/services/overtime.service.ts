@@ -386,8 +386,8 @@ export class OvertimeService
     const canViewAll = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'overtime',
+      'manage',
     );
 
     const where = activeOnly({
@@ -1147,8 +1147,8 @@ export class OvertimeService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'overtime',
+      'manage',
     );
     if (isHrViewer) {
       return;
@@ -1184,8 +1184,8 @@ export class OvertimeService
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'overtime',
+      'manage',
     );
     return (
       isHrViewer ||
