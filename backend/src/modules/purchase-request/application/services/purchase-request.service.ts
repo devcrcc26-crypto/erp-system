@@ -590,19 +590,19 @@ export class PurchaseRequestService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'purchase-request',
+      'manage',
     );
 
     const where: Prisma.PurchaseRequestWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
+      ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
       ...(filters.projectId ? { projectId: filters.projectId } : {}),
@@ -794,13 +794,13 @@ export class PurchaseRequestService
     if (await this.onBehalfService.canActForRecord(userId, companyId, record)) {
       return;
     }
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'purchase-request',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'You do not have permission to modify this purchase request',
       );
@@ -839,13 +839,13 @@ export class PurchaseRequestService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'purchase-request',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isOwner =
       request.employeeId === userId || request.createdBy === userId;

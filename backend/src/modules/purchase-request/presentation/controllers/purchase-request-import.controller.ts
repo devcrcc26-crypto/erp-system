@@ -28,9 +28,7 @@ import { PurchaseRequestImportService } from '../../application/services/purchas
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'create' },
-  { module: 'hr', action: 'view' },
-  { module: 'purchase-request', action: 'create' },
+  { module: 'purchase-request', action: 'manage' },
 )
 @Controller('hr/purchase-requests/import')
 export class PurchaseRequestImportController {
