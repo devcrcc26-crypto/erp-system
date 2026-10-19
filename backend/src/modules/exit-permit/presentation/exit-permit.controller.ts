@@ -39,7 +39,6 @@ async function parseDto<T extends object>(
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
     { module: 'exit-permit', action: 'view' },
     { module: 'exit-permit', action: 'create' },
 )

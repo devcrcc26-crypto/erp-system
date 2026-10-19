@@ -515,19 +515,19 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'exit-permit',
+      'manage',
     );
 
     const where: Prisma.ExitPermitWhereInput = {
         companyId,
         deletedAt: null,
-        ...(isHrViewer ? {} : { employeeId: userId }),
+        ...(canManage ? {} : { employeeId: userId }),
         ...(statuses ? { status: { in: statuses } } : {}),
-        ...(isHrViewer && filters.employeeId ? { employeeId: filters.employeeId } : {}),
+        ...(canManage && filters.employeeId ? { employeeId: filters.employeeId } : {}),
         ...(filters.search?.trim() ? {
             OR: [
                 {requestNumber: {contains: filters.search.trim(), mode: 'insensitive' as const}},
@@ -704,14 +704,14 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       return;
     }
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'exit-permit',
+      'manage',
     );
 
-    if (isHrViewer) {
+    if (canManage) {
       return;
     }
 

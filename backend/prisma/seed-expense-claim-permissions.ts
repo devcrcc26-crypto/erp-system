@@ -34,7 +34,8 @@ const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Fl
     module: 'expense-claim', action: 'create',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
     ],
     flags: viewCreate,
   },

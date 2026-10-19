@@ -1,39 +1,55 @@
 /**
- * Upserts exit-permit.view / exit-permit.create and grants them to every role.
+ * Upserts exit-permit.* role grants.
+ * Defines exit-permit.view, exit-permit.create, exit-permit.manage.
  * Usage: npx ts-node --transpile-only prisma/seed-exit-permit-permissions.ts
  */
 import { PrismaClient } from '@prisma/client';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+type Flags = {
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canApprove: boolean;
+  canExport: boolean;
+};
+
+const viewOnly: Flags = { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const viewCreate: Flags = { canView: true, canCreate: true, canEdit: false, canDelete: false, canApprove: false, canExport: false };
+const manage: Flags = { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false };
+
+const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
+  {
+    module: 'exit-permit', action: 'view',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewOnly,
+  },
+  {
+    module: 'exit-permit', action: 'create',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewCreate,
+  },
+  {
+    module: 'exit-permit', action: 'manage',
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    flags: manage,
+  },
+];
+
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    const defs = [
-      {
-        module: 'exit-permit',
-        action: 'view',
-        description: 'View equipment and materials exit permits',
-      },
-      {
-        module: 'exit-permit',
-        action: 'create',
-        description: 'Submit and cancel exit permits',
-      },
-    ] as const;
-
-    const permissions = [];
-    for (const def of defs) {
-      permissions.push(
-        await prisma.permission.upsert({
-          where: {
-            module_action: { module: def.module, action: def.action },
-          },
-          update: { description: def.description },
-          create: { ...def },
-        }),
-      );
-    }
+    const allRoleNames = [...new Set(GRANTS.flatMap((g) => g.roles))];
 
     const company = await prisma.company.findFirst({
       where: { deletedAt: null },
@@ -45,48 +61,33 @@ async function main(): Promise<void> {
     }
 
     const roles = await prisma.role.findMany({
-      where: { companyId: company.id, deletedAt: null },
+      where: { companyId: company.id, deletedAt: null, name: { in: allRoleNames } },
       select: { id: true, name: true },
     });
+    const roleMap = new Map(roles.map((r) => [r.name, r.id]));
 
-    for (const role of roles) {
-      const isAdmin = role.name === 'System Administrator';
-      for (const permission of permissions) {
+    for (const { module, action, roles: grantRoles, flags } of GRANTS) {
+      const perm = await prisma.permission.upsert({
+        where: { module_action: { module, action } },
+        update: {},
+        create: { module, action, description: `${action} exit permits` },
+        select: { id: true },
+      });
+      for (const roleName of grantRoles) {
+        const roleId = roleMap.get(roleName);
+        if (!roleId) {
+          console.warn(`Role not found: ${roleName}`);
+          continue;
+        }
         await prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: role.id,
-              permissionId: permission.id,
-            },
-          },
-          update: {
-            canView: true,
-            canCreate: true,
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            updatedBy: SYSTEM_USER_ID,
-          },
-          create: {
-            roleId: role.id,
-            permissionId: permission.id,
-            canView: true,
-            canCreate: true,
-            canEdit: isAdmin,
-            canDelete: isAdmin,
-            canApprove: isAdmin,
-            canExport: isAdmin,
-            createdBy: SYSTEM_USER_ID,
-            updatedBy: SYSTEM_USER_ID,
-          },
+          where: { roleId_permissionId: { roleId, permissionId: perm.id } },
+          update: { ...flags, deletedAt: null, deletedBy: null, updatedBy: SYSTEM_USER_ID },
+          create: { roleId, permissionId: perm.id, ...flags, createdBy: SYSTEM_USER_ID, updatedBy: SYSTEM_USER_ID },
         });
       }
     }
 
-    console.log(
-      `Exit permit permissions seeded for ${roles.length} role(s)`,
-    );
+    console.log(`Exit permit permissions seeded for ${roles.length} role(s): ${roles.map((r) => r.name).join(', ')}`);
   } finally {
     await prisma.$disconnect();
   }

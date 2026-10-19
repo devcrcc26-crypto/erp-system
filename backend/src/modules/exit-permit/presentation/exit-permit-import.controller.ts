@@ -10,9 +10,7 @@ export const ExitPermitImportController = createHrImportController({
   templateFileName: 'exit-permit-import-template.xlsx',
   entityLabel: 'exit permit',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'exit-permit', action: 'create' },
+    { module: 'exit-permit', action: 'manage' },
   ],
   service: ExitPermitImportService,
 });
