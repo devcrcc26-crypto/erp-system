@@ -454,11 +454,12 @@ export class BusinessTripService
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
 
-    const [isHrViewer, isTripManager] = await Promise.all([
-      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
-      this.permissionService.hasPermission(userId, companyId, 'business-trip', 'manage'),
-    ]);
-    const canViewAll = isHrViewer || isTripManager;
+    const canViewAll = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'business-trip',
+      'manage',
+    );
 
     const scopeClause: Prisma.BusinessTripWhereInput[] = canViewAll
       ? []
@@ -670,16 +671,13 @@ export class BusinessTripService
       return { total: 0 };
     }
 
-    const [hrView, flightManage] = await Promise.all([
-      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
-      this.permissionService.hasPermission(
-        userId,
-        companyId,
-        'business-trip',
-        'manage',
-      ),
-    ]);
-    if (!hrView && !flightManage) {
+    const businessTripManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'business-trip',
+      'manage',
+    );
+    if (!businessTripManage) {
       return { total: 0 };
     }
 
@@ -1429,7 +1427,7 @@ export class BusinessTripService
   // ??? Private helpers ??????????????????????????????????????????????????????
 
   /**
-   * Throws ForbiddenException unless caller is the submitter or has hr.view.
+   * Throws ForbiddenException unless caller is the submitter or has business-trip.manage.
    */
   private async assertCanManageTrip(
     submitterId: string,
@@ -1439,13 +1437,13 @@ export class BusinessTripService
     if (submitterId === userId) {
       return;
     }
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'business-trip',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'You do not have permission to modify this business trip',
       );
@@ -1494,8 +1492,8 @@ export class BusinessTripService
       (await this.permissionService.hasPermission(
         userId,
         companyId,
-        'hr',
-        'view',
+        'business-trip',
+        'manage',
       )) ||
       (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId));
     if (!canBackdate) {
@@ -1549,13 +1547,13 @@ export class BusinessTripService
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'business-trip',
+      'manage',
     );
-    if (isHrViewer) return;
+    if (canManage) return;
 
     const isSubmitter =
       app.submittedBy === userId || app.createdBy === userId;
@@ -1571,19 +1569,19 @@ export class BusinessTripService
   }
 
   /**
-   * Throws ForbiddenException unless the caller has hr.view permission.
+   * Throws ForbiddenException unless the caller has business-trip.manage permission.
    */
   private async assertHrManager(
     companyId: string,
     userId: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'business-trip',
+      'manage',
     );
-    if (!isHrViewer) {
+    if (!canManage) {
       throw new ForbiddenException(
         'Only HR managers may perform this action',
       );

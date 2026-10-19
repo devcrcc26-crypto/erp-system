@@ -1377,7 +1377,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
-    { roleName: 'HR Manager', module: 'business-trip', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'HR Manager', module: 'approvals', flags: hrManagerFlags() },
@@ -1403,7 +1402,6 @@ async function main(): Promise<void> {
       module: 'employee-contract',
       flags: localHrManagerFlags(),
     },
-    { roleName: 'Local HR Manager', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'approvals', flags: viewOnlyFlags() },
@@ -1419,7 +1417,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Specialist', module: 'exit-permit', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'per-diem', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'employee-contract', flags: viewOnlyFlags() },
-    { roleName: 'HR Specialist', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'notifications', flags: viewOnlyFlags() },
@@ -1434,7 +1431,6 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'exit-permit', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'per-diem', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'employee-contract', flags: viewOnlyFlags() },
-    { roleName: 'HR Assistant', module: 'business-trip', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'notifications', flags: viewOnlyFlags() },
@@ -2284,49 +2280,42 @@ async function main(): Promise<void> {
     }
   }
 
-  const businessTripView = permissions.find(
-    (permission) =>
-      permission.module === 'business-trip' && permission.action === 'view',
-  );
-  const businessTripCreate = permissions.find(
-    (permission) =>
-      permission.module === 'business-trip' && permission.action === 'create',
-  );
-  const businessTripManage = permissions.find(
-    (permission) =>
-      permission.module === 'business-trip' && permission.action === 'manage',
-  );
-  if (businessTripView && businessTripCreate) {
-    for (const roleName of CORE_ROLES) {
+  // Business-trip (business-trip.*) — consolidated grant table.
+  const businessTripGrants: Array<{
+    perm: (typeof permissions)[number] | undefined;
+    roleNames: string[];
+    flags: PermissionFlags;
+  }> = [
+    {
+      perm: permissions.find((p) => p.module === 'business-trip' && p.action === 'view'),
+      roleNames: [
+        'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+        'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+        'Managing Director', 'System Administrator',
+      ],
+      flags: viewOnlyFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'business-trip' && p.action === 'create'),
+      roleNames: [
+        'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+        'HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator',
+      ],
+      flags: viewCreateFlags(),
+    },
+    {
+      perm: permissions.find((p) => p.module === 'business-trip' && p.action === 'manage'),
+      roleNames: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+      flags: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false },
+    },
+  ];
+  for (const { perm, roleNames, flags } of businessTripGrants) {
+    if (!perm) continue;
+    for (const roleName of roleNames) {
       const roleId = roleMap.get(roleName);
-      if (!roleId) {
-        continue;
+      if (roleId) {
+        await upsertRolePermission(roleId, perm.id, flags);
       }
-      await upsertRolePermission(roleId, businessTripView.id, viewOnlyFlags());
-      await upsertRolePermission(roleId, businessTripCreate.id, {
-        canView: true,
-        canCreate: true,
-        canEdit: false,
-        canDelete: false,
-        canApprove: false,
-        canExport: false,
-      });
-    }
-  }
-  if (businessTripManage) {
-    for (const roleName of ['System Administrator', 'HR Officer'] as const) {
-      const roleId = roleMap.get(roleName);
-      if (!roleId) {
-        continue;
-      }
-      await upsertRolePermission(roleId, businessTripManage.id, {
-        canView: true,
-        canCreate: true,
-        canEdit: true,
-        canDelete: false,
-        canApprove: false,
-        canExport: false,
-      });
     }
   }
 
