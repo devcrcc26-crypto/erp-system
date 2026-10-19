@@ -10,9 +10,7 @@ export const InspectionRepairImportController = createHrImportController({
   templateFileName: 'inspection-repair-import-template.xlsx',
   entityLabel: 'inspection & repair',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'inspection-repair', action: 'create' },
+    { module: 'inspection-repair', action: 'manage' },
   ],
   service: InspectionRepairImportService,
 });

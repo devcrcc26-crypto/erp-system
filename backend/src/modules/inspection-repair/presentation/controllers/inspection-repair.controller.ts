@@ -26,7 +26,6 @@ import { InspectionRepairService } from '../../application/services/inspection-r
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
-  { module: 'hr', action: 'view' },
   { module: 'inspection-repair', action: 'view' },
   { module: 'inspection-repair', action: 'create' },
 )

@@ -133,13 +133,13 @@ export class InspectionRepairService {
     actorUserId: string,
   ): Promise<{ id: string; requestNumber: string }> {
     if (employeeId !== actorUserId) {
-      const isHrViewer = await this.permissionService.hasPermission(
+      const canManage = await this.permissionService.hasPermission(
         actorUserId,
         companyId,
-        'hr',
-        'view',
+        'inspection-repair',
+        'manage',
       );
-      if (!isHrViewer) {
+      if (!canManage) {
         throw new ForbiddenException(
           'Only HR can import inspection & repair requests for another employee',
         );
@@ -254,15 +254,15 @@ export class InspectionRepairService {
       throw new NotFoundException('Inspection and repair request not found');
     }
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'inspection-repair',
+      'manage',
     );
     const isOwnerDraft =
       request.employeeId === userId && request.status === InspectionRepairStatus.DRAFT;
-    if (!isHrViewer && !isOwnerDraft) {
+    if (!canManage && !isOwnerDraft) {
       throw new ForbiddenException('You cannot update this request');
     }
 
@@ -450,13 +450,13 @@ export class InspectionRepairService {
     userId: string,
     createdBy?: string,
   ): Promise<void> {
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'inspection-repair',
+      'manage',
     );
-    if (isHrViewer || employeeId === userId || createdBy === userId) {
+    if (canManage || employeeId === userId || createdBy === userId) {
       return;
     }
     throw new ForbiddenException('You do not have access to this request');
@@ -515,19 +515,19 @@ export class InspectionRepairService {
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'inspection-repair',
+      'manage',
     );
 
     const where: Prisma.InspectionRepairWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(canManage ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId ? { employeeId: filters.employeeId } : {}),
+      ...(canManage && filters.employeeId ? { employeeId: filters.employeeId } : {}),
       ...(filters.urgency ? { urgency: filters.urgency } : {}),
       ...(filters.inspectionType ? { inspectionType: filters.inspectionType } : {}),
       ...(filters.search?.trim()
@@ -605,17 +605,17 @@ export class InspectionRepairService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
-    const isHrViewer = await this.permissionService.hasPermission(
+    const canManage = await this.permissionService.hasPermission(
       userId,
       companyId,
-      'hr',
-      'view',
+      'inspection-repair',
+      'manage',
     );
     const whereSql = this.buildCompatibleWhereSql(
       filters,
       companyId,
       userId,
-      isHrViewer,
+      canManage,
     );
 
     const [rows, countRows] = await Promise.all([
