@@ -10,9 +10,7 @@ export const VehicleRefuelingImportController = createHrImportController({
   templateFileName: 'vehicle-refueling-import-template.xlsx',
   entityLabel: 'vehicle refueling',
   permissions: [
-    { module: 'hr', action: 'create' },
-    { module: 'hr', action: 'view' },
-    { module: 'vehicle-refueling', action: 'create' },
+    { module: 'vehicle-refueling', action: 'manage' },
   ],
   service: VehicleRefuelingImportService,
 });

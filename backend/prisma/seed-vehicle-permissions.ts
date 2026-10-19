@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
-// vehicles.* and vehicle-refueling.* — flat grant to all roles (unchanged)
+// vehicles.* — flat grant to all roles (unchanged)
 const PERMISSION_DEFS = [
   {
     module: 'vehicles',
@@ -20,19 +20,9 @@ const PERMISSION_DEFS = [
     action: 'edit',
     description: 'Create, update and delete company vehicles',
   },
-  {
-    module: 'vehicle-refueling',
-    action: 'view',
-    description: 'View vehicle refueling requests',
-  },
-  {
-    module: 'vehicle-refueling',
-    action: 'create',
-    description: 'Submit and cancel vehicle refueling requests',
-  },
 ] as const;
 
-// vehicle-application.* — role-differentiated grants
+// vehicle-application.* and vehicle-refueling.* — role-differentiated grants
 type Flags = {
   canView: boolean;
   canCreate: boolean;
@@ -67,6 +57,32 @@ const VA_GRANTS: Array<{ module: string; action: string; roles: string[]; flags:
   },
   {
     module: 'vehicle-application', action: 'manage',
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    flags: manage,
+  },
+];
+
+const VR_GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
+  {
+    module: 'vehicle-refueling', action: 'view',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewOnly,
+  },
+  {
+    module: 'vehicle-refueling', action: 'create',
+    roles: [
+      'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'Managing Director', 'System Administrator',
+    ],
+    flags: viewCreate,
+  },
+  {
+    module: 'vehicle-refueling', action: 'manage',
     roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
     flags: manage,
   },
@@ -131,7 +147,7 @@ const SAMPLE_VEHICLES: Array<{
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    // ── Flat permissions (vehicles.*, vehicle-refueling.*) ────────────────────
+    // ── Flat permissions (vehicles.*) ────────────────────────────────────────
 
     const permissions = [];
     for (const def of PERMISSION_DEFS) {
@@ -233,6 +249,38 @@ async function main(): Promise<void> {
     }
 
     console.log(`Vehicle application permissions seeded for ${vaRoles.length} role(s): ${vaRoles.map((r) => r.name).join(', ')}`);
+
+    // ── Vehicle-refueling grants (role-differentiated) ────────────────────────
+
+    const allVrRoleNames = [...new Set(VR_GRANTS.flatMap((g) => g.roles))];
+    const vrRoles = await prisma.role.findMany({
+      where: { companyId: company.id, deletedAt: null, name: { in: allVrRoleNames } },
+      select: { id: true, name: true },
+    });
+    const vrRoleMap = new Map(vrRoles.map((r) => [r.name, r.id]));
+
+    for (const { module, action, roles: grantRoles, flags } of VR_GRANTS) {
+      const perm = await prisma.permission.upsert({
+        where: { module_action: { module, action } },
+        update: {},
+        create: { module, action, description: `${action} vehicle refueling requests` },
+        select: { id: true },
+      });
+      for (const roleName of grantRoles) {
+        const roleId = vrRoleMap.get(roleName);
+        if (!roleId) {
+          console.warn(`Role not found: ${roleName}`);
+          continue;
+        }
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId, permissionId: perm.id } },
+          update: { ...flags, deletedAt: null, deletedBy: null, updatedBy: SYSTEM_USER_ID },
+          create: { roleId, permissionId: perm.id, ...flags, createdBy: SYSTEM_USER_ID, updatedBy: SYSTEM_USER_ID },
+        });
+      }
+    }
+
+    console.log(`Vehicle refueling permissions seeded for ${vrRoles.length} role(s): ${vrRoles.map((r) => r.name).join(', ')}`);
 
     // ── Sample vehicles ──────────────────────────────────────────────────────
 
