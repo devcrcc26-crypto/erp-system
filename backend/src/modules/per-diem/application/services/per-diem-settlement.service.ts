@@ -391,7 +391,12 @@ export class PerDiemSettlementService
       this.prisma.perDiemSettlement.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows, total, page, limit);
+    const data = rows.map((row) => ({
+      ...row,
+      settlementKind: 'BATCH' as const,
+    }));
+
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   /**

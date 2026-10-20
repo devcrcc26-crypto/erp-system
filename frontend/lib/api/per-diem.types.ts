@@ -210,6 +210,15 @@ export interface PerDiemRequestSettlement {
   settledBy?: PerDiemUserSummary | null;
   settledAt: string;
   notes?: string | null;
+  balancePaymentReference?: string | null;
+  balancePaymentDate?: string | null;
+  balancePaidAt?: string | null;
+  balancePaidBy?: PerDiemUserSummary | null;
+}
+
+export interface FormalizeRequestSettlementBalancePayload {
+  paymentReference: string;
+  paymentDate: string;
 }
 
 export interface CreateDisbursementPayload {
@@ -242,6 +251,8 @@ export interface PerDiemAdvanceSummary {
   _count?: { disbursements: number };
 }
 
+export type PerDiemSettlementKind = 'BATCH' | 'REQUEST';
+
 export interface PerDiemSettlementListItem {
   id: string;
   companyId: string;
@@ -249,10 +260,10 @@ export interface PerDiemSettlementListItem {
   employeeId: string;
   destination: string;
   destinationCategory: string;
-  actualDepartureDate: string;
+  actualDepartureDate?: string;
   actualReturnDate: string;
   actualDays: number;
-  dailyRate: number | string;
+  dailyRate?: number | string;
   perDiemEarned: number | string;
   totalAdvances: number | string;
   balance: number | string;
@@ -260,6 +271,9 @@ export interface PerDiemSettlementListItem {
   status: PerDiemStatus;
   employee?: PerDiemUserSummary;
   createdAt: string;
+  settlementKind?: PerDiemSettlementKind;
+  requestId?: string;
+  balancePaidAt?: string | null;
 }
 
 export interface PerDiemSettlementDetail extends PerDiemSettlementListItem {

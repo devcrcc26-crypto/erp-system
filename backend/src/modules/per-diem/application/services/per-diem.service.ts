@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
+  PerDiemBalanceDirection,
   PerDiemStatus,
   PerDiemTripType,
   Prisma,
@@ -49,6 +50,7 @@ import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   CreatePerDiemDisbursementDto,
   CreatePerDiemRequestSettlementDto,
+  FormalizeRequestSettlementBalanceDto,
   ListPerDiemRequestsDto,
   SubmitPerDiemRequestDto,
 } from '../dtos/per-diem.dtos';
@@ -100,7 +102,10 @@ const REQUEST_DETAIL_INCLUDE = {
     orderBy: { disbursedAt: 'asc' as const },
   },
   requestSettlement: {
-    include: { settledBy: { select: USER_SELECT } },
+    include: {
+      settledBy: { select: USER_SELECT },
+      balancePaidBy: { select: USER_SELECT },
+    },
   },
   approvalRequest: {
     include: {
@@ -792,6 +797,156 @@ export class PerDiemService
     });
 
     return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Records formal settlement of the remaining balance (payment to employee or cash returned to company).
+   */
+  async formalizeRequestSettlementBalance(
+    requestId: string,
+    dto: FormalizeRequestSettlementBalanceDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (!canManage) {
+      throw new ForbiddenException('Missing permission: per-diem.manage');
+    }
+
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      include: { requestSettlement: true },
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    if (!request.requestSettlement) {
+      throw new BadRequestException('This request has not been settled yet');
+    }
+    const settlement = request.requestSettlement;
+    if (settlement.balancePaidAt) {
+      throw new BadRequestException('Settlement balance has already been formalized');
+    }
+    const balanceAmount = Number(settlement.balance);
+    if (balanceAmount === 0) {
+      throw new BadRequestException('There is no balance to formalize');
+    }
+
+    await this.prisma.perDiemRequestSettlement.update({
+      where: { id: settlement.id },
+      data: {
+        balancePaymentReference: dto.paymentReference.trim(),
+        balancePaymentDate: this.parseDateOnly(dto.paymentDate),
+        balancePaidAt: new Date(),
+        balancePaidById: userId,
+      },
+    });
+
+    return this.getRequest(requestId, companyId, userId);
+  }
+
+  /**
+   * Lists request-level settlements (ACTIVE settle flow) for the settlements tab.
+   */
+  async listRequestSettlements(
+    page: number,
+    limit: number,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+
+    const where: Prisma.PerDiemRequestSettlementWhereInput = {
+      request: {
+        companyId,
+        deletedAt: null,
+        ...(canManage ? {} : { employeeId: userId }),
+      },
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.perDiemRequestSettlement.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { settledAt: 'desc' },
+        include: {
+          request: {
+            select: {
+              id: true,
+              requestNumber: true,
+              destination: true,
+              destinationCategory: true,
+              employeeId: true,
+              status: true,
+              employee: { select: USER_SELECT },
+            },
+          },
+        },
+      }),
+      this.prisma.perDiemRequestSettlement.count({ where }),
+    ]);
+
+    const data = rows.map((row) => {
+      const balanceAmount = Number(row.balance);
+      const { balance, balanceDirection } =
+        this.mapRequestSettlementBalance(balanceAmount);
+      return {
+        settlementKind: 'REQUEST' as const,
+        id: row.id,
+        requestId: row.requestId,
+        companyId,
+        requestNumber: row.request.requestNumber,
+        employeeId: row.request.employeeId,
+        destination: row.request.destination,
+        destinationCategory: row.request.destinationCategory,
+        actualReturnDate: row.actualReturnDate,
+        actualDays: row.actualDays,
+        perDiemEarned: row.earnedTotal,
+        totalAdvances: row.totalDisbursed,
+        balance,
+        balanceDirection,
+        status: PerDiemStatus.SETTLED,
+        balancePaidAt: row.balancePaidAt,
+        employee: row.request.employee,
+        createdAt: row.settledAt,
+      };
+    });
+
+    return buildPaginatedResult(data, total, page, limit);
+  }
+
+  private mapRequestSettlementBalance(balanceAmount: number): {
+    balance: Prisma.Decimal;
+    balanceDirection: PerDiemBalanceDirection;
+  } {
+    if (balanceAmount > 0) {
+      return {
+        balance: new Prisma.Decimal(balanceAmount),
+        balanceDirection: PerDiemBalanceDirection.TO_EMPLOYEE,
+      };
+    }
+    if (balanceAmount < 0) {
+      return {
+        balance: new Prisma.Decimal(Math.abs(balanceAmount)),
+        balanceDirection: PerDiemBalanceDirection.TO_COMPANY,
+      };
+    }
+    return {
+      balance: new Prisma.Decimal(0),
+      balanceDirection: PerDiemBalanceDirection.NONE,
+    };
   }
 
   /**

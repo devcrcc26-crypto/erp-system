@@ -3919,7 +3919,20 @@
       "owedToEmployee": "应付员工",
       "owedToCompany": "应退公司",
       "settledBy": "结算人",
-      "settledAt": "结算时间"
+      "settledAt": "结算时间",
+      "formalizeBalancePayment": "标记余额已结清",
+      "formalizeBalancePaymentEmployee": "登记付给员工",
+      "formalizeBalancePaymentCompany": "登记退回现金",
+      "formalizeBalancePaymentTitleEmployee": "登记付给员工",
+      "formalizeBalancePaymentTitleCompany": "登记退回现金",
+      "formalizeBalanceSuccess": "结算余额已登记",
+      "formalizeBalanceFailed": "登记结算余额失败",
+      "balancePaymentReference": "付款参考号",
+      "balancePaymentReferenceCompany": "收据编号",
+      "balancePaymentDate": "付款日期",
+      "balancePaymentDateCompany": "退回日期",
+      "balanceFormalizedAt": "余额结清时间",
+      "balanceFormalizedBy": "登记人"
     },
     "exportImport": {
       "companyVehicles": {

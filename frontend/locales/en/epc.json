@@ -3919,7 +3919,20 @@
       "owedToEmployee": "owed to employee",
       "owedToCompany": "owed to company",
       "settledBy": "Settled by",
-      "settledAt": "Settled at"
+      "settledAt": "Settled at",
+      "formalizeBalancePayment": "Mark balance as paid",
+      "formalizeBalancePaymentEmployee": "Record payment to employee",
+      "formalizeBalancePaymentCompany": "Record cash returned",
+      "formalizeBalancePaymentTitleEmployee": "Record payment to employee",
+      "formalizeBalancePaymentTitleCompany": "Record cash returned",
+      "formalizeBalanceSuccess": "Settlement balance recorded",
+      "formalizeBalanceFailed": "Failed to record settlement balance",
+      "balancePaymentReference": "Payment reference",
+      "balancePaymentReferenceCompany": "Receipt number",
+      "balancePaymentDate": "Payment date",
+      "balancePaymentDateCompany": "Cash returned date",
+      "balanceFormalizedAt": "Balance paid at",
+      "balanceFormalizedBy": "Recorded by"
     },
     "exportImport": {
       "companyVehicles": {

@@ -22,6 +22,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreatePerDiemDisbursementDto,
   CreatePerDiemRequestSettlementDto,
+  FormalizeRequestSettlementBalanceDto,
   ListPerDiemRequestsDto,
   SetApprovedRateDto,
   SubmitPerDiemRequestDto,
@@ -60,6 +61,26 @@ export class PerDiemController {
     @Query() query: ListPerDiemRequestsDto,
   ): Promise<unknown> {
     return this.perDiemService.listRequests(query, companyId, user.userId);
+  }
+
+  @Get('request-settlements')
+  @ApiOperation({
+    summary:
+      'List request-level per diem settlements (company-wide for per-diem.manage; own otherwise)',
+  })
+  listRequestSettlements(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: ListPerDiemRequestsDto,
+  ): Promise<unknown> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    return this.perDiemService.listRequestSettlements(
+      page,
+      limit,
+      companyId,
+      user.userId,
+    );
   }
 
   @Get(':id')
@@ -152,5 +173,25 @@ export class PerDiemController {
     @Body() dto: CreatePerDiemRequestSettlementDto,
   ): Promise<unknown> {
     return this.perDiemService.settleRequest(id, dto, companyId, user.userId);
+  }
+
+  @Post(':id/settlement/formalize-balance')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Formalize settlement balance payment (to employee or cash returned to company)',
+  })
+  formalizeSettlementBalance(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: FormalizeRequestSettlementBalanceDto,
+  ): Promise<unknown> {
+    return this.perDiemService.formalizeRequestSettlementBalance(
+      id,
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 }

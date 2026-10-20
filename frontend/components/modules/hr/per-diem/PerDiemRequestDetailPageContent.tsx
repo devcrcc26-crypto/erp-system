@@ -4,7 +4,18 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Alert, Button, Form, Grid, Input, InputNumber, Modal, Skeleton, Space } from 'antd';
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Form,
+  Grid,
+  Input,
+  InputNumber,
+  Modal,
+  Skeleton,
+  Space,
+} from 'antd';
 import { StopOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,6 +33,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import {
   useAddPerDiemDisbursement,
   useCancelPerDiemRequest,
+  useFormalizeRequestSettlementBalance,
   usePerDiemRequest,
   useSettlePerDiemRequest,
   useUploadDisbursementAttachment,
@@ -90,9 +102,12 @@ export default function PerDiemRequestDetailPageContent({
   const addDisbursementMutation = useAddPerDiemDisbursement(requestId);
   const uploadAttachmentMutation = useUploadDisbursementAttachment(requestId);
   const settleMutation = useSettlePerDiemRequest(requestId);
+  const formalizeBalanceMutation =
+    useFormalizeRequestSettlementBalance(requestId);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [disbursementOpen, setDisbursementOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
+  const [formalizeBalanceOpen, setFormalizeBalanceOpen] = useState(false);
   const [pendingReceiptFiles, setPendingReceiptFiles] = useState<File[]>([]);
   const [uploadingReceipts, setUploadingReceipts] = useState(false);
   const [disbursementForm] = Form.useForm<{
@@ -137,6 +152,10 @@ export default function PerDiemRequestDetailPageContent({
     actualDaysOverride?: number;
     notes?: string;
   }>();
+  const [formalizeBalanceForm] = Form.useForm<{
+    paymentReference: string;
+    paymentDate: dayjs.Dayjs;
+  }>();
 
   useSetHeaderExtra(null);
 
@@ -156,6 +175,16 @@ export default function PerDiemRequestDetailPageContent({
     canEditHr &&
     request?.status === 'ACTIVE' &&
     !request?.requestSettlement;
+  const settlementBalanceAmount = request?.requestSettlement
+    ? Number(request.requestSettlement.balance)
+    : 0;
+  const balanceOwedToEmployee = settlementBalanceAmount > 0;
+  const balanceOwedToCompany = settlementBalanceAmount < 0;
+  const canFormalizeBalance =
+    canEditHr &&
+    Boolean(request?.requestSettlement) &&
+    !request?.requestSettlement?.balancePaidAt &&
+    settlementBalanceAmount !== 0;
 
   const tiers = useMemo(
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -210,6 +239,22 @@ export default function PerDiemRequestDetailPageContent({
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) return;
       notifyApiError(error, t('hr.perDiem.settleFailed'), messageApi);
+    }
+  }
+
+  async function handleFormalizeBalance(): Promise<void> {
+    try {
+      const values = await formalizeBalanceForm.validateFields();
+      await formalizeBalanceMutation.mutateAsync({
+        paymentReference: values.paymentReference.trim(),
+        paymentDate: values.paymentDate.format('YYYY-MM-DD'),
+      });
+      messageApi.success(t('hr.perDiem.formalizeBalanceSuccess'));
+      setFormalizeBalanceOpen(false);
+      formalizeBalanceForm.resetFields();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      notifyApiError(error, t('hr.perDiem.formalizeBalanceFailed'), messageApi);
     }
   }
 
@@ -302,6 +347,13 @@ export default function PerDiemRequestDetailPageContent({
             {canSettle ? (
               <Button type="primary" onClick={() => setSettleOpen(true)}>
                 {t('hr.perDiem.settle')}
+              </Button>
+            ) : null}
+            {canFormalizeBalance ? (
+              <Button type="primary" onClick={() => setFormalizeBalanceOpen(true)}>
+                {balanceOwedToEmployee
+                  ? t('hr.perDiem.formalizeBalancePaymentEmployee')
+                  : t('hr.perDiem.formalizeBalancePaymentCompany')}
               </Button>
             ) : null}
             {canCancel ? (
@@ -686,7 +738,52 @@ export default function PerDiemRequestDetailPageContent({
                       </MetaItem>
                     </div>
                   ) : null}
+                  {request.requestSettlement.balancePaidAt ? (
+                    <>
+                      <MetaItem
+                        label={
+                          balanceOwedToCompany
+                            ? t('hr.perDiem.balancePaymentReferenceCompany')
+                            : t('hr.perDiem.balancePaymentReference')
+                        }
+                      >
+                        {request.requestSettlement.balancePaymentReference ?? '-'}
+                      </MetaItem>
+                      <MetaItem
+                        label={
+                          balanceOwedToCompany
+                            ? t('hr.perDiem.balancePaymentDateCompany')
+                            : t('hr.perDiem.balancePaymentDate')
+                        }
+                      >
+                        {request.requestSettlement.balancePaymentDate
+                          ? formatProjectDate(
+                              request.requestSettlement.balancePaymentDate,
+                            )
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('hr.perDiem.balanceFormalizedAt')}>
+                        {formatProjectDate(request.requestSettlement.balancePaidAt)}
+                      </MetaItem>
+                      <MetaItem label={t('hr.perDiem.balanceFormalizedBy')}>
+                        {request.requestSettlement.balancePaidBy
+                          ? formatPerDiemEmployeeName(
+                              request.requestSettlement.balancePaidBy,
+                            )
+                          : '-'}
+                      </MetaItem>
+                    </>
+                  ) : null}
                 </div>
+                {canFormalizeBalance ? (
+                  <div className="mt-4 flex justify-end border-t border-[var(--color-border)] pt-4">
+                    <Button type="primary" onClick={() => setFormalizeBalanceOpen(true)}>
+                      {balanceOwedToEmployee
+                        ? t('hr.perDiem.formalizeBalancePaymentEmployee')
+                        : t('hr.perDiem.formalizeBalancePaymentCompany')}
+                    </Button>
+                  </div>
+                ) : null}
               </DetailSection>
             ) : null}
           </div>
@@ -779,6 +876,52 @@ export default function PerDiemRequestDetailPageContent({
               {t('hr.perDiem.uploadingReceipts')}
             </p>
           ) : null}
+        </Form>
+      </Modal>
+
+      <Modal
+        open={formalizeBalanceOpen}
+        centered
+        width={520}
+        title={
+          balanceOwedToEmployee
+            ? t('hr.perDiem.formalizeBalancePaymentTitleEmployee')
+            : t('hr.perDiem.formalizeBalancePaymentTitleCompany')
+        }
+        onCancel={() => {
+          setFormalizeBalanceOpen(false);
+          formalizeBalanceForm.resetFields();
+        }}
+        onOk={() => void handleFormalizeBalance()}
+        confirmLoading={formalizeBalanceMutation.isPending}
+        okText={t('common.save')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+      >
+        <Form form={formalizeBalanceForm} layout="vertical">
+          <Form.Item
+            name="paymentReference"
+            label={
+              balanceOwedToCompany
+                ? t('hr.perDiem.balancePaymentReferenceCompany')
+                : t('hr.perDiem.balancePaymentReference')
+            }
+            rules={[{ required: true, message: t('hr.validation.required') }]}
+          >
+            <Input maxLength={100} />
+          </Form.Item>
+          <Form.Item
+            name="paymentDate"
+            label={
+              balanceOwedToCompany
+                ? t('hr.perDiem.balancePaymentDateCompany')
+                : t('hr.perDiem.balancePaymentDate')
+            }
+            rules={[{ required: true, message: t('hr.validation.required') }]}
+          >
+            <DatePicker className="w-full" format="YYYY-MM-DD" />
+          </Form.Item>
         </Form>
       </Modal>
 

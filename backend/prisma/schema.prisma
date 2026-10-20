@@ -856,6 +856,7 @@ model User {
   perDiemDisbursementsRecorded  PerDiemDisbursement[]    @relation("DisbursementRecorder")
   perDiemDisbursementAttachmentsUploaded PerDiemDisbursementAttachment[] @relation("PerDiemDisbursementAttachmentUploader")
   perDiemRequestSettlements     PerDiemRequestSettlement[] @relation("RequestSettlementRecorder")
+  perDiemRequestSettlementsBalancePaid PerDiemRequestSettlement[] @relation("RequestSettlementBalancePaidBy")
   perDiemSettlementsAsEmployee PerDiemSettlement[] @relation("PerDiemSettlementEmployee")
   perDiemSettlementsCreated    PerDiemSettlement[] @relation("PerDiemSettlementCreator")
   perDiemSettlementsUpdated    PerDiemSettlement[] @relation("PerDiemSettlementUpdater")
@@ -5290,20 +5291,26 @@ model PerDiemDisbursementAttachment {
 }
 
 model PerDiemRequestSettlement {
-  id               String         @id @default(dbgenerated("(gen_random_uuid())::text"))
-  requestId        String         @unique @map("request_id")
-  actualReturnDate DateTime       @map("actual_return_date") @db.Date
-  actualDays       Int            @map("actual_days")
-  earnedTotal      Decimal        @db.Decimal(15, 2) @map("earned_total")
-  totalDisbursed   Decimal        @db.Decimal(15, 2) @map("total_disbursed")
-  balance          Decimal        @db.Decimal(15, 2)
-  settledById      String         @map("settled_by_id")
-  settledAt        DateTime       @default(now()) @map("settled_at")
-  notes            String?
+  id                      String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestId               String    @unique @map("request_id")
+  actualReturnDate        DateTime  @map("actual_return_date") @db.Date
+  actualDays              Int       @map("actual_days")
+  earnedTotal             Decimal   @db.Decimal(15, 2) @map("earned_total")
+  totalDisbursed          Decimal   @db.Decimal(15, 2) @map("total_disbursed")
+  balance                 Decimal   @db.Decimal(15, 2)
+  settledById             String    @map("settled_by_id")
+  settledAt               DateTime  @default(now()) @map("settled_at")
+  notes                   String?
+  balancePaymentReference String?   @map("balance_payment_reference") @db.VarChar(100)
+  balancePaymentDate      DateTime? @map("balance_payment_date") @db.Date
+  balancePaidAt           DateTime? @map("balance_paid_at")
+  balancePaidById         String?   @map("balance_paid_by_id")
 
-  request    PerDiemRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  settledBy  User           @relation("RequestSettlementRecorder", fields: [settledById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request       PerDiemRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  settledBy     User           @relation("RequestSettlementRecorder", fields: [settledById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  balancePaidBy User?          @relation("RequestSettlementBalancePaidBy", fields: [balancePaidById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([balancePaidById], map: "idx_per_diem_request_settlement_balance_paid_by")
   @@map("per_diem_request_settlement")
 }
 

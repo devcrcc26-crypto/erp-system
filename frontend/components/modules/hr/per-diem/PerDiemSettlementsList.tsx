@@ -187,7 +187,13 @@ export default function PerDiemSettlementsList(): React.ReactNode {
         dataSource={rows}
         pagination={bindMeta(meta)}
         onRow={(record) => ({
-          onClick: () => router.push(`/hr/per-diem/settlements/${record.id}`),
+          onClick: () => {
+            if (record.settlementKind === 'REQUEST' && record.requestId) {
+              router.push(`/hr/per-diem/${record.requestId}`);
+              return;
+            }
+            router.push(`/hr/per-diem/settlements/${record.id}`);
+          },
           style: { cursor: 'pointer' },
         })}
       />

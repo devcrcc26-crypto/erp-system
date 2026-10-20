@@ -17,6 +17,7 @@ import {
 import type {
   CreateDisbursementPayload,
   CreateRequestSettlementPayload,
+  FormalizeRequestSettlementBalancePayload,
   EmployeePerDiemActiveCategory,
   EmployeePerDiemRate,
   EmployeePerDiemRateListItem,
@@ -363,7 +364,28 @@ export function useSettlePerDiemRequest(id: string) {
       apiPost<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/settle`, payload),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.lists(),
+      });
       void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+    },
+  });
+}
+
+/** HR formalizes settlement balance payment (owed to employee or company). */
+export function useFormalizeRequestSettlementBalance(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: FormalizeRequestSettlementBalancePayload) =>
+      apiPost<PerDiemRequestDetail>(
+        `${REQUESTS_PATH}/${requestId}/settlement/formalize-balance`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.lists(),
+      });
+      void queryClient.setQueryData(perDiemKeys.detail(requestId), updated);
     },
   });
 }
@@ -451,9 +473,14 @@ export async function downloadPerDiemRequestImportTemplate(): Promise<void> {
   );
 }
 
-async function fetchAllSettlementPages(): Promise<PerDiemSettlementListItem[]> {
+async function fetchAllRequestSettlementPages(): Promise<
+  PerDiemSettlementListItem[]
+> {
   const first = await apiGetPaginated<PerDiemSettlementListItem>(
-    `${SETTLEMENTS_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+    `${REQUESTS_PATH}/request-settlements${buildListQuery({
+      page: 1,
+      limit: FETCH_PAGE_SIZE,
+    })}`,
   );
   const all = [...first.data];
   const pages = first.meta.pages ?? 1;
@@ -463,7 +490,7 @@ async function fetchAllSettlementPages(): Promise<PerDiemSettlementListItem[]> {
   const rest = await Promise.all(
     Array.from({ length: pages - 1 }, (_, index) =>
       apiGetPaginated<PerDiemSettlementListItem>(
-        `${SETTLEMENTS_PATH}${buildListQuery({
+        `${REQUESTS_PATH}/request-settlements${buildListQuery({
           page: index + 2,
           limit: FETCH_PAGE_SIZE,
         })}`,
@@ -474,6 +501,41 @@ async function fetchAllSettlementPages(): Promise<PerDiemSettlementListItem[]> {
     all.push(...page.data);
   }
   return all;
+}
+
+async function fetchAllSettlementPages(): Promise<PerDiemSettlementListItem[]> {
+  const [batch, requestLevel] = await Promise.all([
+    (async () => {
+      const first = await apiGetPaginated<PerDiemSettlementListItem>(
+        `${SETTLEMENTS_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+      );
+      const all = [...first.data];
+      const pages = first.meta.pages ?? 1;
+      if (pages <= 1) {
+        return all;
+      }
+      const rest = await Promise.all(
+        Array.from({ length: pages - 1 }, (_, index) =>
+          apiGetPaginated<PerDiemSettlementListItem>(
+            `${SETTLEMENTS_PATH}${buildListQuery({
+              page: index + 2,
+              limit: FETCH_PAGE_SIZE,
+            })}`,
+          ),
+        ),
+      );
+      for (const page of rest) {
+        all.push(...page.data);
+      }
+      return all;
+    })(),
+    fetchAllRequestSettlementPages(),
+  ]);
+
+  return [...batch, ...requestLevel].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 /** Approved unsettled advances belonging to the current user. */

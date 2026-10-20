@@ -152,6 +152,21 @@ export class CreatePerDiemRequestSettlementDto {
   notes?: string;
 }
 
+export class FormalizeRequestSettlementBalanceDto {
+  @ApiProperty({
+    description:
+      'Payment reference or cash-return receipt number for the settlement balance',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  paymentReference!: string;
+
+  @ApiProperty({ example: '2026-10-01' })
+  @IsDateString()
+  paymentDate!: string;
+}
+
 export class SetApprovedRateDto {
   @ApiProperty({ description: 'Approved daily rate in the request currency' })
   @IsNumber()
