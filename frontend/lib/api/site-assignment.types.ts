@@ -51,7 +51,7 @@ export interface SiteAssignmentLinkedPerDiem {
   startDate: string;
   endDate: string;
   totalAmountEtb: number | string;
-  paidAt?: string | null;
+  _count?: { disbursements: number };
 }
 
 export interface SiteAssignmentDetail extends SiteAssignmentListItem {

@@ -62,9 +62,9 @@ export class PerDiemSettlementReminderService {
 
     const advances = await this.prisma.perDiemRequest.findMany({
       where: activeOnly({
-        status: PerDiemStatus.APPROVED,
+        status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
         settlementId: null,
-        paidAt: { not: null },
+        disbursements: { some: {} },
         endDate: { lte: cutoff },
         OR: [
           { lastSettlementReminderAt: null },
@@ -121,9 +121,9 @@ export class PerDiemSettlementReminderService {
           where: {
             companyId: advance.companyId,
             employeeId: advance.employeeId,
-            status: PerDiemStatus.APPROVED,
+            status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
             settlementId: null,
-            paidAt: { not: null },
+            disbursements: { some: {} },
             endDate: { lte: cutoff },
             OR: [
               { lastSettlementReminderAt: null },

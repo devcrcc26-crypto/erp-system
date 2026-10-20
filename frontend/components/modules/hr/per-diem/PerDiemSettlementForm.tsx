@@ -77,7 +77,9 @@ export default function PerDiemSettlementForm({
   const values = Form.useWatch([], form) as SettlementFormValues | undefined;
 
   const advances = advancesQuery.data ?? [];
-  const paidAdvances = advances.filter((row) => Boolean(row.paidAt));
+  const paidAdvances = advances.filter(
+    (row) => (row._count?.disbursements ?? 0) > 0,
+  );
   const selected = advances.filter((row) => selectedIds.includes(row.id));
   const category = selected[0]?.destinationCategory;
   const mixedCategory =
@@ -388,7 +390,7 @@ export default function PerDiemSettlementForm({
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {advances.map((advance) => {
-                  const unpaid = !advance.paidAt;
+                  const unpaid = (advance._count?.disbursements ?? 0) === 0;
                   const lockedOut =
                     unpaid ||
                     (category != null &&

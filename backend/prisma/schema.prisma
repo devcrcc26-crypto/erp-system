@@ -853,8 +853,8 @@ model User {
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
-  perDiemRequestsPaid         PerDiemRequest[]    @relation("PerDiemRequestPayer")
   perDiemDisbursementsRecorded  PerDiemDisbursement[]    @relation("DisbursementRecorder")
+  perDiemDisbursementAttachmentsUploaded PerDiemDisbursementAttachment[] @relation("PerDiemDisbursementAttachmentUploader")
   perDiemRequestSettlements     PerDiemRequestSettlement[] @relation("RequestSettlementRecorder")
   perDiemSettlementsAsEmployee PerDiemSettlement[] @relation("PerDiemSettlementEmployee")
   perDiemSettlementsCreated    PerDiemSettlement[] @relation("PerDiemSettlementCreator")
@@ -5165,10 +5165,6 @@ model PerDiemRequest {
   pvNumber             String?           @map("pv_number")
   pvDate               DateTime?         @map("pv_date") @db.Date
   settlementId         String?           @map("settlement_id")
-  paidAt               DateTime?         @map("paid_at")
-  paidBy               String?           @map("paid_by")
-  paidAmount           Decimal?          @map("paid_amount") @db.Decimal(14, 2)
-  paymentReference     String?           @map("payment_reference")
   lastSettlementReminderAt DateTime?     @map("last_settlement_reminder_at")
   status               PerDiemStatus     @default(DRAFT)
   approvalRequestId    String?           @unique @map("approval_request_id")
@@ -5195,7 +5191,6 @@ model PerDiemRequest {
   approvalRequest ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   settlement       PerDiemSettlement? @relation(fields: [settlementId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  payer            User?              @relation("PerDiemRequestPayer", fields: [paidBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   creator         User               @relation("PerDiemCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updater          User               @relation("PerDiemUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -5205,7 +5200,6 @@ model PerDiemRequest {
   @@index([employeeId], map: "idx_per_diem_employee")
   @@index([status], map: "idx_per_diem_status")
   @@index([settlementId], map: "idx_per_diem_settlement")
-  @@index([companyId, paidAt], map: "idx_per_diem_paid_at")
   @@index([siteAssignmentId], map: "idx_per_diem_site_assignment")
   @@map("per_diem_request")
 }
@@ -5272,9 +5266,27 @@ model PerDiemDisbursement {
 
   request     PerDiemRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   disbursedBy User           @relation("DisbursementRecorder", fields: [disbursedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachments PerDiemDisbursementAttachment[]
 
   @@index([requestId], map: "idx_per_diem_disbursement_request")
   @@map("per_diem_disbursement")
+}
+
+model PerDiemDisbursementAttachment {
+  id             String   @id @default(uuid())
+  disbursementId String   @map("disbursement_id")
+  fileName       String   @map("file_name")
+  fileUrl        String   @map("file_url")
+  fileSize       Int?     @map("file_size")
+  mimeType       String?  @map("mime_type")
+  uploadedById   String   @map("uploaded_by_id")
+  uploadedAt     DateTime @default(now()) @map("uploaded_at")
+
+  disbursement PerDiemDisbursement @relation(fields: [disbursementId], references: [id], onDelete: Cascade)
+  uploadedBy   User                @relation("PerDiemDisbursementAttachmentUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([disbursementId], map: "idx_per_diem_disbursement_attachment_disbursement")
+  @@map("per_diem_disbursement_attachment")
 }
 
 model PerDiemRequestSettlement {

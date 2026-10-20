@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -38,14 +39,26 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   CreatePerDiemDisbursementDto,
   CreatePerDiemRequestSettlementDto,
   ListPerDiemRequestsDto,
-  MarkPerDiemPaidDto,
   SubmitPerDiemRequestDto,
 } from '../dtos/per-diem.dtos';
+
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 const USER_SELECT = {
   id: true,
@@ -77,13 +90,18 @@ const REQUEST_DETAIL_INCLUDE = {
     },
   },
   disbursements: {
-    include: { disbursedBy: { select: USER_SELECT } },
-    orderBy: { createdAt: 'asc' as const },
+    include: {
+      disbursedBy: { select: USER_SELECT },
+      attachments: {
+        include: { uploadedBy: { select: USER_SELECT } },
+        orderBy: { uploadedAt: 'asc' as const },
+      },
+    },
+    orderBy: { disbursedAt: 'asc' as const },
   },
   requestSettlement: {
     include: { settledBy: { select: USER_SELECT } },
   },
-  payer: { select: USER_SELECT },
   approvalRequest: {
     include: {
       tiers: {
@@ -111,6 +129,7 @@ export class PerDiemService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly employeePerDiemRateService: EmployeePerDiemRateService,
+    @Inject(STORAGE_SERVICE) private readonly storage: IStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -394,7 +413,7 @@ export class PerDiemService
     }
 
     await this.assertCanView(request, companyId, userId);
-    return request;
+    return this.mapRequestDetail(request);
   }
 
   async listRequests(
@@ -462,6 +481,7 @@ export class PerDiemService
         orderBy: { createdAt: 'desc' },
         include: {
           employee: { select: USER_SELECT },
+          _count: { select: { disbursements: true } },
           settlement: {
             select: { id: true, requestNumber: true, status: true },
           },
@@ -482,7 +502,17 @@ export class PerDiemService
       this.prisma.perDiemRequest.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows, total, page, limit);
+    const data = rows.map((row) => {
+      const { _count, ...rest } = row as typeof row & {
+        _count?: { disbursements: number };
+      };
+      return {
+        ...rest,
+        disbursementCount: _count?.disbursements ?? 0,
+      };
+    });
+
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   async cancelRequest(
@@ -541,66 +571,6 @@ export class PerDiemService
   }
 
   /**
-   * Marks an APPROVED advance as paid. HR with per-diem.edit or hr.edit.
-   */
-  async markPaid(
-    id: string,
-    dto: MarkPerDiemPaidDto,
-    companyId: string,
-    userId: string,
-  ): Promise<unknown> {
-    const canManage = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'per-diem',
-      'manage',
-    );
-    if (!canManage) {
-      throw new ForbiddenException(
-        'Missing permission: per-diem.manage',
-      );
-    }
-
-    const request = await this.prisma.perDiemRequest.findFirst({
-      where: activeOnly({ id, companyId }),
-    });
-    if (!request) {
-      throw new NotFoundException('Per diem request not found');
-    }
-    if (request.status !== PerDiemStatus.APPROVED) {
-      throw new BadRequestException(
-        'Only approved advances can be marked as paid',
-      );
-    }
-    if (request.paidAt) {
-      throw new BadRequestException('This advance is already marked as paid');
-    }
-    if (request.settlementId) {
-      throw new BadRequestException(
-        'This advance is already linked to a settlement',
-      );
-    }
-
-    const paidAmount =
-      dto.paidAmount != null
-        ? new Prisma.Decimal(dto.paidAmount)
-        : request.totalAmount;
-
-    await this.prisma.perDiemRequest.update({
-      where: { id },
-      data: {
-        paidAt: new Date(),
-        paidBy: userId,
-        paidAmount,
-        paymentReference: dto.paymentReference?.trim() || null,
-        updatedBy: userId,
-      },
-    });
-
-    return this.getRequest(id, companyId, userId);
-  }
-
-  /**
    * Records a cash disbursement against an approved/active per diem request.
    * The first disbursement transitions the request to ACTIVE.
    */
@@ -643,12 +613,21 @@ export class PerDiemService
       );
     }
 
+    const approvedRate = request.approvedDailyRate ?? request.dailyRate;
+    if (approvedRate == null) {
+      throw new BadRequestException(
+        'Approved daily rate is required before recording a disbursement',
+      );
+    }
+    const days = calendarDaysInclusive(coveredFrom, coveredTo);
+    const amount = new Prisma.Decimal(approvedRate.toString()).mul(days);
+
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.perDiemDisbursement.create({
         data: {
           id: randomUUID(),
           requestId: id,
-          amount: new Prisma.Decimal(dto.amount),
+          amount,
           disbursedAt: new Date(dto.disbursedAt),
           coveredDaysFrom: coveredFrom,
           coveredDaysTo: coveredTo,
@@ -672,6 +651,70 @@ export class PerDiemService
     });
 
     return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Uploads a receipt attachment for a disbursement on a per diem request.
+   */
+  async uploadDisbursementAttachment(
+    requestId: string,
+    disbursementId: string,
+    file: UploadedFile,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (!canManage) {
+      throw new ForbiddenException('Missing permission: per-diem.manage');
+    }
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('File is required');
+    }
+    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+    }
+
+    const disbursement = await this.prisma.perDiemDisbursement.findFirst({
+      where: {
+        id: disbursementId,
+        request: activeOnly({ id: requestId, companyId }),
+      },
+      select: { id: true },
+    });
+    if (!disbursement) {
+      throw new NotFoundException('Disbursement not found for this request');
+    }
+
+    const attachmentId = randomUUID();
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileKey = `${companyId}/hr/per-diem/${requestId}/disbursements/${disbursementId}/${attachmentId}_${safeName}`;
+
+    await this.storage.upload({
+      bucket: STORAGE_BUCKETS.HR,
+      key: fileKey,
+      body: file.buffer,
+      contentType: file.mimetype,
+      contentLength: file.size,
+    });
+
+    await this.prisma.perDiemDisbursementAttachment.create({
+      data: {
+        id: attachmentId,
+        disbursementId,
+        fileName: file.originalname,
+        fileUrl: fileKey,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        uploadedById: userId,
+      },
+    });
+
+    return this.getRequest(requestId, companyId, userId);
   }
 
   /**
@@ -835,6 +878,33 @@ export class PerDiemService
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Adds presigned download URLs for disbursement receipt attachments.
+   */
+  private async mapRequestDetail(request: {
+    disbursements?: Array<{
+      attachments?: Array<{ fileUrl: string } & Record<string, unknown>>;
+    }>;
+  } & Record<string, unknown>): Promise<Record<string, unknown>> {
+    const disbursements = request.disbursements ?? [];
+    const mappedDisbursements = await Promise.all(
+      disbursements.map(async (row) => {
+        const attachments = row.attachments ?? [];
+        const mappedAttachments = await Promise.all(
+          attachments.map(async (attachment) => ({
+            ...attachment,
+            fileUrl: await this.storage.getPresignedDownloadUrl(
+              STORAGE_BUCKETS.HR,
+              attachment.fileUrl,
+            ),
+          })),
+        );
+        return { ...row, attachments: mappedAttachments };
+      }),
+    );
+    return { ...request, disbursements: mappedDisbursements };
+  }
 
   private async assertCanView(
     request: {

@@ -261,9 +261,9 @@ export class ApprovalsService {
           where: activeOnly({
             companyId,
             employeeId: userId,
-            status: PerDiemStatus.APPROVED,
+            status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
             settlementId: null,
-            paidAt: { not: null },
+            disbursements: { some: {} },
           }),
         });
         hasPaidUnsettledAdvance = count > 0;

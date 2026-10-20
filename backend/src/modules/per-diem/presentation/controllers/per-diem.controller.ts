@@ -6,9 +6,13 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -19,7 +23,6 @@ import {
   CreatePerDiemDisbursementDto,
   CreatePerDiemRequestSettlementDto,
   ListPerDiemRequestsDto,
-  MarkPerDiemPaidDto,
   SetApprovedRateDto,
   SubmitPerDiemRequestDto,
 } from '../../application/dtos/per-diem.dtos';
@@ -83,21 +86,6 @@ export class PerDiemController {
     return this.perDiemService.cancelRequest(id, companyId, user.userId);
   }
 
-  @Post(':id/mark-paid')
-  @DelegatePermissionCheck()
-  @ApiOperation({
-    summary:
-      'Mark an approved advance as paid (requires per-diem.edit or hr.edit)',
-  })
-  markPaid(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentCompany() companyId: string,
-    @Param('id') id: string,
-    @Body() dto: MarkPerDiemPaidDto,
-  ): Promise<unknown> {
-    return this.perDiemService.markPaid(id, dto, companyId, user.userId);
-  }
-
   @Post(':id/disbursements')
   @DelegatePermissionCheck()
   @ApiOperation({
@@ -111,6 +99,30 @@ export class PerDiemController {
     @Body() dto: CreatePerDiemDisbursementDto,
   ): Promise<unknown> {
     return this.perDiemService.addDisbursement(id, dto, companyId, user.userId);
+  }
+
+  @Post(':id/disbursements/:disbursementId/attachments')
+  @DelegatePermissionCheck()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Upload a receipt attachment for a disbursement (requires per-diem.manage)',
+  })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadDisbursementAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('disbursementId') disbursementId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<unknown> {
+    return this.perDiemService.uploadDisbursementAttachment(
+      id,
+      disbursementId,
+      file,
+      companyId,
+      user.userId,
+    );
   }
 
   @Patch(':id/approved-rate')

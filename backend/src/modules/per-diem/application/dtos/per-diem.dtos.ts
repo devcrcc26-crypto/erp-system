@@ -114,29 +114,7 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   rateOverrideReason?: string;
 }
 
-export class MarkPerDiemPaidDto {
-  @ApiPropertyOptional({
-    description: 'Amount paid in ETB. Defaults to the advance totalAmount.',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  paidAmount?: number;
-
-  @ApiPropertyOptional({ description: 'Payment voucher / bank reference note' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  paymentReference?: string;
-}
-
 export class CreatePerDiemDisbursementDto {
-  @ApiProperty()
-  @IsNumber()
-  @Min(0)
-  amount!: number;
-
   @ApiProperty()
   @IsDateString()
   disbursedAt!: string;

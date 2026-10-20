@@ -61,9 +61,7 @@ const ADVANCE_SUMMARY_SELECT = {
   totalAmountEtb: true,
   currency: true,
   status: true,
-  paidAt: true,
-  paidAmount: true,
-  paymentReference: true,
+  _count: { select: { disbursements: true } },
 } as const;
 
 const SETTLEMENT_DETAIL_INCLUDE = {
@@ -108,7 +106,7 @@ export class PerDiemSettlementService
 
   /**
    * Lists the caller's approved advances that are not yet on a settlement.
-   * Includes unpaid advances (for "Awaiting payment") and paid ones (selectable).
+   * Includes undisbursed advances (for "Awaiting payment") and disbursed ones (selectable).
    */
   async listUnsettledAdvances(
     companyId: string,
@@ -118,7 +116,7 @@ export class PerDiemSettlementService
       where: activeOnly({
         companyId,
         employeeId: userId,
-        status: PerDiemStatus.APPROVED,
+        status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
         settlementId: null,
       }),
       orderBy: { createdAt: 'desc' },
@@ -168,14 +166,14 @@ export class PerDiemSettlementService
         companyId,
         employeeId: userId,
         id: { in: advanceIds },
-        status: PerDiemStatus.APPROVED,
+        status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
         settlementId: null,
-        paidAt: { not: null },
+        disbursements: { some: {} },
       }),
     });
     if (advances.length !== advanceIds.length) {
       throw new BadRequestException(
-        'Each advance must be your own paid, approved advance that is not already settled',
+        'Each advance must be your own disbursed advance that is not already settled',
       );
     }
 
@@ -278,7 +276,7 @@ export class PerDiemSettlementService
             id: { in: advanceIds },
             companyId,
             employeeId: userId,
-            status: PerDiemStatus.APPROVED,
+            status: { in: [PerDiemStatus.APPROVED, PerDiemStatus.ACTIVE] },
             settlementId: null,
             deletedAt: null,
           },

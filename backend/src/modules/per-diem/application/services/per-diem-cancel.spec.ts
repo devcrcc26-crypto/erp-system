@@ -54,6 +54,10 @@ describe('PerDiemService.cancelRequest on-behalf', () => {
         hasPermission: jest.fn(),
       } as unknown as PermissionService,
       {} as EmployeePerDiemRateService,
+      {
+        upload: jest.fn(),
+        getPresignedDownloadUrl: jest.fn(),
+      } as unknown as import('../../../../shared/storage/storage.interface').IStorageService,
     );
 
     jest.spyOn(service, 'getRequest').mockResolvedValue({ id: REQUEST_ID });

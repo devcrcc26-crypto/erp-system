@@ -22,7 +22,6 @@ import type {
   EmployeePerDiemRateListItem,
   ListEmployeePerDiemRatesParams,
   ListPerDiemRequestsParams,
-  MarkPerDiemPaidPayload,
   PerDiemAdvanceSummary,
   PerDiemRequestDetail,
   PerDiemRequestListItem,
@@ -381,18 +380,26 @@ export function useSetApprovedPerDiemRate(id: string) {
   });
 }
 
-/** HR marks an approved advance as paid. */
-export function useMarkPerDiemPaid(id: string) {
+/** Upload a receipt attachment for a disbursement. */
+export function useUploadDisbursementAttachment(requestId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: MarkPerDiemPaidPayload = {}) =>
-      apiPost<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/mark-paid`, payload),
+    mutationFn: ({
+      disbursementId,
+      file,
+    }: {
+      disbursementId: string;
+      file: File;
+    }) => {
+      const form = new FormData();
+      form.append('file', file);
+      return apiPostForm<PerDiemRequestDetail>(
+        `${REQUESTS_PATH}/${requestId}/disbursements/${disbursementId}/attachments`,
+        form,
+      );
+    },
     onSuccess: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
-      void queryClient.invalidateQueries({
-        queryKey: perDiemSettlementKeys.unsettled(),
-      });
-      void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+      void queryClient.setQueryData(perDiemKeys.detail(requestId), updated);
     },
   });
 }

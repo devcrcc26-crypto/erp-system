@@ -319,7 +319,10 @@ export default function SiteAssignmentDetailPageContent({
                 >
                   {advance.requestNumber} - {advance.destination} (
                   {advance.status}
-                  {advance.paidAt ? ` · ${t('pages.hr.perDiem.paid')}` : ''})
+                  {(advance._count?.disbursements ?? 0) > 0
+                    ? ` · ${t('pages.hr.perDiem.disbursed')}`
+                    : ''}
+                  )
                 </Button>
               </li>
             ))}

@@ -82,7 +82,7 @@ const DETAIL_INCLUDE = {
       startDate: true,
       endDate: true,
       totalAmountEtb: true,
-      paidAt: true,
+      _count: { select: { disbursements: true } },
     },
     orderBy: { createdAt: 'desc' as const },
   },

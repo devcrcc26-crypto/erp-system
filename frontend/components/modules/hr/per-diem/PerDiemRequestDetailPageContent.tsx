@@ -3,6 +3,7 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import { Alert, Button, Form, Grid, Input, InputNumber, Modal, Skeleton, Space } from 'antd';
 import { StopOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
@@ -10,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanEditHr } from '@/hooks/use-auth-capabilities';
@@ -20,9 +22,9 @@ import { ApiRequestError } from '@/lib/api/errors';
 import {
   useAddPerDiemDisbursement,
   useCancelPerDiemRequest,
-  useMarkPerDiemPaid,
   usePerDiemRequest,
   useSettlePerDiemRequest,
+  useUploadDisbursementAttachment,
 } from '@/lib/query/per-diem';
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
@@ -35,6 +37,16 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+function inclusiveCalendarDays(from: string, to: string): number | null {
+  const start = dayjs(from.slice(0, 10));
+  const end = dayjs(to.slice(0, 10));
+  if (!start.isValid() || !end.isValid() || end.isBefore(start, 'day')) {
+    return null;
+  }
+  return end.diff(start, 'day') + 1;
+}
+
 function DetailSection({
   title,
   children,
@@ -75,24 +87,51 @@ export default function PerDiemRequestDetailPageContent({
   const canEditHr = useCanEditHr();
   const detailQuery = usePerDiemRequest(requestId);
   const cancelMutation = useCancelPerDiemRequest(requestId);
-  const markPaidMutation = useMarkPerDiemPaid(requestId);
   const addDisbursementMutation = useAddPerDiemDisbursement(requestId);
+  const uploadAttachmentMutation = useUploadDisbursementAttachment(requestId);
   const settleMutation = useSettlePerDiemRequest(requestId);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [disbursementOpen, setDisbursementOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [markPaidForm] = Form.useForm<{
-    paidAmount?: number;
-    paymentReference?: string;
-  }>();
+  const [pendingReceiptFiles, setPendingReceiptFiles] = useState<File[]>([]);
+  const [uploadingReceipts, setUploadingReceipts] = useState(false);
   const [disbursementForm] = Form.useForm<{
-    amount: number;
     disbursedAt: string;
     coveredDaysFrom: string;
     coveredDaysTo: string;
     notes?: string;
   }>();
+  const disbursementFormValues = Form.useWatch([], disbursementForm) as
+    | {
+        coveredDaysFrom?: string;
+        coveredDaysTo?: string;
+      }
+    | undefined;
+
+  const disbursementAmountPreview = useMemo(() => {
+    const req = detailQuery.data;
+    if (!req) {
+      return null;
+    }
+    const from = disbursementFormValues?.coveredDaysFrom;
+    const to = disbursementFormValues?.coveredDaysTo;
+    if (!from || !to) {
+      return null;
+    }
+    const days = inclusiveCalendarDays(from, to);
+    if (days == null || days < 1) {
+      return null;
+    }
+    const dailyRate = Number(req.approvedDailyRate ?? req.dailyRate);
+    if (!Number.isFinite(dailyRate) || dailyRate <= 0) {
+      return null;
+    }
+    return {
+      days,
+      dailyRate,
+      amount: days * dailyRate,
+    };
+  }, [detailQuery.data, disbursementFormValues]);
   const [settleForm] = Form.useForm<{
     actualReturnDate: string;
     actualDaysOverride?: number;
@@ -110,11 +149,6 @@ export default function PerDiemRequestDetailPageContent({
     (isOwner || isSubmitter) &&
     !request?.settlementId &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
-  const canMarkPaid =
-    canEditHr &&
-    request?.status === 'APPROVED' &&
-    !request.paidAt &&
-    !request.settlementId;
   const canAddDisbursement =
     canEditHr &&
     (request?.status === 'APPROVED' || request?.status === 'ACTIVE');
@@ -131,16 +165,31 @@ export default function PerDiemRequestDetailPageContent({
   async function handleAddDisbursement(): Promise<void> {
     try {
       const values = await disbursementForm.validateFields();
-      await addDisbursementMutation.mutateAsync({
-        amount: values.amount,
+      const updated = await addDisbursementMutation.mutateAsync({
         disbursedAt: values.disbursedAt,
         coveredDaysFrom: values.coveredDaysFrom,
         coveredDaysTo: values.coveredDaysTo,
         notes: values.notes?.trim() || undefined,
       });
+      const disbursements = updated.disbursements ?? [];
+      const newDisbursement = disbursements[disbursements.length - 1];
+      if (newDisbursement && pendingReceiptFiles.length > 0) {
+        setUploadingReceipts(true);
+        try {
+          for (const file of pendingReceiptFiles) {
+            await uploadAttachmentMutation.mutateAsync({
+              disbursementId: newDisbursement.id,
+              file,
+            });
+          }
+        } finally {
+          setUploadingReceipts(false);
+        }
+      }
       messageApi.success(t('hr.perDiem.disbursementAdded'));
       setDisbursementOpen(false);
       disbursementForm.resetFields();
+      setPendingReceiptFiles([]);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) return;
       notifyApiError(error, t('hr.perDiem.disbursementFailed'), messageApi);
@@ -178,24 +227,6 @@ export default function PerDiemRequestDetailPageContent({
     }
   }
 
-  async function handleMarkPaid(): Promise<void> {
-    try {
-      const values = await markPaidForm.validateFields();
-      await markPaidMutation.mutateAsync({
-        paidAmount: values.paidAmount,
-        paymentReference: values.paymentReference?.trim() || undefined,
-      });
-      messageApi.success(t('pages.hr.perDiem.markPaidSuccess'));
-      setMarkPaidOpen(false);
-      markPaidForm.resetFields();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
-        return;
-      }
-      notifyApiError(error, t('pages.hr.perDiem.markPaidFailed'), messageApi);
-    }
-  }
-
   if (detailQuery.isLoading) {
     return (
       <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
@@ -228,6 +259,8 @@ export default function PerDiemRequestDetailPageContent({
   }
 
   const employeeName = formatPerDiemEmployeeName(request.employee);
+  const hasDisbursement = (request.disbursements?.length ?? 0) > 0;
+  const firstDisbursedAt = request.disbursements?.[0]?.disbursedAt;
   const linkedTravel = request.linkedFlight
     ? `${t('hr.labels.flight')} ${request.linkedFlight.applicationNumber} · ${request.linkedFlight.destination}`
     : request.linkedTrip
@@ -259,11 +292,6 @@ export default function PerDiemRequestDetailPageContent({
                 {isNarrow
                   ? t('nav.approvals')
                   : t('hr.buttons.viewInApprovals')}
-              </Button>
-            ) : null}
-            {canMarkPaid ? (
-              <Button type="primary" onClick={() => setMarkPaidOpen(true)}>
-                {t('pages.hr.perDiem.markPaid')}
               </Button>
             ) : null}
             {canAddDisbursement ? (
@@ -404,28 +432,17 @@ export default function PerDiemRequestDetailPageContent({
                   {request.pvDate ? formatProjectDate(request.pvDate) : '-'}
                 </MetaItem>
                 <MetaItem label={t('pages.hr.perDiem.paid')}>
-                  {request.paidAt ? (
+                  {hasDisbursement && firstDisbursedAt ? (
                     <span className="erp-users-cell-strong">
-                      {formatProjectDate(request.paidAt)}
+                      {formatProjectDate(firstDisbursedAt)}
                     </span>
-                  ) : request.status === 'APPROVED' ? (
+                  ) : request.status === 'APPROVED' ||
+                    request.status === 'ACTIVE' ? (
                     t('pages.hr.perDiem.unpaid')
                   ) : (
                     '-'
                   )}
                 </MetaItem>
-                {request.paidAt ? (
-                  <MetaItem label={t('pages.hr.perDiem.paidBy')}>
-                    {request.payer
-                      ? formatPerDiemEmployeeName(request.payer)
-                      : '-'}
-                  </MetaItem>
-                ) : null}
-                {request.paymentReference ? (
-                  <MetaItem label={t('pages.hr.perDiem.paymentReference')}>
-                    {request.paymentReference}
-                  </MetaItem>
-                ) : null}
                 <MetaItem label={t('pages.hr.perDiem.settled')}>
                   {request.settlement?.requestNumber ? (
                     <button
@@ -586,6 +603,22 @@ export default function PerDiemRequestDetailPageContent({
                           {d.notes}
                         </p>
                       ) : null}
+                      {(d.attachments?.length ?? 0) > 0 ? (
+                        <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
+                          {d.attachments!.map((attachment) => (
+                            <li key={attachment.id}>
+                              <a
+                                href={attachment.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="erp-users-id-chip"
+                              >
+                                {attachment.fileName}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
@@ -678,52 +711,6 @@ export default function PerDiemRequestDetailPageContent({
       </div>
 
       <Modal
-        open={markPaidOpen}
-        centered
-        width={520}
-        title={t('pages.hr.perDiem.markPaidTitle')}
-        onCancel={() => {
-          setMarkPaidOpen(false);
-          markPaidForm.resetFields();
-        }}
-        onOk={() => void handleMarkPaid()}
-        confirmLoading={markPaidMutation.isPending}
-        okText={t('pages.hr.perDiem.markPaid')}
-        destroyOnHidden
-        rootClassName="erp-hr-travel-modal"
-        className="erp-hr-travel-modal"
-      >
-        <p className="erp-hr-travel-modal-hint">
-          {t('pages.hr.perDiem.markPaidDescription')}
-        </p>
-        <Form
-          form={markPaidForm}
-          layout="vertical"
-          initialValues={{
-            paidAmount: request.totalAmount
-              ? Number(request.totalAmount)
-              : undefined,
-          }}
-        >
-          <Form.Item
-            name="paidAmount"
-            label={t('pages.hr.perDiem.paidAmountLabel')}
-          >
-            <InputNumber min={0} precision={2} className="w-full" />
-          </Form.Item>
-          <Form.Item
-            name="paymentReference"
-            label={t('pages.hr.perDiem.paymentReference')}
-          >
-            <Input
-              maxLength={500}
-              placeholder={t('pages.hr.perDiem.paymentReferencePlaceholder')}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
         open={disbursementOpen}
         centered
         width={520}
@@ -731,22 +718,18 @@ export default function PerDiemRequestDetailPageContent({
         onCancel={() => {
           setDisbursementOpen(false);
           disbursementForm.resetFields();
+          setPendingReceiptFiles([]);
         }}
         onOk={() => void handleAddDisbursement()}
-        confirmLoading={addDisbursementMutation.isPending}
+        confirmLoading={
+          addDisbursementMutation.isPending || uploadingReceipts
+        }
         okText={t('hr.perDiem.addDisbursement')}
         destroyOnHidden
         rootClassName="erp-hr-travel-modal"
         className="erp-hr-travel-modal"
       >
         <Form form={disbursementForm} layout="vertical">
-          <Form.Item
-            name="amount"
-            label={t('hr.perDiem.disbursementAmount')}
-            rules={[{ required: true }]}
-          >
-            <InputNumber min={0} precision={2} className="w-full" suffix="ETB" />
-          </Form.Item>
           <Form.Item
             name="disbursedAt"
             label={t('hr.perDiem.disbursedOn')}
@@ -768,9 +751,34 @@ export default function PerDiemRequestDetailPageContent({
           >
             <Input type="date" className="w-full" />
           </Form.Item>
+          {disbursementAmountPreview ? (
+            <p className="erp-users-cell-strong m-0 mb-4 text-sm">
+              {t('hr.perDiem.disbursementAmountPreview', {
+                days: disbursementAmountPreview.days,
+                amount: formatEtbAmount(disbursementAmountPreview.amount),
+                dailyRate: formatEtbAmount(disbursementAmountPreview.dailyRate),
+              })}
+            </p>
+          ) : null}
           <Form.Item name="notes" label={t('hr.labels.notes')}>
             <Input.TextArea rows={3} maxLength={2000} />
           </Form.Item>
+          <Form.Item label={t('hr.perDiem.receipts')} className="mb-0">
+            <FileUploadInput
+              files={pendingReceiptFiles}
+              onChange={setPendingReceiptFiles}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              multiple
+              disabled={
+                addDisbursementMutation.isPending || uploadingReceipts
+              }
+            />
+          </Form.Item>
+          {uploadingReceipts ? (
+            <p className="erp-users-cell-sub m-0 mt-2 text-xs">
+              {t('hr.perDiem.uploadingReceipts')}
+            </p>
+          ) : null}
         </Form>
       </Modal>
 

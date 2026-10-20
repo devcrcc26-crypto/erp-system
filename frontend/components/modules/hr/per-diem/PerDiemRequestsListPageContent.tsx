@@ -293,11 +293,11 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         width: 110,
         responsive: ['lg'],
         render: (_: unknown, row: PerDiemRequestListItem) =>
-          row.paidAt ? (
+          (row.disbursementCount ?? 0) > 0 ? (
             <span className="erp-users-cell-strong">
-              {formatProjectDate(row.paidAt)}
+              {t('pages.hr.perDiem.disbursed')}
             </span>
-          ) : row.status === 'APPROVED' ? (
+          ) : row.status === 'APPROVED' || row.status === 'ACTIVE' ? (
             <span className="erp-users-cell-sub">
               {t('pages.hr.perDiem.unpaid')}
             </span>

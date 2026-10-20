@@ -98,10 +98,7 @@ export interface PerDiemRequestListItem {
   status: PerDiemStatus;
   pvNumber?: string | null;
   pvDate?: string | null;
-  paidAt?: string | null;
-  paidBy?: string | null;
-  paidAmount?: number | string | null;
-  paymentReference?: string | null;
+  disbursementCount?: number;
   siteAssignmentId?: string | null;
   settlementId?: string | null;
   settlement?: {
@@ -144,7 +141,6 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
     endDate: string;
     status: string;
   } | null;
-  payer?: PerDiemUserSummary | null;
   approvalRequest?: {
     id: string;
     status: string;
@@ -178,9 +174,14 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   rateOverrideReason?: string;
 }
 
-export interface MarkPerDiemPaidPayload {
-  paidAmount?: number;
-  paymentReference?: string;
+export interface PerDiemDisbursementAttachment {
+  id: string;
+  disbursementId: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  uploadedAt: string;
 }
 
 export interface PerDiemDisbursement {
@@ -194,6 +195,7 @@ export interface PerDiemDisbursement {
   disbursedBy?: PerDiemUserSummary | null;
   notes?: string | null;
   createdAt: string;
+  attachments?: PerDiemDisbursementAttachment[];
 }
 
 export interface PerDiemRequestSettlement {
@@ -211,7 +213,6 @@ export interface PerDiemRequestSettlement {
 }
 
 export interface CreateDisbursementPayload {
-  amount: number;
   disbursedAt: string;
   coveredDaysFrom: string;
   coveredDaysTo: string;
@@ -238,9 +239,7 @@ export interface PerDiemAdvanceSummary {
   totalAmountEtb: number | string;
   currency: SupportedCurrency;
   status: PerDiemStatus;
-  paidAt?: string | null;
-  paidAmount?: number | string | null;
-  paymentReference?: string | null;
+  _count?: { disbursements: number };
 }
 
 export interface PerDiemSettlementListItem {

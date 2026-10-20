@@ -44,31 +44,33 @@ describe('PerDiemSettlementService advance payment gate', () => {
     );
   });
 
-  it('listUnsettledAdvances returns paidAt so unpaid can show Awaiting payment', async () => {
+  it('listUnsettledAdvances returns disbursement counts for payment UI', async () => {
     prisma.perDiemRequest.findMany.mockResolvedValue([
       {
         id: UNPAID_ID,
-        paidAt: null,
+        _count: { disbursements: 0 },
         status: PerDiemStatus.APPROVED,
       },
       {
         id: PAID_ID,
-        paidAt: new Date('2026-10-01'),
-        status: PerDiemStatus.APPROVED,
+        _count: { disbursements: 1 },
+        status: PerDiemStatus.ACTIVE,
       },
     ]);
 
     const rows = (await service.listUnsettledAdvances(
       COMPANY_ID,
       USER_ID,
-    )) as Array<{ id: string; paidAt: Date | null }>;
+    )) as Array<{ id: string; _count: { disbursements: number } }>;
 
     expect(rows).toHaveLength(2);
-    expect(rows.find((row) => row.id === UNPAID_ID)?.paidAt).toBeNull();
-    expect(rows.find((row) => row.id === PAID_ID)?.paidAt).toBeTruthy();
+    expect(rows.find((row) => row.id === UNPAID_ID)?._count.disbursements).toBe(
+      0,
+    );
+    expect(rows.find((row) => row.id === PAID_ID)?._count.disbursements).toBe(1);
   });
 
-  it('submitSettlement rejects unpaid advances', async () => {
+  it('submitSettlement rejects advances without disbursements', async () => {
     prisma.perDiemRequest.findMany.mockResolvedValue([]);
 
     await expect(
@@ -90,7 +92,7 @@ describe('PerDiemSettlementService advance payment gate', () => {
     expect(prisma.perDiemRequest.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          paidAt: { not: null },
+          disbursements: { some: {} },
         }),
       }),
     );
