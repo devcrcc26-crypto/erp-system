@@ -529,14 +529,16 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               )}
             />
           ) : null}
-          <div className="erp-pro-card">
-            <DraftsPanel
-              items={draftsQuery.data ?? []}
-              isLoading={draftsQuery.isLoading}
-              module={draftModule}
-              onModuleChange={setDraftModule}
-            />
-          </div>
+          <DraftsPanel
+            items={draftsQuery.data ?? []}
+            isLoading={draftsQuery.isLoading}
+            isFetching={draftsQuery.isFetching}
+            module={draftModule}
+            onModuleChange={setDraftModule}
+            onRefresh={() => void draftsQuery.refetch()}
+            onNewRequest={() => router.push(NEW_PATH)}
+            pageDescription={pageDescription}
+          />
         </>
       ) : (
         <>

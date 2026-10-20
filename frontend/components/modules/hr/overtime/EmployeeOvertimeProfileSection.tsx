@@ -25,6 +25,7 @@ import {
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
+import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
 import { overtimeHistoryPath, myOvertimeHistoryPath } from '@/lib/utils/overtime-history-path';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -163,6 +164,16 @@ export default function EmployeeOvertimeProfileSection({
   const isSelf = mode === 'self';
   const targetEmployeeId = isSelf ? undefined : employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
+
+  const detailReturnTo = useMemo((): string => {
+    if (isSelf) {
+      return '/profile?tab=overtime';
+    }
+    if (targetEmployeeId) {
+      return `/users/${encodeURIComponent(targetEmployeeId)}?tab=leave`;
+    }
+    return '/profile?tab=overtime';
+  }, [isSelf, targetEmployeeId]);
 
   const mySheetsQuery = useOvertimeSheetsAll({}, isSelf);
   const employeeSheetsQuery = useOvertimeSheetsAll(
@@ -449,7 +460,10 @@ export default function EmployeeOvertimeProfileSection({
             columns={columns}
             dataSource={historyRows}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/overtime/${record.id}`),
+              onClick: () =>
+                router.push(
+                  overtimeSheetDetailHref(record.id, detailReturnTo),
+                ),
               style: { cursor: 'pointer' },
             })}
             pagination={{

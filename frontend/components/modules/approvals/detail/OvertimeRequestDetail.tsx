@@ -28,6 +28,7 @@ import {
   unregisteredHolidayDatesFromFormData,
 } from '@/lib/utils/overtime-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
 
 import '@/components/modules/hr/overtime/overtime-entries-v2.css';
 
@@ -36,6 +37,7 @@ import '@/components/modules/hr/overtime/overtime-entries-v2.css';
  * Entries table matches OvertimeSheetDetailPageContent (v2).
  */
 export default function OvertimeRequestDetail({
+  approvalRequestId,
   sourceId,
   formData,
 }: {
@@ -262,7 +264,12 @@ export default function OvertimeRequestDetail({
               variant={overtimeStatusVariant(sheet.status)}
             />
             {canEdit ? (
-              <Link href={`/hr/overtime/${sheet.id}`}>
+              <Link
+                href={overtimeSheetDetailHref(
+                  sheet.id,
+                  `/approvals/${approvalRequestId}`,
+                )}
+              >
                 <Button type="primary" size="small">
                   Edit entries
                 </Button>

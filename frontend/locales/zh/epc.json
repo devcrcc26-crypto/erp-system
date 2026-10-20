@@ -512,6 +512,8 @@
       "drafts": {
         "filterByModule": "全部模块",
         "empty": "暂无草稿",
+        "emptyFiltered": "没有符合该模块筛选的草稿",
+        "statusDraft": "草稿",
         "number": "编号",
         "module": "模块",
         "description": "说明",
@@ -5832,6 +5834,7 @@
       "summaryHoliday": "{{count}} 个公共假期（0）",
       "remainingAfterRequest": "提交后剩余：{{remaining}}",
       "remainingAfter": "提交后剩余",
+      "usedIncludingPending": "已占用（已批准 + 待批准）",
       "leaveBalanceForDates": "涵盖 {{date}} 的休假年度余额（入职周年年度）。",
       "leaveBalanceSelectDates": "请先选择请假日期以加载对应休假年度余额。",
       "reason": "原因",

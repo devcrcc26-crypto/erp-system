@@ -26,6 +26,7 @@ import {
 } from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
 import { leaveBalanceTypesForGender } from '@/lib/utils/leave-balance-access';
+import { leaveRequestDetailHref } from '@/lib/utils/hr-self-service-nav';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 import {
   formatLeaveStatus,
@@ -183,6 +184,16 @@ export default function EmployeeLeaveProfileSection({
   const isSelf = mode === 'self';
   const targetEmployeeId = isSelf ? undefined : employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
+
+  const detailReturnTo = useMemo((): string => {
+    if (isSelf) {
+      return '/profile?tab=leave';
+    }
+    if (targetEmployeeId) {
+      return `/users/${encodeURIComponent(targetEmployeeId)}?tab=leave`;
+    }
+    return '/profile?tab=leave';
+  }, [isSelf, targetEmployeeId]);
 
   // Leave years follow the employment anniversary: default to the current one.
   const ledgerQuery = useLeaveBalanceLedger(
@@ -440,7 +451,10 @@ export default function EmployeeLeaveProfileSection({
             columns={columns}
             dataSource={historyRows}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/leave-requests/${record.id}`),
+              onClick: () =>
+                router.push(
+                  leaveRequestDetailHref(record.id, detailReturnTo),
+                ),
               style: { cursor: 'pointer' },
             })}
             pagination={{

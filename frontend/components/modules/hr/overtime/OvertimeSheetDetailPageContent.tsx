@@ -29,7 +29,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
@@ -74,6 +74,7 @@ import {
 } from '@/lib/utils/overtime-display';
 import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { resolveOvertimeDetailBackHref } from '@/lib/utils/hr-self-service-nav';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
@@ -112,6 +113,8 @@ export default function OvertimeSheetDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnToParam = searchParams.get('returnTo');
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
@@ -119,6 +122,18 @@ export default function OvertimeSheetDetailPageContent({
   const currentUser = useCurrentUser();
   const authUser = useAuthStore((state) => state.user);
   const detailQuery = useOvertimeSheet(sheetId);
+  const sheet = detailQuery.data;
+
+  const backHref = useMemo(
+    () =>
+      resolveOvertimeDetailBackHref({
+        canViewHr,
+        currentUserId: currentUser.data?.id,
+        sheetEmployeeId: sheet?.employeeId,
+        returnTo: returnToParam,
+      }),
+    [canViewHr, currentUser.data?.id, returnToParam, sheet?.employeeId],
+  );
   const deleteMutation = useDeleteOvertimeEntry(sheetId);
   const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
   const removeAttachmentMutation = useRemoveOvertimeEntryAttachment(sheetId);
@@ -146,7 +161,6 @@ export default function OvertimeSheetDetailPageContent({
 
   useSetHeaderExtra(null);
 
-  const sheet = detailQuery.data;
   const approvalRequestId = sheet?.approvalRequestId ?? null;
   const approvalQuery = useApprovalRequest(
     approvalRequestId ?? '',
@@ -314,7 +328,7 @@ export default function OvertimeSheetDetailPageContent({
       await deleteSheetMutation.mutateAsync(sheetId);
       messageApi.success(t('hr.messages.overtimeSheetDeleted'));
       setConfirmDeleteSheet(false);
-      router.push('/hr/overtime');
+      router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -564,7 +578,7 @@ export default function OvertimeSheetDetailPageContent({
               : t('hr.messages.overtimeSheetNotFound')
           }
           action={
-            <Button onClick={() => router.push('/hr/overtime')}>
+            <Button onClick={() => router.push(backHref)}>
               {t('hr.buttons.backToList')}
             </Button>
           }
@@ -602,7 +616,7 @@ export default function OvertimeSheetDetailPageContent({
             <Button
               type="text"
               icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/overtime')}
+              onClick={() => router.push(backHref)}
               aria-label={t('hr.buttons.backToList')}
             >
               {isNarrow ? undefined : t('hr.buttons.back')}

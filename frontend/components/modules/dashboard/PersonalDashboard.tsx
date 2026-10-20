@@ -22,6 +22,7 @@ import {
   formatLeaveType,
   leaveStatusVariant,
 } from '@/lib/utils/leave-display';
+import { leaveRequestDetailHref } from '@/lib/utils/hr-self-service-nav';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -168,7 +169,10 @@ export default function PersonalDashboard({
               {recentLeave.map((req) => (
                 <Link
                   key={req.id}
-                  href={`/hr/leave-requests/${req.id}`}
+                  href={leaveRequestDetailHref(
+                    req.id,
+                    '/profile?tab=leave',
+                  )}
                   className="flex items-center justify-between gap-3 py-3 no-underline first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">

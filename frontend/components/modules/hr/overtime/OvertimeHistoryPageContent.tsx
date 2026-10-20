@@ -29,6 +29,11 @@ import {
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
+import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
+import {
+  myOvertimeHistoryPath,
+  overtimeHistoryPath,
+} from '@/lib/utils/overtime-history-path';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
@@ -138,6 +143,16 @@ export default function OvertimeHistoryPageContent({
     targetEmployeeId === currentUserQuery.data?.id;
 
   const allowed = isSelf || canViewHr || isOwnEmployeePage;
+
+  const detailReturnTo = useMemo((): string => {
+    if (isSelf) {
+      return myOvertimeHistoryPath();
+    }
+    if (targetEmployeeId) {
+      return overtimeHistoryPath(targetEmployeeId);
+    }
+    return myOvertimeHistoryPath();
+  }, [isSelf, targetEmployeeId]);
 
   const employeeQuery = useUser(
     targetEmployeeId ?? '',
@@ -510,7 +525,10 @@ export default function OvertimeHistoryPageContent({
             columns={columns}
             dataSource={historyRows}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/overtime/${record.id}`),
+              onClick: () =>
+                router.push(
+                  overtimeSheetDetailHref(record.id, detailReturnTo),
+                ),
               style: { cursor: 'pointer' },
             })}
             pagination={{

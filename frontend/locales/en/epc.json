@@ -512,6 +512,8 @@
       "drafts": {
         "filterByModule": "All modules",
         "empty": "No drafts",
+        "emptyFiltered": "No drafts match this module filter",
+        "statusDraft": "Draft",
         "number": "Number",
         "module": "Module",
         "description": "Description",
@@ -5833,6 +5835,7 @@
       "summaryHoliday": "{{count}} public holiday(s) (0)",
       "remainingAfterRequest": "Remaining after this request: {{remaining}}",
       "remainingAfter": "Remaining after request",
+      "usedIncludingPending": "Taken (approved + pending)",
       "leaveBalanceForDates": "Balance for leave year covering {{date}} (employment anniversary year).",
       "leaveBalanceSelectDates": "Select leave dates to load the matching leave-year balance.",
       "reason": "Reason",

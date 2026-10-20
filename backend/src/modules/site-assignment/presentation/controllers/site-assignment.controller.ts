@@ -15,6 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
@@ -62,7 +63,7 @@ export class SiteAssignmentController {
   }
 
   @Get('employee/:employeeId')
-  @RequireAnyPermission({ module: 'site-assignment', action: 'view' })
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Site assignments for employee profile' })
   async listForEmployee(
     @Param('employeeId') employeeId: string,
@@ -77,7 +78,7 @@ export class SiteAssignmentController {
   }
 
   @Get(':id')
-  @RequireAnyPermission({ module: 'site-assignment', action: 'view' })
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Site assignment detail' })
   async getOne(
     @Param('id') id: string,

@@ -39,6 +39,11 @@ import {
   leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
+import { leaveRequestDetailHref } from '@/lib/utils/hr-self-service-nav';
+import {
+  leaveHistoryPath,
+  myLeaveHistoryPath,
+} from '@/lib/utils/leave-history-path';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
@@ -168,6 +173,16 @@ export default function LeaveHistoryPageContent({
     targetEmployeeId === currentUserQuery.data?.id;
 
   const allowed = isSelf || canViewHr || isOwnEmployeePage;
+
+  const detailReturnTo = useMemo((): string => {
+    if (isSelf) {
+      return myLeaveHistoryPath();
+    }
+    if (targetEmployeeId) {
+      return leaveHistoryPath(targetEmployeeId);
+    }
+    return myLeaveHistoryPath();
+  }, [isSelf, targetEmployeeId]);
 
   const employeeQuery = useUser(
     targetEmployeeId ?? '',
@@ -584,7 +599,9 @@ export default function LeaveHistoryPageContent({
             dataSource={historyRows}
             onRow={(record) => ({
               onClick: () =>
-                router.push(`/hr/leave-requests/${record.id}`),
+                router.push(
+                  leaveRequestDetailHref(record.id, detailReturnTo),
+                ),
               style: { cursor: 'pointer' },
             })}
             pagination={{

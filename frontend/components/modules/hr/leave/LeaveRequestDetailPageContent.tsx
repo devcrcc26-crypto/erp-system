@@ -19,7 +19,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
@@ -46,6 +46,7 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { resolveLeaveRequestDetailBackHref } from '@/lib/utils/hr-self-service-nav';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 function DetailSection({
@@ -77,6 +78,8 @@ export default function LeaveRequestDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnToParam = searchParams.get('returnTo');
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
@@ -90,6 +93,18 @@ export default function LeaveRequestDetailPageContent({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const request = detailQuery.data;
+
+  const backHref = useMemo(
+    () =>
+      resolveLeaveRequestDetailBackHref({
+        canViewHr,
+        currentUserId: currentUser.data?.id,
+        requestEmployeeId: request?.employeeId,
+        returnTo: returnToParam,
+      }),
+    [canViewHr, currentUser.data?.id, request?.employeeId, returnToParam],
+  );
+
   const approvalRequestId = request?.approvalRequestId ?? null;
   const approvalQuery = useApprovalRequest(
     approvalRequestId ?? '',
@@ -178,7 +193,7 @@ export default function LeaveRequestDetailPageContent({
       await deleteMutation.mutateAsync(requestId);
       messageApi.success(t('hr.messages.leaveRequestDeleted'));
       setConfirmDelete(false);
-      router.push('/hr/leave-requests');
+      router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -210,7 +225,7 @@ export default function LeaveRequestDetailPageContent({
               : t('hr.messages.leaveRequestNotFound')
           }
           action={
-            <Button onClick={() => router.push('/hr/leave-requests')}>
+            <Button onClick={() => router.push(backHref)}>
               {t('hr.buttons.backToList')}
             </Button>
           }
@@ -242,7 +257,7 @@ export default function LeaveRequestDetailPageContent({
       <section className="erp-leave-detail-hero">
         <div className="erp-leave-hero-top">
           <div className="min-w-0">
-            <Link href="/hr/leave-requests" className="erp-leave-back">
+            <Link href={backHref} className="erp-leave-back">
               <ArrowLeft size={14} strokeWidth={2} aria-hidden />
               {t('hr.buttons.backToList')}
             </Link>

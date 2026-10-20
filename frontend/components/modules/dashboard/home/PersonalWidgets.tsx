@@ -27,6 +27,7 @@ import {
 import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
 import { EVALUATION_STATUS_BADGE } from '@/lib/utils/evaluation-status';
 import { formatLeaveType } from '@/lib/utils/leave-display';
+import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
 import {
   formatOvertimeHours,
   formatOvertimeStatus,
@@ -306,7 +307,13 @@ export function OvertimeWidget({
               />
             </div>
           </div>
-          <Link href={`/hr/overtime/${sheet.id}`} className="dv2-button">
+          <Link
+            href={overtimeSheetDetailHref(
+              sheet.id,
+              '/profile?tab=overtime',
+            )}
+            className="dv2-button"
+          >
             {t(`${HOME}.overtime.openSheet`)}
           </Link>
         </>

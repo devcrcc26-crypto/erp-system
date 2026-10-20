@@ -110,6 +110,14 @@ function isSingleDay(range: [Dayjs, Dayjs] | null): boolean {
   return range[0].isSame(range[1], 'day');
 }
 
+function roundBalanceAmount(value: number | string | undefined): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.round(numeric * 10) / 10;
+}
+
 function formatLeaveChargeSummary(
   preview: PreviewDaysResult,
   t: (key: string, vars?: Record<string, string | number>) => string,
@@ -201,7 +209,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   const balancesQuery = useMyLeaveBalances({
     forDate: balanceForDate,
-    enabled: true,
+    enabled: Boolean(onBehalf.effectiveEmployeeId),
     employeeId: onBehalf.employeeId,
   });
   const submitMutation = useSubmitLeaveRequest();
@@ -475,30 +483,64 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       );
     }
 
+    const entitled = roundBalanceAmount(selectedBalance.entitled);
+    const broughtForward = roundBalanceAmount(selectedBalance.broughtForward);
+    const usedApproved = roundBalanceAmount(selectedBalance.used);
+    const pendingNow = roundBalanceAmount(selectedBalance.pending);
+    const remainingNow = roundBalanceAmount(selectedBalance.remaining);
+
+    const chargedDays = roundBalanceAmount(preview?.totalDays);
+    const showProjection = preview != null && chargedDays > 0;
+    const pendingDisplay = showProjection
+      ? roundBalanceAmount(pendingNow + chargedDays)
+      : pendingNow;
+    const remainingDisplay = showProjection
+      ? roundBalanceAmount(remainingNow - chargedDays)
+      : remainingNow;
+    const pool = roundBalanceAmount(entitled + broughtForward);
+    const committedDisplay = showProjection
+      ? roundBalanceAmount(pool - remainingDisplay)
+      : roundBalanceAmount(usedApproved + pendingNow);
+    const showPendingTile = !showProjection && pendingNow > 0;
+
     return (
       <div className="erp-leave-form-balance-tiles">
         <div className="erp-leave-form-balance-tile erp-leave-form-balance-tile--primary">
-          <p className="erp-leave-fact-label">{t('hr.labels.remaining')}</p>
-          <p className="erp-leave-fact-value">{selectedBalance.remaining}</p>
-        </div>
-        <div className="erp-leave-form-balance-tile">
-          <p className="erp-leave-fact-label">{t('hr.labels.used')}</p>
-          <p className="erp-leave-fact-value">{selectedBalance.used}</p>
-        </div>
-        <div className="erp-leave-form-balance-tile">
-          <p className="erp-leave-fact-label">{t('hr.labels.entitled')}</p>
-          <p className="erp-leave-fact-value">{selectedBalance.entitled}</p>
+          <p className="erp-leave-fact-label">
+            {showProjection
+              ? t('hr.form.remainingAfter')
+              : t('hr.labels.remaining')}
+          </p>
+          <p className="erp-leave-fact-value">{remainingDisplay}</p>
         </div>
         <div className="erp-leave-form-balance-tile">
           <p className="erp-leave-fact-label">
-            {selectedBalance.pending > 0
+            {showProjection || pendingNow > 0
+              ? t('hr.form.usedIncludingPending')
+              : t('hr.labels.used')}
+          </p>
+          <p className="erp-leave-fact-value">{committedDisplay}</p>
+          {showProjection || pendingNow > 0 ? (
+            <p className="erp-users-cell-sub m-0 mt-0.5">
+              {t('hr.leave.usedPending', {
+                used: usedApproved,
+                pending: showProjection ? pendingDisplay : pendingNow,
+              })}
+            </p>
+          ) : null}
+        </div>
+        <div className="erp-leave-form-balance-tile">
+          <p className="erp-leave-fact-label">{t('hr.labels.entitled')}</p>
+          <p className="erp-leave-fact-value">{entitled}</p>
+        </div>
+        <div className="erp-leave-form-balance-tile">
+          <p className="erp-leave-fact-label">
+            {showPendingTile
               ? t('hr.labels.pending')
               : t('hr.labels.broughtForward')}
           </p>
           <p className="erp-leave-fact-value">
-            {selectedBalance.pending > 0
-              ? selectedBalance.pending
-              : selectedBalance.broughtForward}
+            {showPendingTile ? pendingNow : broughtForward}
           </p>
         </div>
       </div>
@@ -565,34 +607,35 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                           );
                         }}
                       />
-                      <Select
-                        className="w-full"
-                        value={period.dayPortion}
-                        disabled={!isSingleDay(period.range)}
-                        options={[
-                          {
-                            value: 'FULL',
-                            label: t('hr.form.dayPortionFull'),
-                          },
-                          {
-                            value: 'MORNING',
-                            label: t('hr.form.dayPortionMorning'),
-                          },
-                          {
-                            value: 'AFTERNOON',
-                            label: t('hr.form.dayPortionAfternoon'),
-                          },
-                        ]}
-                        onChange={(value: LeaveDayPortion) => {
-                          setPeriods((current) =>
-                            current.map((row) =>
-                              row.id === period.id
-                                ? { ...row, dayPortion: value }
-                                : row,
-                            ),
-                          );
-                        }}
-                      />
+                      {isSingleDay(period.range) ? (
+                        <Select
+                          className="w-full"
+                          value={period.dayPortion}
+                          options={[
+                            {
+                              value: 'FULL',
+                              label: t('hr.form.dayPortionFull'),
+                            },
+                            {
+                              value: 'MORNING',
+                              label: t('hr.form.dayPortionMorning'),
+                            },
+                            {
+                              value: 'AFTERNOON',
+                              label: t('hr.form.dayPortionAfternoon'),
+                            },
+                          ]}
+                          onChange={(value: LeaveDayPortion) => {
+                            setPeriods((current) =>
+                              current.map((row) =>
+                                row.id === period.id
+                                  ? { ...row, dayPortion: value }
+                                  : row,
+                              ),
+                            );
+                          }}
+                        />
+                      ) : null}
                       <div className="erp-leave-period-editor-actions">
                         {periods.length > 1 ? (
                           <Button

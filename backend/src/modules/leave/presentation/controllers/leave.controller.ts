@@ -165,7 +165,11 @@ export class LeaveController {
   }
 
   @Get('balance')
-  @RequireAnyPermission({ module: 'leave', action: 'view' })
+  @RequireAnyPermission(
+    { module: 'leave', action: 'view' },
+    { module: 'leave', action: 'create' },
+    { module: 'leave', action: 'manage' },
+  )
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
@@ -194,7 +198,11 @@ export class LeaveController {
   }
 
   @Get('balances/me')
-  @RequireAnyPermission({ module: 'leave', action: 'view' })
+  @RequireAnyPermission(
+    { module: 'leave', action: 'view' },
+    { module: 'leave', action: 'create' },
+    { module: 'leave', action: 'manage' },
+  )
   @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Get my leave balances for a year (alias of GET balance)',
