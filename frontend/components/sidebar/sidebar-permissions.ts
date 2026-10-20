@@ -79,6 +79,8 @@ export function resolveSidebarPermissions(
   // Expense claims are self-service (see app/(dashboard)/hr/layout.tsx);
   // every employee can submit and track their own claims.
   grant('expenseClaims.access', true);
+  // Self-service per diem list and detail (own requests); HR staff also have hr.view.
+  grant('perDiem.access', true);
   grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet - the /hr route guard requires hr.view.
   grant('procurement.access', hr);
   grant('fleet.access', hr);

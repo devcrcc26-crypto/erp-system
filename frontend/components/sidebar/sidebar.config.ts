@@ -25,6 +25,7 @@ export type SidebarPermission =
   | 'flight.access'
   | 'businessTrip.access'
   | 'expenseClaims.access'
+  | 'perDiem.access'
   | 'perDiemRates.manage'
   | 'procurement.access'
   | 'fleet.access'
@@ -156,7 +157,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   // Staff without hr.view get a self-service sidebar only.
   limitedNavigation: {
     unlessGranted: 'hr.view',
-    entryIds: ['dashboard', 'new-request', 'approvals', 'evaluation-inbox', 'announcements', 'expense-claims', 'my-profile'],
+    entryIds: ['dashboard', 'new-request', 'approvals', 'evaluation-inbox', 'announcements', 'expense-claims', 'per-diem', 'my-profile'],
   },
   primary: [
     {
@@ -296,7 +297,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access'], keywords: ['ticket', 'air'] },
             { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access'], keywords: ['travel'] },
-            { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: HR, keywords: ['allowance'] },
+            { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: ['perDiem.access'], keywords: ['allowance'] },
             { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
           ],
         },

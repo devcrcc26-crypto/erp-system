@@ -64,14 +64,16 @@ function DetailSection({
   children,
   className = '',
   bodyClassName = '',
+  id,
 }: {
   title: string;
   children: React.ReactNode;
   className?: string;
   bodyClassName?: string;
+  id?: string;
 }): React.ReactNode {
   return (
-    <div className={`erp-employee-section ${className}`.trim()}>
+    <div id={id} className={`erp-employee-section ${className}`.trim()}>
       <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
         <h3 className="erp-employee-section-title m-0">{title}</h3>
       </div>
@@ -510,6 +512,20 @@ export default function PerDiemRequestDetailPageContent({
                         number: request.settlement.requestNumber,
                       })}
                     </button>
+                  ) : request.requestSettlement ? (
+                    <button
+                      type="button"
+                      className="erp-users-id-chip"
+                      onClick={() => {
+                        document
+                          .getElementById('per-diem-request-settlement')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                    >
+                      {formatProjectDate(request.requestSettlement.settledAt)}
+                    </button>
+                  ) : request.status === 'SETTLED' ? (
+                    t('common.yes')
                   ) : (
                     '-'
                   )}
@@ -691,7 +707,10 @@ export default function PerDiemRequestDetailPageContent({
             ) : null}
 
             {request.requestSettlement ? (
-              <DetailSection title={t('hr.perDiem.settlement')}>
+              <DetailSection
+                title={t('hr.perDiem.settlement')}
+                id="per-diem-request-settlement"
+              >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <MetaItem label={t('hr.perDiem.actualReturnDate')}>
                     {formatProjectDate(request.requestSettlement.actualReturnDate)}

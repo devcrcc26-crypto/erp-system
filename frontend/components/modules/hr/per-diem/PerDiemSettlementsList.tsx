@@ -9,7 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanEditHr, useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -34,6 +34,7 @@ export default function PerDiemSettlementsList(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
+  const canEditHr = useCanEditHr();
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const listQuery = usePerDiemSettlementsAll(true);
   const [search, setSearch] = useState('');
@@ -158,12 +159,14 @@ export default function PerDiemSettlementsList(): React.ReactNode {
               aria-label={t('common.refresh')}
             />
           </Tooltip>
-          <Button
-            type="primary"
-            onClick={() => router.push('/approvals/new/per-diem-settlement')}
-          >
-            {t('pages.hr.perDiemSettlement.new')}
-          </Button>
+          {canEditHr ? (
+            <Button
+              type="primary"
+              onClick={() => router.push('/approvals/new/per-diem-settlement')}
+            >
+              {t('pages.hr.perDiemSettlement.new')}
+            </Button>
+          ) : null}
         </div>
       </div>
       <div className="erp-users-filter-bar">

@@ -36,6 +36,7 @@ export default function HrSectionLayout({
     pathname.startsWith('/hr/leave-history') ||
     pathname.startsWith('/hr/employee-contract') ||
     pathname.startsWith('/hr/expense-claims') ||
+    pathname.startsWith('/hr/per-diem') ||
     pathname.startsWith('/hr/attendance') ||
     pathname.startsWith('/hr/evaluations');
 
