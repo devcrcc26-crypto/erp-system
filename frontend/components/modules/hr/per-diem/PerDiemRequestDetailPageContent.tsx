@@ -402,6 +402,44 @@ export default function PerDiemRequestDetailPageContent({
                     </MetaItem>
                   </div>
                 ) : null}
+                {request.requestedDailyRate != null ? (
+                  <div className="md:col-span-2">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+                      <div className="mb-3 flex items-center gap-2">
+                        <span className="erp-users-role-tag" style={{ background: 'var(--color-warning-bg, #fffbe6)', color: 'var(--color-warning, #d48806)', borderColor: 'var(--color-warning-border, #ffe58f)' }}>
+                          {t('hr.perDiem.rateOverrideRequested', 'Rate override requested')}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <MetaItem label={t('hr.labels.dailyRate')}>
+                          {formatEtbAmount(request.dailyRate)}
+                        </MetaItem>
+                        <MetaItem label={t('hr.perDiem.requestedDailyRate', 'Requested daily rate')}>
+                          <span className="erp-users-cell-strong">
+                            {formatEtbAmount(request.requestedDailyRate)}
+                          </span>
+                        </MetaItem>
+                        <MetaItem label={t('hr.form.totalAmount')}>
+                          {formatEtbAmount(request.totalAmount)}
+                        </MetaItem>
+                        <MetaItem label={t('hr.perDiem.requestedTotal', 'Requested total')}>
+                          <span className="erp-users-cell-strong">
+                            {formatEtbAmount(Number(request.requestedDailyRate) * request.days)}
+                          </span>
+                        </MetaItem>
+                        {request.rateOverrideReason ? (
+                          <div className="sm:col-span-2">
+                            <MetaItem label={t('hr.perDiem.rateOverrideReason', 'Reason for rate increase')}>
+                              <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                                {request.rateOverrideReason}
+                              </p>
+                            </MetaItem>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 {request.notes?.trim() ? (
                   <div className="md:col-span-2">
                     <MetaItem label={t('hr.labels.notes')}>

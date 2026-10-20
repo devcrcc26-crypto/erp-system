@@ -116,6 +116,8 @@ export interface PerDiemRequestListItem {
 
 export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   notes?: string | null;
+  requestedDailyRate?: string | null;
+  rateOverrideReason?: string | null;
   employeePerDiemRate?: EmployeePerDiemRate | null;
   linkedFlight?: {
     id: string;
@@ -166,6 +168,8 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   linkedBusinessTripId?: string;
   siteAssignmentId?: string;
   notes?: string;
+  requestedDailyRate?: number;
+  rateOverrideReason?: string;
 }
 
 export interface MarkPerDiemPaidPayload {

@@ -50,16 +50,34 @@ export default function BusinessTripPurposeBudgetStep({
           />
         </div>
 
+        <p className="mb-3 mt-2 text-[13px] font-semibold text-[var(--color-text-primary)]">
+          {t('hr.section.hostOrganization')}
+        </p>
+        <div className="mb-4">
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+            {t('hr.form.hostOrganizationName')}
+          </label>
+          <Input
+            value={values.hostOrganization}
+            onChange={(e) => patch({ hostOrganization: e.target.value })}
+            placeholder={t('hr.placeholder.hostOrganizationName')}
+            maxLength={500}
+          />
+        </div>
+
+        <p className="mb-3 mt-2 text-[13px] font-semibold text-[var(--color-text-primary)]">
+          {t('hr.section.hostContactPerson')}
+        </p>
         <Row gutter={[16, 0]}>
           <Col xs={24} sm={12}>
             <div className="mb-4">
               <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-                {t('hr.form.hostOrganization')}
+                {t('hr.form.hostContactName')}
               </label>
               <Input
-                value={values.hostOrganization}
-                onChange={(e) => patch({ hostOrganization: e.target.value })}
-                placeholder={t('hr.form.hostOrganization')}
+                value={values.hostContactName}
+                onChange={(e) => patch({ hostContactName: e.target.value })}
+                placeholder={t('hr.placeholder.hostContactName')}
                 maxLength={200}
               />
             </div>
@@ -67,13 +85,27 @@ export default function BusinessTripPurposeBudgetStep({
           <Col xs={24} sm={12}>
             <div className="mb-4">
               <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-                {t('hr.form.hostContact')}
+                {t('hr.form.hostContactPhone')}
               </label>
               <Input
-                value={values.hostContact}
-                onChange={(e) => patch({ hostContact: e.target.value })}
-                placeholder={t('hr.form.hostContact')}
-                maxLength={200}
+                value={values.hostContactPhone}
+                onChange={(e) => patch({ hostContactPhone: e.target.value })}
+                placeholder={t('hr.placeholder.hostContactPhone')}
+                maxLength={50}
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div className="mb-4">
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+                {t('hr.form.hostContactEmail')}
+              </label>
+              <Input
+                type="email"
+                value={values.hostContactEmail}
+                onChange={(e) => patch({ hostContactEmail: e.target.value })}
+                placeholder={t('hr.placeholder.hostContactEmail')}
+                maxLength={320}
               />
             </div>
           </Col>

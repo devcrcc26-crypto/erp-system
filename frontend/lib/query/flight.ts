@@ -197,6 +197,12 @@ export function useSubmitFlightApplication() {
       if (payload.notes) {
         formData.append('notes', payload.notes);
       }
+      if (payload.linkedBusinessTripId) {
+        formData.append('linkedBusinessTripId', payload.linkedBusinessTripId);
+      }
+      if (payload.siteAssignmentId) {
+        formData.append('siteAssignmentId', payload.siteAssignmentId);
+      }
       formData.append('passengers', JSON.stringify(payload.passengers));
       appendOnBehalfFields(formData, payload);
       for (const file of payload.files ?? []) {

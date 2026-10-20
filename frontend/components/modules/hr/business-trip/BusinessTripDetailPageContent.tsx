@@ -14,9 +14,10 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip/BusinessTripCurrentStepBanner';
+import BusinessTripHostMetaItems from '@/components/modules/hr/business-trip/BusinessTripHostMetaItems';
+import { hasBusinessTripHostDetails } from '@/lib/utils/business-trip-host-display';
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
-import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import {
   TravelBudgetBreakdown,
   TravelPassengerList,
@@ -207,8 +208,10 @@ export default function BusinessTripDetailPageContent({
           departure: t('hr.labels.departure'),
           return: t('hr.labels.return'),
           purpose: t('hr.labels.purpose'),
-          hostOrganization: t('hr.form.hostOrganization'),
-          hostContact: t('hr.form.hostContact'),
+          hostOrganization: t('hr.form.hostOrganizationName'),
+          hostContactName: t('hr.form.hostContactName'),
+          hostContactPhone: t('hr.form.hostContactPhone'),
+          hostContactEmail: t('hr.form.hostContactEmail'),
           expectedOutcomes: t('hr.labels.expectedOutcomes'),
           itinerary: t('hr.labels.itinerary'),
           notes: t('hr.labels.notes'),
@@ -293,8 +296,7 @@ export default function BusinessTripDetailPageContent({
 
   const hasPurposeContent =
     Boolean(trip.purpose) ||
-    Boolean(trip.hostOrganization) ||
-    Boolean(trip.hostContact) ||
+    hasBusinessTripHostDetails(trip) ||
     Boolean(trip.expectedOutcomes) ||
     Boolean(trip.itinerary);
 
@@ -408,22 +410,7 @@ export default function BusinessTripDetailPageContent({
             {hasPurposeContent ? (
               <DetailSection title={t('hr.labels.purposeHost')}>
                 <div className="flex flex-col gap-4">
-                  {trip.hostOrganization || trip.hostContact ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {trip.hostOrganization ? (
-                        <MetaItem label={t('hr.labels.organization')}>
-                          <span className="erp-users-cell-strong">
-                            {trip.hostOrganization}
-                          </span>
-                        </MetaItem>
-                      ) : null}
-                      {trip.hostContact ? (
-                        <MetaItem label={t('hr.labels.contact')}>
-                          {trip.hostContact}
-                        </MetaItem>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <BusinessTripHostMetaItems trip={trip} />
                   <TravelTextBlock
                     label={t('hr.labels.purpose')}
                     text={trip.purpose}

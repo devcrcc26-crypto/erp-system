@@ -1,9 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  FlightTicketClass,
-  FlightTripType,
-  FlightVisaStatus,
-} from '@prisma/client';
+import { FlightTripType, FlightVisaStatus } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -21,7 +17,6 @@ type AuditContext = { companyId: string; userId: string };
 const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 500;
 const TRIP_TYPE_VALUES = Object.values(FlightTripType);
-const TICKET_CLASS_VALUES = Object.values(FlightTicketClass);
 const VISA_STATUS_VALUES = Object.values(FlightVisaStatus);
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -68,9 +63,18 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   hostorganization: 'hostOrganization',
   'host organization': 'hostOrganization',
   host_organization: 'hostOrganization',
-  hostcontact: 'hostContact',
-  'host contact': 'hostContact',
-  host_contact: 'hostContact',
+  hostcontactname: 'hostContactName',
+  'host contact name': 'hostContactName',
+  host_contact_name: 'hostContactName',
+  hostcontactphone: 'hostContactPhone',
+  'host contact phone': 'hostContactPhone',
+  host_contact_phone: 'hostContactPhone',
+  hostcontactemail: 'hostContactEmail',
+  'host contact email': 'hostContactEmail',
+  host_contact_email: 'hostContactEmail',
+  hostcontact: 'hostContactName',
+  'host contact': 'hostContactName',
+  host_contact: 'hostContactName',
   expectedoutcomes: 'expectedOutcomes',
   'expected outcomes': 'expectedOutcomes',
   expected_outcomes: 'expectedOutcomes',
@@ -116,7 +120,9 @@ interface ParsedImportRow {
   returnDate: string;
   purpose: string;
   hostOrganization: string;
-  hostContact: string;
+  hostContactName: string;
+  hostContactPhone: string;
+  hostContactEmail: string;
   expectedOutcomes: string;
   itinerary: string;
   estimatedAccommodationCost: string;
@@ -166,7 +172,9 @@ export class BusinessTripImportService {
         returnDate: today,
         purpose: 'Client meeting',
         hostOrganization: 'Partner Co',
-        hostContact: 'host@partner.local',
+        hostContactName: 'Partner Host',
+        hostContactPhone: '+251 911 000 000',
+        hostContactEmail: 'host@partner.local',
         expectedOutcomes: 'Signed MoU',
         itinerary: 'Day 1: meetings; Day 2: site visit',
         estimatedAccommodationCost: '200',
@@ -204,7 +212,9 @@ export class BusinessTripImportService {
         returnDate: '',
         purpose: '',
         hostOrganization: '',
-        hostContact: '',
+        hostContactName: '',
+        hostContactPhone: '',
+        hostContactEmail: '',
         expectedOutcomes: '',
         itinerary: '',
         estimatedAccommodationCost: '',
@@ -315,15 +325,11 @@ export class BusinessTripImportService {
         { header: 'returnDate', key: 'returnDate', width: 14 },
         { header: 'purpose', key: 'purpose', width: 28 },
         { header: 'hostOrganization', key: 'hostOrganization', width: 20 },
-        { header: 'hostContact', key: 'hostContact', width: 20 },
+        { header: 'hostContactName', key: 'hostContactName', width: 20 },
+        { header: 'hostContactPhone', key: 'hostContactPhone', width: 18 },
+        { header: 'hostContactEmail', key: 'hostContactEmail', width: 24 },
         { header: 'expectedOutcomes', key: 'expectedOutcomes', width: 24 },
         { header: 'itinerary', key: 'itinerary', width: 28 },
-        { header: 'ticketClass', key: 'ticketClass', width: 12 },
-        {
-          header: 'estimatedFlightCost',
-          key: 'estimatedFlightCost',
-          width: 18,
-        },
         {
           header: 'estimatedAccommodationCost',
           key: 'estimatedAccommodationCost',
@@ -335,17 +341,6 @@ export class BusinessTripImportService {
           key: 'estimatedOtherCost',
           width: 16,
         },
-        {
-          header: 'accommodationRequired',
-          key: 'accommodationRequired',
-          width: 18,
-        },
-        {
-          header: 'accommodationDetails',
-          key: 'accommodationDetails',
-          width: 24,
-        },
-        { header: 'perDiemRequired', key: 'perDiemRequired', width: 14 },
         { header: 'notes', key: 'notes', width: 24 },
       );
     }
@@ -395,19 +390,11 @@ export class BusinessTripImportService {
         'Rows with the same submitter + purpose + route + departureDate share one DRAFT trip',
       ]);
       instructions.addRow(['hostOrganization', 'No', '']);
-      instructions.addRow(['hostContact', 'No', '']);
+      instructions.addRow(['hostContactName', 'No', '']);
+      instructions.addRow(['hostContactPhone', 'No', '']);
+      instructions.addRow(['hostContactEmail', 'No', '']);
       instructions.addRow(['expectedOutcomes', 'No', '']);
       instructions.addRow(['itinerary', 'No', '']);
-      instructions.addRow([
-        'ticketClass',
-        'Yes',
-        TICKET_CLASS_VALUES.join(' | '),
-      ]);
-      instructions.addRow([
-        'estimatedFlightCost',
-        'No',
-        'Number ≥ 0',
-      ]);
       instructions.addRow([
         'estimatedAccommodationCost',
         'No',
@@ -415,17 +402,6 @@ export class BusinessTripImportService {
       ]);
       instructions.addRow(['estimatedPerDiem', 'No', 'Number ≥ 0']);
       instructions.addRow(['estimatedOtherCost', 'No', 'Number ≥ 0']);
-      instructions.addRow([
-        'accommodationRequired',
-        'No',
-        'TRUE | FALSE (default TRUE)',
-      ]);
-      instructions.addRow(['accommodationDetails', 'No', '']);
-      instructions.addRow([
-        'perDiemRequired',
-        'No',
-        'TRUE | FALSE (default TRUE)',
-      ]);
       instructions.addRow(['notes', 'No', '']);
     }
     instructions.addRow([
@@ -498,7 +474,6 @@ export class BusinessTripImportService {
         destinationCity: string;
         departureDate: string;
         purpose: string;
-        ticketClass: FlightTicketClass;
         passengerId: string;
       } =>
         row.status === 'ok' &&
@@ -510,7 +485,6 @@ export class BusinessTripImportService {
         Boolean(row.destinationCity) &&
         Boolean(row.departureDate) &&
         Boolean(row.purpose) &&
-        Boolean(row.ticketClass) &&
         Boolean(row.passengerId),
     );
     const skipped = preview.rows.length - validRows.length;
@@ -547,17 +521,14 @@ export class BusinessTripImportService {
               returnDate: row.returnDate,
               purpose: row.purpose,
               hostOrganization: row.hostOrganization,
-              hostContact: row.hostContact,
+              hostContactName: row.hostContactName,
+              hostContactPhone: row.hostContactPhone,
+              hostContactEmail: row.hostContactEmail,
               expectedOutcomes: row.expectedOutcomes,
               itinerary: row.itinerary,
-              ticketClass: row.ticketClass,
-              estimatedFlightCost: row.estimatedFlightCost,
               estimatedAccommodationCost: row.estimatedAccommodationCost,
               estimatedPerDiem: row.estimatedPerDiem,
               estimatedOtherCost: row.estimatedOtherCost,
-              accommodationRequired: row.accommodationRequired,
-              accommodationDetails: row.accommodationDetails,
-              perDiemRequired: row.perDiemRequired,
               notes: row.notes,
             };
             const trip = await this.businessTripService.findOrCreateDraftTrip(
@@ -646,7 +617,6 @@ export class BusinessTripImportService {
         'destinationCity',
         'departureDate',
         'purpose',
-        'ticketClass',
       ] as const) {
         if (!mapped.has(field)) {
           throw new BadRequestException(
@@ -676,7 +646,9 @@ export class BusinessTripImportService {
         returnDate: '',
         purpose: '',
         hostOrganization: '',
-        hostContact: '',
+        hostContactName: '',
+        hostContactPhone: '',
+        hostContactEmail: '',
         expectedOutcomes: '',
         itinerary: '',
         estimatedAccommodationCost: '',
@@ -793,18 +765,15 @@ export class BusinessTripImportService {
     let departureDate: string;
     let returnDate: string | undefined;
     let purpose: string;
-    let ticketClass: FlightTicketClass;
     let hostOrganization: string | undefined;
-    let hostContact: string | undefined;
+    let hostContactName: string | undefined;
+    let hostContactPhone: string | undefined;
+    let hostContactEmail: string | undefined;
     let expectedOutcomes: string | undefined;
     let itinerary: string | undefined;
-    let estimatedFlightCost: number | undefined;
     let estimatedAccommodationCost: number | undefined;
     let estimatedPerDiem: number | undefined;
     let estimatedOtherCost: number | undefined;
-    let accommodationRequired: boolean | undefined;
-    let accommodationDetails: string | undefined;
-    let perDiemRequired: boolean | undefined;
     let notes: string | undefined;
 
     if (options.mode === 'trip') {
@@ -824,7 +793,6 @@ export class BusinessTripImportService {
           departureDate: true,
           returnDate: true,
           purpose: true,
-          ticketClass: true,
         },
       });
       if (!trip) {
@@ -844,7 +812,6 @@ export class BusinessTripImportService {
         ? trip.returnDate.toISOString().slice(0, 10)
         : undefined;
       purpose = trip.purpose;
-      ticketClass = trip.ticketClass;
       base.label = row.passengerEmail.trim() || purpose || label;
       base.tripType = tripType;
       base.originCountry = originCountry;
@@ -854,7 +821,6 @@ export class BusinessTripImportService {
       base.departureDate = departureDate;
       base.returnDate = returnDate;
       base.purpose = purpose;
-      base.ticketClass = ticketClass;
     } else {
       const submitter = await this.resolveUser(
         ctx.companyId,
@@ -933,37 +899,6 @@ export class BusinessTripImportService {
       }
       returnDate = returnResult.value;
 
-      const ticketResult = this.parseEnum(
-        row.ticketClass,
-        TICKET_CLASS_VALUES,
-        'ticketClass',
-      );
-      if (!ticketResult.ok) {
-        return { ...base, status: 'error', message: ticketResult.message };
-      }
-      ticketClass = ticketResult.value;
-
-      const accomResult = this.parseBoolean(row.accommodationRequired, false);
-      if (!accomResult.ok) {
-        return { ...base, status: 'error', message: accomResult.message };
-      }
-      accommodationRequired = accomResult.value ?? true;
-
-      const perDiemResult = this.parseBoolean(row.perDiemRequired, false);
-      if (!perDiemResult.ok) {
-        return { ...base, status: 'error', message: perDiemResult.message };
-      }
-      perDiemRequired = perDiemResult.value ?? true;
-
-      const flightCost = this.parseOptionalNumber(
-        row.estimatedFlightCost,
-        'estimatedFlightCost',
-      );
-      if (!flightCost.ok) {
-        return { ...base, status: 'error', message: flightCost.message };
-      }
-      estimatedFlightCost = flightCost.value;
-
       const accomCost = this.parseOptionalNumber(
         row.estimatedAccommodationCost,
         'estimatedAccommodationCost',
@@ -998,10 +933,11 @@ export class BusinessTripImportService {
       destinationCity = row.destinationCity.trim();
       purpose = row.purpose.trim();
       hostOrganization = row.hostOrganization.trim() || undefined;
-      hostContact = row.hostContact.trim() || undefined;
+      hostContactName = row.hostContactName.trim() || undefined;
+      hostContactPhone = row.hostContactPhone.trim() || undefined;
+      hostContactEmail = row.hostContactEmail.trim() || undefined;
       expectedOutcomes = row.expectedOutcomes.trim() || undefined;
       itinerary = row.itinerary.trim() || undefined;
-      accommodationDetails = row.accommodationDetails.trim() || undefined;
       notes = row.notes.trim() || undefined;
 
       base.tripType = tripType;
@@ -1012,7 +948,6 @@ export class BusinessTripImportService {
       base.departureDate = departureDate;
       base.returnDate = returnDate;
       base.purpose = purpose;
-      base.ticketClass = ticketClass;
     }
 
     const passenger = await this.resolveUser(
@@ -1104,18 +1039,15 @@ export class BusinessTripImportService {
       departureDate,
       returnDate,
       purpose,
-      ticketClass,
       hostOrganization,
-      hostContact,
+      hostContactName,
+      hostContactPhone,
+      hostContactEmail,
       expectedOutcomes,
       itinerary,
-      estimatedFlightCost,
       estimatedAccommodationCost,
       estimatedPerDiem,
       estimatedOtherCost,
-      accommodationRequired,
-      accommodationDetails,
-      perDiemRequired,
       notes,
       passengerId: passenger.id,
       passportNumber,

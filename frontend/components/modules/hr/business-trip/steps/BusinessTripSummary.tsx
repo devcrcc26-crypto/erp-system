@@ -107,12 +107,28 @@ export default function BusinessTripSummary({
           />
         </div>
         {purposeBudget.hostOrganization.trim() ? (
-          <div className="sm:col-span-2">
-            <ReviewItem
-              label={t('hr.labels.host')}
-              value={purposeBudget.hostOrganization}
-            />
-          </div>
+          <ReviewItem
+            label={t('hr.form.hostOrganizationName')}
+            value={purposeBudget.hostOrganization}
+          />
+        ) : null}
+        {purposeBudget.hostContactName.trim() ? (
+          <ReviewItem
+            label={t('hr.form.hostContactName')}
+            value={purposeBudget.hostContactName}
+          />
+        ) : null}
+        {purposeBudget.hostContactPhone.trim() ? (
+          <ReviewItem
+            label={t('hr.form.hostContactPhone')}
+            value={purposeBudget.hostContactPhone}
+          />
+        ) : null}
+        {purposeBudget.hostContactEmail.trim() ? (
+          <ReviewItem
+            label={t('hr.form.hostContactEmail')}
+            value={purposeBudget.hostContactEmail}
+          />
         ) : null}
         <ReviewItem
           label={t('hr.labels.estimatedAccommodation')}

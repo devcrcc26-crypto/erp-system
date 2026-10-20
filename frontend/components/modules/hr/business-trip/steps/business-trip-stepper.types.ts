@@ -19,7 +19,9 @@ export interface BusinessTripDetailsValues {
 export interface BusinessTripPurposeBudgetValues {
   purpose: string;
   hostOrganization: string;
-  hostContact: string;
+  hostContactName: string;
+  hostContactPhone: string;
+  hostContactEmail: string;
   expectedOutcomes: string;
   itinerary: string;
   estimatedAccommodationCost?: number | null;

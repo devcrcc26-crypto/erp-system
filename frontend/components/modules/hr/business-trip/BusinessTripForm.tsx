@@ -19,15 +19,18 @@ import type {
   BusinessTripPurposeBudgetValues,
 } from '@/components/modules/hr/business-trip/steps/business-trip-stepper.types';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { hasDuplicatePassengerIds } from '@/lib/utils/travel-form-validation';
+import {
+  hasDuplicatePassengerIds,
+  notifyFormValidationErrors,
+} from '@/lib/utils/travel-form-validation';
 import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
 import {
   useBusinessTripSelectablePassengers,
   useSubmitBusinessTrip,
 } from '@/lib/query/business-trip';
 import { useCurrentUser } from '@/lib/query/profile';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -49,7 +52,9 @@ const INITIAL_TRIP: BusinessTripDetailsValues = {
 const INITIAL_PURPOSE: BusinessTripPurposeBudgetValues = {
   purpose: '',
   hostOrganization: '',
-  hostContact: '',
+  hostContactName: '',
+  hostContactPhone: '',
+  hostContactEmail: '',
   expectedOutcomes: '',
   itinerary: '',
   estimatedAccommodationCost: null,
@@ -166,9 +171,7 @@ export function BusinessTripForm({
             errors.push(t('hr.validation.roundTripMinDuration'));
           }
           if (errors.length > 0) {
-            for (const error of errors) {
-              messageApi.error(error);
-            }
+            notifyFormValidationErrors(messageApi, errors);
             return false;
           }
           return true;
@@ -183,8 +186,16 @@ export function BusinessTripForm({
           />
         ),
         validate: (): boolean => {
+          const errors: string[] = [];
           if (!purposeBudget.purpose.trim()) {
-            messageApi.error(t('hr.validation.purposeRequiredFlight'));
+            errors.push(t('hr.validation.purposeRequiredFlight'));
+          }
+          const email = purposeBudget.hostContactEmail.trim();
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.push(t('hr.validation.hostContactEmailInvalid'));
+          }
+          if (errors.length > 0) {
+            notifyFormValidationErrors(messageApi, errors);
             return false;
           }
           return true;
@@ -297,7 +308,9 @@ export function BusinessTripForm({
             : undefined,
         purpose: purposeBudget.purpose.trim(),
         hostOrganization: purposeBudget.hostOrganization.trim() || undefined,
-        hostContact: purposeBudget.hostContact.trim() || undefined,
+        hostContactName: purposeBudget.hostContactName.trim() || undefined,
+        hostContactPhone: purposeBudget.hostContactPhone.trim() || undefined,
+        hostContactEmail: purposeBudget.hostContactEmail.trim() || undefined,
         expectedOutcomes: purposeBudget.expectedOutcomes.trim() || undefined,
         itinerary: purposeBudget.itinerary.trim() || undefined,
         estimatedAccommodationCost:
@@ -339,11 +352,11 @@ export function BusinessTripForm({
           type="error"
           showIcon
           className="mb-4"
-          title={
-            submitMutation.error instanceof ApiRequestError
-              ? submitMutation.error.message
-              : t('hr.messages.failedToSubmitBusinessTrip')
-          }
+          title={getFriendlyApiErrorMessage(
+            submitMutation.error,
+            t('hr.messages.failedToSubmitBusinessTrip'),
+            t,
+          )}
         />
       ) : null}
       <StepperForm

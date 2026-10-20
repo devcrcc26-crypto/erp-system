@@ -57,24 +57,14 @@ function normalizeBusinessTripSubmitBody(
   }
 
   for (const key of [
-    'accommodationRequired',
-    'perDiemRequired',
-  ] as const) {
-    const value = next[key];
-    if (typeof value === 'string') {
-      next[key] = value === 'true' || value === '1';
-    }
-  }
-
-  for (const key of [
     'returnDate',
     'notes',
-    'accommodationDetails',
     'hostOrganization',
-    'hostContact',
+    'hostContactName',
+    'hostContactPhone',
+    'hostContactEmail',
     'expectedOutcomes',
     'itinerary',
-    'estimatedFlightCost',
     'estimatedAccommodationCost',
     'estimatedPerDiem',
     'estimatedOtherCost',
@@ -85,6 +75,16 @@ function normalizeBusinessTripSubmitBody(
   }
 
   delete next.files;
+  for (const legacyKey of [
+    'ticketClass',
+    'estimatedFlightCost',
+    'accommodationRequired',
+    'accommodationDetails',
+    'perDiemRequired',
+    'isInternational',
+  ] as const) {
+    delete next[legacyKey];
+  }
   return next;
 }
 
@@ -185,7 +185,6 @@ export class BusinessTripController {
         'destinationCity',
         'departureDate',
         'purpose',
-        'ticketClass',
         'passengers',
       ],
       properties: {
@@ -198,17 +197,14 @@ export class BusinessTripController {
         returnDate: { type: 'string', format: 'date' },
         purpose: { type: 'string' },
         hostOrganization: { type: 'string' },
-        hostContact: { type: 'string' },
+        hostContactName: { type: 'string' },
+        hostContactPhone: { type: 'string' },
+        hostContactEmail: { type: 'string', format: 'email' },
         expectedOutcomes: { type: 'string' },
         itinerary: { type: 'string' },
-        ticketClass: { type: 'string', enum: ['ECONOMY', 'BUSINESS'] },
-        estimatedFlightCost: { type: 'number' },
         estimatedAccommodationCost: { type: 'number' },
         estimatedPerDiem: { type: 'number' },
         estimatedOtherCost: { type: 'number' },
-        accommodationRequired: { type: 'boolean' },
-        accommodationDetails: { type: 'string' },
-        perDiemRequired: { type: 'boolean' },
         notes: { type: 'string' },
         passengers: {
           type: 'string',

@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -142,8 +143,22 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
-  @MaxLength(500)
-  hostContact?: string;
+  @MaxLength(200)
+  hostContactName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(50)
+  hostContactPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsEmail()
+  @MaxLength(320)
+  hostContactEmail?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -267,8 +282,22 @@ export class CreateBusinessTripDraftDto {
   @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
-  @MaxLength(500)
-  hostContact?: string;
+  @MaxLength(200)
+  hostContactName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(50)
+  hostContactPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsEmail()
+  @MaxLength(320)
+  hostContactEmail?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

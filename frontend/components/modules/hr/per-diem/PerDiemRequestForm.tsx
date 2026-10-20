@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, DatePicker, Form, Input, InputNumber, Radio, Select, TimePicker } from 'antd';
+import { Alert, DatePicker, Form, Input, InputNumber, Radio, Result, Select, Switch, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import {
@@ -37,6 +37,8 @@ interface PerDiemFormValues {
   linkedTravel?: string;
   siteAssignmentId?: string;
   notes?: string;
+  requestedDailyRate?: number;
+  rateOverrideReason?: string;
 }
 
 interface PerDiemRequestFormProps {
@@ -65,6 +67,7 @@ export default function PerDiemRequestForm({
   const [form] = Form.useForm<PerDiemFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [rateOverride, setRateOverride] = useState(false);
 
   const ratesQuery = useActiveEmployeePerDiemCategories(onBehalf.employeeId);
   const flightsQuery = useFlightApplications(
@@ -131,6 +134,13 @@ export default function PerDiemRequestForm({
     formValues?.days != null && formValues.days > 0 ? formValues.days : 0;
 
   const totalAmount = selectedRate ? Number(selectedRate.dailyRate) * days : 0;
+
+  const requestedDailyRate = formValues?.requestedDailyRate;
+  const configuredDailyRate = selectedRate ? Number(selectedRate.dailyRate) : 0;
+  const requestedTotal =
+    rateOverride && requestedDailyRate != null && requestedDailyRate > configuredDailyRate && days > 0
+      ? requestedDailyRate * days
+      : null;
 
   const travelOptions = useMemo(
     () => [
@@ -336,6 +346,20 @@ export default function PerDiemRequestForm({
 
     const [kind, id] = values.linkedTravel?.split(':') ?? [];
 
+    const overrideRate =
+      rateOverride &&
+      values.requestedDailyRate != null &&
+      values.requestedDailyRate > Number(rate.dailyRate)
+        ? values.requestedDailyRate
+        : undefined;
+
+    if (overrideRate != null && !values.rateOverrideReason?.trim()) {
+      messageApi.warning(
+        t('hr.validation.rateOverrideReasonRequired', 'Please provide a reason for the rate increase.'),
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const span = calcInclusiveCalendarDays(
@@ -368,6 +392,8 @@ export default function PerDiemRequestForm({
             ? values.siteAssignmentId
             : undefined,
         notes: values.notes?.trim() || undefined,
+        requestedDailyRate: overrideRate,
+        rateOverrideReason: overrideRate != null ? values.rateOverrideReason?.trim() || undefined : undefined,
       });
       messageApi.success(t('hr.messages.perDiemSubmitted'));
       onSuccess(created);
@@ -398,6 +424,13 @@ export default function PerDiemRequestForm({
           value={formatEtbAmount(totalAmount)}
           emphasize
         />
+        {requestedTotal != null ? (
+          <EstimateItem
+            label={t('hr.perDiem.requestedTotal', 'Requested total')}
+            value={formatEtbAmount(requestedTotal)}
+            emphasize
+          />
+        ) : null}
       </div>
     ) : null;
 
@@ -609,6 +642,83 @@ export default function PerDiemRequestForm({
               />
             </Form.Item>
 
+            <div className="flex items-center gap-3 pt-2">
+              <Switch
+                checked={rateOverride}
+                onChange={(checked) => {
+                  setRateOverride(checked);
+                  if (!checked) {
+                    form.setFieldsValue({ requestedDailyRate: undefined, rateOverrideReason: undefined });
+                  }
+                }}
+                size="small"
+              />
+              <span className="text-sm" style={{ color: tokens.colorTextSecondary }}>
+                {t('hr.perDiem.requestDifferentRate', 'Request a different rate?')}
+              </span>
+            </div>
+
+            {rateOverride ? (
+              <div className="mt-4 flex flex-col gap-4 rounded-md border border-[rgba(0,0,0,0.08)] p-4">
+                <Form.Item
+                  name="requestedDailyRate"
+                  label={t('hr.perDiem.requestedDailyRate', 'Requested daily rate')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.enterRequestedDailyRate', 'Please enter the requested daily rate'),
+                    },
+                    {
+                      validator: async (_, value: number | null | undefined) => {
+                        if (value == null) return;
+                        if (value <= configuredDailyRate) {
+                          throw new Error(
+                            t('hr.validation.requestedRateMustExceedConfigured', {
+                              rate: formatEtbAmount(configuredDailyRate),
+                            }, `Rate must be greater than the configured rate (${formatEtbAmount(configuredDailyRate)})`),
+                          );
+                        }
+                      },
+                    },
+                  ]}
+                  extra={
+                    selectedRate
+                      ? t('hr.perDiem.configuredRateHint', {
+                          rate: formatEtbAmount(selectedRate.dailyRate),
+                          currency: selectedRate.currency,
+                        }, `Configured rate: ${formatEtbAmount(selectedRate.dailyRate)} ${selectedRate.currency}`)
+                      : undefined
+                  }
+                >
+                  <InputNumber
+                    min={configuredDailyRate + 0.01}
+                    step={1}
+                    precision={2}
+                    className="w-full"
+                    addonAfter={selectedRate?.currency ?? 'ETB'}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="rateOverrideReason"
+                  label={t('hr.perDiem.rateOverrideReason', 'Reason for rate increase')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.rateOverrideReasonRequired', 'Please provide a reason for the rate increase'),
+                    },
+                  ]}
+                >
+                  <Input.TextArea
+                    rows={3}
+                    maxLength={1000}
+                    showCount
+                    placeholder={t('hr.perDiem.rateOverrideReasonPlaceholder', 'Explain why a higher rate is needed…')}
+                  />
+                </Form.Item>
+              </div>
+            ) : null}
+
             {estimateBlock}
           </FormLayout>
         ),
@@ -696,6 +806,18 @@ export default function PerDiemRequestForm({
                   value={formValues.notes.trim()}
                 />
               ) : null}
+              {rateOverride && requestedDailyRate != null && requestedDailyRate > configuredDailyRate ? (
+                <ReviewItem
+                  label={t('hr.perDiem.requestedDailyRate', 'Requested daily rate')}
+                  value={formatEtbAmount(requestedDailyRate)}
+                />
+              ) : null}
+              {rateOverride && formValues?.rateOverrideReason?.trim() ? (
+                <ReviewItem
+                  label={t('hr.perDiem.rateOverrideReason', 'Reason for rate increase')}
+                  value={formValues.rateOverrideReason.trim()}
+                />
+              ) : null}
             </div>
             {estimateBlock}
           </FormLayout>
@@ -723,8 +845,27 @@ export default function PerDiemRequestForm({
       days,
       selectedRate,
       totalAmount,
+      rateOverride,
+      requestedDailyRate,
+      configuredDailyRate,
+      requestedTotal,
     ],
   );
+
+  if (noActiveRates) {
+    return (
+      <div className="erp-pro-card erp-per-diem-no-rate">
+        <Result
+          status="warning"
+          title={t('hr.perDiem.noRateTitle', 'No per diem rate assigned')}
+          subTitle={t(
+            'hr.perDiem.noRateSubtitle',
+            'You do not have a per diem rate configured. Please contact HR to have your rate set up before submitting a per diem request.',
+          )}
+        />
+      </div>
+    );
+  }
 
   return (
     <Form<PerDiemFormValues>

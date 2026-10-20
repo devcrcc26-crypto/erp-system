@@ -67,7 +67,13 @@ function normalizeFlightSubmitBody(
     }
   }
 
-  for (const key of ['returnDate', 'notes', 'accommodationDetails'] as const) {
+  for (const key of [
+    'returnDate',
+    'notes',
+    'accommodationDetails',
+    'linkedBusinessTripId',
+    'siteAssignmentId',
+  ] as const) {
     if (next[key] === '') {
       next[key] = undefined;
     }

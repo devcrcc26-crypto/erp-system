@@ -1,4 +1,5 @@
 import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
+import { formatUserValidationFromDetails } from '@/lib/utils/api-validation-details';
 import {
   normalizeEpcLocale,
   translateEpcWithVars,
@@ -143,6 +144,17 @@ function messageForCode(code: string, t: TFn): string | null {
  * Turns API / network failures into short plain-language copy for end users.
  * Keeps clear API messages; maps technical / status failures to friendly text.
  */
+function validationDetailMessage(
+  apiError: ApiRequestError,
+  t: TFn,
+): string | null {
+  return formatUserValidationFromDetails(apiError.details, t);
+}
+
+function isGenericValidationMessage(message: string): boolean {
+  return /^validation failed$/i.test(message.trim());
+}
+
 export function getFriendlyApiErrorMessage(
   error: unknown,
   fallback?: string,
@@ -151,8 +163,16 @@ export function getFriendlyApiErrorMessage(
   const apiError =
     error instanceof ApiRequestError ? error : toApiRequestError(error);
 
+  const fromDetails = validationDetailMessage(apiError, t);
+  if (fromDetails && isGenericValidationMessage(apiError.message)) {
+    return fromDetails;
+  }
+
   const softened = softenApiMessage(apiError.message, t);
   if (softened) {
+    if (isGenericValidationMessage(softened)) {
+      return fromDetails ?? t('errors.api.validation');
+    }
     return softened;
   }
 

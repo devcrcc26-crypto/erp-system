@@ -319,11 +319,13 @@ export class NotificationService {
     });
 
     const ids = unread
-      .filter(
-        (row): row is { id: string; link: string } =>
-          Boolean(row.link) &&
-          notificationLinkMatchesRoute(row.link, trimmed),
-      )
+      .filter((row) => {
+        const link = row.link;
+        return (
+          link != null &&
+          notificationLinkMatchesRoute(link, trimmed)
+        );
+      })
       .map((row) => row.id);
 
     if (ids.length === 0) {

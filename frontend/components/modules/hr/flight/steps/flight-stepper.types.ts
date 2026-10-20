@@ -35,5 +35,7 @@ export interface FlightAdditionalValues {
   accommodationDetails: string;
   perDiemRequired: boolean;
   notes: string;
+  linkedBusinessTripId?: string;
+  siteAssignmentId?: string;
   files: File[];
 }

@@ -3,11 +3,10 @@
 import { Alert, Skeleton } from 'antd';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip/BusinessTripCurrentStepBanner';
+import BusinessTripHostMetaItems from '@/components/modules/hr/business-trip/BusinessTripHostMetaItems';
+import { hasBusinessTripHostDetails } from '@/lib/utils/business-trip-host-display';
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
-import {
-  MetaItem,
-  SectionCard,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import {
   TicketAcknowledgementCard,
   TravelBudgetBreakdown,
@@ -29,7 +28,6 @@ import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatBusinessTripSubmitterName,
   formatEtb,
-  formatTicketClass,
   formatTripType,
   formatVisaStatus,
   tripTypeVariant,
@@ -119,8 +117,7 @@ export default function BusinessTripDetail({
 
   const hasPurposeContent =
     Boolean(trip.purpose) ||
-    Boolean(trip.hostOrganization) ||
-    Boolean(trip.hostContact) ||
+    hasBusinessTripHostDetails(trip) ||
     Boolean(trip.expectedOutcomes) ||
     Boolean(trip.itinerary);
 
@@ -159,7 +156,6 @@ export default function BusinessTripDetail({
           }}
           departureDate={trip.departureDate}
           returnDate={trip.returnDate}
-          ticketClassLabel={formatTicketClass(trip.ticketClass, t)}
           passengerCount={trip.passengerCount}
           extraFact={{
             label: t('hr.labels.estimatedTotal'),
@@ -183,22 +179,7 @@ export default function BusinessTripDetail({
       {hasPurposeContent ? (
         <SectionCard title={t('hr.labels.purposeHost')}>
           <div className="flex flex-col gap-4">
-            {trip.hostOrganization || trip.hostContact ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {trip.hostOrganization ? (
-                  <MetaItem label={t('hr.labels.organization')}>
-                    <span className="erp-users-cell-strong">
-                      {trip.hostOrganization}
-                    </span>
-                  </MetaItem>
-                ) : null}
-                {trip.hostContact ? (
-                  <MetaItem label={t('hr.labels.contact')}>
-                    {trip.hostContact}
-                  </MetaItem>
-                ) : null}
-              </div>
-            ) : null}
+            <BusinessTripHostMetaItems trip={trip} />
             <TravelTextBlock label={t('hr.labels.purpose')} text={trip.purpose} />
             <TravelTextBlock
               label={t('hr.labels.expectedOutcomes')}

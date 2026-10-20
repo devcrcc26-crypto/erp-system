@@ -77,6 +77,10 @@ export interface FlightApplicationDetail extends FlightApplicationListItem {
   accommodationDetails?: string | null;
   perDiemRequired: boolean;
   notes?: string | null;
+  linkedBusinessTripId?: string | null;
+  linkedBusinessTripNumber?: string | null;
+  siteAssignmentId?: string | null;
+  siteAssignmentReference?: string | null;
   combinedTicket?: FlightDocumentSummary | null;
   combinedTickets?: FlightDocumentSummary[];
   passengers: FlightPassenger[];
@@ -118,6 +122,8 @@ export interface SubmitFlightApplicationPayload extends OnBehalfPayload {
   accommodationDetails?: string;
   perDiemRequired: boolean;
   notes?: string;
+  linkedBusinessTripId?: string;
+  siteAssignmentId?: string;
   passengers: SubmitFlightPassengerPayload[];
   files?: File[];
 }

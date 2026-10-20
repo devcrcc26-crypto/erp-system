@@ -45,10 +45,14 @@ export default function FlightSummary({
   tripDetails,
   passengers,
   additional,
+  linkedBusinessTripLabel,
+  linkedSiteAssignmentLabel,
 }: {
   tripDetails: FlightTripDetailsValues;
   passengers: FlightPassengerValues[];
   additional: FlightAdditionalValues;
+  linkedBusinessTripLabel?: string;
+  linkedSiteAssignmentLabel?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -145,6 +149,22 @@ export default function FlightSummary({
               : t('hr.labels.notRequired')
           }
         />
+        {additional.linkedBusinessTripId && linkedBusinessTripLabel ? (
+          <div className="sm:col-span-2">
+            <ReviewItem
+              label={t('hr.labels.businessTrip')}
+              value={linkedBusinessTripLabel}
+            />
+          </div>
+        ) : null}
+        {additional.siteAssignmentId && linkedSiteAssignmentLabel ? (
+          <div className="sm:col-span-2">
+            <ReviewItem
+              label={t('hr.form.linkedSiteAssignment')}
+              value={linkedSiteAssignmentLabel}
+            />
+          </div>
+        ) : null}
         {additional.notes.trim() ? (
           <div className="sm:col-span-2">
             <ReviewItem

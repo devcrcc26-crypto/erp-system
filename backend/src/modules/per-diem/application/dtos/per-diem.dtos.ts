@@ -102,6 +102,16 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  requestedDailyRate?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  rateOverrideReason?: string;
 }
 
 export class MarkPerDiemPaidDto {

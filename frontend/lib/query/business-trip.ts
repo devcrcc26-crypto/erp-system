@@ -188,21 +188,20 @@ export function useSubmitBusinessTrip() {
       if (payload.hostOrganization) {
         formData.append('hostOrganization', payload.hostOrganization);
       }
-      if (payload.hostContact) {
-        formData.append('hostContact', payload.hostContact);
+      if (payload.hostContactName) {
+        formData.append('hostContactName', payload.hostContactName);
+      }
+      if (payload.hostContactPhone) {
+        formData.append('hostContactPhone', payload.hostContactPhone);
+      }
+      if (payload.hostContactEmail) {
+        formData.append('hostContactEmail', payload.hostContactEmail);
       }
       if (payload.expectedOutcomes) {
         formData.append('expectedOutcomes', payload.expectedOutcomes);
       }
       if (payload.itinerary) {
         formData.append('itinerary', payload.itinerary);
-      }
-      formData.append('ticketClass', payload.ticketClass);
-      if (payload.estimatedFlightCost != null) {
-        formData.append(
-          'estimatedFlightCost',
-          String(payload.estimatedFlightCost),
-        );
       }
       if (payload.estimatedAccommodationCost != null) {
         formData.append(
@@ -219,14 +218,6 @@ export function useSubmitBusinessTrip() {
           String(payload.estimatedOtherCost),
         );
       }
-      formData.append(
-        'accommodationRequired',
-        String(payload.accommodationRequired),
-      );
-      if (payload.accommodationDetails) {
-        formData.append('accommodationDetails', payload.accommodationDetails);
-      }
-      formData.append('perDiemRequired', String(payload.perDiemRequired));
       if (payload.notes) {
         formData.append('notes', payload.notes);
       }

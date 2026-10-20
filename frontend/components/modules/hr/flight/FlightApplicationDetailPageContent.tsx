@@ -23,6 +23,7 @@ import {
   TravelTextBlock,
   type PassengerTicketState,
 } from '@/components/modules/hr/shared/TravelDetailParts';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -397,6 +398,38 @@ export default function FlightApplicationDetailPageContent({
                   label={t('hr.labels.notes')}
                   text={application.notes}
                 />
+                {application.linkedBusinessTripId ? (
+                  <MetaItem label={t('hr.labels.businessTrip')}>
+                    <button
+                      type="button"
+                      className="erp-users-id-chip"
+                      onClick={() =>
+                        router.push(
+                          `/hr/business-trips/${application.linkedBusinessTripId}`,
+                        )
+                      }
+                    >
+                      {application.linkedBusinessTripNumber ??
+                        application.linkedBusinessTripId}
+                    </button>
+                  </MetaItem>
+                ) : null}
+                {application.siteAssignmentId ? (
+                  <MetaItem label={t('hr.form.linkedSiteAssignment')}>
+                    <button
+                      type="button"
+                      className="erp-users-id-chip"
+                      onClick={() =>
+                        router.push(
+                          `/hr/site-assignments/${application.siteAssignmentId}`,
+                        )
+                      }
+                    >
+                      {application.siteAssignmentReference ??
+                        application.siteAssignmentId}
+                    </button>
+                  </MetaItem>
+                ) : null}
               </TravelRequirements>
             </DetailSection>
 

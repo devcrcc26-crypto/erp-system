@@ -45,7 +45,9 @@ export interface BusinessTripPdfLabels {
   ticketClass: string;
   purpose: string;
   hostOrganization: string;
-  hostContact: string;
+  hostContactName: string;
+  hostContactPhone: string;
+  hostContactEmail: string;
   expectedOutcomes: string;
   itinerary: string;
   notes: string;
@@ -198,7 +200,9 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   const purposeBody: string[][] = [
     [labels.purpose, dash(trip.purpose)],
     [labels.hostOrganization, dash(trip.hostOrganization)],
-    [labels.hostContact, dash(trip.hostContact)],
+    [labels.hostContactName, dash(trip.hostContactName)],
+    [labels.hostContactPhone, dash(trip.hostContactPhone)],
+    [labels.hostContactEmail, dash(trip.hostContactEmail)],
   ];
   if (trip.expectedOutcomes?.trim()) {
     purposeBody.push([labels.expectedOutcomes, trip.expectedOutcomes.trim()]);

@@ -314,6 +314,11 @@ export class PerDiemService
           days,
           totalDays,
           dailyRate: new Prisma.Decimal(dailyRate),
+          requestedDailyRate:
+            dto.requestedDailyRate != null
+              ? new Prisma.Decimal(dto.requestedDailyRate)
+              : null,
+          rateOverrideReason: dto.rateOverrideReason?.trim() || null,
           currency: SupportedCurrency.ETB,
           totalAmount: new Prisma.Decimal(totalAmount),
           totalAmountEtb: new Prisma.Decimal(totalAmountEtb),

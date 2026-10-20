@@ -17,15 +17,20 @@ import type {
   FlightTripDetailsValues,
 } from '@/components/modules/hr/flight/steps/flight-stepper.types';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { hasDuplicatePassengerIds } from '@/lib/utils/travel-form-validation';
+import {
+  hasDuplicatePassengerIds,
+  notifyFormValidationErrors,
+} from '@/lib/utils/travel-form-validation';
 import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 import {
   useSelectablePassengers,
   useSubmitFlightApplication,
 } from '@/lib/query/flight';
+import { useBusinessTrips } from '@/lib/query/business-trip';
+import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { useCurrentUser } from '@/lib/query/profile';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -69,6 +74,14 @@ export function FlightApplicationForm({
   const currentUser = useCurrentUser();
   const passengersQuery = useSelectablePassengers();
   const submitMutation = useSubmitFlightApplication();
+  const approvedTripsQuery = useBusinessTrips(
+    { status: 'APPROVED', limit: 50 },
+    true,
+  );
+  const siteAssignmentsQuery = useEmployeeSiteAssignments(
+    onBehalf.effectiveEmployeeId,
+    Boolean(onBehalf.effectiveEmployeeId),
+  );
 
   const [tripDetails, setTripDetails] =
     useState<FlightTripDetailsValues>(INITIAL_TRIP);
@@ -76,6 +89,30 @@ export function FlightApplicationForm({
   const [additional, setAdditional] =
     useState<FlightAdditionalValues>(INITIAL_ADDITIONAL);
   const [seededSelf, setSeededSelf] = useState(false);
+
+  const linkedBusinessTripLabel = useMemo(() => {
+    if (!additional.linkedBusinessTripId) {
+      return undefined;
+    }
+    const trip = approvedTripsQuery.data?.data.find(
+      (row) => row.id === additional.linkedBusinessTripId,
+    );
+    return trip
+      ? `${trip.tripNumber} - ${trip.destinationCity}`
+      : additional.linkedBusinessTripId;
+  }, [additional.linkedBusinessTripId, approvedTripsQuery.data?.data]);
+
+  const linkedSiteAssignmentLabel = useMemo(() => {
+    if (!additional.siteAssignmentId) {
+      return undefined;
+    }
+    const row = (siteAssignmentsQuery.data ?? []).find(
+      (assignment) => assignment.id === additional.siteAssignmentId,
+    );
+    return row
+      ? `${row.requestNumber} - ${row.siteName}`
+      : additional.siteAssignmentId;
+  }, [additional.siteAssignmentId, siteAssignmentsQuery.data]);
 
   useEffect(() => {
     if (seededSelf || !currentUser.data?.id || !passengersQuery.data) {
@@ -173,9 +210,7 @@ export function FlightApplicationForm({
             errors.push(t('hr.validation.purposeRequiredFlight'));
           }
           if (errors.length > 0) {
-            for (const error of errors) {
-              messageApi.error(error);
-            }
+            notifyFormValidationErrors(messageApi, errors);
             return false;
           }
           return true;
@@ -225,11 +260,14 @@ export function FlightApplicationForm({
               values={additional}
               onChange={setAdditional}
               disabled={submitMutation.isPending}
+              effectiveEmployeeId={onBehalf.effectiveEmployeeId}
             />
             <FlightSummary
               tripDetails={tripDetails}
               passengers={passengers}
               additional={additional}
+              linkedBusinessTripLabel={linkedBusinessTripLabel}
+              linkedSiteAssignmentLabel={linkedSiteAssignmentLabel}
             />
           </div>
         ),
@@ -263,6 +301,8 @@ export function FlightApplicationForm({
       tripDetails,
       passengers,
       additional,
+      linkedBusinessTripLabel,
+      linkedSiteAssignmentLabel,
       selectablePassengers,
       passengersQuery.isLoading,
       submitMutation.isPending,
@@ -310,6 +350,8 @@ export function FlightApplicationForm({
           : undefined,
         perDiemRequired: additional.perDiemRequired,
         notes: additional.notes.trim() || undefined,
+        linkedBusinessTripId: additional.linkedBusinessTripId,
+        siteAssignmentId: additional.siteAssignmentId,
         passengers: passengers.map((p) => ({
           employeeId: p.employeeId,
           passportNumber: p.passportNumber?.trim() || undefined,
@@ -341,11 +383,11 @@ export function FlightApplicationForm({
           type="error"
           showIcon
           className="mb-4"
-          title={
-            submitMutation.error instanceof ApiRequestError
-              ? submitMutation.error.message
-              : t('hr.messages.failedToSubmitFlightApplication')
-          }
+          title={getFriendlyApiErrorMessage(
+            submitMutation.error,
+            t('hr.messages.failedToSubmitFlightApplication'),
+            t,
+          )}
         />
       ) : null}
       <StepperForm

@@ -74,7 +74,9 @@ export interface BusinessTripListItem {
 export interface BusinessTripDetail extends BusinessTripListItem {
   purpose: string;
   hostOrganization?: string | null;
-  hostContact?: string | null;
+  hostContactName?: string | null;
+  hostContactPhone?: string | null;
+  hostContactEmail?: string | null;
   expectedOutcomes?: string | null;
   itinerary?: string | null;
   estimatedAccommodationCost?: number | null;
@@ -119,7 +121,9 @@ export interface SubmitBusinessTripPayload extends OnBehalfPayload {
   returnDate?: string;
   purpose: string;
   hostOrganization?: string;
-  hostContact?: string;
+  hostContactName?: string;
+  hostContactPhone?: string;
+  hostContactEmail?: string;
   expectedOutcomes?: string;
   itinerary?: string;
   estimatedAccommodationCost?: number;

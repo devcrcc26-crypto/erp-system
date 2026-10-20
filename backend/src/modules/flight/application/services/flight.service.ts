@@ -11,12 +11,14 @@ import {
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
+  BusinessTripStatus,
   FlightAcknowledgementStatus,
   FlightApplicationStatus,
   FlightTripType,
   FolderContextType,
   Prisma,
   RequestInitiatorType,
+  SiteAssignmentStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -95,6 +97,8 @@ const FLIGHT_DETAIL_INCLUDE = {
       },
     },
   },
+  linkedBusinessTrip: { select: { id: true, tripNumber: true } },
+  siteAssignment: { select: { id: true, requestNumber: true } },
 } as const;
 
 /**
@@ -193,6 +197,9 @@ export class FlightService
       skipBusinessTripConflicts: true,
     });
 
+    const { linkedBusinessTripId, siteAssignmentId } =
+      await this.resolveOptionalFlightLinks(dto, companyId, employeeId);
+
     // --- Resolve approval chain ---
     let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
       employeeId,
@@ -235,6 +242,8 @@ export class FlightService
                 dto.accommodationDetails?.trim() || null,
               perDiemRequired: dto.perDiemRequired ?? false,
               notes: dto.notes?.trim() || null,
+              linkedBusinessTripId,
+              siteAssignmentId,
               status: FlightApplicationStatus.APPROVED,
               submittedAt: now,
               completedAt: now,
@@ -349,6 +358,8 @@ export class FlightService
                 dto.accommodationDetails?.trim() || null,
               perDiemRequired: dto.perDiemRequired ?? false,
               notes: dto.notes?.trim() || null,
+              linkedBusinessTripId,
+              siteAssignmentId,
               status: FlightApplicationStatus.SUBMITTED,
               approvalRequestId: approval.id,
               submittedAt: now,
@@ -732,9 +743,30 @@ export class FlightService
         orderBy: { createdAt: 'desc' },
       });
       if (existing) {
+        if (
+          dto.linkedBusinessTripId !== undefined ||
+          dto.siteAssignmentId !== undefined
+        ) {
+          const links = await this.resolveOptionalFlightLinks(
+            dto,
+            companyId,
+            submitterId,
+          );
+          await this.prisma.flightApplication.update({
+            where: { id: existing.id },
+            data: {
+              linkedBusinessTripId: links.linkedBusinessTripId,
+              siteAssignmentId: links.siteAssignmentId,
+              updatedBy: actorUserId,
+            },
+          });
+        }
         return existing;
       }
     }
+
+    const { linkedBusinessTripId, siteAssignmentId } =
+      await this.resolveOptionalFlightLinks(dto, companyId, submitterId);
 
     const applicationNumber = await this.nextApplicationNumber();
     const app = await this.prisma.flightApplication.create({
@@ -756,6 +788,8 @@ export class FlightService
         accommodationDetails: dto.accommodationDetails?.trim() || null,
         perDiemRequired: dto.perDiemRequired ?? false,
         notes: dto.notes?.trim() || null,
+        linkedBusinessTripId,
+        siteAssignmentId,
         status: FlightApplicationStatus.DRAFT,
         createdBy: actorUserId,
         updatedBy: actorUserId,
@@ -2002,9 +2036,30 @@ export class FlightService
       }
     }
 
+    const linkedBusinessTrip = row.linkedBusinessTrip as
+      | { id: string; tripNumber: string }
+      | null
+      | undefined;
+    const siteAssignment = row.siteAssignment as
+      | { id: string; requestNumber: string }
+      | null
+      | undefined;
+
+    const {
+      linkedBusinessTrip: _linkedTrip,
+      siteAssignment: _siteAssignment,
+      ...rest
+    } = row;
+
     return {
-      ...row,
+      ...rest,
       documents,
+      linkedBusinessTripId:
+        (row.linkedBusinessTripId as string | null | undefined) ?? null,
+      linkedBusinessTripNumber: linkedBusinessTrip?.tripNumber ?? null,
+      siteAssignmentId:
+        (row.siteAssignmentId as string | null | undefined) ?? null,
+      siteAssignmentReference: siteAssignment?.requestNumber ?? null,
       passengerCount:
         typeof row.passengerCount === 'number'
           ? row.passengerCount
@@ -2012,6 +2067,67 @@ export class FlightService
       needsTicketAttachment,
       currentStepLabel,
     };
+  }
+
+  /**
+   * Validates optional business-trip / site-assignment links for the submitter.
+   */
+  private async resolveOptionalFlightLinks(
+    dto: Pick<
+      SubmitFlightApplicationDto,
+      'linkedBusinessTripId' | 'siteAssignmentId'
+    >,
+    companyId: string,
+    employeeId: string,
+  ): Promise<{
+    linkedBusinessTripId: string | null;
+    siteAssignmentId: string | null;
+  }> {
+    if (dto.linkedBusinessTripId && dto.siteAssignmentId) {
+      throw new BadRequestException(
+        'Only one of linkedBusinessTripId or siteAssignmentId may be set',
+      );
+    }
+
+    let linkedBusinessTripId: string | null = null;
+    if (dto.linkedBusinessTripId) {
+      const trip = await this.prisma.businessTrip.findFirst({
+        where: activeOnly({
+          id: dto.linkedBusinessTripId,
+          companyId,
+          submittedBy: employeeId,
+          status: BusinessTripStatus.APPROVED,
+        }),
+        select: { id: true },
+      });
+      if (!trip) {
+        throw new BadRequestException(
+          'linkedBusinessTripId must reference an approved business trip for this employee',
+        );
+      }
+      linkedBusinessTripId = trip.id;
+    }
+
+    let siteAssignmentId: string | null = null;
+    if (dto.siteAssignmentId) {
+      const assignment = await this.prisma.siteAssignment.findFirst({
+        where: activeOnly({
+          id: dto.siteAssignmentId,
+          companyId,
+          employeeId,
+          status: SiteAssignmentStatus.APPROVED,
+        }),
+        select: { id: true },
+      });
+      if (!assignment) {
+        throw new BadRequestException(
+          'siteAssignmentId must reference an approved site assignment for this employee',
+        );
+      }
+      siteAssignmentId = assignment.id;
+    }
+
+    return { linkedBusinessTripId, siteAssignmentId };
   }
 
   /**

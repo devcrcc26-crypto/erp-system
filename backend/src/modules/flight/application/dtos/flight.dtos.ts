@@ -163,6 +163,18 @@ export class SubmitFlightApplicationDto extends OnBehalfSubmissionDto {
   @MaxLength(4000)
   notes?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  linkedBusinessTripId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  siteAssignmentId?: string;
+
   @ApiProperty({ type: [FlightPassengerDto] })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
@@ -268,6 +280,18 @@ export class CreateFlightDraftDto {
   @IsString()
   @MaxLength(4000)
   notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  linkedBusinessTripId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  siteAssignmentId?: string;
 }
 
 export class ListFlightApplicationsDto {
