@@ -506,7 +506,16 @@
       "tabs": {
         "pendingMyAction": "待我处理",
         "myRequests": "我的申请",
-        "allRequests": "全部申请"
+        "allRequests": "全部申请",
+        "myDrafts": "我的草稿"
+      },
+      "drafts": {
+        "filterByModule": "全部模块",
+        "empty": "暂无草稿",
+        "number": "编号",
+        "module": "模块",
+        "description": "说明",
+        "lastModified": "最后修改"
       }
     },
     "hr": {

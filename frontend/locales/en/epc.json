@@ -506,7 +506,16 @@
       "tabs": {
         "pendingMyAction": "Pending My Action",
         "myRequests": "My Requests",
-        "allRequests": "All Requests"
+        "allRequests": "All Requests",
+        "myDrafts": "My Drafts"
+      },
+      "drafts": {
+        "filterByModule": "All modules",
+        "empty": "No drafts",
+        "number": "Number",
+        "module": "Module",
+        "description": "Description",
+        "lastModified": "Last Modified"
       }
     },
     "hr": {
@@ -617,6 +626,7 @@
         "balancesExportSheetName": "Leave Balances",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -1784,6 +1794,7 @@
         "pdfOverview": "Request Overview",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -1823,6 +1834,7 @@
         "pdfOverview": "Requisition Overview",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -1847,6 +1859,7 @@
         "permitPlural": "permits",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -1892,6 +1905,7 @@
         "pdfOverview": "Requisition Overview",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -1937,6 +1951,7 @@
         "exportSheetName": "Per Diem Requests",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -2017,6 +2032,7 @@
         "applicationPlural": "applications",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -2040,6 +2056,7 @@
         "requestPlural": "requests",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -2136,6 +2153,7 @@
         "requestPlural": "requests",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"
@@ -2159,6 +2177,7 @@
         "requestPlural": "requests",
         "stats": {
           "total": "Total",
+          "draft": "Draft",
           "pending": "Pending",
           "approved": "Approved",
           "rejected": "Rejected"

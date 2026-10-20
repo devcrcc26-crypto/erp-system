@@ -57,6 +57,7 @@ import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import {PayrollModule} from './modules/payroll/payroll.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { PolicySettingsModule } from './modules/policy-settings/policy-settings.module';
+import { DraftsModule } from './modules/drafts/drafts.module';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { PolicySettingsModule } from './modules/policy-settings/policy-settings.
     PayrollModule,
     AnnouncementsModule,
     PolicySettingsModule,
+    DraftsModule,
   ],
   controllers: [AppController],
   providers: [

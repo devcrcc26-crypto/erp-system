@@ -17,6 +17,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FormOutlined,
   InboxOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -62,10 +63,22 @@ import {
 } from '@/lib/utils/approvals-list-filter';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import type { DraftModule } from '@/lib/api/drafts.types';
+import { useMyDrafts } from '@/lib/query/drafts';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+import { DraftsPanel } from './DraftsPanel';
 
-type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
+type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL' | 'MY_DRAFTS';
+
+type ApprovalInbox = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
+
+function toApprovalInbox(tab: InboxTab): ApprovalInbox {
+  if (tab === 'MY_DRAFTS') {
+    return 'MY_REQUESTS';
+  }
+  return tab;
+}
 
 const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2 ${LIST_PAGE_V2}`;
 
@@ -166,9 +179,13 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusMode, setStatusMode] = useState<ApprovalStatusMode>('all');
   const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [draftModule, setDraftModule] = useState<DraftModule | undefined>();
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  const isDraftsInbox = inbox === 'MY_DRAFTS';
+  const draftsQuery = useMyDrafts(isDraftsInbox, draftModule);
 
   useSetHeaderExtra(null);
 
@@ -179,7 +196,10 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   }, [inbox, isFullAccess]);
 
   const categoriesQuery = useApprovalCategories();
-  const listQuery = useApprovalRequestsAll({ inbox }, true);
+  const listQuery = useApprovalRequestsAll(
+    { inbox: toApprovalInbox(inbox) },
+    !isDraftsInbox,
+  );
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
@@ -412,7 +432,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
     [currentUserId, inbox, isNarrow, t],
   );
 
-  if (listQuery.isLoading && !listQuery.data) {
+  if (!isDraftsInbox && listQuery.isLoading && !listQuery.data) {
     return (
       <div className={PAGE_ROOT}>
         <div className="erp-pro-card flex justify-center p-12">
@@ -481,9 +501,45 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               <span>{t('pages.approvals.tabs.allRequests')}</span>
             </button>
           ) : null}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={inbox === 'MY_DRAFTS'}
+            onClick={() => {
+              setInbox('MY_DRAFTS');
+              resetPage();
+            }}
+          >
+            <FormOutlined aria-hidden />
+            <span>{t('pages.approvals.tabs.myDrafts')}</span>
+          </button>
         </div>
       </div>
 
+      {isDraftsInbox ? (
+        <>
+          {draftsQuery.isError ? (
+            <ErpNotice
+              tone="error"
+              className="mb-4"
+              title={getFriendlyApiErrorMessage(
+                draftsQuery.error,
+                t('pages.approvals.failedToLoad'),
+                t,
+              )}
+            />
+          ) : null}
+          <div className="erp-pro-card">
+            <DraftsPanel
+              items={draftsQuery.data ?? []}
+              isLoading={draftsQuery.isLoading}
+              module={draftModule}
+              onModuleChange={setDraftModule}
+            />
+          </div>
+        </>
+      ) : (
+        <>
       <div className="erp-users-stat-bar">
         <ApprovalsStat
           label={t('pages.approvals.stats.total')}
@@ -649,6 +705,8 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           />
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

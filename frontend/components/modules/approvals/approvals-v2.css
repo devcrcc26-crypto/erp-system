@@ -94,6 +94,82 @@
   line-height: 1;
 }
 
+/* ── My drafts panel ── */
+
+.erp-approvals-v2 .erp-drafts-panel {
+  padding: 20px 24px 24px;
+}
+
+.erp-approvals-v2 .erp-drafts-filters {
+  margin-bottom: 16px;
+}
+
+.erp-approvals-v2 .erp-drafts-module-select {
+  min-width: 220px;
+}
+
+.erp-approvals-v2 .erp-drafts-loading,
+.erp-approvals-v2 .erp-drafts-empty {
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+.erp-approvals-v2 .erp-drafts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.erp-approvals-v2 .erp-drafts-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--ap2-text-secondary, #6b7280);
+  border-bottom: 1px solid var(--ap2-border, #e5e7eb);
+  background: #fafafa;
+}
+
+.erp-approvals-v2 .erp-drafts-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--ap2-border, #e5e7eb);
+  vertical-align: top;
+}
+
+.erp-approvals-v2 .erp-drafts-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.erp-approvals-v2 .erp-drafts-link {
+  color: var(--ap2-primary, #f47b20);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.erp-approvals-v2 .erp-drafts-link:hover {
+  text-decoration: underline;
+}
+
+.erp-approvals-v2 .erp-drafts-module-badge {
+  display: inline-block;
+  max-width: 220px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-approvals-v2 .erp-drafts-title {
+  color: var(--ap2-text, #1a1a1a);
+}
+
+.erp-approvals-v2 .erp-drafts-date {
+  white-space: nowrap;
+  color: var(--ap2-text-secondary, #6b7280);
+}
+
 /* ── Stat tiles ── */
 
 .erp-approvals-v2 .erp-users-stat-bar {
