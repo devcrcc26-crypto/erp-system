@@ -31,7 +31,12 @@ export class WorkScheduleController {
   constructor(private readonly workScheduleService: WorkScheduleService) {}
 
   @Post('preview-days')
-  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
+  @RequireAnyPermission(
+    { module: 'work-schedule', action: 'view' },
+    { module: 'leave', action: 'create' },
+    { module: 'leave', action: 'edit' },
+    { module: 'leave', action: 'manage' },
+  )
   @ApiOperation({
     summary:
       'Preview working-day weights for leave periods (weekends, half days, holidays). Non-HR may only preview self.',

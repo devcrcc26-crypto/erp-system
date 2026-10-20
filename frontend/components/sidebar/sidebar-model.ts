@@ -189,23 +189,9 @@ export function buildSidebarModel(
   const limited = config.limitedNavigation;
   if (limited && !permissions.has(limited.unlessGranted)) {
     const allowed = new Set(limited.entryIds);
-    const filterLimited = (entries: readonly SidebarEntry[]): SidebarEntry[] => {
-      const result: SidebarEntry[] = [];
-      for (const entry of entries) {
-        if (entry.kind === 'link') {
-          if (allowed.has(entry.id)) result.push(entry);
-        } else {
-          const filteredGroups = entry.groups
-            .map((group) => ({ ...group, items: group.items.filter((item) => allowed.has(item.id)) }))
-            .filter((g) => g.items.length > 0);
-          if (filteredGroups.length > 0) result.push({ ...entry, groups: filteredGroups });
-        }
-      }
-      return result;
-    };
     return {
-      primary: filterLimited(primary),
-      utility: filterLimited(utility),
+      primary: primary.filter((e) => allowed.has(e.id)),
+      utility: utility.filter((e) => allowed.has(e.id)),
     };
   }
 

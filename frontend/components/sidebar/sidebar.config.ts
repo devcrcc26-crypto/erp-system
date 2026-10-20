@@ -156,29 +156,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   // Staff without hr.view get a self-service sidebar only.
   limitedNavigation: {
     unlessGranted: 'hr.view',
-    entryIds: [
-      'dashboard',
-      'new-request',
-      'approvals',
-      'evaluation-inbox',
-      'announcements',
-      // Self-service HR modules
-      'leave-requests',
-      'site-assignments',
-      'overtime',
-      'expense-claims',
-      'flight-applications',
-      'business-trips',
-      'purchase-requests',
-      'material-requisition',
-      'consumables',
-      'vehicle-applications',
-      'vehicle-refueling',
-      'official-seal',
-      'project-seal',
-      'exit-permit',
-      'my-profile',
-    ],
+    entryIds: ['dashboard', 'new-request', 'approvals', 'evaluation-inbox', 'announcements', 'expense-claims', 'my-profile'],
   },
   primary: [
     {
