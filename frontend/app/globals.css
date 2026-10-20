@@ -4396,6 +4396,12 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Pinned to main column — flush with bottom edge */
+.erp-form-page-footer,
+.erp-stepper-form__footer {
+  border-radius: 0 !important;
+}
+
 /* Ant Design Pro–style advanced form (add employee stepper, etc.) */
 .erp-advanced-form .ant-form-item {
   margin-bottom: 24px;

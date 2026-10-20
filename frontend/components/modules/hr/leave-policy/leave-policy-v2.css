@@ -247,10 +247,16 @@
   overflow: hidden;
 }
 
-.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__steps-shell,
-.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__footer {
+.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__steps-shell {
   border: 0;
   border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__footer {
+  border: 0;
+  border-radius: 0;
   background: #ffffff;
   box-shadow: var(--lpv2-shadow);
 }

@@ -291,10 +291,15 @@
 }
 
 .erp-hr-travel-v2 .erp-form-layout-pro,
-.erp-hr-travel-v2 .erp-stepper-form__steps-shell,
-.erp-hr-travel-v2 .erp-stepper-form__footer {
+.erp-hr-travel-v2 .erp-stepper-form__steps-shell {
   border: 0 !important;
   border-radius: var(--htv2-radius) !important;
+  box-shadow: var(--htv2-shadow) !important;
+}
+
+.erp-hr-travel-v2 .erp-stepper-form__footer {
+  border: 0 !important;
+  border-radius: 0 !important;
   box-shadow: var(--htv2-shadow) !important;
 }
 
