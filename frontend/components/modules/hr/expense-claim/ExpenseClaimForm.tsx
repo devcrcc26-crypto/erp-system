@@ -136,7 +136,7 @@ export default function ExpenseClaimForm({
   const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -155,7 +155,7 @@ export default function ExpenseClaimForm({
     setDetailsSnapshot({});
     setEditingKey(null);
     setShowItemForm(false);
-    setReceiptFile(null);
+    setReceiptFiles([]);
     setFormError(null);
   }
 
@@ -187,7 +187,7 @@ export default function ExpenseClaimForm({
   function openAddItem(): void {
     setEditingKey(null);
     itemForm.resetFields();
-    setReceiptFile(null);
+    setReceiptFiles([]);
     setShowItemForm(true);
   }
 
@@ -199,7 +199,7 @@ export default function ExpenseClaimForm({
       expenseDate: dayjs(item.expenseDate),
       amount: item.amount,
     });
-    setReceiptFile(item.file ?? null);
+    setReceiptFiles(item.file ? [item.file] : []);
     setShowItemForm(true);
   }
 
@@ -207,46 +207,38 @@ export default function ExpenseClaimForm({
     setShowItemForm(false);
     setEditingKey(null);
     itemForm.resetFields();
-    setReceiptFile(null);
+    setReceiptFiles([]);
   }
 
   async function saveItem(): Promise<void> {
     try {
       const values = await itemForm.validateFields();
-      if (!receiptFile && !editingKey) {
+      if (receiptFiles.length === 0 && !editingKey) {
         messageApi.warning(t('hr.messages.attachReceiptRequired'));
         return;
       }
-      if (!receiptFile && editingKey) {
-        const existing = items.find((row) => row._key === editingKey);
-        if (!existing?.file) {
-          messageApi.warning(t('hr.messages.attachReceiptRequired'));
-          return;
-        }
-      }
-      const entry: ClientItem = {
-        _key: editingKey ?? nextKey(),
+      const base = {
         category: values.category.trim(),
         description: values.description.trim(),
         expenseDate: values.expenseDate.format('YYYY-MM-DD'),
         amount: Number(values.amount),
-        currency: 'ETB',
-        file: receiptFile ?? undefined,
+        currency: 'ETB' as const,
       };
       if (editingKey) {
+        const entry: ClientItem = {
+          ...base,
+          _key: editingKey,
+          file: receiptFiles[0] ?? undefined,
+        };
         setItems((prev) =>
-          prev.map((row) => {
-            if (row._key !== editingKey) {
-              return row;
-            }
-            return {
-              ...entry,
-              file: receiptFile ?? row.file,
-            };
-          }),
+          prev.map((row) => (row._key === editingKey ? entry : row)),
         );
       } else {
-        setItems((prev) => [...prev, entry]);
+        const newEntries: ClientItem[] =
+          receiptFiles.length > 0
+            ? receiptFiles.map((file) => ({ ...base, _key: nextKey(), file }))
+            : [{ ...base, _key: nextKey() }];
+        setItems((prev) => [...prev, ...newEntries]);
       }
       cancelItemForm();
     } catch {
@@ -711,23 +703,26 @@ export default function ExpenseClaimForm({
             </DrawerSection>
 
             <DrawerSection title={t('hr.form.amount')}>
-              <Form.Item
-                name="amount"
-                className="!mb-0"
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.amountRequired'),
-                  },
-                ]}
-              >
-                <InputNumber
-                  className="w-full"
-                  min={0.01}
-                  precision={2}
-                  addonAfter="ETB"
-                />
-              </Form.Item>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <Form.Item
+                  name="amount"
+                  className="!mb-0"
+                  style={{ flex: 1 }}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.amountRequired'),
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    className="w-full"
+                    min={0.01}
+                    precision={2}
+                  />
+                </Form.Item>
+                <Button disabled style={{ pointerEvents: 'none', color: 'inherit', flexShrink: 0 }}>ETB</Button>
+              </div>
             </DrawerSection>
 
             <DrawerSection title={t('hr.form.receipt')}>
@@ -737,12 +732,10 @@ export default function ExpenseClaimForm({
                 extra={t('hr.hints.receiptRequired')}
               >
                 <FileUploadInput
-                  files={receiptFile ? [receiptFile] : []}
-                  onChange={(nextFiles) =>
-                    setReceiptFile(nextFiles[0] ?? null)
-                  }
+                  files={receiptFiles}
+                  onChange={setReceiptFiles}
                   accept=".pdf,.jpg,.jpeg,.png"
-                  multiple={false}
+                  multiple={true}
                 />
               </Form.Item>
             </DrawerSection>
