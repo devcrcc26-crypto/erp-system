@@ -54,9 +54,6 @@ const INITIAL_TRIP: FlightTripDetailsValues = {
 };
 
 const INITIAL_ADDITIONAL: FlightAdditionalValues = {
-  accommodationRequired: false,
-  accommodationDetails: '',
-  perDiemRequired: false,
   notes: '',
   files: [],
 };
@@ -344,11 +341,6 @@ export function FlightApplicationForm({
             : undefined,
         purpose: tripDetails.purpose.trim(),
         ticketClass: tripDetails.ticketClass,
-        accommodationRequired: additional.accommodationRequired,
-        accommodationDetails: additional.accommodationRequired
-          ? additional.accommodationDetails.trim() || undefined
-          : undefined,
-        perDiemRequired: additional.perDiemRequired,
         notes: additional.notes.trim() || undefined,
         linkedBusinessTripId: additional.linkedBusinessTripId,
         siteAssignmentId: additional.siteAssignmentId,

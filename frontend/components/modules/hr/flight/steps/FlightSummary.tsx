@@ -132,23 +132,6 @@ export default function FlightSummary({
             }
           />
         </div>
-        <ReviewItem
-          label={t('hr.labels.accommodation')}
-          value={
-            additional.accommodationRequired
-              ? additional.accommodationDetails.trim() ||
-                t('hr.labels.required')
-              : t('hr.labels.notRequired')
-          }
-        />
-        <ReviewItem
-          label={t('hr.labels.perDiem')}
-          value={
-            additional.perDiemRequired
-              ? t('hr.labels.required')
-              : t('hr.labels.notRequired')
-          }
-        />
         {additional.linkedBusinessTripId && linkedBusinessTripLabel ? (
           <div className="sm:col-span-2">
             <ReviewItem

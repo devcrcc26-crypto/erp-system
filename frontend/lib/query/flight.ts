@@ -186,14 +186,6 @@ export function useSubmitFlightApplication() {
       }
       formData.append('purpose', payload.purpose);
       formData.append('ticketClass', payload.ticketClass);
-      formData.append(
-        'accommodationRequired',
-        String(payload.accommodationRequired),
-      );
-      if (payload.accommodationDetails) {
-        formData.append('accommodationDetails', payload.accommodationDetails);
-      }
-      formData.append('perDiemRequired', String(payload.perDiemRequired));
       if (payload.notes) {
         formData.append('notes', payload.notes);
       }

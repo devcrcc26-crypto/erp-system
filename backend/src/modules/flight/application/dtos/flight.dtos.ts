@@ -131,33 +131,6 @@ export class SubmitFlightApplicationDto extends OnBehalfSubmissionDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  accommodationRequired?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(4000)
-  accommodationDetails?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  perDiemRequired?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
   @MaxLength(4000)
@@ -246,33 +219,6 @@ export class CreateFlightDraftDto {
   @ApiProperty({ enum: FlightTicketClass, default: FlightTicketClass.ECONOMY })
   @IsEnum(FlightTicketClass)
   ticketClass!: FlightTicketClass;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  accommodationRequired?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(4000)
-  accommodationDetails?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  perDiemRequired?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()

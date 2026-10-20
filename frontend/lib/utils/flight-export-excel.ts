@@ -98,17 +98,6 @@ export async function exportFlightPassengersExcel(input: {
       { header: 'returnDate', key: 'returnDate', width: 14 },
       { header: 'purpose', key: 'purpose', width: 28 },
       { header: 'ticketClass', key: 'ticketClass', width: 12 },
-      {
-        header: 'accommodationRequired',
-        key: 'accommodationRequired',
-        width: 18,
-      },
-      {
-        header: 'accommodationDetails',
-        key: 'accommodationDetails',
-        width: 24,
-      },
-      { header: 'perDiemRequired', key: 'perDiemRequired', width: 14 },
       { header: 'notes', key: 'notes', width: 24 },
       { header: 'passengerEmail', key: 'passengerEmail', width: 28 },
       { header: 'passengerName', key: 'passengerName', width: 22 },
@@ -176,9 +165,6 @@ function mapPassengerExportRow(
     returnDate: formatExportDate(app.returnDate),
     purpose: cell(app.purpose),
     ticketClass: cell(app.ticketClass),
-    accommodationRequired: app.accommodationRequired ? 'TRUE' : 'FALSE',
-    accommodationDetails: cell(app.accommodationDetails),
-    perDiemRequired: app.perDiemRequired ? 'TRUE' : 'FALSE',
     notes: cell(app.notes),
     passengerEmail: cell(passenger.employee?.email),
     passengerName: passenger.employee

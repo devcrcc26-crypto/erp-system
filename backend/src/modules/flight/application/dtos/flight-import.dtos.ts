@@ -29,9 +29,6 @@ export class FlightImportRowPreviewDto extends ImportRowPreviewDto {
   returnDate?: string;
   purpose?: string;
   ticketClass?: FlightTicketClass;
-  accommodationRequired?: boolean;
-  accommodationDetails?: string;
-  perDiemRequired?: boolean;
   notes?: string;
   passengerId?: string;
   passengerEmail?: string;

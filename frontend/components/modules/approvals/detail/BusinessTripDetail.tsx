@@ -11,7 +11,6 @@ import {
   TicketAcknowledgementCard,
   TravelBudgetBreakdown,
   TravelPassengerList,
-  TravelRequirements,
   TravelRouteHero,
   TravelTextBlock,
   type PassengerTicketState,
@@ -106,7 +105,6 @@ export default function BusinessTripDetail({
   }
 
   const budgetRows = [
-    { label: t('hr.labels.estimatedFlight'), value: trip.estimatedFlightCost },
     {
       label: t('hr.labels.estimatedAccommodation'),
       value: trip.estimatedAccommodationCost,
@@ -195,13 +193,9 @@ export default function BusinessTripDetail({
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,300px)]">
         <SectionCard title={t('hr.travel.requirements')}>
-          <TravelRequirements
-            accommodationRequired={trip.accommodationRequired}
-            accommodationDetails={trip.accommodationDetails}
-            perDiemRequired={trip.perDiemRequired}
-          >
+          <div className="flex flex-col gap-4">
             <TravelTextBlock label={t('hr.labels.notes')} text={trip.notes} />
-          </TravelRequirements>
+          </div>
         </SectionCard>
 
         <SectionCard title={t('hr.labels.budgetEstimate')} bodyClassName="p-0">

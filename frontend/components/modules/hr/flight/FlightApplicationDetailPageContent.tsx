@@ -18,7 +18,6 @@ import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTi
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import {
   TravelPassengerList,
-  TravelRequirements,
   TravelRouteHero,
   TravelTextBlock,
   type PassengerTicketState,
@@ -191,7 +190,6 @@ export default function FlightApplicationDetailPageContent({
           footer: t('pages.hr.flight.pdfFooter'),
           applicationOverview: t('pages.hr.flight.pdfOverview'),
           travelDetails: t('hr.labels.travelDetails'),
-          stayAllowances: t('hr.labels.stayAllowances'),
           passengers: t('hr.section.passengerDetails'),
           documents: t('hr.section.attachments'),
           field: t('pages.hr.flight.pdfField'),
@@ -209,17 +207,14 @@ export default function FlightApplicationDetailPageContent({
           ticketClass: t('hr.labels.ticketClass'),
           purpose: t('hr.labels.purpose'),
           notes: t('hr.labels.notes'),
-          accommodation: t('hr.labels.accommodation'),
-          accommodationDetails: t('hr.form.accommodationDetails'),
-          perDiem: t('hr.labels.perDiem'),
-          required: t('hr.labels.required'),
-          notRequired: t('hr.labels.notRequired'),
           passengerName: t('hr.table.employee'),
           passengerEmail: t('users.form.email'),
           passport: t('hr.labels.passport'),
           visaRequired: t('hr.form.visaRequired'),
           visaStatus: t('hr.form.visaStatus'),
           none: t('pages.hr.flight.pdfNone'),
+          required: t('hr.labels.required'),
+          notRequired: t('hr.labels.notRequired'),
           page: t('pages.hr.flight.pdfPage'),
           of: t('pages.hr.flight.pdfOf'),
         },
@@ -385,11 +380,7 @@ export default function FlightApplicationDetailPageContent({
         <div className="erp-pro-card min-w-0 overflow-hidden">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
             <DetailSection title={t('hr.travel.requirements')}>
-              <TravelRequirements
-                accommodationRequired={application.accommodationRequired}
-                accommodationDetails={application.accommodationDetails}
-                perDiemRequired={application.perDiemRequired}
-              >
+              <div className="flex flex-col gap-4">
                 <TravelTextBlock
                   label={t('hr.labels.purpose')}
                   text={application.purpose}
@@ -430,7 +421,7 @@ export default function FlightApplicationDetailPageContent({
                     </button>
                   </MetaItem>
                 ) : null}
-              </TravelRequirements>
+              </div>
             </DetailSection>
 
             <DetailSection

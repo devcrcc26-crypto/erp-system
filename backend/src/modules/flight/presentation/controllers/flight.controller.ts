@@ -56,21 +56,18 @@ function normalizeFlightSubmitBody(
     }
   }
 
-  for (const key of [
-    'isInternational',
-    'accommodationRequired',
-    'perDiemRequired',
-  ] as const) {
-    const value = next[key];
-    if (typeof value === 'string') {
-      next[key] = value === 'true' || value === '1';
-    }
+  if (typeof next.isInternational === 'string') {
+    next.isInternational =
+      next.isInternational === 'true' || next.isInternational === '1';
   }
+
+  delete next.accommodationRequired;
+  delete next.accommodationDetails;
+  delete next.perDiemRequired;
 
   for (const key of [
     'returnDate',
     'notes',
-    'accommodationDetails',
     'linkedBusinessTripId',
     'siteAssignmentId',
   ] as const) {
@@ -192,10 +189,9 @@ export class FlightController {
         returnDate: { type: 'string', format: 'date' },
         purpose: { type: 'string' },
         ticketClass: { type: 'string', enum: ['ECONOMY', 'BUSINESS'] },
-        accommodationRequired: { type: 'boolean' },
-        accommodationDetails: { type: 'string' },
-        perDiemRequired: { type: 'boolean' },
         notes: { type: 'string' },
+        linkedBusinessTripId: { type: 'string' },
+        siteAssignmentId: { type: 'string' },
         passengers: {
           type: 'string',
           description: 'JSON array of FlightPassengerDto',

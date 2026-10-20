@@ -67,15 +67,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   ticketclass: 'ticketClass',
   'ticket class': 'ticketClass',
   ticket_class: 'ticketClass',
-  accommodationrequired: 'accommodationRequired',
-  'accommodation required': 'accommodationRequired',
-  accommodation_required: 'accommodationRequired',
-  accommodationdetails: 'accommodationDetails',
-  'accommodation details': 'accommodationDetails',
-  accommodation_details: 'accommodationDetails',
-  perdiemrequired: 'perDiemRequired',
-  'per diem required': 'perDiemRequired',
-  per_diem_required: 'perDiemRequired',
   notes: 'notes',
   passengeremail: 'passengerEmail',
   'passenger email': 'passengerEmail',
@@ -108,9 +99,6 @@ interface ParsedImportRow {
   returnDate: string;
   purpose: string;
   ticketClass: string;
-  accommodationRequired: string;
-  accommodationDetails: string;
-  perDiemRequired: string;
   notes: string;
   passengerEmail: string;
   passengerId: string;
@@ -155,9 +143,6 @@ export class FlightImportService {
         returnDate: today,
         purpose: 'Site visit',
         ticketClass: 'ECONOMY',
-        accommodationRequired: 'FALSE',
-        accommodationDetails: '',
-        perDiemRequired: 'FALSE',
         notes: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
@@ -190,9 +175,6 @@ export class FlightImportService {
         returnDate: '',
         purpose: '',
         ticketClass: '',
-        accommodationRequired: '',
-        accommodationDetails: '',
-        perDiemRequired: '',
         notes: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
@@ -294,17 +276,6 @@ export class FlightImportService {
         { header: 'returnDate', key: 'returnDate', width: 14 },
         { header: 'purpose', key: 'purpose', width: 28 },
         { header: 'ticketClass', key: 'ticketClass', width: 12 },
-        {
-          header: 'accommodationRequired',
-          key: 'accommodationRequired',
-          width: 18,
-        },
-        {
-          header: 'accommodationDetails',
-          key: 'accommodationDetails',
-          width: 24,
-        },
-        { header: 'perDiemRequired', key: 'perDiemRequired', width: 14 },
         { header: 'notes', key: 'notes', width: 24 },
       );
     }
@@ -361,17 +332,6 @@ export class FlightImportService {
         'ticketClass',
         'Yes',
         TICKET_CLASS_VALUES.join(' | '),
-      ]);
-      instructions.addRow([
-        'accommodationRequired',
-        'No',
-        'TRUE | FALSE (default FALSE)',
-      ]);
-      instructions.addRow(['accommodationDetails', 'No', '']);
-      instructions.addRow([
-        'perDiemRequired',
-        'No',
-        'TRUE | FALSE (default FALSE)',
       ]);
       instructions.addRow(['notes', 'No', '']);
     }
@@ -497,9 +457,6 @@ export class FlightImportService {
               returnDate: row.returnDate,
               purpose: row.purpose,
               ticketClass: row.ticketClass,
-              accommodationRequired: row.accommodationRequired,
-              accommodationDetails: row.accommodationDetails,
-              perDiemRequired: row.perDiemRequired,
               notes: row.notes,
             };
             const app = await this.flightService.findOrCreateDraftApplication(
@@ -618,9 +575,6 @@ export class FlightImportService {
         returnDate: '',
         purpose: '',
         ticketClass: '',
-        accommodationRequired: '',
-        accommodationDetails: '',
-        perDiemRequired: '',
         notes: '',
         passengerEmail: '',
         passengerId: '',
@@ -735,9 +689,6 @@ export class FlightImportService {
     let returnDate: string | undefined;
     let purpose: string;
     let ticketClass: FlightTicketClass;
-    let accommodationRequired: boolean | undefined;
-    let accommodationDetails: string | undefined;
-    let perDiemRequired: boolean | undefined;
     let notes: string | undefined;
 
     if (options.mode === 'application') {
@@ -877,24 +828,10 @@ export class FlightImportService {
       }
       ticketClass = ticketResult.value;
 
-      const accomResult = this.parseBoolean(row.accommodationRequired, false);
-      if (!accomResult.ok) {
-        return { ...base, status: 'error', message: accomResult.message };
-      }
-      accommodationRequired = accomResult.value;
-
-      const perDiemResult = this.parseBoolean(row.perDiemRequired, false);
-      if (!perDiemResult.ok) {
-        return { ...base, status: 'error', message: perDiemResult.message };
-      }
-      perDiemRequired = perDiemResult.value;
-
-
       originCountry = row.originCountry.trim();
       originCity = row.originCity.trim();
       destination = row.destination.trim();
       purpose = row.purpose.trim();
-      accommodationDetails = row.accommodationDetails.trim() || undefined;
       notes = row.notes.trim() || undefined;
 
       base.tripType = tripType;
@@ -998,9 +935,6 @@ export class FlightImportService {
       returnDate,
       purpose,
       ticketClass,
-      accommodationRequired,
-      accommodationDetails,
-      perDiemRequired,
       notes,
       passengerId: passenger.id,
       passportNumber,

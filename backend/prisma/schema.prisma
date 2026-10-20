@@ -4818,9 +4818,6 @@ model FlightApplication {
   returnDate               DateTime?               @map("return_date")
   purpose                  String
   ticketClass              FlightTicketClass       @default(ECONOMY) @map("ticket_class")
-  accommodationRequired    Boolean                 @default(false) @map("accommodation_required")
-  accommodationDetails     String?                 @map("accommodation_details")
-  perDiemRequired          Boolean                 @default(false) @map("per_diem_required")
   notes                    String?
   linkedBusinessTripId     String?                 @map("linked_business_trip_id")
   siteAssignmentId         String?                 @map("site_assignment_id")

@@ -8,7 +8,6 @@ import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import {
   TicketAcknowledgementCard,
   TravelPassengerList,
-  TravelRequirements,
   TravelRouteHero,
   TravelTextBlock,
   type PassengerTicketState,
@@ -157,11 +156,7 @@ export default function FlightApplicationDetail({
       ) : null}
 
       <SectionCard title={t('hr.travel.requirements')}>
-        <TravelRequirements
-          accommodationRequired={application.accommodationRequired}
-          accommodationDetails={application.accommodationDetails}
-          perDiemRequired={application.perDiemRequired}
-        >
+        <div className="flex flex-col gap-4">
           <TravelTextBlock
             label={t('hr.labels.purpose')}
             text={application.purpose}
@@ -170,7 +165,7 @@ export default function FlightApplicationDetail({
             label={t('hr.labels.notes')}
             text={application.notes}
           />
-        </TravelRequirements>
+        </div>
       </SectionCard>
 
       <SectionCard title={t('hr.section.passengerDetails')} bodyClassName="p-0">

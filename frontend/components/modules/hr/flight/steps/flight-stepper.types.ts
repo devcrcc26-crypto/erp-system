@@ -31,9 +31,6 @@ export interface FlightPassengerValues {
 }
 
 export interface FlightAdditionalValues {
-  accommodationRequired: boolean;
-  accommodationDetails: string;
-  perDiemRequired: boolean;
   notes: string;
   linkedBusinessTripId?: string;
   siteAssignmentId?: string;

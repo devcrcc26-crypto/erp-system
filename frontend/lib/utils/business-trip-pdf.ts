@@ -5,7 +5,6 @@ import {
   formatBusinessTripStatus,
   formatBusinessTripSubmitterName,
   formatEtb,
-  formatTicketClass,
   formatTripType,
   formatVisaStatus,
 } from '@/lib/utils/business-trip-display';
@@ -28,7 +27,6 @@ export interface BusinessTripPdfLabels {
   travelDetails: string;
   purposeHost: string;
   budgetEstimate: string;
-  stayAllowances: string;
   passengers: string;
   documents: string;
   field: string;
@@ -42,7 +40,6 @@ export interface BusinessTripPdfLabels {
   destination: string;
   departure: string;
   return: string;
-  ticketClass: string;
   purpose: string;
   hostOrganization: string;
   hostContactName: string;
@@ -51,22 +48,18 @@ export interface BusinessTripPdfLabels {
   expectedOutcomes: string;
   itinerary: string;
   notes: string;
-  estimatedFlight: string;
   estimatedAccommodation: string;
   estimatedPerDiem: string;
   estimatedOther: string;
   estimatedTotal: string;
-  accommodation: string;
-  accommodationDetails: string;
-  perDiem: string;
-  required: string;
-  notRequired: string;
   passengerName: string;
   passengerEmail: string;
   passport: string;
   visaRequired: string;
   visaStatus: string;
   none: string;
+  required: string;
+  notRequired: string;
   page: string;
   of: string;
 }
@@ -164,7 +157,6 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
       [labels.submittedBy, submitterName],
       [labels.tripType, formatTripType(trip.tripType, t)],
       [labels.international, labels.international],
-      [labels.ticketClass, formatTicketClass(trip.ticketClass, t)],
     ],
   });
   y = doc.lastAutoTable.finalY + 8;
@@ -242,7 +234,6 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
     },
     head: [[labels.field, labels.value]],
     body: [
-      [labels.estimatedFlight, formatEtb(trip.estimatedFlightCost)],
       [
         labels.estimatedAccommodation,
         formatEtb(trip.estimatedAccommodationCost),
@@ -250,35 +241,6 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
       [labels.estimatedPerDiem, formatEtb(trip.estimatedPerDiem)],
       [labels.estimatedOther, formatEtb(trip.estimatedOtherCost)],
       [labels.estimatedTotal, formatEtb(trip.estimatedTotalCost)],
-    ],
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  y = ensureSpace(doc, y, 35);
-  y = drawSectionTitle(doc, labels.stayAllowances, y);
-  autoTable(doc, {
-    startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
-    columnStyles: {
-      0: { cellWidth: 55, fontStyle: 'bold' },
-      1: { cellWidth: 'auto' },
-    },
-    head: [[labels.field, labels.value]],
-    body: [
-      [
-        labels.accommodation,
-        trip.accommodationRequired ? labels.required : labels.notRequired,
-      ],
-      ...(trip.accommodationRequired && trip.accommodationDetails?.trim()
-        ? [[labels.accommodationDetails, trip.accommodationDetails.trim()]]
-        : []),
-      [
-        labels.perDiem,
-        trip.perDiemRequired ? labels.required : labels.notRequired,
-      ],
     ],
   });
   y = doc.lastAutoTable.finalY + 8;

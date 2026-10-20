@@ -73,9 +73,6 @@ export interface FlightApplicationListItem {
 export interface FlightApplicationDetail extends FlightApplicationListItem {
   purpose: string;
   ticketClass: FlightTicketClass;
-  accommodationRequired: boolean;
-  accommodationDetails?: string | null;
-  perDiemRequired: boolean;
   notes?: string | null;
   linkedBusinessTripId?: string | null;
   linkedBusinessTripNumber?: string | null;
@@ -118,9 +115,6 @@ export interface SubmitFlightApplicationPayload extends OnBehalfPayload {
   returnDate?: string;
   purpose: string;
   ticketClass: FlightTicketClass;
-  accommodationRequired: boolean;
-  accommodationDetails?: string;
-  perDiemRequired: boolean;
   notes?: string;
   linkedBusinessTripId?: string;
   siteAssignmentId?: string;

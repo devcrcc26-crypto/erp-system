@@ -84,14 +84,11 @@ export default function PerDiemRequestForm({
   const formValues = Form.useWatch([], form) as PerDiemFormValues | undefined;
   const tripType = formValues?.tripType ?? 'TRAVEL';
   const isSiteDeployment = tripType === 'SITE_DEPLOYMENT';
-  const destinationCategory = isSiteDeployment
-    ? 'Domestic'
-    : formValues?.destinationCategory;
+  const destinationCategory = formValues?.destinationCategory;
   const dateRange = formValues?.dateRange;
 
   useEffect(() => {
     if (isSiteDeployment) {
-      form.setFieldValue('destinationCategory', 'Domestic');
       form.setFieldValue('linkedTravel', undefined);
     } else {
       form.setFieldValue('siteAssignmentId', undefined);
@@ -241,7 +238,6 @@ export default function PerDiemRequestForm({
     if (!assignment) {
       return;
     }
-    form.setFieldValue('destinationCategory', 'Domestic');
     form.setFieldValue('destination', assignment.siteName);
     const start = dayjs(assignment.startDate);
     const end = dayjs(assignment.endDate);
@@ -282,9 +278,6 @@ export default function PerDiemRequestForm({
       const trip = tripsQuery.data?.data.find((item) => item.id === tripId);
       if (!trip) {
         return;
-      }
-      if (trip.perDiemCategory) {
-        form.setFieldValue('destinationCategory', trip.perDiemCategory);
       }
       const dest = [trip.destinationCity, trip.destinationCountry]
         .filter(Boolean)
@@ -355,7 +348,7 @@ export default function PerDiemRequestForm({
 
     if (overrideRate != null && !values.rateOverrideReason?.trim()) {
       messageApi.warning(
-        t('hr.validation.rateOverrideReasonRequired', 'Please provide a reason for the rate increase.'),
+        t('hr.validation.rateOverrideReasonRequired'),
       );
       return;
     }
@@ -426,7 +419,7 @@ export default function PerDiemRequestForm({
         />
         {requestedTotal != null ? (
           <EstimateItem
-            label={t('hr.perDiem.requestedTotal', 'Requested total')}
+            label={t('hr.perDiem.requestedTotal')}
             value={formatEtbAmount(requestedTotal)}
             emphasize
           />
@@ -528,15 +521,10 @@ export default function PerDiemRequestForm({
                         'hr.placeholder.selectDestinationCategory',
                       )}
                       options={categoryOptions}
-                      disabled={noActiveRates || isSiteDeployment}
+                      disabled={noActiveRates}
                     />
                   </Form.Item>
                 )}
-                {isSiteDeployment ? (
-                  <p className="erp-users-cell-sub m-0 mb-3">
-                    {t('hr.messages.siteDeploymentDomesticLocked')}
-                  </p>
-                ) : null}
                 <Form.Item
                   name="destination"
                   label={t('hr.form.specificDestination')}
@@ -654,7 +642,7 @@ export default function PerDiemRequestForm({
                 size="small"
               />
               <span className="text-sm" style={{ color: tokens.colorTextSecondary }}>
-                {t('hr.perDiem.requestDifferentRate', 'Request a different rate?')}
+                {t('hr.perDiem.requestDifferentRate')}
               </span>
             </div>
 
@@ -662,11 +650,11 @@ export default function PerDiemRequestForm({
               <div className="mt-4 flex flex-col gap-4 rounded-md border border-[rgba(0,0,0,0.08)] p-4">
                 <Form.Item
                   name="requestedDailyRate"
-                  label={t('hr.perDiem.requestedDailyRate', 'Requested daily rate')}
+                  label={t('hr.perDiem.requestedDailyRate')}
                   rules={[
                     {
                       required: true,
-                      message: t('hr.validation.enterRequestedDailyRate', 'Please enter the requested daily rate'),
+                      message: t('hr.validation.enterRequestedDailyRate'),
                     },
                     {
                       validator: async (_, value: number | null | undefined) => {
@@ -675,7 +663,7 @@ export default function PerDiemRequestForm({
                           throw new Error(
                             t('hr.validation.requestedRateMustExceedConfigured', {
                               rate: formatEtbAmount(configuredDailyRate),
-                            }, `Rate must be greater than the configured rate (${formatEtbAmount(configuredDailyRate)})`),
+                            }),
                           );
                         }
                       },
@@ -686,7 +674,7 @@ export default function PerDiemRequestForm({
                       ? t('hr.perDiem.configuredRateHint', {
                           rate: formatEtbAmount(selectedRate.dailyRate),
                           currency: selectedRate.currency,
-                        }, `Configured rate: ${formatEtbAmount(selectedRate.dailyRate)} ${selectedRate.currency}`)
+                        })
                       : undefined
                   }
                 >
@@ -701,11 +689,11 @@ export default function PerDiemRequestForm({
 
                 <Form.Item
                   name="rateOverrideReason"
-                  label={t('hr.perDiem.rateOverrideReason', 'Reason for rate increase')}
+                  label={t('hr.perDiem.rateOverrideReason')}
                   rules={[
                     {
                       required: true,
-                      message: t('hr.validation.rateOverrideReasonRequired', 'Please provide a reason for the rate increase'),
+                      message: t('hr.validation.rateOverrideReasonRequired'),
                     },
                   ]}
                 >
@@ -713,7 +701,7 @@ export default function PerDiemRequestForm({
                     rows={3}
                     maxLength={1000}
                     showCount
-                    placeholder={t('hr.perDiem.rateOverrideReasonPlaceholder', 'Explain why a higher rate is needed…')}
+                    placeholder={t('hr.perDiem.rateOverrideReasonPlaceholder')}
                   />
                 </Form.Item>
               </div>
@@ -808,13 +796,13 @@ export default function PerDiemRequestForm({
               ) : null}
               {rateOverride && requestedDailyRate != null && requestedDailyRate > configuredDailyRate ? (
                 <ReviewItem
-                  label={t('hr.perDiem.requestedDailyRate', 'Requested daily rate')}
+                  label={t('hr.perDiem.requestedDailyRate')}
                   value={formatEtbAmount(requestedDailyRate)}
                 />
               ) : null}
               {rateOverride && formValues?.rateOverrideReason?.trim() ? (
                 <ReviewItem
-                  label={t('hr.perDiem.rateOverrideReason', 'Reason for rate increase')}
+                  label={t('hr.perDiem.rateOverrideReason')}
                   value={formValues.rateOverrideReason.trim()}
                 />
               ) : null}
@@ -857,11 +845,8 @@ export default function PerDiemRequestForm({
       <div className="erp-pro-card erp-per-diem-no-rate">
         <Result
           status="warning"
-          title={t('hr.perDiem.noRateTitle', 'No per diem rate assigned')}
-          subTitle={t(
-            'hr.perDiem.noRateSubtitle',
-            'You do not have a per diem rate configured. Please contact HR to have your rate set up before submitting a per diem request.',
-          )}
+          title={t('hr.perDiem.noRateTitle')}
+          subTitle={t('hr.perDiem.noRateSubtitle')}
         />
       </div>
     );
