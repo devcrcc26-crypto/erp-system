@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, DatePicker, Form, Input, InputNumber, Radio, Result, Select, Switch, TimePicker } from 'antd';
 import dayjs from 'dayjs';
+import CitySelector from '@/components/modules/hr/shared/CitySelector';
+import CountrySelector from '@/components/modules/hr/shared/CountrySelector';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import {
   OnBehalfSection,
@@ -13,7 +15,9 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { PerDiemRequestDetail, PerDiemTripType } from '@/lib/api/per-diem.types';
+import type { PerDiemDestinationCategory } from '@/lib/constants/per-diem-destination-categories';
 import { PER_DIEM_CATEGORY_FIELDS } from '@/lib/constants/per-diem-destination-categories';
+import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
 import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useFlightApplications } from '@/lib/query/flight';
 import {
@@ -28,8 +32,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PerDiemFormValues {
   tripType?: PerDiemTripType;
+  destinationCountry?: string;
+  destinationCity?: string;
   destinationCategory?: string;
-  destination?: string;
   dateRange?: [dayjs.Dayjs, dayjs.Dayjs];
   departureTime?: dayjs.Dayjs;
   returnTime?: dayjs.Dayjs;
@@ -45,7 +50,7 @@ interface PerDiemRequestFormProps {
   onSuccess: (result: PerDiemRequestDetail) => void;
 }
 
-const DESTINATION_FIELDS = ['tripType', 'destinationCategory', 'destination'] as const;
+const DESTINATION_FIELDS = ['tripType', 'destinationCountry', 'destinationCity', 'destinationCategory'] as const;
 const DATES_FIELDS = ['dateRange', 'departureTime', 'returnTime', 'days'] as const;
 
 function calcInclusiveCalendarDays(
@@ -238,7 +243,7 @@ export default function PerDiemRequestForm({
     if (!assignment) {
       return;
     }
-    form.setFieldValue('destination', assignment.siteName);
+    form.setFieldValue('destinationCity', assignment.siteName);
     const start = dayjs(assignment.startDate);
     const end = dayjs(assignment.endDate);
     form.setFieldValue('dateRange', [start, end]);
@@ -259,10 +264,11 @@ export default function PerDiemRequestForm({
         return;
       }
       if (!flight.isInternational) {
+        form.setFieldValue('destinationCountry', 'Ethiopia');
         form.setFieldValue('destinationCategory', 'Domestic');
       }
       if (flight.destination) {
-        form.setFieldValue('destination', flight.destination);
+        form.setFieldValue('destinationCity', flight.destination);
       }
       if (flight.departureDate) {
         const start = dayjs(flight.departureDate);
@@ -279,11 +285,15 @@ export default function PerDiemRequestForm({
       if (!trip) {
         return;
       }
-      const dest = [trip.destinationCity, trip.destinationCountry]
-        .filter(Boolean)
-        .join(', ');
-      if (dest) {
-        form.setFieldValue('destination', dest);
+      if (trip.destinationCountry) {
+        form.setFieldValue('destinationCountry', trip.destinationCountry);
+        const category = getPerDiemCategoryForCountry(trip.destinationCountry);
+        if (category) {
+          form.setFieldValue('destinationCategory', category);
+        }
+      }
+      if (trip.destinationCity) {
+        form.setFieldValue('destinationCity', trip.destinationCity);
       }
       if (trip.departureDate) {
         const start = dayjs(trip.departureDate);
@@ -291,6 +301,16 @@ export default function PerDiemRequestForm({
         form.setFieldValue('dateRange', [start, end]);
         form.setFieldValue('days', calcInclusiveCalendarDays(start, end));
       }
+    }
+  }
+
+  function handleCountryChange(
+    _country: string,
+    category: PerDiemDestinationCategory | null,
+  ): void {
+    form.setFieldValue('destinationCity', undefined);
+    if (category != null) {
+      form.setFieldValue('destinationCategory', category);
     }
   }
 
@@ -322,7 +342,7 @@ export default function PerDiemRequestForm({
 
     if (
       !values.destinationCategory ||
-      !values.destination?.trim() ||
+      !values.destinationCountry?.trim() ||
       !values.dateRange?.[0] ||
       !values.dateRange?.[1]
     ) {
@@ -368,11 +388,10 @@ export default function PerDiemRequestForm({
       const created = await submitMutation.mutateAsync({
         ...onBehalf.payload,
         tripType: values.tripType ?? 'TRAVEL',
-        destinationCategory:
-          values.tripType === 'SITE_DEPLOYMENT'
-            ? 'Domestic'
-            : values.destinationCategory,
-        destination: values.destination.trim(),
+        destinationCategory: values.destinationCategory,
+        destination: [values.destinationCity?.trim(), values.destinationCountry?.trim()]
+          .filter(Boolean)
+          .join(', '),
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
         departureTime: values.departureTime?.format('HH:mm'),
@@ -490,54 +509,52 @@ export default function PerDiemRequestForm({
               )}
 
               <div className="erp-form-grid-2">
-                {linkedKind === 'domestic-flight' && !isSiteDeployment ? (
-                  <>
-                    <Form.Item name="destinationCategory" hidden>
-                      <Input />
-                    </Form.Item>
-                    <div
-                      className="erp-notice erp-notice--success"
-                      style={{ padding: '8px 12px' }}
-                    >
-                      <span className="text-xs">
-                        {t('hr.messages.domesticRateAutoApplied')}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <Form.Item
-                    name="destinationCategory"
-                    label={t('hr.form.destinationCategory')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.selectDestinationCategory'),
-                      },
-                    ]}
-                  >
-                    <Select
-                      loading={ratesQuery.isLoading}
-                      placeholder={t(
-                        'hr.placeholder.selectDestinationCategory',
-                      )}
-                      options={categoryOptions}
-                      disabled={noActiveRates}
-                    />
-                  </Form.Item>
-                )}
                 <Form.Item
-                  name="destination"
-                  label={t('hr.form.specificDestination')}
+                  name="destinationCountry"
+                  label={t('hr.form.destinationCountry')}
                   rules={[
                     {
                       required: true,
-                      message: t('hr.validation.enterDestination'),
+                      message: t('hr.validation.destinationCountryRequired'),
                     },
                   ]}
                 >
-                  <Input
-                    placeholder={t('hr.placeholder.enterDestination')}
-                    maxLength={200}
+                  <CountrySelector
+                    placeholder={t('hr.placeholder.selectDestinationCountry')}
+                    onChange={handleCountryChange}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="destinationCity"
+                  label={t('hr.form.destinationCity')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.destinationCityRequired'),
+                    },
+                  ]}
+                >
+                  <CitySelector
+                    countryName={formValues?.destinationCountry}
+                    placeholder={t('hr.placeholder.selectDestinationCity')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="destinationCategory"
+                  label={t('hr.form.destinationCategory')}
+                  extra={t('hr.messages.categoryAutoSetFromCountry')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.selectDestinationCategory'),
+                    },
+                  ]}
+                >
+                  <Select
+                    loading={ratesQuery.isLoading}
+                    placeholder={t('hr.placeholder.selectDestinationCategory')}
+                    options={categoryOptions}
+                    disabled={noActiveRates}
                   />
                 </Form.Item>
               </div>
@@ -729,12 +746,16 @@ export default function PerDiemRequestForm({
                 }
               />
               <ReviewItem
-                label={t('hr.form.destinationCategory')}
-                value={categoryLabel}
+                label={t('hr.form.destinationCountry')}
+                value={formValues?.destinationCountry?.trim() || '-'}
               />
               <ReviewItem
-                label={t('hr.form.specificDestination')}
-                value={formValues?.destination?.trim() || '-'}
+                label={t('hr.form.destinationCity')}
+                value={formValues?.destinationCity?.trim() || '-'}
+              />
+              <ReviewItem
+                label={t('hr.form.destinationCategory')}
+                value={categoryLabel}
               />
               <ReviewItem
                 label={t('hr.form.startDate')}
