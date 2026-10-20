@@ -34,6 +34,8 @@ export type TravelPassengerConflictInput = {
   returnDate: Date | null;
   excludeFlightApplicationId?: string;
   excludeBusinessTripId?: string;
+  skipFlightConflicts?: boolean;
+  skipBusinessTripConflicts?: boolean;
 };
 
 /**
@@ -96,7 +98,9 @@ export async function assertNoTravelPassengerConflicts(
   }
 
   const [flightPassengers, tripPassengers] = await Promise.all([
-    prisma.flightPassenger.findMany({
+    input.skipFlightConflicts
+      ? Promise.resolve([])
+      : prisma.flightPassenger.findMany({
       where: {
         employeeId: { in: employeeIds },
         application: {
@@ -119,7 +123,9 @@ export async function assertNoTravelPassengerConflicts(
         },
       },
     }),
-    prisma.businessTripPassenger.findMany({
+    input.skipBusinessTripConflicts
+      ? Promise.resolve([])
+      : prisma.businessTripPassenger.findMany({
       where: {
         employeeId: { in: employeeIds },
         trip: {

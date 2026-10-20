@@ -195,6 +195,7 @@ export class BusinessTripService
       employeeIds: [...new Set([employeeId, ...passengerIds])],
       departureDate,
       returnDate,
+      skipFlightConflicts: true,
     });
 
     // --- Resolve approval chain ---
@@ -874,6 +875,7 @@ export class BusinessTripService
       departureDate: trip.departureDate,
       returnDate: trip.returnDate,
       excludeBusinessTripId: tripId,
+      skipFlightConflicts: true,
     });
 
     await this.prisma.businessTripPassenger.create({
