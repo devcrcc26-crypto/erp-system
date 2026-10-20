@@ -1,5 +1,11 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
@@ -17,6 +23,7 @@ import {
   SEND_NOTIFICATION_JOB,
   SendNotificationJobData,
 } from '../constants/queue.constants';
+import { notificationLinkMatchesRoute } from '../utils/notification-route-match.util';
 import {
   CreateNotificationTemplateDto,
   SendNotificationDto,
@@ -284,6 +291,56 @@ export class NotificationService {
       where: { id },
       data: { readAt: new Date(), status: NotificationStatus.READ },
     });
+  }
+
+  /**
+   * Marks unread in-app notifications whose deep link matches the current route.
+   */
+  async markReadForRoute(
+    ctx: AuditContext,
+    path: string,
+  ): Promise<{ updated: number }> {
+    const trimmed = path.trim();
+    if (!trimmed.startsWith('/')) {
+      throw new BadRequestException('path must start with /');
+    }
+
+    const unread = await this.prisma.notification.findMany({
+      where: {
+        companyId: ctx.companyId,
+        recipientId: ctx.userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+        link: { not: null },
+      },
+      select: { id: true, link: true },
+      take: 500,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const ids = unread
+      .filter(
+        (row): row is { id: string; link: string } =>
+          Boolean(row.link) &&
+          notificationLinkMatchesRoute(row.link, trimmed),
+      )
+      .map((row) => row.id);
+
+    if (ids.length === 0) {
+      return { updated: 0 };
+    }
+
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: { in: ids },
+        companyId: ctx.companyId,
+        recipientId: ctx.userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+      },
+      data: { readAt: new Date(), status: NotificationStatus.READ },
+    });
+    return { updated: result.count };
   }
 
   async markAllRead(ctx: AuditContext): Promise<{ updated: number }> {

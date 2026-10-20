@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useAutoMarkNotificationsRead } from '@/hooks/use-auto-mark-notifications-read';
 import { useEffect, useMemo, useState } from 'react';
 import SidebarShell from '@/components/sidebar/SidebarShell';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
@@ -34,6 +35,7 @@ export default function AppShell({
   showContextSidebar?: boolean;
 }): React.ReactNode {
   const pathname = usePathname();
+  useAutoMarkNotificationsRead();
   const { t } = useEpcTranslation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 

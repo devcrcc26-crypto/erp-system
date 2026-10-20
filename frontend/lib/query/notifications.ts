@@ -115,6 +115,30 @@ export function useMarkNotificationRead() {
   });
 }
 
+export function useMarkNotificationsReadForRoute() {
+  const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id ?? '');
+
+  return useMutation({
+    mutationFn: (path: string) =>
+      apiPatch<{ updated: number }>('/notifications/read-for-route', {
+        path,
+      }),
+    onSuccess: (result) => {
+      if (result.updated <= 0) {
+        return;
+      }
+      if (!userId) {
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: notificationKeys.forUser(userId),
+      });
+    },
+  });
+}
+
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
   const userId = useAuthStore((state) => state.user?.id ?? '');

@@ -9,6 +9,16 @@ import {
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
+export class MarkNotificationsReadForRouteDto {
+  @ApiProperty({
+    description:
+      'Current app route (pathname and optional query), e.g. /approvals/uuid or /profile?tab=leave',
+    example: '/approvals/550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsString()
+  path!: string;
+}
+
 export class ListNotificationsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'When true, return only unread in-app notifications',

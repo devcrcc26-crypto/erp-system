@@ -16,6 +16,7 @@ import { RequirePermission } from '../../../../shared/permissions/require-permis
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   ListNotificationsQueryDto,
+  MarkNotificationsReadForRouteDto,
   SendNotificationDto,
 } from '../../application/dtos/notification.dtos';
 import { NotificationService } from '../../application/services/notification.service';
@@ -58,6 +59,21 @@ export class NotificationsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ updated: number }> {
     return this.notificationService.markAllRead(this.ctx(user));
+  }
+
+  @Patch('read-for-route')
+  @ApiOperation({
+    summary:
+      'Mark unread in-app notifications whose link matches the current route',
+  })
+  markReadForRoute(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: MarkNotificationsReadForRouteDto,
+  ): Promise<{ updated: number }> {
+    return this.notificationService.markReadForRoute(
+      this.ctx(user),
+      dto.path,
+    );
   }
 
   @Patch(':id/read')
