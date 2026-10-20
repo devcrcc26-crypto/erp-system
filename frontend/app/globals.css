@@ -4866,6 +4866,55 @@ main::-webkit-scrollbar,
   background: #1d9e75;
 }
 
+/* ── Settings page — role selector buttons ─────────────────────── */
+.erp-settings-page .erp-settings-role-btn {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.erp-settings-page .erp-settings-role-btn:hover {
+  background: #f8f9fb;
+  border-color: #e8ebef;
+}
+
+.erp-settings-page .erp-settings-role-btn--active {
+  background: #f0f7ff;
+  border-color: #c5dcf5;
+}
+
+.erp-settings-page .erp-settings-role-accent {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: #378ADD;
+}
+
+/* ── Settings page — permission table tweaks ───────────────────── */
+.erp-settings-page .erp-users-table .ant-table-thead > tr > th {
+  text-align: center;
+}
+
+.erp-settings-page .erp-users-table .ant-table-thead > tr > th:first-child {
+  text-align: left;
+}
+
+.erp-settings-page .erp-users-cell-strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+
+.erp-settings-page .erp-users-cell-sub {
+  color: #9AA4B2;
+  font-size: 13px;
+}
 
 /* Employee contract - Users chrome extensions */
 .erp-contract-stat {

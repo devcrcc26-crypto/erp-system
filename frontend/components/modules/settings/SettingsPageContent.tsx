@@ -63,9 +63,22 @@ function matrixKey(module: string, action: string): string {
   return `${module}:${action}`;
 }
 
+const MODULE_DISPLAY_NAMES: Record<string, string> = {
+  'hr': 'Human Resources',
+  'assets': 'Company Assets',
+  'vehicles': 'Company Vehicles',
+  'reports': 'Reports & Analytics',
+  'engineering_documents': 'Engineering Documents',
+  'approvals': 'Approvals',
+  'users': 'User Management',
+  'projects': 'Projects',
+  'schedule': 'Work Schedule',
+};
+
 function formatModuleLabel(module: string): string {
+  if (MODULE_DISPLAY_NAMES[module]) return MODULE_DISPLAY_NAMES[module];
   return module
-    .replace(/_/g, ' ')
+    .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
