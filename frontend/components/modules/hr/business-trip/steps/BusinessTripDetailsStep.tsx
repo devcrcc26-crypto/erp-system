@@ -11,6 +11,7 @@ import {
   getDisabledDepartureDate,
   getDisabledReturnDate,
 } from '@/lib/utils/date-validation';
+import { roundTripReturnIssue } from '@/lib/utils/travel-trip-dates';
 
 /**
  * Step 1 - international trip routing details.
@@ -33,6 +34,11 @@ export default function BusinessTripDetailsStep({
   function handleDestinationCountryChange(country: string): void {
     patch({ destinationCountry: country, destinationCity: '' });
   }
+
+  const returnIssue = roundTripReturnIssue(
+    values.departureDate,
+    values.returnDate,
+  );
 
   return (
     <FormLayout
@@ -161,15 +167,18 @@ export default function BusinessTripDetailsStep({
                 format="YYYY-MM-DD HH:mm"
                 value={values.returnDate}
                 disabledDate={getDisabledReturnDate(values.departureDate)}
-                status={
-                  values.departureDate &&
-                  values.returnDate &&
-                  values.returnDate.isBefore(values.departureDate)
-                    ? 'error'
-                    : undefined
-                }
+                status={returnIssue ? 'error' : undefined}
                 onChange={(date) => patch({ returnDate: date })}
               />
+              {returnIssue === 'beforeDeparture' ? (
+                <p className="m-0 mt-1 text-xs text-[#DC2626]">
+                  {t('hr.validation.returnAfterDeparture')}
+                </p>
+              ) : returnIssue === 'minDuration' ? (
+                <p className="m-0 mt-1 text-xs text-[#DC2626]">
+                  {t('hr.validation.roundTripMinDuration')}
+                </p>
+              ) : null}
             </div>
           </Col>
         ) : null}

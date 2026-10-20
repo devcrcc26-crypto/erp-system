@@ -5664,6 +5664,8 @@
       "returnDateRequired": "往返行程请选择返回日期",
       "purposeRequiredFlight": "请填写出行目的",
       "passengersRequired": "请至少选择一位乘客",
+      "duplicatePassengers": "每位乘客只能添加一次",
+      "onBehalfEmployeeRequired": "请选择您要代为提交的员工",
       "passportRequiredFor": "以下乘客需填写护照号：{{names}}",
       "categoryRequired": "请输入费用类别",
       "descriptionRequired": "请输入说明",

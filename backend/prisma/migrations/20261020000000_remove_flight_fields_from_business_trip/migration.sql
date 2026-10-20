@@ -1,5 +1,9 @@
 -- Remove flight-specific fields from business_trip table
 
+-- Generated column must be dropped before columns it references
+ALTER TABLE "business_trip"
+  DROP COLUMN IF EXISTS "estimated_total_cost";
+
 ALTER TABLE "business_trip"
   DROP COLUMN IF EXISTS "ticket_class",
   DROP COLUMN IF EXISTS "estimated_flight_cost",
@@ -7,10 +11,6 @@ ALTER TABLE "business_trip"
   DROP COLUMN IF EXISTS "accommodation_details",
   DROP COLUMN IF EXISTS "per_diem_required",
   DROP COLUMN IF EXISTS "per_diem_category";
-
--- Recompute the estimated_total_cost generated column (accommodation + per_diem + other only)
-ALTER TABLE "business_trip"
-  DROP COLUMN IF EXISTS "estimated_total_cost";
 
 ALTER TABLE "business_trip"
   ADD COLUMN "estimated_total_cost" DECIMAL(12,2)

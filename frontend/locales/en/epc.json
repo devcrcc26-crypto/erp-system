@@ -5665,6 +5665,8 @@
       "returnDateRequired": "Return date is required for round trips",
       "purposeRequiredFlight": "Purpose is required",
       "passengersRequired": "At least one passenger is required",
+      "duplicatePassengers": "Each passenger can only be added once",
+      "onBehalfEmployeeRequired": "Select the employee you are submitting this request for",
       "passportRequiredFor": "Passport number required for: {{names}}",
       "categoryRequired": "Category is required",
       "descriptionRequired": "Description is required",

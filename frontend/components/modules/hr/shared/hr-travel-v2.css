@@ -291,12 +291,23 @@
 }
 
 .erp-hr-travel-v2 .erp-form-layout-pro,
-.erp-hr-travel-v2 .erp-stepper-form,
-.erp-hr-travel-v2 .erp-stepper-form__panel,
-.erp-hr-travel-v2 .erp-stepper-form__steps-shell {
+.erp-hr-travel-v2 .erp-stepper-form__steps-shell,
+.erp-hr-travel-v2 .erp-stepper-form__footer {
   border: 0 !important;
   border-radius: var(--htv2-radius) !important;
   box-shadow: var(--htv2-shadow) !important;
+}
+
+/* Section stepper: shadow only on step cards + step bar/footer — not the full scroll column */
+.erp-hr-travel-v2.erp-flight-form-page .erp-stepper-form,
+.erp-hr-travel-v2.erp-business-trip-form-page .erp-stepper-form {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.erp-hr-travel-v2.erp-flight-form-page .erp-stepper-form > .min-h-0,
+.erp-hr-travel-v2.erp-business-trip-form-page .erp-stepper-form > .min-h-0 {
+  background: transparent !important;
 }
 
 .erp-hr-travel-v2 .ant-input,

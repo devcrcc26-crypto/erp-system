@@ -21,6 +21,7 @@ import {
   getDisabledDepartureDate,
   getDisabledReturnDate,
 } from '@/lib/utils/date-validation';
+import { roundTripReturnIssue } from '@/lib/utils/travel-trip-dates';
 
 /**
  * Step 1 - trip routing and travel metadata (FormLayout chrome from parent).
@@ -47,6 +48,11 @@ export default function FlightTripDetailsStep({
   function patch(partial: Partial<FlightTripDetailsValues>): void {
     onChange({ ...values, ...partial });
   }
+
+  const returnIssue = roundTripReturnIssue(
+    values.departureDate,
+    values.returnDate,
+  );
 
   return (
     <FormLayout
@@ -253,15 +259,18 @@ export default function FlightTripDetailsStep({
                 format="YYYY-MM-DD HH:mm"
                 value={values.returnDate}
                 disabledDate={getDisabledReturnDate(values.departureDate)}
-                status={
-                  values.departureDate &&
-                  values.returnDate &&
-                  values.returnDate.isBefore(values.departureDate)
-                    ? 'error'
-                    : undefined
-                }
+                status={returnIssue ? 'error' : undefined}
                 onChange={(date) => patch({ returnDate: date })}
               />
+              {returnIssue === 'beforeDeparture' ? (
+                <p className="m-0 mt-1 text-xs text-[#DC2626]">
+                  {t('hr.validation.returnAfterDeparture')}
+                </p>
+              ) : returnIssue === 'minDuration' ? (
+                <p className="m-0 mt-1 text-xs text-[#DC2626]">
+                  {t('hr.validation.roundTripMinDuration')}
+                </p>
+              ) : null}
             </div>
           </Col>
         ) : null}

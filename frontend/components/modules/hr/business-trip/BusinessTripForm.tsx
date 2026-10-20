@@ -19,6 +19,7 @@ import type {
   BusinessTripPurposeBudgetValues,
 } from '@/components/modules/hr/business-trip/steps/business-trip-stepper.types';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { hasDuplicatePassengerIds } from '@/lib/utils/travel-form-validation';
 import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
@@ -122,6 +123,9 @@ export function BusinessTripForm({
         ),
         validate: (): boolean => {
           const errors: string[] = [];
+          if (onBehalf.targetRequired) {
+            errors.push(t('hr.validation.onBehalfEmployeeRequired'));
+          }
           if (!tripDetails.originCountry.trim()) {
             errors.push(t('hr.validation.originCountryRequired'));
           }
@@ -201,6 +205,10 @@ export function BusinessTripForm({
             messageApi.error(t('hr.validation.passengersRequired'));
             return false;
           }
+          if (hasDuplicatePassengerIds(passengers)) {
+            messageApi.error(t('hr.validation.duplicatePassengers'));
+            return false;
+          }
           const missing = passengers.filter((p) => !p.passportNumber?.trim());
           if (missing.length > 0) {
             messageApi.error(
@@ -230,6 +238,29 @@ export function BusinessTripForm({
             />
           </div>
         ),
+        validate: (): boolean => {
+          if (onBehalf.targetRequired) {
+            messageApi.error(t('hr.validation.onBehalfEmployeeRequired'));
+            return false;
+          }
+          if (
+            tripDetails.tripType === 'ROUND_TRIP' &&
+            tripDetails.departureDate &&
+            tripDetails.returnDate &&
+            !isRoundTripDurationValid(
+              tripDetails.departureDate,
+              tripDetails.returnDate,
+            )
+          ) {
+            messageApi.error(t('hr.validation.roundTripMinDuration'));
+            return false;
+          }
+          if (hasDuplicatePassengerIds(passengers)) {
+            messageApi.error(t('hr.validation.duplicatePassengers'));
+            return false;
+          }
+          return true;
+        },
       },
     ],
     [

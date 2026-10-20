@@ -15,3 +15,24 @@ export function isRoundTripDurationValid(
   }
   return returnDate.diff(departure, 'minute', true) >= MIN_ROUND_TRIP_MINUTES;
 }
+
+export type RoundTripReturnIssue = 'beforeDeparture' | 'minDuration' | null;
+
+/**
+ * Identifies why a round-trip return datetime is invalid (for inline field feedback).
+ */
+export function roundTripReturnIssue(
+  departure: Dayjs | null,
+  returnDate: Dayjs | null,
+): RoundTripReturnIssue {
+  if (!departure || !returnDate) {
+    return null;
+  }
+  if (returnDate.isBefore(departure)) {
+    return 'beforeDeparture';
+  }
+  if (!isRoundTripDurationValid(departure, returnDate)) {
+    return 'minDuration';
+  }
+  return null;
+}
