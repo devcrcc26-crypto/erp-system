@@ -9,12 +9,13 @@ import {
 
 export type ExitPermitStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: ExitPermitStatus[] = ['DRAFT'];
 const PENDING_STATUSES: ExitPermitStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -26,6 +27,8 @@ export function statusesForExitPermitMode(
   mode: ExitPermitStatusMode,
 ): ExitPermitStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

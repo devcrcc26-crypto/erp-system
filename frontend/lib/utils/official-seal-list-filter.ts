@@ -6,12 +6,13 @@ import { formatOfficialSealEmployeeName } from '@/lib/utils/official-seal';
 
 export type OfficialSealStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: OfficialSealStatus[] = ['DRAFT'];
 const PENDING_STATUSES: OfficialSealStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -23,6 +24,8 @@ export function statusesForOfficialSealMode(
   mode: OfficialSealStatusMode,
 ): OfficialSealStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

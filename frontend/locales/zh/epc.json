@@ -617,6 +617,7 @@
         "balancesExportSheetName": "假期余额",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1665,6 +1666,7 @@
         "pdfOverview": "申请概览",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1704,6 +1706,7 @@
         "pdfOverview": "领用概览",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1728,6 +1731,7 @@
         "permitPlural": "条出入证",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1773,6 +1777,7 @@
         "pdfOverview": "申请概览",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1818,6 +1823,7 @@
         "exportSheetName": "差旅补贴申请",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1898,6 +1904,7 @@
         "applicationPlural": "条申请",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -1921,6 +1928,7 @@
         "requestPlural": "条申请",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -2017,6 +2025,7 @@
         "requestPlural": "条申请",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
@@ -2040,6 +2049,7 @@
         "requestPlural": "条申请",
         "stats": {
           "total": "全部",
+          "draft": "草稿",
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"

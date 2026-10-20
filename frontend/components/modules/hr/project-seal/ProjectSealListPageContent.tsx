@@ -14,6 +14,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FormOutlined,
   InboxOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -42,6 +43,7 @@ import {
   projectSealStatusVariant,
 } from '@/lib/utils/project-seal';
 import {
+  DRAFT_STATUSES,
   filterProjectSeals,
   statusesForProjectSealMode,
   type ProjectSealStatusMode,
@@ -67,6 +69,7 @@ const STAT_ACCENT = {
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
 } as const;
 
 function ProjectSealStat({
@@ -138,6 +141,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
   const statusCounts = useMemo(() => {
     return {
       all: allRows.length,
+      draft: allRows.filter((row) => DRAFT_STATUSES.includes(row.status)).length,
       pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
         .length,
       approved: allRows.filter((row) => APPROVED_STATUSES.includes(row.status))
@@ -343,6 +347,16 @@ export default function ProjectSealListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
+        {!canViewHr ? (
+          <ProjectSealStat
+            label={t('pages.hr.projectSeal.stats.draft')}
+            value={statusCounts.draft}
+            accent="blue"
+            icon={<FormOutlined />}
+            active={statusMode === 'draft'}
+            onClick={() => handleStatusMode('draft')}
+          />
+        ) : null}
         <ProjectSealStat
           label={t('pages.hr.projectSeal.stats.pending')}
           value={statusCounts.pending}

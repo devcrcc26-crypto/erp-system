@@ -6,12 +6,13 @@ import { formatConsumablesRequisitionEmployeeName } from '@/lib/utils/consumable
 
 export type ConsumablesRequisitionStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: ConsumablesRequisitionStatus[] = ['DRAFT'];
 const PENDING_STATUSES: ConsumablesRequisitionStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -26,6 +27,8 @@ export function statusesForConsumablesRequisitionMode(
   mode: ConsumablesRequisitionStatusMode,
 ): ConsumablesRequisitionStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

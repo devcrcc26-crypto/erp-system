@@ -6,12 +6,13 @@ import { formatPurchaseRequestEmployeeName } from '@/lib/utils/purchase-request-
 
 export type PurchaseRequestStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: PurchaseRequestStatus[] = ['DRAFT'];
 const PENDING_STATUSES: PurchaseRequestStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -23,6 +24,8 @@ export function statusesForPurchaseRequestMode(
   mode: PurchaseRequestStatusMode,
 ): PurchaseRequestStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

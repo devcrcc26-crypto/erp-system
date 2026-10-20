@@ -14,6 +14,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FormOutlined,
   ReloadOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -39,6 +40,7 @@ import {
   vehicleRefuelingStatusVariant,
 } from '@/lib/utils/vehicle-refueling-display';
 import {
+  DRAFT_STATUSES,
   filterVehicleRefuelings,
   statusesForVehicleRefuelingMode,
   type VehicleRefuelingStatusMode,
@@ -62,6 +64,7 @@ const STAT_ACCENT = {
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
 } as const;
 
 function VehicleRefuelingStat({
@@ -132,6 +135,9 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const draft = allRows.filter((row) =>
+      DRAFT_STATUSES.includes(row.status),
+    ).length;
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -143,6 +149,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
     ).length;
     return {
       all: allRows.length,
+      draft,
       pending,
       approved,
       rejected,
@@ -400,6 +407,16 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
+        {!canViewHr ? (
+          <VehicleRefuelingStat
+            label={t('pages.hr.vehicleRefueling.stats.draft')}
+            value={statusCounts.draft}
+            accent="blue"
+            icon={<FormOutlined />}
+            active={statusMode === 'draft'}
+            onClick={() => handleStatusMode('draft')}
+          />
+        ) : null}
         <VehicleRefuelingStat
           label={t('pages.hr.vehicleRefueling.stats.pending')}
           value={statusCounts.pending}

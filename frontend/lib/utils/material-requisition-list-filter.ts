@@ -6,12 +6,13 @@ import { formatMaterialRequisitionEmployeeName } from '@/lib/utils/material-requ
 
 export type MaterialRequisitionStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: MaterialRequisitionStatus[] = ['DRAFT'];
 const PENDING_STATUSES: MaterialRequisitionStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -23,6 +24,8 @@ export function statusesForMaterialRequisitionMode(
   mode: MaterialRequisitionStatusMode,
 ): MaterialRequisitionStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

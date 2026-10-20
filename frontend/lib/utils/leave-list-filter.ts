@@ -36,6 +36,34 @@ export function matchesLeaveRequestSearch(
   return haystack.includes(needle);
 }
 
+export type StatusMode = 'all' | 'draft' | 'pending' | 'approved' | 'rejected';
+
+export const DRAFT_STATUSES: LeaveRequestStatus[] = ['DRAFT'];
+const PENDING_STATUSES: LeaveRequestStatus[] = [
+  'SUBMITTED',
+  'IN_REVIEW',
+  'RETURNED',
+];
+const APPROVED_STATUSES: LeaveRequestStatus[] = ['APPROVED'];
+const REJECTED_STATUSES: LeaveRequestStatus[] = ['REJECTED', 'CANCELLED'];
+
+export function statusesForMode(
+  mode: StatusMode,
+): LeaveRequestStatus[] {
+  switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
+    case 'pending':
+      return PENDING_STATUSES;
+    case 'approved':
+      return APPROVED_STATUSES;
+    case 'rejected':
+      return REJECTED_STATUSES;
+    default:
+      return [];
+  }
+}
+
 export interface LeaveRequestListFilters {
   search: string;
   statuses?: LeaveRequestStatus[];

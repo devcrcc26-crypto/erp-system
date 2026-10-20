@@ -15,6 +15,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FormOutlined,
   ReloadOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
@@ -48,6 +49,7 @@ import {
   purchaseRequestStatusVariant,
 } from '@/lib/utils/purchase-request-display';
 import {
+  DRAFT_STATUSES,
   filterPurchaseRequests,
   statusesForPurchaseRequestMode,
   type PurchaseRequestStatusMode,
@@ -70,6 +72,7 @@ const STAT_ACCENT = {
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
 } as const;
 
 function PurchaseRequestStat({
@@ -143,6 +146,9 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const draft = allRows.filter((row) =>
+      DRAFT_STATUSES.includes(row.status),
+    ).length;
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -154,6 +160,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
     ).length;
     return {
       all: allRows.length,
+      draft,
       pending,
       approved,
       rejected,
@@ -395,6 +402,16 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
+        {!canViewHr ? (
+          <PurchaseRequestStat
+            label={t('pages.hr.purchaseRequest.stats.draft')}
+            value={statusCounts.draft}
+            accent="blue"
+            icon={<FormOutlined />}
+            active={statusMode === 'draft'}
+            onClick={() => handleStatusMode('draft')}
+          />
+        ) : null}
         <PurchaseRequestStat
           label={t('pages.hr.purchaseRequest.stats.pending')}
           value={statusCounts.pending}

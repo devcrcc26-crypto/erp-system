@@ -6,12 +6,13 @@ import { formatProjectSealEmployeeName } from '@/lib/utils/project-seal';
 
 export type ProjectSealStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: ProjectSealStatus[] = ['DRAFT'];
 const PENDING_STATUSES: ProjectSealStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -23,6 +24,8 @@ export function statusesForProjectSealMode(
   mode: ProjectSealStatusMode,
 ): ProjectSealStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

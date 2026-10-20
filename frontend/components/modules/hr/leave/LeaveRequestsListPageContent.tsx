@@ -23,6 +23,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  FormOutlined,
   MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -70,36 +71,21 @@ import {
   leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
-import { filterLeaveRequests } from '@/lib/utils/leave-list-filter';
+import {
+  DRAFT_STATUSES,
+  filterLeaveRequests,
+  statusesForMode,
+  type StatusMode,
+} from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildLeaveRequestExportSheets } from '@/lib/utils/leave-export';
 
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
-
-const PENDING_STATUSES: LeaveRequestStatus[] = [
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-  'DRAFT',
-];
-const APPROVED_STATUSES: LeaveRequestStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: LeaveRequestStatus[] = ['REJECTED', 'CANCELLED'];
-
-function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return [];
-  }
-}
+const PENDING_STATUSES = statusesForMode('pending');
+const APPROVED_STATUSES = statusesForMode('approved');
+const REJECTED_STATUSES = statusesForMode('rejected');
 
 /**
  * Leave requests list - Employees v2 chrome with floating stats and soft cards.
@@ -174,6 +160,9 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const draft = allRows.filter((row) =>
+      DRAFT_STATUSES.includes(row.status),
+    ).length;
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -185,6 +174,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     ).length;
     return {
       all: allRows.length,
+      draft,
       pending,
       approved,
       rejected,
@@ -500,6 +490,16 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
+        {!canViewHr ? (
+          <EvaluationStat
+            label={t('pages.hr.leave.stats.draft')}
+            value={statusCounts.draft}
+            accent="blue"
+            icon={<FormOutlined />}
+            active={statusMode === 'draft'}
+            onClick={() => handleStatusMode('draft')}
+          />
+        ) : null}
         <EvaluationStat
           label={t('pages.hr.leave.stats.pending')}
           value={statusCounts.pending}

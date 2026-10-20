@@ -6,12 +6,13 @@ import { formatVehicleApplicationEmployeeName } from '@/lib/utils/vehicle-applic
 
 export type VehicleApplicationStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: VehicleApplicationStatus[] = ['DRAFT'];
 const PENDING_STATUSES: VehicleApplicationStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -26,6 +27,8 @@ export function statusesForVehicleApplicationMode(
   mode: VehicleApplicationStatusMode,
 ): VehicleApplicationStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

@@ -6,12 +6,13 @@ import { formatVehicleRefuelingEmployeeName } from '@/lib/utils/vehicle-refuelin
 
 export type VehicleRefuelingStatusMode =
   | 'all'
+  | 'draft'
   | 'pending'
   | 'approved'
   | 'rejected';
 
+export const DRAFT_STATUSES: VehicleRefuelingStatus[] = ['DRAFT'];
 const PENDING_STATUSES: VehicleRefuelingStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -26,6 +27,8 @@ export function statusesForVehicleRefuelingMode(
   mode: VehicleRefuelingStatusMode,
 ): VehicleRefuelingStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

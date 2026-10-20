@@ -14,6 +14,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FormOutlined,
   InboxOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -46,6 +47,7 @@ import {
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
 import {
+  DRAFT_STATUSES,
   filterMaterialRequisitions,
   statusesForMaterialRequisitionMode,
   type MaterialRequisitionStatusMode,
@@ -68,6 +70,7 @@ const STAT_ACCENT = {
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
 } as const;
 
 function MaterialRequisitionStat({
@@ -141,6 +144,9 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const draft = allRows.filter((row) =>
+      DRAFT_STATUSES.includes(row.status),
+    ).length;
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -152,6 +158,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     ).length;
     return {
       all: allRows.length,
+      draft,
       pending,
       approved,
       rejected,
@@ -366,6 +373,16 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
+        {!canViewHr ? (
+          <MaterialRequisitionStat
+            label={t('pages.hr.materialRequisition.stats.draft')}
+            value={statusCounts.draft}
+            accent="blue"
+            icon={<FormOutlined />}
+            active={statusMode === 'draft'}
+            onClick={() => handleStatusMode('draft')}
+          />
+        ) : null}
         <MaterialRequisitionStat
           label={t('pages.hr.materialRequisition.stats.pending')}
           value={statusCounts.pending}

@@ -4,10 +4,15 @@ import type {
 } from '@/lib/api/per-diem.types';
 import { formatPerDiemEmployeeName } from '@/lib/utils/per-diem-display';
 
-export type PerDiemStatusMode = 'all' | 'pending' | 'approved' | 'rejected';
+export type PerDiemStatusMode =
+  | 'all'
+  | 'draft'
+  | 'pending'
+  | 'approved'
+  | 'rejected';
 
+export const DRAFT_STATUSES: PerDiemStatus[] = ['DRAFT'];
 const PENDING_STATUSES: PerDiemStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
   'RETURNED',
@@ -19,6 +24,8 @@ export function statusesForPerDiemMode(
   mode: PerDiemStatusMode,
 ): PerDiemStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':
