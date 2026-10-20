@@ -17,6 +17,7 @@ import type {
   FlightTripDetailsValues,
 } from '@/components/modules/hr/flight/steps/flight-stepper.types';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 import {
@@ -152,6 +153,17 @@ export function FlightApplicationForm({
             tripDetails.returnDate?.isBefore(tripDetails.departureDate)
           ) {
             errors.push(t('hr.validation.returnAfterDeparture'));
+          }
+          if (
+            tripDetails.tripType === 'ROUND_TRIP' &&
+            tripDetails.departureDate &&
+            tripDetails.returnDate &&
+            !isRoundTripDurationValid(
+              tripDetails.departureDate,
+              tripDetails.returnDate,
+            )
+          ) {
+            errors.push(t('hr.validation.roundTripMinDuration'));
           }
           if (!tripDetails.purpose.trim()) {
             errors.push(t('hr.validation.purposeRequiredFlight'));

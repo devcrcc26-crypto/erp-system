@@ -41,6 +41,8 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { assertNoTravelPassengerConflicts } from '../../../hr-shared/application/utils/travel-passenger-conflict.util';
+import { assertRoundTripTravelDates } from '../../../hr-shared/application/utils/travel-trip-dates.util';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
@@ -163,16 +165,7 @@ export class FlightService
       : null;
     await this.assertDepartureNotBackdated(departureDate, companyId, userId);
 
-    if (dto.tripType === FlightTripType.ROUND_TRIP) {
-      if (!returnDate) {
-        throw new BadRequestException('ROUND_TRIP requires returnDate');
-      }
-      if (returnDate.getTime() < departureDate.getTime()) {
-        throw new BadRequestException(
-          'returnDate must be on or after departureDate',
-        );
-      }
-    }
+    assertRoundTripTravelDates(dto.tripType, departureDate, returnDate);
 
     const passengerIds = dto.passengers.map((p) => p.employeeId);
     const uniqueIds = new Set(passengerIds);
@@ -192,6 +185,12 @@ export class FlightService
         `Passengers not in selectable set: ${invalidIds.join(', ')}`,
       );
     }
+
+    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
+      employeeIds: [...new Set([employeeId, ...passengerIds])],
+      departureDate,
+      returnDate,
+    });
 
     // --- Resolve approval chain ---
     let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
@@ -802,6 +801,13 @@ export class FlightService
       );
     }
 
+    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
+      employeeIds: [dto.employeeId],
+      departureDate: app.departureDate,
+      returnDate: app.returnDate,
+      excludeFlightApplicationId: applicationId,
+    });
+
     await this.prisma.flightPassenger.create({
       data: {
         id: randomUUID(),
@@ -1391,13 +1397,20 @@ export class FlightService
     applicationId: string,
     companyId: string,
     userId: string,
-  ): Promise<{ id: string; submittedBy: string }> {
+  ): Promise<{
+    id: string;
+    submittedBy: string;
+    departureDate: Date;
+    returnDate: Date | null;
+  }> {
     const app = await this.prisma.flightApplication.findFirst({
       where: activeOnly({ id: applicationId, companyId }),
       select: {
         id: true,
         submittedBy: true,
         status: true,
+        departureDate: true,
+        returnDate: true,
       },
     });
     if (!app) {
@@ -1447,16 +1460,7 @@ export class FlightService
     departureDate: Date,
     returnDate: Date | null,
   ): void {
-    if (tripType === FlightTripType.ROUND_TRIP) {
-      if (!returnDate) {
-        throw new BadRequestException('ROUND_TRIP requires returnDate');
-      }
-      if (returnDate.getTime() < departureDate.getTime()) {
-        throw new BadRequestException(
-          'returnDate must be on or after departureDate',
-        );
-      }
-    }
+    assertRoundTripTravelDates(tripType, departureDate, returnDate);
   }
 
   /**

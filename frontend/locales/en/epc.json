@@ -5689,6 +5689,7 @@
       "selectVehicle": "Select a vehicle",
       "enterPurpose": "Enter the purpose of travel",
       "returnAfterDeparture": "Return must be on or after departure",
+      "roundTripMinDuration": "Return must be at least 1 hour 30 minutes after departure",
       "companyDriverRequired": "Selected vehicle has no assigned company driver. Choose Self Drive or pick another vehicle.",
       "enterFuelStation": "Enter the fuel station name",
       "fuelDateNotFuture": "Fuel date cannot be in the future",
