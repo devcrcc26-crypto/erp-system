@@ -21,6 +21,7 @@ import type {
   ExpenseClaimDetail,
   ExpenseClaimListItem,
   ListExpenseClaimsParams,
+  MarkExpenseClaimPaidPayload,
   UpdateExpenseClaimPayload,
   UpdateExpenseClaimItemPayload,
 } from '@/lib/api/expense-claim.types';
@@ -250,6 +251,22 @@ export function useDeleteExpenseClaim() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+    },
+  });
+}
+
+/** Marks an approved claim as paid (HR / finance). */
+export function useMarkExpenseClaimPaid(claimId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: MarkExpenseClaimPaidPayload) =>
+      apiPost<ExpenseClaimDetail>(
+        `${EXPENSE_CLAIM_PATH}/${claimId}/mark-paid`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
+      void queryClient.setQueryData(expenseClaimKeys.detail(claimId), updated);
     },
   });
 }

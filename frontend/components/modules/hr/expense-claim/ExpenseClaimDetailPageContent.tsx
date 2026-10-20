@@ -4,11 +4,16 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/hr/overtime/overtime-entries-v2.css';
 
 import { useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import {
   Alert,
   Button,
+  DatePicker,
   Dropdown,
+  Form,
   Grid,
+  Input,
+  Modal,
   Skeleton,
   Space,
   Tooltip,
@@ -55,6 +60,7 @@ import {
   useExpenseClaim,
   useExpenseClaimItemsImport,
   useExpenseClaimItemsImportPreview,
+  useMarkExpenseClaimPaid,
   useSubmitExpenseClaim,
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -116,6 +122,7 @@ export default function ExpenseClaimDetailPageContent({
   const detailQuery = useExpenseClaim(claimId);
   const submitMutation = useSubmitExpenseClaim(claimId);
   const cancelMutation = useCancelExpenseClaim(claimId);
+  const markPaidMutation = useMarkExpenseClaimPaid(claimId);
   const deleteClaimMutation = useDeleteExpenseClaim();
   const deleteItemMutation = useDeleteExpenseClaimItem(claimId);
   const itemsImportPreview = useExpenseClaimItemsImportPreview(claimId);
@@ -127,8 +134,13 @@ export default function ExpenseClaimDetailPageContent({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDeleteClaim, setConfirmDeleteClaim] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [markPaidForm] = Form.useForm<{
+    paidDate: dayjs.Dayjs;
+    paymentReference?: string;
+  }>();
 
   useSetHeaderExtra(null);
 
@@ -172,6 +184,10 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(isOwner && isDraft) &&
     (claim?.items.length ?? 0) > 0 &&
     missingReceiptCount === 0;
+  const canMarkPaid =
+    canManage &&
+    claim?.status === 'APPROVED' &&
+    !claim?.paidAt;
 
   useEffect(() => {
     if (canViewHr || detailQuery.isLoading) {
@@ -273,6 +289,28 @@ export default function ExpenseClaimDetailPageContent({
       notifyApiError(
         error,
         t('hr.messages.failedToCancelExpenseClaim'),
+        messageApi,
+      );
+    }
+  }
+
+  async function handleMarkPaid(): Promise<void> {
+    try {
+      const values = await markPaidForm.validateFields();
+      await markPaidMutation.mutateAsync({
+        paidDate: values.paidDate.format('YYYY-MM-DD'),
+        paymentReference: values.paymentReference?.trim() || undefined,
+      });
+      messageApi.success(t('pages.hr.expenseClaim.markPaidSuccess'));
+      setMarkPaidOpen(false);
+      markPaidForm.resetFields();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+      notifyApiError(
+        error,
+        t('pages.hr.expenseClaim.markPaidFailed'),
         messageApi,
       );
     }
@@ -599,6 +637,11 @@ export default function ExpenseClaimDetailPageContent({
                 ) : null}
               </>
             )}
+            {canMarkPaid ? (
+              <Button type="primary" onClick={() => setMarkPaidOpen(true)}>
+                {t('pages.hr.expenseClaim.markPaid')}
+              </Button>
+            ) : null}
             {(canEditHeader || canEditItems || canManage) ? (
               <Space.Compact>
                 {canEditHeader ? (
@@ -696,7 +739,56 @@ export default function ExpenseClaimDetailPageContent({
             </p>
           </div>
         </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('pages.hr.expenseClaim.paid')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {claim.paidAt ? (
+                formatProjectDate(claim.paidAt)
+              ) : claim.status === 'APPROVED' ? (
+                t('pages.hr.expenseClaim.unpaid')
+              ) : (
+                '-'
+              )}
+            </p>
+          </div>
+        </div>
       </div>
+
+      {claim.paidAt ? (
+        <div className="erp-pro-card px-4 py-3 sm:px-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label m-0 mb-1">
+                {t('pages.hr.expenseClaim.paidAt')}
+              </p>
+              <p className="erp-employee-meta-value m-0">
+                {formatProjectDate(claim.paidAt)}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="erp-users-stat-label m-0 mb-1">
+                {t('pages.hr.expenseClaim.paymentReference')}
+              </p>
+              <p className="erp-employee-meta-value m-0">
+                {claim.paymentReference ?? '-'}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="erp-users-stat-label m-0 mb-1">
+                {t('pages.hr.expenseClaim.paidBy')}
+              </p>
+              <p className="erp-employee-meta-value m-0">
+                {claim.paidBy
+                  ? formatExpenseClaimEmployeeName(claim.paidBy)
+                  : '-'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isDraft && missingReceiptCount > 0 ? (
         <Alert
@@ -829,6 +921,50 @@ export default function ExpenseClaimDetailPageContent({
           setEditingItem(null);
         }}
       />
+
+      <Modal
+        open={markPaidOpen}
+        centered
+        width={520}
+        title={t('pages.hr.expenseClaim.markPaidTitle')}
+        onCancel={() => {
+          setMarkPaidOpen(false);
+          markPaidForm.resetFields();
+        }}
+        onOk={() => void handleMarkPaid()}
+        confirmLoading={markPaidMutation.isPending}
+        okText={t('pages.hr.expenseClaim.markPaid')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+      >
+        <p className="erp-hr-travel-modal-hint">
+          {t('pages.hr.expenseClaim.markPaidDescription')}
+        </p>
+        <Form
+          form={markPaidForm}
+          layout="vertical"
+          initialValues={{ paidDate: dayjs() }}
+        >
+          <Form.Item
+            name="paidDate"
+            label={t('pages.hr.expenseClaim.paidAt')}
+            rules={[{ required: true, message: t('hr.validation.required') }]}
+          >
+            <DatePicker className="w-full" format="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item
+            name="paymentReference"
+            label={t('pages.hr.expenseClaim.paymentReference')}
+            className="mb-0"
+          >
+            <Input
+              maxLength={100}
+              placeholder={t('pages.hr.expenseClaim.paymentReferencePlaceholder')}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <ConfirmDialog
         open={confirmSubmit}

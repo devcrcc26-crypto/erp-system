@@ -149,4 +149,17 @@ export class ListExpenseClaimsDto {
   dateTo?: string;
 }
 
+export class MarkExpenseClaimPaidDto {
+  @ApiPropertyOptional({ example: '2026-10-01' })
+  @IsOptional()
+  @IsDateString()
+  paidDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentReference?: string;
+}
+
 export { ExpenseClaimStatus };

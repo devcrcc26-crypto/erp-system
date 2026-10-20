@@ -1642,7 +1642,18 @@
           "pending": "审核中",
           "approved": "已批准",
           "rejected": "已拒绝"
-        }
+        },
+        "paid": "已支付",
+        "unpaid": "未支付",
+        "paidAt": "支付日期",
+        "paymentReference": "付款参考号",
+        "markPaid": "标记为已支付",
+        "markPaidTitle": "将费用报销标记为已支付？",
+        "markPaidDescription": "确认该已批准报销已向员工完成付款。",
+        "markPaidSuccess": "费用报销已标记为已支付。",
+        "markPaidFailed": "无法标记为已支付。",
+        "paymentReferencePlaceholder": "付款凭证/银行参考号（可选）",
+        "paidBy": "登记人"
       },
       "purchaseRequest": {
         "new": "新建采购申请",

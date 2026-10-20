@@ -36,6 +36,7 @@ import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
   ListExpenseClaimsDto,
+  MarkExpenseClaimPaidDto,
   UpdateExpenseClaimDto,
   UpdateExpenseClaimItemDto,
 } from '../../application/dtos/expense-claim.dtos';
@@ -318,6 +319,26 @@ export class ExpenseClaimController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.expenseClaimService.cancelClaim(id, companyId, user.userId);
+  }
+
+  @Post(':id/mark-paid')
+  @RequireAnyPermission({ module: 'expense-claim', action: 'manage' })
+  @ApiOperation({
+    summary: 'Mark an approved expense claim as paid (HR / finance)',
+  })
+  async markPaid(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(MarkExpenseClaimPaidDto, body);
+    return this.expenseClaimService.markAsPaid(
+      id,
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 
   @Delete(':id')

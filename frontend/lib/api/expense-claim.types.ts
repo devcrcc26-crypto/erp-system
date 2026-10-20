@@ -53,6 +53,14 @@ export interface ExpenseClaimListItem {
   createdAt: string;
   submittedAt?: string | null;
   completedAt?: string | null;
+  paidAt?: string | null;
+  paymentReference?: string | null;
+  paidBy?: ExpenseClaimUserSummary | null;
+}
+
+export interface MarkExpenseClaimPaidPayload {
+  paidDate?: string;
+  paymentReference?: string;
 }
 
 export interface ExpenseClaimDetail extends ExpenseClaimListItem {

@@ -136,6 +136,15 @@ export default function ExpenseClaimDetail({
         items={[
           { label: 'Items', value: String(claim.items.length) },
           { label: 'Total (ETB)', value: formatEtbAmount(claim.totalAmountEtb), emphasize: true },
+          ...(claim.paidAt
+            ? [
+                {
+                  label: 'Paid on',
+                  value: formatProjectDate(claim.paidAt),
+                  emphasize: true,
+                },
+              ]
+            : []),
         ]}
       />
 

@@ -850,6 +850,7 @@ model User {
   expenseClaimsAsEmployee     ExpenseClaim[]      @relation("ExpenseClaimEmployee")
   expenseClaimsCreated        ExpenseClaim[]      @relation("ExpenseClaimCreator")
   expenseClaimsUpdated        ExpenseClaim[]      @relation("ExpenseClaimUpdater")
+  expenseClaimsPaid           ExpenseClaim[]      @relation("ExpenseClaimPaidBy")
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
@@ -5068,6 +5069,9 @@ model ExpenseClaim {
   attachmentFolderId String?            @map("attachment_folder_id")
   submittedAt        DateTime?          @map("submitted_at")
   completedAt        DateTime?          @map("completed_at")
+  paidAt             DateTime?          @map("paid_at")
+  paidById           String?            @map("paid_by_id")
+  paymentReference   String?            @map("payment_reference") @db.VarChar(100)
   createdAt          DateTime           @default(now()) @map("created_at")
   createdBy          String             @map("created_by")
   updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at")
@@ -5081,12 +5085,14 @@ model ExpenseClaim {
   attachmentFolder DocumentFolder?    @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   creator          User               @relation("ExpenseClaimCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updater          User               @relation("ExpenseClaimUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  paidBy           User?              @relation("ExpenseClaimPaidBy", fields: [paidById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items            ExpenseClaimItem[]
 
   @@unique([companyId, claimNumber])
   @@index([companyId], map: "idx_expense_claim_company")
   @@index([employeeId], map: "idx_expense_claim_employee")
   @@index([status], map: "idx_expense_claim_status")
+  @@index([paidById], map: "idx_expense_claim_paid_by")
   @@map("expense_claim")
 }
 

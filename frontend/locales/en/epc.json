@@ -1761,7 +1761,18 @@
           "pending": "In Review",
           "approved": "Approved",
           "rejected": "Rejected"
-        }
+        },
+        "paid": "Paid",
+        "unpaid": "Unpaid",
+        "paidAt": "Paid on",
+        "paymentReference": "Payment reference",
+        "markPaid": "Mark as paid",
+        "markPaidTitle": "Mark expense claim as paid?",
+        "markPaidDescription": "Confirm that this approved claim has been reimbursed to the employee.",
+        "markPaidSuccess": "Expense claim marked as paid.",
+        "markPaidFailed": "Could not mark the expense claim as paid.",
+        "paymentReferencePlaceholder": "PV / bank reference (optional)",
+        "paidBy": "Recorded by"
       },
       "purchaseRequest": {
         "new": "New Purchase Request",

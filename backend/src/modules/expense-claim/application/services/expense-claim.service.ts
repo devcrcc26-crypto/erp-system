@@ -44,6 +44,7 @@ import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
   ListExpenseClaimsDto,
+  MarkExpenseClaimPaidDto,
   UpdateExpenseClaimDto,
   UpdateExpenseClaimItemDto,
 } from '../dtos/expense-claim.dtos';
@@ -71,6 +72,7 @@ const DOCUMENT_SELECT = {
 
 const CLAIM_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
+  paidBy: { select: USER_SELECT },
   items: {
     include: { receipt: { select: DOCUMENT_SELECT } },
     orderBy: { expenseDate: 'asc' as const },
@@ -694,6 +696,59 @@ export class ExpenseClaimService
           },
         });
       }
+    });
+
+    return this.getClaim(id, companyId, userId);
+  }
+
+  /**
+   * Records that an approved expense claim has been reimbursed to the employee.
+   */
+  async markAsPaid(
+    id: string,
+    dto: MarkExpenseClaimPaidDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'expense-claim',
+      'manage',
+    );
+    if (!canManage) {
+      throw new ForbiddenException(
+        'Only HR can mark expense claims as paid',
+      );
+    }
+    if (claim.status !== ExpenseClaimStatus.APPROVED) {
+      throw new BadRequestException(
+        'Only approved expense claims can be marked as paid',
+      );
+    }
+    if (claim.paidAt) {
+      throw new BadRequestException('This expense claim is already marked as paid');
+    }
+
+    const paidAt = dto.paidDate
+      ? this.parseDateOnly(dto.paidDate)
+      : new Date();
+
+    await this.prisma.expenseClaim.update({
+      where: { id },
+      data: {
+        paidAt,
+        paidById: userId,
+        paymentReference: dto.paymentReference?.trim() || null,
+        updatedBy: userId,
+      },
     });
 
     return this.getClaim(id, companyId, userId);
