@@ -4,13 +4,12 @@ import type {
 } from '@/lib/api/expense-claim.types';
 import { formatExpenseClaimEmployeeName } from '@/lib/utils/expense-claim-display';
 
-export type ExpenseClaimStatusMode = 'all' | 'pending' | 'approved' | 'rejected';
+export type ExpenseClaimStatusMode = 'all' | 'draft' | 'pending' | 'approved' | 'rejected';
 
+const DRAFT_STATUSES: ExpenseClaimStatus[] = ['DRAFT', 'RETURNED'];
 const PENDING_STATUSES: ExpenseClaimStatus[] = [
-  'DRAFT',
   'SUBMITTED',
   'IN_REVIEW',
-  'RETURNED',
 ];
 const APPROVED_STATUSES: ExpenseClaimStatus[] = ['APPROVED'];
 const REJECTED_STATUSES: ExpenseClaimStatus[] = ['REJECTED', 'CANCELLED'];
@@ -19,6 +18,8 @@ export function statusesForExpenseClaimMode(
   mode: ExpenseClaimStatusMode,
 ): ExpenseClaimStatus[] {
   switch (mode) {
+    case 'draft':
+      return DRAFT_STATUSES;
     case 'pending':
       return PENDING_STATUSES;
     case 'approved':

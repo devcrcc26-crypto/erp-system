@@ -162,6 +162,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       'approvals',
       'evaluation-inbox',
       'announcements',
+      'expense-claims',
       'my-profile',
     ],
   },

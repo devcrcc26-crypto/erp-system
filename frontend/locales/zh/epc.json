@@ -1625,7 +1625,8 @@
         "exportItems": "导出明细",
         "stats": {
           "total": "全部",
-          "pending": "待处理",
+          "draft": "草稿",
+          "pending": "审核中",
           "approved": "已批准",
           "rejected": "已拒绝"
         }

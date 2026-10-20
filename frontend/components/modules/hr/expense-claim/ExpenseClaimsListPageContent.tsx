@@ -21,6 +21,7 @@ import {
   DeleteOutlined,
   DollarOutlined,
   EditOutlined,
+  FileTextOutlined,
   MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -73,6 +74,7 @@ function isEditableClaimStatus(status: ExpenseClaimListItem['status']): boolean 
   return status === 'DRAFT' || status === 'RETURNED';
 }
 
+const DRAFT_STATUSES = statusesForExpenseClaimMode('draft');
 const PENDING_STATUSES = statusesForExpenseClaimMode('pending');
 const APPROVED_STATUSES = statusesForExpenseClaimMode('approved');
 const REJECTED_STATUSES = statusesForExpenseClaimMode('rejected');
@@ -157,6 +159,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const draft = allRows.filter((row) =>
+      DRAFT_STATUSES.includes(row.status),
+    ).length;
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -168,6 +173,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
     ).length;
     return {
       all: allRows.length,
+      draft,
       pending,
       approved,
       rejected,
@@ -453,6 +459,14 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           icon={<DollarOutlined />}
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
+        />
+        <ExpenseClaimStat
+          label={t('pages.hr.expenseClaim.stats.draft')}
+          value={statusCounts.draft}
+          accent="amber"
+          icon={<FileTextOutlined />}
+          active={statusMode === 'draft'}
+          onClick={() => handleStatusMode('draft')}
         />
         <ExpenseClaimStat
           label={t('pages.hr.expenseClaim.stats.pending')}
