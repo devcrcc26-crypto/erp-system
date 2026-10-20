@@ -91,7 +91,7 @@ function ReviewItem({
         {label}
       </p>
       <p
-        className="m-0 whitespace-pre-wrap text-sm"
+        className="m-0 max-w-full overflow-hidden whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]"
         style={{ color: tokens.colorTextPrimary }}
       >
         {value}
@@ -325,10 +325,13 @@ export default function ExpenseClaimForm({
     {
       title: t('hr.table.description'),
       key: 'description',
+      width: 260,
       ellipsis: true,
       render: (_: unknown, row: ClientItem) => (
-        <div className="min-w-0">
-          <span className="erp-users-cell-strong">{row.description}</span>
+        <div className="min-w-0 max-w-[260px]">
+          <span className="erp-users-cell-strong block truncate" title={row.description}>
+            {row.description}
+          </span>
           <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
             {row.category}
           </p>
@@ -469,6 +472,7 @@ export default function ExpenseClaimForm({
             <Table<ClientItem>
               rowKey="_key"
               size="middle"
+              tableLayout="fixed"
               className="erp-pro-table erp-users-table"
               columns={itemColumns}
               dataSource={items}
@@ -555,6 +559,7 @@ export default function ExpenseClaimForm({
               <Table<ClientItem>
                 rowKey="_key"
                 size="middle"
+                tableLayout="fixed"
                 className="erp-pro-table erp-users-table"
                 columns={reviewItemColumns}
                 dataSource={items}

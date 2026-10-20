@@ -74,9 +74,13 @@ export default function ExpenseClaimDetail({
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
+      width: 260,
+      ellipsis: true,
       render: (value: string, row: ExpenseClaimItem) => (
-        <div className="min-w-0 break-words">
-          <span>{value || '-'}</span>
+        <div className="min-w-0 max-w-[260px]">
+          <span className="block truncate" title={value || undefined}>
+            {value || '-'}
+          </span>
           <p className="erp-users-cell-sub m-0 mt-0.5 sm:hidden">
             {formatProjectDate(row.expenseDate)}
           </p>
@@ -138,7 +142,7 @@ export default function ExpenseClaimDetail({
       {claim.description ? (
         <SectionCard title="Description" bodyClassName="px-3 py-4 sm:px-5">
           <MetaItem label="Notes">
-            <p className="whitespace-pre-wrap leading-relaxed m-0">
+            <p className="m-0 max-w-2xl whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
               {claim.description}
             </p>
           </MetaItem>
@@ -151,10 +155,11 @@ export default function ExpenseClaimDetail({
             rowKey="id"
             className="erp-pro-table"
             size="small"
+            tableLayout="fixed"
             columns={columns}
             dataSource={claim.items}
             pagination={false}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: 960 }}
           />
         </DocumentPreviewGroup>
       </SectionCard>

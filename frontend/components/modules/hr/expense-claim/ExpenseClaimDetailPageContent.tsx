@@ -319,10 +319,13 @@ export default function ExpenseClaimDetailPageContent({
         title: t('hr.table.description'),
         dataIndex: 'description',
         key: 'description',
+        width: 260,
         ellipsis: true,
         render: (value: string, row: ExpenseClaimItem) => (
-          <div className="min-w-0">
-            <span className="erp-users-cell-strong">{value}</span>
+          <div className="min-w-0 max-w-[260px]">
+            <Tooltip title={value}>
+              <span className="erp-users-cell-strong block truncate">{value}</span>
+            </Tooltip>
             <p className="erp-users-cell-sub m-0 mt-0.5 sm:hidden">
               {formatProjectDate(row.expenseDate)}
             </p>
@@ -759,6 +762,7 @@ export default function ExpenseClaimDetailPageContent({
                 rowKey="id"
                 className="erp-pro-table erp-users-table"
                 size="middle"
+                tableLayout="fixed"
                 columns={columns}
                 dataSource={claim.items}
                 pagination={false}
@@ -787,8 +791,11 @@ export default function ExpenseClaimDetailPageContent({
           </section>
 
           {claim.description?.trim() ? (
-            <DetailSection title={t('hr.form.description')}>
-              <p className="m-0 whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
+            <DetailSection
+              title={t('hr.form.description')}
+              className="min-w-0"
+            >
+              <p className="m-0 max-w-2xl whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
                 {claim.description}
               </p>
             </DetailSection>
