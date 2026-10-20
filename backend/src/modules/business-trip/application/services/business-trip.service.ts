@@ -231,7 +231,6 @@ export class BusinessTripService
               originCity: dto.originCity.trim(),
               destinationCountry: dto.destinationCountry.trim(),
               destinationCity: dto.destinationCity.trim(),
-              perDiemCategory: dto.perDiemCategory?.trim() || null,
               departureDate,
               returnDate,
               purpose: dto.purpose.trim(),
@@ -239,15 +238,9 @@ export class BusinessTripService
               hostContact: dto.hostContact?.trim() || null,
               expectedOutcomes: dto.expectedOutcomes?.trim() || null,
               itinerary: dto.itinerary?.trim() || null,
-              ticketClass: dto.ticketClass,
-              estimatedFlightCost: dto.estimatedFlightCost ?? null,
               estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
               estimatedPerDiem: dto.estimatedPerDiem ?? null,
               estimatedOtherCost: dto.estimatedOtherCost ?? null,
-              accommodationRequired: dto.accommodationRequired ?? true,
-              accommodationDetails:
-                dto.accommodationDetails?.trim() || null,
-              perDiemRequired: dto.perDiemRequired ?? true,
               notes: dto.notes?.trim() || null,
               status: BusinessTripStatus.APPROVED,
               submittedAt: now,
@@ -322,8 +315,6 @@ export class BusinessTripService
           returnDate: dto.returnDate ?? null,
           purpose: dto.purpose,
           hostOrganization: dto.hostOrganization ?? null,
-          ticketClass: dto.ticketClass,
-          estimatedFlightCost: dto.estimatedFlightCost ?? null,
           estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
           estimatedPerDiem: dto.estimatedPerDiem ?? null,
           estimatedOtherCost: dto.estimatedOtherCost ?? null,
@@ -359,7 +350,6 @@ export class BusinessTripService
               originCity: dto.originCity.trim(),
               destinationCountry: dto.destinationCountry.trim(),
               destinationCity: dto.destinationCity.trim(),
-              perDiemCategory: dto.perDiemCategory?.trim() || null,
               departureDate,
               returnDate,
               purpose: dto.purpose.trim(),
@@ -367,15 +357,9 @@ export class BusinessTripService
               hostContact: dto.hostContact?.trim() || null,
               expectedOutcomes: dto.expectedOutcomes?.trim() || null,
               itinerary: dto.itinerary?.trim() || null,
-              ticketClass: dto.ticketClass,
-              estimatedFlightCost: dto.estimatedFlightCost ?? null,
               estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
               estimatedPerDiem: dto.estimatedPerDiem ?? null,
               estimatedOtherCost: dto.estimatedOtherCost ?? null,
-              accommodationRequired: dto.accommodationRequired ?? true,
-              accommodationDetails:
-                dto.accommodationDetails?.trim() || null,
-              perDiemRequired: dto.perDiemRequired ?? true,
               notes: dto.notes?.trim() || null,
               status: BusinessTripStatus.SUBMITTED,
               approvalRequestId: approval.id,
@@ -795,7 +779,6 @@ export class BusinessTripService
         originCity,
         destinationCountry,
         destinationCity,
-        perDiemCategory: dto.perDiemCategory?.trim() || null,
         departureDate,
         returnDate,
         purpose,
@@ -803,11 +786,6 @@ export class BusinessTripService
         hostContact: dto.hostContact?.trim() || null,
         expectedOutcomes: dto.expectedOutcomes?.trim() || null,
         itinerary: dto.itinerary?.trim() || null,
-        ticketClass: dto.ticketClass,
-        estimatedFlightCost:
-          dto.estimatedFlightCost != null
-            ? new Prisma.Decimal(dto.estimatedFlightCost)
-            : null,
         estimatedAccommodationCost:
           dto.estimatedAccommodationCost != null
             ? new Prisma.Decimal(dto.estimatedAccommodationCost)
@@ -820,9 +798,6 @@ export class BusinessTripService
           dto.estimatedOtherCost != null
             ? new Prisma.Decimal(dto.estimatedOtherCost)
             : null,
-        accommodationRequired: dto.accommodationRequired ?? true,
-        accommodationDetails: dto.accommodationDetails?.trim() || null,
-        perDiemRequired: dto.perDiemRequired ?? true,
         notes: dto.notes?.trim() || null,
         status: BusinessTripStatus.DRAFT,
         createdBy: actorUserId,

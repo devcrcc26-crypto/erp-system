@@ -41,10 +41,8 @@ const INITIAL_TRIP: BusinessTripDetailsValues = {
   originCity: '',
   destinationCountry: '',
   destinationCity: '',
-  perDiemCategory: undefined,
   departureDate: null,
   returnDate: null,
-  ticketClass: 'ECONOMY',
 };
 
 const INITIAL_PURPOSE: BusinessTripPurposeBudgetValues = {
@@ -53,16 +51,12 @@ const INITIAL_PURPOSE: BusinessTripPurposeBudgetValues = {
   hostContact: '',
   expectedOutcomes: '',
   itinerary: '',
-  estimatedFlightCost: null,
   estimatedAccommodationCost: null,
   estimatedPerDiem: null,
   estimatedOtherCost: null,
 };
 
 const INITIAL_ADDITIONAL: BusinessTripAdditionalValues = {
-  accommodationRequired: true,
-  accommodationDetails: '',
-  perDiemRequired: true,
   notes: '',
   files: [],
 };
@@ -265,7 +259,6 @@ export function BusinessTripForm({
         originCity: tripDetails.originCity.trim(),
         destinationCountry: tripDetails.destinationCountry.trim(),
         destinationCity: tripDetails.destinationCity.trim(),
-        perDiemCategory: tripDetails.perDiemCategory?.trim() || undefined,
         departureDate: tripDetails.departureDate.toISOString(),
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate
@@ -276,11 +269,6 @@ export function BusinessTripForm({
         hostContact: purposeBudget.hostContact.trim() || undefined,
         expectedOutcomes: purposeBudget.expectedOutcomes.trim() || undefined,
         itinerary: purposeBudget.itinerary.trim() || undefined,
-        ticketClass: tripDetails.ticketClass,
-        estimatedFlightCost:
-          purposeBudget.estimatedFlightCost != null
-            ? Number(purposeBudget.estimatedFlightCost)
-            : undefined,
         estimatedAccommodationCost:
           purposeBudget.estimatedAccommodationCost != null
             ? Number(purposeBudget.estimatedAccommodationCost)
@@ -293,11 +281,6 @@ export function BusinessTripForm({
           purposeBudget.estimatedOtherCost != null
             ? Number(purposeBudget.estimatedOtherCost)
             : undefined,
-        accommodationRequired: additional.accommodationRequired,
-        accommodationDetails: additional.accommodationRequired
-          ? additional.accommodationDetails.trim() || undefined
-          : undefined,
-        perDiemRequired: additional.perDiemRequired,
         notes: additional.notes.trim() || undefined,
         passengers: passengers.map((p) => ({
           employeeId: p.employeeId,

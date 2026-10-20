@@ -4918,16 +4918,10 @@ model BusinessTrip {
   hostContact                String?            @map("host_contact")
   expectedOutcomes           String?            @map("expected_outcomes")
   itinerary                  String?
-  ticketClass                FlightTicketClass  @default(ECONOMY) @map("ticket_class")
-  estimatedFlightCost        Decimal?           @map("estimated_flight_cost") @db.Decimal(12, 2)
   estimatedAccommodationCost Decimal?           @map("estimated_accommodation_cost") @db.Decimal(12, 2)
   estimatedPerDiem           Decimal?           @map("estimated_per_diem") @db.Decimal(12, 2)
   estimatedOtherCost         Decimal?           @map("estimated_other_cost") @db.Decimal(12, 2)
-  estimatedTotalCost         Decimal?           @default(dbgenerated("(((COALESCE(estimated_flight_cost, (0)::numeric) + COALESCE(estimated_accommodation_cost, (0)::numeric)) + COALESCE(estimated_per_diem, (0)::numeric)) + COALESCE(estimated_other_cost, (0)::numeric))")) @map("estimated_total_cost") @db.Decimal(12, 2)
-  accommodationRequired      Boolean            @default(true) @map("accommodation_required")
-  accommodationDetails       String?            @map("accommodation_details")
-  perDiemRequired            Boolean            @default(true) @map("per_diem_required")
-  perDiemCategory            String?            @map("per_diem_category")
+  estimatedTotalCost         Decimal?           @default(dbgenerated("(COALESCE(estimated_accommodation_cost, (0)::numeric) + COALESCE(estimated_per_diem, (0)::numeric) + COALESCE(estimated_other_cost, (0)::numeric))")) @map("estimated_total_cost") @db.Decimal(12, 2)
   notes                      String?
   status                     BusinessTripStatus @default(DRAFT)
   approvalRequestId          String?            @unique @map("approval_request_id")

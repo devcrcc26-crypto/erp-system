@@ -24,7 +24,6 @@ export default function BusinessTripPurposeBudgetStep({
   }
 
   const estimatedTotal =
-    (Number(values.estimatedFlightCost) || 0) +
     (Number(values.estimatedAccommodationCost) || 0) +
     (Number(values.estimatedPerDiem) || 0) +
     (Number(values.estimatedOtherCost) || 0);
@@ -116,25 +115,6 @@ export default function BusinessTripPurposeBudgetStep({
         description={t('pages.hr.businessTrip.budgetStepDescription')}
       >
         <Row gutter={[16, 0]}>
-          <Col xs={24} sm={12}>
-            <div className="mb-4">
-              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-                {t('hr.form.estimatedFlightCost')}
-              </label>
-              <InputNumber
-                className="w-full"
-                min={0}
-                prefix="ETB"
-                placeholder="0"
-                value={values.estimatedFlightCost ?? undefined}
-                onChange={(v) =>
-                  patch({
-                    estimatedFlightCost: typeof v === 'number' ? v : null,
-                  })
-                }
-              />
-            </div>
-          </Col>
           <Col xs={24} sm={12}>
             <div className="mb-4">
               <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">

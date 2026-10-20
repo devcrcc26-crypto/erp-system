@@ -1,6 +1,6 @@
 'use client';
 
-import { Checkbox, Input } from 'antd';
+import { Input } from 'antd';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -32,45 +32,6 @@ export default function BusinessTripAdditionalStep({
         title={t('hr.section.additionalOptions')}
         description={t('pages.hr.businessTrip.additionalStepDescription')}
       >
-        <div className="mb-3">
-          <Checkbox
-            checked={values.accommodationRequired}
-            onChange={(e) =>
-              patch({ accommodationRequired: e.target.checked })
-            }
-            disabled={disabled}
-          >
-            {t('hr.form.accommodation')}
-          </Checkbox>
-        </div>
-
-        {values.accommodationRequired ? (
-          <div className="mb-4">
-            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-              {t('hr.form.accommodationDetails')}
-            </label>
-            <Input.TextArea
-              rows={3}
-              maxLength={1000}
-              showCount
-              value={values.accommodationDetails}
-              onChange={(e) => patch({ accommodationDetails: e.target.value })}
-              placeholder={t('hr.form.accommodationDetails')}
-              disabled={disabled}
-            />
-          </div>
-        ) : null}
-
-        <div className="mb-4">
-          <Checkbox
-            checked={values.perDiemRequired}
-            onChange={(e) => patch({ perDiemRequired: e.target.checked })}
-            disabled={disabled}
-          >
-            {t('hr.form.perDiemRequired')}
-          </Checkbox>
-        </div>
-
         <div className="mb-0">
           <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
             {t('hr.form.notes')}

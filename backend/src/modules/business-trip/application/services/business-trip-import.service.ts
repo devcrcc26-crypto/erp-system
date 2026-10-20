@@ -75,12 +75,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   'expected outcomes': 'expectedOutcomes',
   expected_outcomes: 'expectedOutcomes',
   itinerary: 'itinerary',
-  ticketclass: 'ticketClass',
-  'ticket class': 'ticketClass',
-  ticket_class: 'ticketClass',
-  estimatedflightcost: 'estimatedFlightCost',
-  'estimated flight cost': 'estimatedFlightCost',
-  estimated_flight_cost: 'estimatedFlightCost',
   estimatedaccommodationcost: 'estimatedAccommodationCost',
   'estimated accommodation cost': 'estimatedAccommodationCost',
   estimated_accommodation_cost: 'estimatedAccommodationCost',
@@ -90,15 +84,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   estimatedothercost: 'estimatedOtherCost',
   'estimated other cost': 'estimatedOtherCost',
   estimated_other_cost: 'estimatedOtherCost',
-  accommodationrequired: 'accommodationRequired',
-  'accommodation required': 'accommodationRequired',
-  accommodation_required: 'accommodationRequired',
-  accommodationdetails: 'accommodationDetails',
-  'accommodation details': 'accommodationDetails',
-  accommodation_details: 'accommodationDetails',
-  perdiemrequired: 'perDiemRequired',
-  'per diem required': 'perDiemRequired',
-  per_diem_required: 'perDiemRequired',
   notes: 'notes',
   passengeremail: 'passengerEmail',
   'passenger email': 'passengerEmail',
@@ -134,14 +119,9 @@ interface ParsedImportRow {
   hostContact: string;
   expectedOutcomes: string;
   itinerary: string;
-  ticketClass: string;
-  estimatedFlightCost: string;
   estimatedAccommodationCost: string;
   estimatedPerDiem: string;
   estimatedOtherCost: string;
-  accommodationRequired: string;
-  accommodationDetails: string;
-  perDiemRequired: string;
   notes: string;
   passengerEmail: string;
   passengerId: string;
@@ -189,14 +169,9 @@ export class BusinessTripImportService {
         hostContact: 'host@partner.local',
         expectedOutcomes: 'Signed MoU',
         itinerary: 'Day 1: meetings; Day 2: site visit',
-        ticketClass: 'ECONOMY',
-        estimatedFlightCost: '500',
         estimatedAccommodationCost: '200',
         estimatedPerDiem: '100',
         estimatedOtherCost: '',
-        accommodationRequired: 'TRUE',
-        accommodationDetails: '',
-        perDiemRequired: 'TRUE',
         notes: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
@@ -232,14 +207,9 @@ export class BusinessTripImportService {
         hostContact: '',
         expectedOutcomes: '',
         itinerary: '',
-        ticketClass: '',
-        estimatedFlightCost: '',
         estimatedAccommodationCost: '',
         estimatedPerDiem: '',
         estimatedOtherCost: '',
-        accommodationRequired: '',
-        accommodationDetails: '',
-        perDiemRequired: '',
         notes: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
@@ -709,14 +679,9 @@ export class BusinessTripImportService {
         hostContact: '',
         expectedOutcomes: '',
         itinerary: '',
-        ticketClass: '',
-        estimatedFlightCost: '',
         estimatedAccommodationCost: '',
         estimatedPerDiem: '',
         estimatedOtherCost: '',
-        accommodationRequired: '',
-        accommodationDetails: '',
-        perDiemRequired: '',
         notes: '',
         passengerEmail: '',
         passengerId: '',

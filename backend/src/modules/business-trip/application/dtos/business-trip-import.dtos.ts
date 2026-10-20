@@ -4,11 +4,7 @@ import {
   ImportRowPreviewDto,
   ImportRowStatus,
 } from '../../../hr-shared/application/dtos/hr-import.dtos';
-import {
-  FlightTicketClass,
-  FlightTripType,
-  FlightVisaStatus,
-} from '@prisma/client';
+import { FlightTripType, FlightVisaStatus } from '@prisma/client';
 
 export type {
   ImportRowStatus,
@@ -28,18 +24,13 @@ export class BusinessTripImportRowPreviewDto extends ImportRowPreviewDto {
   departureDate?: string;
   returnDate?: string;
   purpose?: string;
-  ticketClass?: FlightTicketClass;
   hostOrganization?: string;
   hostContact?: string;
   expectedOutcomes?: string;
   itinerary?: string;
-  estimatedFlightCost?: number;
   estimatedAccommodationCost?: number;
   estimatedPerDiem?: number;
   estimatedOtherCost?: number;
-  accommodationRequired?: boolean;
-  accommodationDetails?: string;
-  perDiemRequired?: boolean;
   notes?: string;
   passengerId?: string;
   passengerEmail?: string;

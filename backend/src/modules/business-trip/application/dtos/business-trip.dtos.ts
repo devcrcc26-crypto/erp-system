@@ -19,7 +19,6 @@ import {
 } from 'class-validator';
 import {
   BusinessTripStatus,
-  FlightTicketClass,
   FlightTripType,
   FlightVisaStatus,
 } from '@prisma/client';
@@ -113,13 +112,6 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @MaxLength(200)
   destinationCity!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(100)
-  perDiemCategory?: string;
-
   @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
   @IsDateString()
   departureDate!: string;
@@ -167,17 +159,6 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @MaxLength(4000)
   itinerary?: string;
 
-  @ApiProperty({ enum: FlightTicketClass, default: FlightTicketClass.ECONOMY })
-  @IsEnum(FlightTicketClass)
-  ticketClass!: FlightTicketClass;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => toOptionalNumber(value))
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  estimatedFlightCost?: number;
-
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => toOptionalNumber(value))
@@ -198,33 +179,6 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   estimatedOtherCost?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  accommodationRequired?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(4000)
-  accommodationDetails?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  perDiemRequired?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -283,13 +237,6 @@ export class CreateBusinessTripDraftDto {
   @MaxLength(200)
   destinationCity!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(100)
-  perDiemCategory?: string;
-
   @ApiProperty({ example: '2026-09-01' })
   @IsDateString()
   departureDate!: string;
@@ -337,17 +284,6 @@ export class CreateBusinessTripDraftDto {
   @MaxLength(4000)
   itinerary?: string;
 
-  @ApiProperty({ enum: FlightTicketClass, default: FlightTicketClass.ECONOMY })
-  @IsEnum(FlightTicketClass)
-  ticketClass!: FlightTicketClass;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => toOptionalNumber(value))
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  estimatedFlightCost?: number;
-
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => toOptionalNumber(value))
@@ -368,33 +304,6 @@ export class CreateBusinessTripDraftDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   estimatedOtherCost?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  accommodationRequired?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => emptyToUndefined(value))
-  @IsString()
-  @MaxLength(4000)
-  accommodationDetails?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === undefined || value === null || value === ''
-      ? undefined
-      : toBoolean(value),
-  )
-  @IsBoolean()
-  perDiemRequired?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()

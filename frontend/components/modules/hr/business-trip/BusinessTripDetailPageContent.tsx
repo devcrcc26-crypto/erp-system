@@ -20,7 +20,6 @@ import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import {
   TravelBudgetBreakdown,
   TravelPassengerList,
-  TravelRequirements,
   TravelRouteHero,
   TravelTextBlock,
   type PassengerTicketState,
@@ -51,7 +50,6 @@ import {
   formatBusinessTripStatus,
   formatBusinessTripSubmitterName,
   formatEtb,
-  formatTicketClass,
   formatTripType,
   formatVisaStatus,
   tripTypeVariant,
@@ -208,23 +206,16 @@ export default function BusinessTripDetailPageContent({
           destination: t('hr.form.destination'),
           departure: t('hr.labels.departure'),
           return: t('hr.labels.return'),
-          ticketClass: t('hr.labels.ticketClass'),
           purpose: t('hr.labels.purpose'),
           hostOrganization: t('hr.form.hostOrganization'),
           hostContact: t('hr.form.hostContact'),
           expectedOutcomes: t('hr.labels.expectedOutcomes'),
           itinerary: t('hr.labels.itinerary'),
           notes: t('hr.labels.notes'),
-          estimatedFlight: t('hr.labels.estimatedFlight'),
           estimatedAccommodation: t('hr.labels.estimatedAccommodation'),
           estimatedPerDiem: t('hr.labels.estimatedPerDiem'),
           estimatedOther: t('hr.labels.estimatedOther'),
           estimatedTotal: t('hr.labels.estimatedTotal'),
-          accommodation: t('hr.labels.accommodation'),
-          accommodationDetails: t('hr.form.accommodationDetails'),
-          perDiem: t('hr.labels.perDiem'),
-          required: t('hr.labels.required'),
-          notRequired: t('hr.labels.notRequired'),
           passengerName: t('hr.table.employee'),
           passengerEmail: t('users.form.email'),
           passport: t('hr.labels.passport'),
@@ -292,7 +283,6 @@ export default function BusinessTripDetailPageContent({
   const tripTypeLabel = formatTripType(trip.tripType, t);
 
   const budgetRows = [
-    { label: t('hr.labels.estimatedFlight'), value: trip.estimatedFlightCost },
     {
       label: t('hr.labels.estimatedAccommodation'),
       value: trip.estimatedAccommodationCost,
@@ -389,7 +379,6 @@ export default function BusinessTripDetailPageContent({
           }}
           departureDate={trip.departureDate}
           returnDate={trip.returnDate}
-          ticketClassLabel={formatTicketClass(trip.ticketClass, t)}
           passengerCount={trip.passengerCount}
           extraFact={{
             label: t('hr.labels.estimatedTotal'),
@@ -451,18 +440,14 @@ export default function BusinessTripDetailPageContent({
               </DetailSection>
             ) : null}
 
-            <DetailSection title={t('hr.travel.requirements')}>
-              <TravelRequirements
-                accommodationRequired={trip.accommodationRequired}
-                accommodationDetails={trip.accommodationDetails}
-                perDiemRequired={trip.perDiemRequired}
-              >
+            {trip.notes ? (
+              <DetailSection title={t('hr.travel.requirements')}>
                 <TravelTextBlock
                   label={t('hr.labels.notes')}
                   text={trip.notes}
                 />
-              </TravelRequirements>
-            </DetailSection>
+              </DetailSection>
+            ) : null}
 
             <DetailSection
               title={t('hr.section.passengerDetails')}

@@ -2,7 +2,6 @@
 
 import type { Dayjs } from 'dayjs';
 import type {
-  FlightTicketClass,
   FlightTripType,
   FlightVisaStatus,
 } from '@/lib/api/business-trip.types';
@@ -13,11 +12,8 @@ export interface BusinessTripDetailsValues {
   originCity: string;
   destinationCountry: string;
   destinationCity: string;
-  /** Auto-detected or manually selected per diem destination category. */
-  perDiemCategory?: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
-  ticketClass: FlightTicketClass;
 }
 
 export interface BusinessTripPurposeBudgetValues {
@@ -26,7 +22,6 @@ export interface BusinessTripPurposeBudgetValues {
   hostContact: string;
   expectedOutcomes: string;
   itinerary: string;
-  estimatedFlightCost?: number | null;
   estimatedAccommodationCost?: number | null;
   estimatedPerDiem?: number | null;
   estimatedOtherCost?: number | null;
@@ -41,9 +36,6 @@ export interface BusinessTripPassengerValues {
 }
 
 export interface BusinessTripAdditionalValues {
-  accommodationRequired: boolean;
-  accommodationDetails: string;
-  perDiemRequired: boolean;
   notes: string;
   files: File[];
 }

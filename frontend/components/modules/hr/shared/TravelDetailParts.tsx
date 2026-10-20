@@ -136,7 +136,7 @@ export interface TravelRouteHeroProps {
   destination: RoutePlace;
   departureDate: string;
   returnDate?: string | null;
-  ticketClassLabel: string;
+  ticketClassLabel?: string;
   passengerCount: number;
   /** Extra headline figure (e.g. estimated total cost). */
   extraFact?: { label: string; value: React.ReactNode };
@@ -253,11 +253,13 @@ export function TravelRouteHero({
           label={t('hr.labels.return')}
           value={returnDate ? formatProjectDate(returnDate) : '-'}
         />
-        <RouteFact
-          icon={<Ticket size={17} strokeWidth={1.75} />}
-          label={t('hr.labels.ticketClass')}
-          value={ticketClassLabel}
-        />
+        {ticketClassLabel !== undefined ? (
+          <RouteFact
+            icon={<Ticket size={17} strokeWidth={1.75} />}
+            label={t('hr.labels.ticketClass')}
+            value={ticketClassLabel}
+          />
+        ) : null}
         <RouteFact
           icon={<Users size={17} strokeWidth={1.75} />}
           label={t('hr.labels.passengers')}

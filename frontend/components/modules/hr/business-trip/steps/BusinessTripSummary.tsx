@@ -4,7 +4,6 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatEtb,
-  formatTicketClass,
   formatTripType,
 } from '@/lib/utils/business-trip-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
@@ -58,7 +57,6 @@ export default function BusinessTripSummary({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const totalCost =
-    (Number(purposeBudget.estimatedFlightCost) || 0) +
     (Number(purposeBudget.estimatedAccommodationCost) || 0) +
     (Number(purposeBudget.estimatedPerDiem) || 0) +
     (Number(purposeBudget.estimatedOtherCost) || 0);
@@ -83,10 +81,6 @@ export default function BusinessTripSummary({
         <ReviewItem
           label={t('hr.labels.tripType')}
           value={formatTripType(tripDetails.tripType, t)}
-        />
-        <ReviewItem
-          label={t('hr.labels.ticketClass')}
-          value={formatTicketClass(tripDetails.ticketClass, t)}
         />
         <ReviewItem label={t('hr.labels.origin')} value={origin} />
         <ReviewItem label={t('hr.labels.destination')} value={destination} />
@@ -121,10 +115,6 @@ export default function BusinessTripSummary({
           </div>
         ) : null}
         <ReviewItem
-          label={t('hr.labels.estimatedFlight')}
-          value={formatEtb(purposeBudget.estimatedFlightCost ?? 0)}
-        />
-        <ReviewItem
           label={t('hr.labels.estimatedAccommodation')}
           value={formatEtb(purposeBudget.estimatedAccommodationCost ?? 0)}
         />
@@ -152,23 +142,6 @@ export default function BusinessTripSummary({
             }
           />
         </div>
-        <ReviewItem
-          label={t('hr.labels.accommodation')}
-          value={
-            additional.accommodationRequired
-              ? additional.accommodationDetails.trim() ||
-                t('hr.labels.required')
-              : t('hr.labels.notRequired')
-          }
-        />
-        <ReviewItem
-          label={t('hr.labels.perDiem')}
-          value={
-            additional.perDiemRequired
-              ? t('hr.labels.required')
-              : t('hr.labels.notRequired')
-          }
-        />
         {additional.notes.trim() ? (
           <div className="sm:col-span-2">
             <ReviewItem

@@ -57,8 +57,6 @@ export interface BusinessTripListItem {
   originCity: string;
   destinationCountry: string;
   destinationCity: string;
-  /** Per diem destination category when known (Domestic | Regional | International). */
-  perDiemCategory?: string | null;
   departureDate: string;
   returnDate?: string | null;
   status: BusinessTripStatus;
@@ -79,15 +77,10 @@ export interface BusinessTripDetail extends BusinessTripListItem {
   hostContact?: string | null;
   expectedOutcomes?: string | null;
   itinerary?: string | null;
-  ticketClass: FlightTicketClass;
-  estimatedFlightCost?: number | null;
   estimatedAccommodationCost?: number | null;
   estimatedPerDiem?: number | null;
   estimatedOtherCost?: number | null;
   estimatedTotalCost?: number | null;
-  accommodationRequired: boolean;
-  accommodationDetails?: string | null;
-  perDiemRequired: boolean;
   notes?: string | null;
   combinedTicket?: BusinessTripDocumentSummary | null;
   combinedTickets?: BusinessTripDocumentSummary[];
@@ -122,8 +115,6 @@ export interface SubmitBusinessTripPayload extends OnBehalfPayload {
   originCity: string;
   destinationCountry: string;
   destinationCity: string;
-  /** Per diem destination category when known (Domestic | Regional | International). */
-  perDiemCategory?: string | null;
   departureDate: string;
   returnDate?: string;
   purpose: string;
@@ -131,14 +122,9 @@ export interface SubmitBusinessTripPayload extends OnBehalfPayload {
   hostContact?: string;
   expectedOutcomes?: string;
   itinerary?: string;
-  ticketClass: FlightTicketClass;
-  estimatedFlightCost?: number;
   estimatedAccommodationCost?: number;
   estimatedPerDiem?: number;
   estimatedOtherCost?: number;
-  accommodationRequired: boolean;
-  accommodationDetails?: string;
-  perDiemRequired: boolean;
   notes?: string;
   passengers: SubmitBusinessTripPassengerPayload[];
   files?: File[];
