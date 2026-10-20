@@ -5153,6 +5153,7 @@ model PerDiemRequest {
   dailyRate            Decimal           @map("daily_rate") @db.Decimal(12, 2)
   requestedDailyRate   Decimal?          @map("requested_daily_rate") @db.Decimal(12, 2)
   rateOverrideReason   String?           @map("rate_override_reason")
+  approvedDailyRate    Decimal?          @map("approved_daily_rate") @db.Decimal(12, 2)
   currency             SupportedCurrency @default(ETB)
   totalAmount          Decimal           @map("total_amount") @db.Decimal(14, 2)
   totalAmountEtb       Decimal           @map("total_amount_etb") @db.Decimal(14, 2)

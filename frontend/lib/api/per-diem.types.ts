@@ -120,6 +120,7 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   notes?: string | null;
   requestedDailyRate?: string | null;
   rateOverrideReason?: string | null;
+  approvedDailyRate?: string | null;
   actualStartDate?: string | null;
   employeePerDiemRate?: EmployeePerDiemRate | null;
   disbursements?: PerDiemDisbursement[];

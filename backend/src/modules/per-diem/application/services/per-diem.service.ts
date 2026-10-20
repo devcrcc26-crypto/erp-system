@@ -752,6 +752,27 @@ export class PerDiemService
   }
 
   /**
+   * Sets the approved daily rate on a pending per diem request (called by the approver before confirming).
+   */
+  async setApprovedRate(
+    id: string,
+    approvedDailyRate: number,
+    companyId: string,
+  ): Promise<unknown> {
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    await this.prisma.perDiemRequest.update({
+      where: { id },
+      data: { approvedDailyRate: new Prisma.Decimal(approvedDailyRate), updatedBy: request.updatedBy },
+    });
+    return this.getRequest(id, companyId, request.employeeId);
+  }
+
+  /**
    * Called by the approval engine when a linked request reaches a terminal decision.
    */
   async onApprovalDecision(

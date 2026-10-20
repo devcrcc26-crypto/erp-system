@@ -20,6 +20,7 @@ import {
   CreatePerDiemRequestSettlementDto,
   ListPerDiemRequestsDto,
   MarkPerDiemPaidDto,
+  SetApprovedRateDto,
   SubmitPerDiemRequestDto,
 } from '../../application/dtos/per-diem.dtos';
 import { PerDiemService } from '../../application/services/per-diem.service';
@@ -110,6 +111,20 @@ export class PerDiemController {
     @Body() dto: CreatePerDiemDisbursementDto,
   ): Promise<unknown> {
     return this.perDiemService.addDisbursement(id, dto, companyId, user.userId);
+  }
+
+  @Patch(':id/approved-rate')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Set the approved daily rate on a pending per diem request (approver action)',
+  })
+  setApprovedRate(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: SetApprovedRateDto,
+  ): Promise<unknown> {
+    return this.perDiemService.setApprovedRate(id, dto.approvedDailyRate, companyId);
   }
 
   @Post(':id/settle')

@@ -174,6 +174,13 @@ export class CreatePerDiemRequestSettlementDto {
   notes?: string;
 }
 
+export class SetApprovedRateDto {
+  @ApiProperty({ description: 'Approved daily rate in the request currency' })
+  @IsNumber()
+  @Min(0)
+  approvedDailyRate!: number;
+}
+
 export class ListPerDiemRequestsDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

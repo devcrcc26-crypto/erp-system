@@ -2,8 +2,8 @@
 
 import './approvals-v2.css';
 
-import { useMemo, useState } from 'react';
-import { Button, Dropdown, Grid, Input, Skeleton, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Dropdown, Grid, Input, InputNumber, Skeleton, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   CheckOutlined,
@@ -59,6 +59,8 @@ import {
   useResolveApprovalCondition,
   useReturnApprovalTier,
 } from '@/lib/query/approvals';
+import { usePerDiemRequest, useSetApprovedPerDiemRate } from '@/lib/query/per-diem';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   findCurrentTier,
@@ -293,10 +295,29 @@ export default function ApprovalDetailPageContent({
   const [actionModal, setActionModal] = useState<ActionModalKind>(null);
   const [note, setNote] = useState('');
   const [conditionText, setConditionText] = useState('');
+  const [approvedRate, setApprovedRate] = useState<number | null>(null);
+
+  // Derive per-diem source id early (before conditional returns) using detailQuery.data directly.
+  const _earlyRequest = detailQuery.data;
+  const _isPerDiem = Boolean(_earlyRequest) && resolveCategoryCode(_earlyRequest!) === 'PER_DIEM';
+  const _perDiemSourceId = _isPerDiem ? (_earlyRequest?.sourceId ?? '') : '';
+  const perDiemDetailQuery = usePerDiemRequest(_perDiemSourceId);
+  const setApprovedRateMutation = useSetApprovedPerDiemRate(_perDiemSourceId);
+
+  useEffect(() => {
+    if (actionModal === 'approve' && _isPerDiem && perDiemDetailQuery.data) {
+      const raw = perDiemDetailQuery.data.approvedDailyRate ?? perDiemDetailQuery.data.requestedDailyRate ?? perDiemDetailQuery.data.dailyRate;
+      setApprovedRate(parseFloat(String(raw)));
+    }
+  }, [actionModal, _isPerDiem, perDiemDetailQuery.data]);
 
   useSetHeaderExtra(null);
 
   const request = detailQuery.data;
+  const isPerDiem = _isPerDiem;
+  const perDiemId = _perDiemSourceId;
+  const perDiemDetail = perDiemDetailQuery.data;
+
   const tiers = useMemo(
     () =>
       [...(request?.tiers ?? [])].sort(
@@ -363,16 +384,30 @@ export default function ApprovalDetailPageContent({
     approveMutation.isPending ||
     rejectMutation.isPending ||
     returnMutation.isPending ||
-    addConditionMutation.isPending;
+    addConditionMutation.isPending ||
+    setApprovedRateMutation.isPending;
 
   function closeModal(): void {
     setActionModal(null);
     setNote('');
     setConditionText('');
+    setApprovedRate(null);
   }
 
   async function handleApprove(onBehalf = false): Promise<void> {
     if (!currentTier) return;
+    if (isPerDiem && perDiemId) {
+      if (approvedRate == null || approvedRate <= 0) {
+        messageApi.warning(t('pages.approvals.dialog.approvedRateRequired'));
+        return;
+      }
+      try {
+        await setApprovedRateMutation.mutateAsync(approvedRate);
+      } catch (error) {
+        notifyApiError(error, t('pages.approvals.dialog.approveFailed'), messageApi);
+        return;
+      }
+    }
     try {
       await approveMutation.mutateAsync({
         tierId: currentTier.id,
@@ -765,6 +800,52 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleApprove()}
       >
+        {isPerDiem && perDiemDetail ? (
+          <div className="erp-confirm-dialog-field" style={{ marginBottom: 12 }}>
+            <div
+              className="rounded-md p-3 mb-3"
+              style={{ background: 'var(--color-teal-50)', border: '1px solid var(--color-teal-400)' }}
+            >
+              <p className="erp-confirm-dialog-field-label" style={{ marginBottom: 8 }}>
+                Rate Summary
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Configured Rate</p>
+                  <p style={{ fontWeight: 600, margin: 0 }}>
+                    {formatEtbAmount(perDiemDetail.dailyRate)} / day
+                  </p>
+                </div>
+                {perDiemDetail.requestedDailyRate ? (
+                  <div>
+                    <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Requested Rate</p>
+                    <p style={{ fontWeight: 600, margin: 0 }}>
+                      {formatEtbAmount(perDiemDetail.requestedDailyRate)} / day
+                    </p>
+                  </div>
+                ) : null}
+                {perDiemDetail.rateOverrideReason ? (
+                  <div className="col-span-2">
+                    <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Override Reason</p>
+                    <p style={{ margin: 0 }}>{perDiemDetail.rateOverrideReason}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <p className="erp-confirm-dialog-field-label">
+              Approved Daily Rate <span style={{ color: '#f04438' }}>*</span>
+            </p>
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              precision={2}
+              value={approvedRate}
+              onChange={(v) => setApprovedRate(v)}
+              placeholder="Enter approved rate"
+              suffix="ETB"
+            />
+          </div>
+        ) : null}
         <div className="erp-confirm-dialog-field">
           <p className="erp-confirm-dialog-field-label">
             {t('pages.approvals.dialog.noteLabel')}

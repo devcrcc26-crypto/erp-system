@@ -473,11 +473,11 @@ export default function PerDiemRequestDetailPageContent({
                     </MetaItem>
                   </div>
                 ) : null}
-                {request.requestedDailyRate != null ? (
+                {(request.requestedDailyRate != null || request.approvedDailyRate != null) ? (
                   <div className="md:col-span-2">
-                    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+                    <div className="rounded-md p-4" style={{ background: 'var(--color-teal-50)', border: '1px solid var(--color-teal-400)' }}>
                       <div className="mb-3 flex items-center gap-2">
-                        <span className="erp-users-role-tag" style={{ background: 'var(--color-warning-bg, #fffbe6)', color: 'var(--color-warning, #d48806)', borderColor: 'var(--color-warning-border, #ffe58f)' }}>
+                        <span className="erp-users-role-tag" style={{ background: 'var(--color-teal-50)', color: 'var(--color-teal-600)', borderColor: 'var(--color-teal-400)' }}>
                           {t('hr.perDiem.rateOverrideRequested')}
                         </span>
                       </div>
@@ -485,19 +485,30 @@ export default function PerDiemRequestDetailPageContent({
                         <MetaItem label={t('hr.labels.dailyRate')}>
                           {formatEtbAmount(request.dailyRate)}
                         </MetaItem>
-                        <MetaItem label={t('hr.perDiem.requestedDailyRate')}>
-                          <span className="erp-users-cell-strong">
-                            {formatEtbAmount(request.requestedDailyRate)}
-                          </span>
-                        </MetaItem>
+                        {request.requestedDailyRate != null ? (
+                          <MetaItem label={t('hr.perDiem.requestedDailyRate')}>
+                            <span className="erp-users-cell-strong">
+                              {formatEtbAmount(request.requestedDailyRate)}
+                            </span>
+                          </MetaItem>
+                        ) : null}
+                        {request.approvedDailyRate != null ? (
+                          <MetaItem label={t('hr.perDiem.approvedDailyRate')}>
+                            <span className="erp-users-cell-strong">
+                              {formatEtbAmount(request.approvedDailyRate)}
+                            </span>
+                          </MetaItem>
+                        ) : null}
                         <MetaItem label={t('hr.form.totalAmount')}>
                           {formatEtbAmount(request.totalAmount)}
                         </MetaItem>
-                        <MetaItem label={t('hr.perDiem.requestedTotal')}>
-                          <span className="erp-users-cell-strong">
-                            {formatEtbAmount(Number(request.requestedDailyRate) * request.days)}
-                          </span>
-                        </MetaItem>
+                        {request.requestedDailyRate != null ? (
+                          <MetaItem label={t('hr.perDiem.requestedTotal')}>
+                            <span className="erp-users-cell-strong">
+                              {formatEtbAmount(Number(request.requestedDailyRate) * request.days)}
+                            </span>
+                          </MetaItem>
+                        ) : null}
                         {request.rateOverrideReason ? (
                           <div className="sm:col-span-2">
                             <MetaItem label={t('hr.perDiem.rateOverrideReason')}>

@@ -369,6 +369,18 @@ export function useSettlePerDiemRequest(id: string) {
   });
 }
 
+/** Approver sets the approved daily rate before confirming approval. */
+export function useSetApprovedPerDiemRate(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (approvedDailyRate: number) =>
+      apiPatch<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/approved-rate`, { approvedDailyRate }),
+    onSuccess: (updated) => {
+      void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+    },
+  });
+}
+
 /** HR marks an approved advance as paid. */
 export function useMarkPerDiemPaid(id: string) {
   const queryClient = useQueryClient();

@@ -61,10 +61,16 @@ export default function PerDiemDetail({
             label: 'Daily Rate',
             value: formatEtbAmount(request.dailyRate),
           },
+          ...(request.requestedDailyRate != null
+            ? [{ label: 'Requested Rate', value: formatEtbAmount(request.requestedDailyRate) }]
+            : []),
+          ...(request.approvedDailyRate != null
+            ? [{ label: 'Approved Rate', value: formatEtbAmount(request.approvedDailyRate), emphasize: true }]
+            : []),
           {
             label: 'Total (ETB)',
             value: formatEtbAmount(request.totalAmountEtb),
-            emphasize: true,
+            emphasize: !request.approvedDailyRate,
           },
         ]}
       />
