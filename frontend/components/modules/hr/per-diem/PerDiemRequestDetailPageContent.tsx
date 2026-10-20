@@ -18,9 +18,11 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
+  useAddPerDiemDisbursement,
   useCancelPerDiemRequest,
   useMarkPerDiemPaid,
   usePerDiemRequest,
+  useSettlePerDiemRequest,
 } from '@/lib/query/per-diem';
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
@@ -74,11 +76,27 @@ export default function PerDiemRequestDetailPageContent({
   const detailQuery = usePerDiemRequest(requestId);
   const cancelMutation = useCancelPerDiemRequest(requestId);
   const markPaidMutation = useMarkPerDiemPaid(requestId);
+  const addDisbursementMutation = useAddPerDiemDisbursement(requestId);
+  const settleMutation = useSettlePerDiemRequest(requestId);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [disbursementOpen, setDisbursementOpen] = useState(false);
+  const [settleOpen, setSettleOpen] = useState(false);
   const [markPaidForm] = Form.useForm<{
     paidAmount?: number;
     paymentReference?: string;
+  }>();
+  const [disbursementForm] = Form.useForm<{
+    amount: number;
+    disbursedAt: string;
+    coveredDaysFrom: string;
+    coveredDaysTo: string;
+    notes?: string;
+  }>();
+  const [settleForm] = Form.useForm<{
+    actualReturnDate: string;
+    actualDaysOverride?: number;
+    notes?: string;
   }>();
 
   useSetHeaderExtra(null);
@@ -97,11 +115,54 @@ export default function PerDiemRequestDetailPageContent({
     request?.status === 'APPROVED' &&
     !request.paidAt &&
     !request.settlementId;
+  const canAddDisbursement =
+    canEditHr &&
+    (request?.status === 'APPROVED' || request?.status === 'ACTIVE');
+  const canSettle =
+    canEditHr &&
+    request?.status === 'ACTIVE' &&
+    !request?.requestSettlement;
 
   const tiers = useMemo(
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
     [request?.approvalRequest?.tiers],
   );
+
+  async function handleAddDisbursement(): Promise<void> {
+    try {
+      const values = await disbursementForm.validateFields();
+      await addDisbursementMutation.mutateAsync({
+        amount: values.amount,
+        disbursedAt: values.disbursedAt,
+        coveredDaysFrom: values.coveredDaysFrom,
+        coveredDaysTo: values.coveredDaysTo,
+        notes: values.notes?.trim() || undefined,
+      });
+      messageApi.success(t('hr.perDiem.disbursementAdded'));
+      setDisbursementOpen(false);
+      disbursementForm.resetFields();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      notifyApiError(error, t('hr.perDiem.disbursementFailed'), messageApi);
+    }
+  }
+
+  async function handleSettle(): Promise<void> {
+    try {
+      const values = await settleForm.validateFields();
+      await settleMutation.mutateAsync({
+        actualReturnDate: values.actualReturnDate,
+        actualDaysOverride: values.actualDaysOverride,
+        notes: values.notes?.trim() || undefined,
+      });
+      messageApi.success(t('hr.perDiem.settledSuccess'));
+      setSettleOpen(false);
+      settleForm.resetFields();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      notifyApiError(error, t('hr.perDiem.settleFailed'), messageApi);
+    }
+  }
 
   async function handleCancel(): Promise<void> {
     try {
@@ -203,6 +264,16 @@ export default function PerDiemRequestDetailPageContent({
             {canMarkPaid ? (
               <Button type="primary" onClick={() => setMarkPaidOpen(true)}>
                 {t('pages.hr.perDiem.markPaid')}
+              </Button>
+            ) : null}
+            {canAddDisbursement ? (
+              <Button onClick={() => setDisbursementOpen(true)}>
+                {t('hr.perDiem.addDisbursement')}
+              </Button>
+            ) : null}
+            {canSettle ? (
+              <Button type="primary" onClick={() => setSettleOpen(true)}>
+                {t('hr.perDiem.settle')}
               </Button>
             ) : null}
             {canCancel ? (
@@ -476,6 +547,104 @@ export default function PerDiemRequestDetailPageContent({
                 </div>
               </div>
             </DetailSection>
+
+            {(request.disbursements?.length ?? 0) > 0 ? (
+              <DetailSection
+                title={t('hr.perDiem.disbursements')}
+                bodyClassName="!p-0"
+              >
+                <div className="divide-y divide-[#eef1f4]">
+                  {request.disbursements!.map((d, i) => (
+                    <div key={d.id} className="px-3 py-3 sm:px-4">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="erp-users-cell-sub text-xs">
+                          #{i + 1} · {formatProjectDate(d.coveredDaysFrom)}–{formatProjectDate(d.coveredDaysTo)}
+                        </span>
+                        <span className="erp-users-cell-strong tabular-nums text-sm">
+                          {formatEtbAmount(d.amount)}
+                        </span>
+                      </div>
+                      <div className="erp-users-cell-sub text-xs">
+                        {t('hr.perDiem.disbursedOn')} {formatProjectDate(d.disbursedAt)}
+                        {d.disbursedBy
+                          ? ` · ${formatPerDiemEmployeeName(d.disbursedBy)}`
+                          : ''}
+                      </div>
+                      {d.notes ? (
+                        <p className="erp-users-cell-sub m-0 mt-1 whitespace-pre-wrap text-xs">
+                          {d.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
+                    <span className="erp-users-cell-strong text-sm">
+                      {t('hr.perDiem.totalDisbursed')}
+                    </span>
+                    <span className="erp-employee-meta-value tabular-nums">
+                      {formatEtbAmount(
+                        request.disbursements!.reduce(
+                          (s, d) => s + Number(d.amount),
+                          0,
+                        ),
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </DetailSection>
+            ) : null}
+
+            {request.requestSettlement ? (
+              <DetailSection title={t('hr.perDiem.settlement')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <MetaItem label={t('hr.perDiem.actualReturnDate')}>
+                    {formatProjectDate(request.requestSettlement.actualReturnDate)}
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.actualDays')}>
+                    <span className="erp-users-cell-strong">
+                      {request.requestSettlement.actualDays}
+                    </span>
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.earnedTotal')}>
+                    {formatEtbAmount(request.requestSettlement.earnedTotal)}
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.totalDisbursed')}>
+                    {formatEtbAmount(request.requestSettlement.totalDisbursed)}
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.balance')}>
+                    <span
+                      className={
+                        Number(request.requestSettlement.balance) >= 0
+                          ? 'erp-users-cell-strong text-green-700 dark:text-green-400'
+                          : 'erp-users-cell-strong text-red-600 dark:text-red-400'
+                      }
+                    >
+                      {formatEtbAmount(request.requestSettlement.balance)}
+                      {Number(request.requestSettlement.balance) >= 0
+                        ? ` (${t('hr.perDiem.owedToEmployee')})`
+                        : ` (${t('hr.perDiem.owedToCompany')})`}
+                    </span>
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.settledBy')}>
+                    {request.requestSettlement.settledBy
+                      ? formatPerDiemEmployeeName(request.requestSettlement.settledBy)
+                      : '-'}
+                  </MetaItem>
+                  <MetaItem label={t('hr.perDiem.settledAt')}>
+                    {formatProjectDate(request.requestSettlement.settledAt)}
+                  </MetaItem>
+                  {request.requestSettlement.notes ? (
+                    <div className="md:col-span-2">
+                      <MetaItem label={t('hr.labels.notes')}>
+                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                          {request.requestSettlement.notes}
+                        </p>
+                      </MetaItem>
+                    </div>
+                  ) : null}
+                </div>
+              </DetailSection>
+            ) : null}
           </div>
         </div>
 
@@ -539,6 +708,97 @@ export default function PerDiemRequestDetailPageContent({
               maxLength={500}
               placeholder={t('pages.hr.perDiem.paymentReferencePlaceholder')}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={disbursementOpen}
+        centered
+        width={520}
+        title={t('hr.perDiem.addDisbursementTitle')}
+        onCancel={() => {
+          setDisbursementOpen(false);
+          disbursementForm.resetFields();
+        }}
+        onOk={() => void handleAddDisbursement()}
+        confirmLoading={addDisbursementMutation.isPending}
+        okText={t('hr.perDiem.addDisbursement')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+      >
+        <Form form={disbursementForm} layout="vertical">
+          <Form.Item
+            name="amount"
+            label={t('hr.perDiem.disbursementAmount')}
+            rules={[{ required: true }]}
+          >
+            <InputNumber min={0} precision={2} className="w-full" suffix="ETB" />
+          </Form.Item>
+          <Form.Item
+            name="disbursedAt"
+            label={t('hr.perDiem.disbursedOn')}
+            rules={[{ required: true }]}
+          >
+            <Input type="date" className="w-full" />
+          </Form.Item>
+          <Form.Item
+            name="coveredDaysFrom"
+            label={t('hr.perDiem.coveredFrom')}
+            rules={[{ required: true }]}
+          >
+            <Input type="date" className="w-full" />
+          </Form.Item>
+          <Form.Item
+            name="coveredDaysTo"
+            label={t('hr.perDiem.coveredTo')}
+            rules={[{ required: true }]}
+          >
+            <Input type="date" className="w-full" />
+          </Form.Item>
+          <Form.Item name="notes" label={t('hr.labels.notes')}>
+            <Input.TextArea rows={3} maxLength={2000} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={settleOpen}
+        centered
+        width={520}
+        title={t('hr.perDiem.settleTitle')}
+        onCancel={() => {
+          setSettleOpen(false);
+          settleForm.resetFields();
+        }}
+        onOk={() => void handleSettle()}
+        confirmLoading={settleMutation.isPending}
+        okText={t('hr.perDiem.settle')}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+      >
+        <p className="erp-hr-travel-modal-hint">
+          {t('hr.perDiem.settleDescription')}
+        </p>
+        <Form form={settleForm} layout="vertical">
+          <Form.Item
+            name="actualReturnDate"
+            label={t('hr.perDiem.actualReturnDate')}
+            rules={[{ required: true }]}
+          >
+            <Input type="date" className="w-full" />
+          </Form.Item>
+          <Form.Item
+            name="actualDaysOverride"
+            label={t('hr.perDiem.actualDaysOverride')}
+            extra={t('hr.perDiem.actualDaysOverrideHint')}
+          >
+            <InputNumber min={1} className="w-full" />
+          </Form.Item>
+          <Form.Item name="notes" label={t('hr.labels.notes')}>
+            <Input.TextArea rows={3} maxLength={2000} />
           </Form.Item>
         </Form>
       </Modal>

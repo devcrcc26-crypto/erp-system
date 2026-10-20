@@ -40,6 +40,8 @@ import { HrApprovalChainService } from '../../../hr-shared/application/services/
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
+  CreatePerDiemDisbursementDto,
+  CreatePerDiemRequestSettlementDto,
   ListPerDiemRequestsDto,
   MarkPerDiemPaidDto,
   SubmitPerDiemRequestDto,
@@ -73,6 +75,13 @@ const REQUEST_DETAIL_INCLUDE = {
       endDate: true,
       status: true,
     },
+  },
+  disbursements: {
+    include: { disbursedBy: { select: USER_SELECT } },
+    orderBy: { createdAt: 'asc' as const },
+  },
+  requestSettlement: {
+    include: { settledBy: { select: USER_SELECT } },
   },
   payer: { select: USER_SELECT },
   approvalRequest: {
@@ -586,6 +595,157 @@ export class PerDiemService
         paymentReference: dto.paymentReference?.trim() || null,
         updatedBy: userId,
       },
+    });
+
+    return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Records a cash disbursement against an approved/active per diem request.
+   * The first disbursement transitions the request to ACTIVE.
+   */
+  async addDisbursement(
+    id: string,
+    dto: CreatePerDiemDisbursementDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (!canManage) {
+      throw new ForbiddenException('Missing permission: per-diem.manage');
+    }
+
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    if (
+      request.status !== PerDiemStatus.APPROVED &&
+      request.status !== PerDiemStatus.ACTIVE
+    ) {
+      throw new BadRequestException(
+        'Disbursements can only be added to approved or active requests',
+      );
+    }
+
+    const coveredFrom = this.parseDateOnly(dto.coveredDaysFrom);
+    const coveredTo = this.parseDateOnly(dto.coveredDaysTo);
+    if (coveredTo.getTime() < coveredFrom.getTime()) {
+      throw new BadRequestException(
+        'coveredDaysTo must be on or after coveredDaysFrom',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.perDiemDisbursement.create({
+        data: {
+          id: randomUUID(),
+          requestId: id,
+          amount: new Prisma.Decimal(dto.amount),
+          disbursedAt: new Date(dto.disbursedAt),
+          coveredDaysFrom: coveredFrom,
+          coveredDaysTo: coveredTo,
+          disbursedById: userId,
+          notes: dto.notes?.trim() || null,
+        },
+      });
+
+      await tx.perDiemRequest.update({
+        where: { id },
+        data: {
+          ...(request.status === PerDiemStatus.APPROVED
+            ? {
+                status: PerDiemStatus.ACTIVE,
+                actualStartDate: coveredFrom,
+              }
+            : {}),
+          updatedBy: userId,
+        },
+      });
+    });
+
+    return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Settles an ACTIVE per diem request by calculating earned vs. disbursed amounts.
+   */
+  async settleRequest(
+    id: string,
+    dto: CreatePerDiemRequestSettlementDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (!canManage) {
+      throw new ForbiddenException('Missing permission: per-diem.manage');
+    }
+
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+      include: {
+        disbursements: { select: { amount: true } },
+        requestSettlement: { select: { id: true } },
+      },
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    if (request.status !== PerDiemStatus.ACTIVE) {
+      throw new BadRequestException('Only active requests can be settled');
+    }
+    if (request.requestSettlement) {
+      throw new BadRequestException('This request has already been settled');
+    }
+
+    const actualReturnDate = this.parseDateOnly(dto.actualReturnDate);
+    const baseDate = request.actualStartDate ?? request.startDate;
+    const calculatedDays = calendarDaysInclusive(baseDate, actualReturnDate);
+    const actualDays = dto.actualDaysOverride ?? calculatedDays;
+
+    const dailyRate = Number(request.dailyRate);
+    const earnedTotal = actualDays * dailyRate;
+    const totalDisbursed = request.disbursements.reduce(
+      (sum, d) => sum + Number(d.amount),
+      0,
+    );
+    const balance = earnedTotal - totalDisbursed;
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.perDiemRequestSettlement.create({
+        data: {
+          id: randomUUID(),
+          requestId: id,
+          actualReturnDate,
+          actualDays,
+          earnedTotal: new Prisma.Decimal(earnedTotal),
+          totalDisbursed: new Prisma.Decimal(totalDisbursed),
+          balance: new Prisma.Decimal(balance),
+          settledById: userId,
+          notes: dto.notes?.trim() || null,
+        },
+      });
+
+      await tx.perDiemRequest.update({
+        where: { id },
+        data: {
+          status: PerDiemStatus.SETTLED,
+          completedAt: new Date(),
+          updatedBy: userId,
+        },
+      });
     });
 
     return this.getRequest(id, companyId, userId);

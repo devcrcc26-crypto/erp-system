@@ -131,6 +131,49 @@ export class MarkPerDiemPaidDto {
   paymentReference?: string;
 }
 
+export class CreatePerDiemDisbursementDto {
+  @ApiProperty()
+  @IsNumber()
+  @Min(0)
+  amount!: number;
+
+  @ApiProperty()
+  @IsDateString()
+  disbursedAt!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  coveredDaysFrom!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  coveredDaysTo!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class CreatePerDiemRequestSettlementDto {
+  @ApiProperty()
+  @IsDateString()
+  actualReturnDate!: string;
+
+  @ApiPropertyOptional({ description: 'Override auto-calculated actual days' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  actualDaysOverride?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
 export class ListPerDiemRequestsDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

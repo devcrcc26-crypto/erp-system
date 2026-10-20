@@ -12,7 +12,9 @@ export type PerDiemStatus =
   | 'APPROVED'
   | 'REJECTED'
   | 'RETURNED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'ACTIVE'
+  | 'SETTLED';
 
 export interface PerDiemUserSummary {
   id: string;
@@ -118,7 +120,10 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   notes?: string | null;
   requestedDailyRate?: string | null;
   rateOverrideReason?: string | null;
+  actualStartDate?: string | null;
   employeePerDiemRate?: EmployeePerDiemRate | null;
+  disbursements?: PerDiemDisbursement[];
+  requestSettlement?: PerDiemRequestSettlement | null;
   linkedFlight?: {
     id: string;
     applicationNumber: string;
@@ -175,6 +180,47 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
 export interface MarkPerDiemPaidPayload {
   paidAmount?: number;
   paymentReference?: string;
+}
+
+export interface PerDiemDisbursement {
+  id: string;
+  requestId: string;
+  amount: number | string;
+  disbursedAt: string;
+  coveredDaysFrom: string;
+  coveredDaysTo: string;
+  disbursedById: string;
+  disbursedBy?: PerDiemUserSummary | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface PerDiemRequestSettlement {
+  id: string;
+  requestId: string;
+  actualReturnDate: string;
+  actualDays: number;
+  earnedTotal: number | string;
+  totalDisbursed: number | string;
+  balance: number | string;
+  settledById: string;
+  settledBy?: PerDiemUserSummary | null;
+  settledAt: string;
+  notes?: string | null;
+}
+
+export interface CreateDisbursementPayload {
+  amount: number;
+  disbursedAt: string;
+  coveredDaysFrom: string;
+  coveredDaysTo: string;
+  notes?: string;
+}
+
+export interface CreateRequestSettlementPayload {
+  actualReturnDate: string;
+  actualDaysOverride?: number;
+  notes?: string;
 }
 
 export interface PerDiemAdvanceSummary {

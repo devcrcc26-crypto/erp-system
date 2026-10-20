@@ -15,6 +15,8 @@ import {
   downloadApiFile,
 } from '@/lib/api/client';
 import type {
+  CreateDisbursementPayload,
+  CreateRequestSettlementPayload,
   EmployeePerDiemActiveCategory,
   EmployeePerDiemRate,
   EmployeePerDiemRateListItem,
@@ -336,6 +338,32 @@ export function useCancelPerDiemRequest(id: string) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+    },
+  });
+}
+
+/** HR records a cash disbursement against an approved/active per diem request. */
+export function useAddPerDiemDisbursement(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateDisbursementPayload) =>
+      apiPost<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/disbursements`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+    },
+  });
+}
+
+/** HR settles an active per diem request. */
+export function useSettlePerDiemRequest(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateRequestSettlementPayload) =>
+      apiPost<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/settle`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
       void queryClient.setQueryData(perDiemKeys.detail(id), updated);
     },
   });

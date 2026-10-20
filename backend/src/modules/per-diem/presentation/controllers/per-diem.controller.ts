@@ -16,6 +16,8 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  CreatePerDiemDisbursementDto,
+  CreatePerDiemRequestSettlementDto,
   ListPerDiemRequestsDto,
   MarkPerDiemPaidDto,
   SubmitPerDiemRequestDto,
@@ -93,5 +95,35 @@ export class PerDiemController {
     @Body() dto: MarkPerDiemPaidDto,
   ): Promise<unknown> {
     return this.perDiemService.markPaid(id, dto, companyId, user.userId);
+  }
+
+  @Post(':id/disbursements')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Record a cash disbursement against an approved/active per diem request (requires per-diem.manage)',
+  })
+  addDisbursement(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: CreatePerDiemDisbursementDto,
+  ): Promise<unknown> {
+    return this.perDiemService.addDisbursement(id, dto, companyId, user.userId);
+  }
+
+  @Post(':id/settle')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Settle an active per diem request by computing earned vs. disbursed amounts (requires per-diem.manage)',
+  })
+  settle(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: CreatePerDiemRequestSettlementDto,
+  ): Promise<unknown> {
+    return this.perDiemService.settleRequest(id, dto, companyId, user.userId);
   }
 }

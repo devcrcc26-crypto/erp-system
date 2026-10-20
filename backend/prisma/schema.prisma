@@ -854,6 +854,8 @@ model User {
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
   perDiemRequestsPaid         PerDiemRequest[]    @relation("PerDiemRequestPayer")
+  perDiemDisbursementsRecorded  PerDiemDisbursement[]    @relation("DisbursementRecorder")
+  perDiemRequestSettlements     PerDiemRequestSettlement[] @relation("RequestSettlementRecorder")
   perDiemSettlementsAsEmployee PerDiemSettlement[] @relation("PerDiemSettlementEmployee")
   perDiemSettlementsCreated    PerDiemSettlement[] @relation("PerDiemSettlementCreator")
   perDiemSettlementsUpdated    PerDiemSettlement[] @relation("PerDiemSettlementUpdater")
@@ -5118,6 +5120,8 @@ enum PerDiemStatus {
   REJECTED
   RETURNED
   CANCELLED
+  ACTIVE
+  SETTLED
 }
 
 enum PerDiemTripType {
@@ -5176,6 +5180,10 @@ model PerDiemRequest {
   updatedBy            String            @map("updated_by")
   deletedAt            DateTime?         @map("deleted_at")
   deletedBy            String?           @map("deleted_by")
+  actualStartDate      DateTime?         @map("actual_start_date") @db.Date
+
+  disbursements        PerDiemDisbursement[]
+  requestSettlement    PerDiemRequestSettlement?
 
   company         Company            @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   employee              User                 @relation("PerDiemEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -5248,6 +5256,42 @@ model PerDiemSettlement {
   @@index([employeeId], map: "idx_per_diem_settlement_employee")
   @@index([status], map: "idx_per_diem_settlement_status")
   @@map("per_diem_settlement")
+}
+
+model PerDiemDisbursement {
+  id              String         @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestId       String         @map("request_id")
+  amount          Decimal        @db.Decimal(15, 2)
+  disbursedAt     DateTime       @map("disbursed_at")
+  coveredDaysFrom DateTime       @map("covered_days_from") @db.Date
+  coveredDaysTo   DateTime       @map("covered_days_to") @db.Date
+  disbursedById   String         @map("disbursed_by_id")
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  request     PerDiemRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  disbursedBy User           @relation("DisbursementRecorder", fields: [disbursedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([requestId], map: "idx_per_diem_disbursement_request")
+  @@map("per_diem_disbursement")
+}
+
+model PerDiemRequestSettlement {
+  id               String         @id @default(dbgenerated("(gen_random_uuid())::text"))
+  requestId        String         @unique @map("request_id")
+  actualReturnDate DateTime       @map("actual_return_date") @db.Date
+  actualDays       Int            @map("actual_days")
+  earnedTotal      Decimal        @db.Decimal(15, 2) @map("earned_total")
+  totalDisbursed   Decimal        @db.Decimal(15, 2) @map("total_disbursed")
+  balance          Decimal        @db.Decimal(15, 2)
+  settledById      String         @map("settled_by_id")
+  settledAt        DateTime       @default(now()) @map("settled_at")
+  notes            String?
+
+  request    PerDiemRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  settledBy  User           @relation("RequestSettlementRecorder", fields: [settledById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("per_diem_request_settlement")
 }
 
 model BusinessTripDocument {

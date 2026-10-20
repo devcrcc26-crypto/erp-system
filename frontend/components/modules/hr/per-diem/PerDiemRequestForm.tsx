@@ -700,7 +700,7 @@ export default function PerDiemRequestForm({
                     step={1}
                     precision={2}
                     className="w-full"
-                    addonAfter={selectedRate?.currency ?? 'ETB'}
+                    suffix={selectedRate?.currency ?? 'ETB'}
                   />
                 </Form.Item>
 
