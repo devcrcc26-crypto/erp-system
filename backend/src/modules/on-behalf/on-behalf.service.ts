@@ -333,7 +333,12 @@ export class OnBehalfService {
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
-    if (isExcludedFromHrProcesses(employee)) {
+    // Site assignment on-behalf is the exception: approver-only accounts can be
+    // the subject when someone else files for them (they still cannot self-file).
+    if (
+      isExcludedFromHrProcesses(employee) &&
+      requestType !== 'SITE_ASSIGNMENT'
+    ) {
       throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
     }
 
@@ -355,24 +360,35 @@ export class OnBehalfService {
 
   /**
    * Employees the actor may pick for a request type (excluding themselves unless
-   * `includeSelf` and SELF is allowed). `includeApproverOnly`: keep approver-only
-   * accounts (flight / business-trip passengers are not HR-process subjects).
+   * `includeSelf` and SELF is allowed).
+   * - `approverOnly`: only approver-only accounts (site-assignment on-behalf).
+   * - `includeApproverOnly`: keep both (flight / business-trip passengers).
+   * - default: HR-process employees only (exclude approver-only).
    */
   async getInitiableEmployees(
     actorUserId: string,
     companyId: string,
     requestType: InitiatorRequestType,
-    options?: { includeSelf?: boolean; includeApproverOnly?: boolean },
+    options?: {
+      includeSelf?: boolean;
+      includeApproverOnly?: boolean;
+      approverOnly?: boolean;
+    },
   ): Promise<InitiableEmployee[]> {
     const allowed = await this.allowedInitiators(companyId, requestType);
     const fullAccess = await this.hrApprovalChain.isHrOrFullAccessActor(
       actorUserId,
       companyId,
     );
+    const exclusionFilter = options?.approverOnly
+      ? { excludedFromHrProcesses: true as const }
+      : options?.includeApproverOnly
+        ? {}
+        : hrProcessEmployeeWhere({});
     const base: Prisma.UserWhereInput = activeOnly({
       companyId,
       isActive: true,
-      ...(options?.includeApproverOnly ? {} : { excludedFromHrProcesses: false }),
+      ...exclusionFilter,
     });
 
     const scopes: Prisma.UserWhereInput[] = [];

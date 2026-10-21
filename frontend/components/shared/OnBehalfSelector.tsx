@@ -44,12 +44,20 @@ type PickableEmployee = Pick<
   gender?: OnBehalfEligibleEmployee['gender'];
 };
 
+export type OnBehalfEmployeesOptions = {
+  /** Site-assignment on-behalf: only approver-only accounts. */
+  approverOnlyTargets?: boolean;
+};
+
 /**
  * Employees the signed-in user may file for. Site assignment, WFH, flight and
  * business trip follow allowedInitiators (direct reports, delegate scope, full
  * access); `selfAllowed` is false when the user may not file for themselves.
  */
-export function useOnBehalfEmployees(moduleCode: OnBehalfModuleCode): {
+export function useOnBehalfEmployees(
+  moduleCode: OnBehalfModuleCode,
+  options?: OnBehalfEmployeesOptions,
+): {
   employees: PickableEmployee[];
   selfAllowed: boolean;
   isLoading: boolean;
@@ -61,7 +69,9 @@ export function useOnBehalfEmployees(moduleCode: OnBehalfModuleCode): {
     currentUser.data?.companyId,
     governed === null,
   );
-  const initiableQuery = useInitiableEmployees(currentUser.data?.id, governed);
+  const initiableQuery = useInitiableEmployees(currentUser.data?.id, governed, {
+    approverOnly: options?.approverOnlyTargets === true,
+  });
   if (governed) {
     return {
       employees: initiableQuery.data?.employees ?? [],
@@ -85,11 +95,14 @@ function initials(employee: PickableEmployee): string {
  * Form-level on-behalf state. Spread `payload` into the create request body
  * (or pass it to `appendOnBehalfFields` for multipart bodies).
  */
-export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
+export function useOnBehalf(
+  moduleCode: OnBehalfModuleCode,
+  options?: OnBehalfEmployeesOptions,
+) {
   const currentUser = useCurrentUser();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [autoApproveTier, setAutoApproveTier] = useState(false);
-  const pickable = useOnBehalfEmployees(moduleCode);
+  const pickable = useOnBehalfEmployees(moduleCode, options);
 
   const employee = useMemo(
     () => pickable.employees.find((row) => row.id === employeeId),
@@ -115,6 +128,7 @@ export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
     targetRequired: !pickable.selfAllowed && !employeeId,
     /** Target for employee-scoped lookups: the selected employee, else the signed-in user. */
     effectiveEmployeeId: employeeId ?? currentUser.data?.id,
+    approverOnlyTargets: options?.approverOnlyTargets === true,
     payload,
     reset: (): void => {
       setEmployeeId(undefined);
@@ -134,6 +148,8 @@ interface OnBehalfSelectorProps {
   moduleCode: OnBehalfModuleCode;
   autoApproveTier: boolean;
   onAutoApproveTierChange: (value: boolean) => void;
+  /** Site-assignment on-behalf: only approver-only accounts. */
+  approverOnlyTargets?: boolean;
 }
 
 /**
@@ -146,9 +162,10 @@ export default function OnBehalfSelector({
   moduleCode,
   autoApproveTier,
   onAutoApproveTierChange,
+  approverOnlyTargets = false,
 }: OnBehalfSelectorProps): React.ReactNode {
   const { t } = useEpcTranslation();
-  const pickable = useOnBehalfEmployees(moduleCode);
+  const pickable = useOnBehalfEmployees(moduleCode, { approverOnlyTargets });
   const chainQuery = useOnBehalfChainMembership(value, moduleCode);
   const [toggled, setEnabled] = useState(Boolean(value));
   // Self not allowed (e.g. site assignment): filing for someone is the only option.
@@ -327,6 +344,7 @@ export function OnBehalfSection({
       moduleCode={state.moduleCode}
       autoApproveTier={state.autoApproveTier}
       onAutoApproveTierChange={state.setAutoApproveTier}
+      approverOnlyTargets={state.approverOnlyTargets}
     />
   );
 }

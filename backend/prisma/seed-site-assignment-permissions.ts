@@ -30,7 +30,10 @@ const VIEW_CREATE_ROLES = [
   'Department Head',
   'Discipline Lead',
   'HR Assistant',
+  'HR Officer',
   'HR Manager',
+  'Local HR Manager',
+  'HR Specialist',
   'General Manager',
   'Managing Director',
   'System Administrator',
@@ -38,7 +41,9 @@ const VIEW_CREATE_ROLES = [
 
 const MANAGE_ROLES = [
   'HR Assistant',
+  'HR Officer',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
@@ -64,23 +69,13 @@ async function main(): Promise<void> {
       permissions.map((p) => [`${p.module}:${p.action}`, p] as const),
     );
 
-    const company = await prisma.company.findFirst({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true },
-    });
-    if (!company) {
-      throw new Error('No company found');
-    }
-
     const roleNames = [...new Set([...VIEW_CREATE_ROLES, ...MANAGE_ROLES])];
     const roles = await prisma.role.findMany({
       where: {
-        companyId: company.id,
         deletedAt: null,
         name: { in: [...roleNames] },
       },
-      select: { id: true, name: true },
+      select: { id: true, name: true, companyId: true },
     });
 
     for (const role of roles) {
@@ -147,8 +142,9 @@ async function main(): Promise<void> {
       }
     }
 
+    const roleSummary = [...new Set(roles.map((r) => r.name))].sort().join(', ');
     console.log(
-      `Site-assignment permissions seeded for ${roles.length} role(s): ${roles.map((r) => r.name).join(', ')}`,
+      `Site-assignment permissions seeded for ${roles.length} role row(s): ${roleSummary}`,
     );
   } finally {
     await prisma.$disconnect();

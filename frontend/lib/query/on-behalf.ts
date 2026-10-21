@@ -18,24 +18,46 @@ export const onBehalfKeys = {
     [...onBehalfKeys.all, 'eligible', userId ?? '', companyId ?? ''] as const,
   chain: (employeeId: string, moduleCode: OnBehalfModuleCode) =>
     [...onBehalfKeys.all, 'chain', moduleCode, employeeId] as const,
-  initiable: (userId: string | undefined, moduleCode: InitiatorModuleCode) =>
-    [...onBehalfKeys.all, 'initiable', moduleCode, userId ?? ''] as const,
+  initiable: (
+    userId: string | undefined,
+    moduleCode: InitiatorModuleCode,
+    approverOnly: boolean,
+  ) =>
+    [
+      ...onBehalfKeys.all,
+      'initiable',
+      moduleCode,
+      userId ?? '',
+      approverOnly ? 'approver-only' : 'hr-process',
+    ] as const,
 };
 
 /**
  * Site assignment / WFH / flight / business trip: who the signed-in user may
  * file for under allowedInitiators, and whether they may file for themselves.
+ * Pass `approverOnly: true` for site-assignment on-behalf (approver-only targets).
  */
 export function useInitiableEmployees(
   userId: string | undefined,
   moduleCode: InitiatorModuleCode | null,
+  options?: { approverOnly?: boolean },
 ) {
+  const approverOnly = options?.approverOnly === true;
   return useQuery({
-    queryKey: onBehalfKeys.initiable(userId, moduleCode ?? 'SITE_ASSIGNMENT'),
-    queryFn: () =>
-      apiGet<InitiableEmployees>(
-        `${ON_BEHALF_PATH}/initiable-employees?module=${moduleCode}`,
-      ),
+    queryKey: onBehalfKeys.initiable(
+      userId,
+      moduleCode ?? 'SITE_ASSIGNMENT',
+      approverOnly,
+    ),
+    queryFn: () => {
+      const params = new URLSearchParams({ module: moduleCode ?? '' });
+      if (approverOnly) {
+        params.set('approverOnly', 'true');
+      }
+      return apiGet<InitiableEmployees>(
+        `${ON_BEHALF_PATH}/initiable-employees?${params.toString()}`,
+      );
+    },
     enabled: Boolean(userId) && moduleCode !== null,
     staleTime: 60_000,
     retry: false,

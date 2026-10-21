@@ -1374,6 +1374,8 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'overtime', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'attendance', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'field-movement', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'site-assignment', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'wfh', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
@@ -1395,6 +1397,12 @@ async function main(): Promise<void> {
       module: 'field-movement',
       flags: localHrManagerFlags(),
     },
+    {
+      roleName: 'Local HR Manager',
+      module: 'site-assignment',
+      flags: localHrManagerFlags(),
+    },
+    { roleName: 'Local HR Manager', module: 'wfh', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'exit-permit', flags: localHrManagerFlags() },
     {
       roleName: 'Local HR Manager',
@@ -1811,7 +1819,10 @@ async function main(): Promise<void> {
     'Department Head',
     'Discipline Lead',
     'HR Assistant',
+    'HR Officer',
     'HR Manager',
+    'Local HR Manager',
+    'HR Specialist',
     'General Manager',
     'Managing Director',
     'System Administrator',
@@ -1819,7 +1830,9 @@ async function main(): Promise<void> {
 
   const wsPhWfhManageRoleNames = [
     'HR Assistant',
+    'HR Officer',
     'HR Manager',
+    'Local HR Manager',
     'General Manager',
     'Managing Director',
     'System Administrator',

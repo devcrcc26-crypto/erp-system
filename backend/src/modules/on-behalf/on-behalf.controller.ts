@@ -3,9 +3,11 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiProperty,
+  ApiPropertyOptional,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsIn, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { CurrentCompany } from '../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../shared/permissions/delegate-permission-check.decorator';
@@ -26,10 +28,32 @@ import {
   type RequestInitiator,
 } from '../../shared/policy/policy-definitions';
 
+function toOptionalBoolean({ value }: { value: unknown }): unknown {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return value === 'true' || value === '1';
+  }
+  return Boolean(value);
+}
+
 export class InitiableEmployeesQueryDto {
   @ApiProperty({ enum: INITIATOR_REQUEST_TYPES })
   @IsIn(INITIATOR_REQUEST_TYPES)
   module!: InitiatorRequestType;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, only approver-only employees (site-assignment on-behalf). When omitted, HR-process employees only.',
+  })
+  @Transform(toOptionalBoolean)
+  @IsOptional()
+  @IsBoolean()
+  approverOnly?: boolean;
 }
 
 export class OnBehalfChainQueryDto {
@@ -78,7 +102,9 @@ export class OnBehalfController {
   }> {
     const [allowed, employees] = await Promise.all([
       this.onBehalfService.allowedInitiators(companyId, query.module),
-      this.onBehalfService.getInitiableEmployees(user.userId, companyId, query.module),
+      this.onBehalfService.getInitiableEmployees(user.userId, companyId, query.module, {
+        approverOnly: query.approverOnly === true,
+      }),
     ]);
     return { allowed, selfAllowed: allowed.includes('SELF'), employees };
   }

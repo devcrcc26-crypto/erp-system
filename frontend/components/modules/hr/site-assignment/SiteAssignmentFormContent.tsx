@@ -112,8 +112,9 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SiteAssignmentFormValues>();
-  const onBehalf = useOnBehalf('SITE_ASSIGNMENT');
-  // Crew: direct reports or delegate scope (allowedInitiators); never the submitter.
+  // On-behalf: approver-only accounts only (filed for by supervisor / HR).
+  const onBehalf = useOnBehalf('SITE_ASSIGNMENT', { approverOnlyTargets: true });
+  // Crew: normal HR-process employees in initiator scope (never the submitter).
   const crewCandidates = useOnBehalfEmployees('SITE_ASSIGNMENT');
   const [crewIds, setCrewIds] = useState<string[]>([]);
   const [targetError, setTargetError] = useState<string | null>(null);

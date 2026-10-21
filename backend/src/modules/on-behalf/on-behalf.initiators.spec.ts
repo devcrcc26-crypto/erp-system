@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { OnBehalfService } from './on-behalf.service';
 
 const COMPANY = 'company-1';
@@ -10,6 +10,7 @@ const DEPT_MEMBER = 'dept-member-1';
 const HR_MANAGER = 'hr-manager-1';
 const DEPT_LEAD = 'dept-lead-1';
 const PLAIN = 'plain-1';
+const APPROVER_ONLY_REPORT = 'approver-only-report';
 
 type User = {
   id: string;
@@ -21,6 +22,12 @@ type User = {
 const USERS: User[] = [
   { id: SUPERVISOR, reportsToUserId: null, departmentId: 'dept-b', excludedFromHrProcesses: false },
   { id: REPORT, reportsToUserId: SUPERVISOR, departmentId: 'dept-b', excludedFromHrProcesses: false },
+  {
+    id: APPROVER_ONLY_REPORT,
+    reportsToUserId: SUPERVISOR,
+    departmentId: 'dept-b',
+    excludedFromHrProcesses: true,
+  },
   { id: GRAND_REPORT, reportsToUserId: REPORT, departmentId: 'dept-b', excludedFromHrProcesses: false },
   { id: DEPT_MEMBER, reportsToUserId: HR_MANAGER, departmentId: 'dept-a', excludedFromHrProcesses: false },
   { id: HR_MANAGER, reportsToUserId: null, departmentId: null, excludedFromHrProcesses: false },
@@ -124,6 +131,33 @@ describe('OnBehalfService.resolveInitiation', () => {
     ).resolves.toEqual({ employeeId: REPORT, initiatedAs: 'SUPERVISOR' });
   });
 
+  it('SUPERVISOR: site assignment may target an approver-only direct report', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(
+        SUPERVISOR,
+        COMPANY,
+        'SITE_ASSIGNMENT',
+        APPROVER_ONLY_REPORT,
+      ),
+    ).resolves.toEqual({
+      employeeId: APPROVER_ONLY_REPORT,
+      initiatedAs: 'SUPERVISOR',
+    });
+  });
+
+  it('SUPERVISOR: WFH still rejects an approver-only direct report', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(
+        SUPERVISOR,
+        COMPANY,
+        'WORK_FROM_HOME',
+        APPROVER_ONLY_REPORT,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('SUPERVISOR: indirect reports are refused', async () => {
     const service = buildService();
     await expect(
@@ -206,10 +240,23 @@ describe('OnBehalfService.resolveInitiation', () => {
 });
 
 describe('OnBehalfService initiable employees and passengers', () => {
-  it('supervisor sees only direct reports for site assignments (no self)', async () => {
+  it('supervisor sees only HR-process direct reports for site-assignment crew (no self)', async () => {
     const service = buildService();
     const list = await service.getInitiableEmployees(SUPERVISOR, COMPANY, 'SITE_ASSIGNMENT');
     expect(list.map((e) => [e.id, e.initiatedAs])).toEqual([[REPORT, 'SUPERVISOR']]);
+  });
+
+  it('supervisor site-assignment on-behalf lists only approver-only direct reports', async () => {
+    const service = buildService();
+    const list = await service.getInitiableEmployees(
+      SUPERVISOR,
+      COMPANY,
+      'SITE_ASSIGNMENT',
+      { approverOnly: true },
+    );
+    expect(list.map((e) => [e.id, e.initiatedAs])).toEqual([
+      [APPROVER_ONLY_REPORT, 'SUPERVISOR'],
+    ]);
   });
 
   it('flight passengers: self + delegate scope, no direct reports (SELF+DELEGATE)', async () => {
@@ -223,7 +270,9 @@ describe('OnBehalfService initiable employees and passengers', () => {
   it('business-trip passengers include direct reports (SUPERVISOR allowed)', async () => {
     const service = buildService();
     const passengers = await service.getSelectablePassengers(SUPERVISOR, COMPANY, 'BUSINESS_TRIP');
-    expect(passengers.map((p) => p.id).sort()).toEqual([REPORT, SUPERVISOR].sort());
+    expect(passengers.map((p) => p.id).sort()).toEqual(
+      [APPROVER_ONLY_REPORT, REPORT, SUPERVISOR].sort(),
+    );
   });
 
   it('full-access roles may pick anyone', async () => {
