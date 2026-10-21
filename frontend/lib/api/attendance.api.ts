@@ -117,6 +117,21 @@ export async function confirmAttendanceImport(
 }
 
 /**
+ * Clear a previously ignored identity from the import preview and move it
+ * to the rejected bucket so HR can assign an employee.
+ */
+export async function unignoreAttendancePreviewRow(dto: {
+  previewToken: string;
+  ignoredIndex: number;
+}): Promise<{
+  previewToken: string;
+  ignored: AttendancePreviewResult['ignored'];
+  rejected: AttendancePreviewResult['rejected'];
+}> {
+  return apiPost(`${ATTENDANCE_PATH}/import/preview/unignore`, dto);
+}
+
+/**
  * Search active employees for manual attendance assignment.
  */
 export async function searchAttendanceEmployees(

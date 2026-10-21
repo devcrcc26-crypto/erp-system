@@ -131,35 +131,64 @@ export class WorkScheduleService {
     date?: Date,
   ): Promise<ScheduleWithDays> {
     const onDate = toUtcDateOnly(date ?? todayUtc());
-
-    const assignment = await this.prisma.employeeScheduleAssignment.findFirst({
-      where: {
-        companyId,
-        employeeId,
-        effectiveFrom: { lte: onDate },
-        OR: [{ effectiveTo: null }, { effectiveTo: { gte: onDate } }],
-        schedule: activeOnly({ companyId, isActive: true }),
-      },
-      orderBy: { effectiveFrom: 'desc' },
-      include: {
-        schedule: { include: SCHEDULE_INCLUDE },
-      },
-    });
-
-    if (assignment?.schedule) {
-      return assignment.schedule;
-    }
-
-    const fallback = await this.prisma.workSchedule.findFirst({
-      where: activeOnly({ companyId, isDefault: true, isActive: true }),
-      include: SCHEDULE_INCLUDE,
-    });
-    if (!fallback) {
+    const resolve = await this.createActiveScheduleResolver(
+      employeeId,
+      companyId,
+      onDate,
+      onDate,
+    );
+    const schedule = resolve(onDate);
+    if (!schedule) {
       throw new NotFoundException(
         'No work schedule found for this employee and no company default is set',
       );
     }
-    return fallback;
+    return schedule;
+  }
+
+  /**
+   * Prefetches overlapping assignments + company default once, then resolves
+   * any date in the range synchronously (no further DB reads).
+   */
+  async createActiveScheduleResolver(
+    employeeId: string,
+    companyId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<(date: Date) => ScheduleWithDays | null> {
+    const start = toUtcDateOnly(rangeStart);
+    const end = toUtcDateOnly(rangeEnd);
+
+    const [assignments, companyDefault] = await Promise.all([
+      this.prisma.employeeScheduleAssignment.findMany({
+        where: {
+          companyId,
+          employeeId,
+          effectiveFrom: { lte: end },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: start } }],
+          schedule: activeOnly({ companyId, isActive: true }),
+        },
+        orderBy: { effectiveFrom: 'desc' },
+        include: {
+          schedule: { include: SCHEDULE_INCLUDE },
+        },
+      }),
+      this.prisma.workSchedule.findFirst({
+        where: activeOnly({ companyId, isDefault: true, isActive: true }),
+        include: SCHEDULE_INCLUDE,
+      }),
+    ]);
+
+    return (date: Date): ScheduleWithDays | null => {
+      const onDate = toUtcDateOnly(date);
+      const match = assignments.find(
+        (assignment) =>
+          assignment.effectiveFrom <= onDate &&
+          (assignment.effectiveTo == null ||
+            assignment.effectiveTo >= onDate),
+      );
+      return match?.schedule ?? companyDefault ?? null;
+    };
   }
 
   /**
@@ -1207,15 +1236,21 @@ export class WorkScheduleService {
         name: holiday.name,
       }));
 
-    const scheduleCache = new Map<string, ScheduleWithDays>();
-    for (const day of iterateUtcDays(from, to)) {
-      await this.getCachedSchedule(employeeId, companyId, day, scheduleCache);
-    }
+    const resolveActive = await this.createActiveScheduleResolver(
+      employeeId,
+      companyId,
+      from,
+      to,
+    );
+    let weekdayFallback: ScheduleWithDays | null = null;
 
     const resolveScheduleDay = (date: Date) => {
-      const schedule = scheduleCache.get(formatDateOnly(date));
+      let schedule = resolveActive(date);
       if (!schedule) {
-        return null;
+        if (!weekdayFallback) {
+          weekdayFallback = this.weekdayFallbackSchedule(companyId);
+        }
+        schedule = weekdayFallback;
       }
       const weekday = schedule.days.find(
         (row) => row.dayOfWeek === date.getUTCDay(),

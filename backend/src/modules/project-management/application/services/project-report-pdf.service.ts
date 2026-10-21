@@ -1,21 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
-  CW,
-  createDoc,
-  docToBuffer,
-  drawItemsTable,
-  drawKvTable,
-  drawMeta,
-  drawPageHeader,
-  drawSectionTitle,
-  ensureSpace,
+  bilingualTitle,
+  dash,
   fmtDate,
-  fmtTs,
-  resolveFontPath,
-} from '../../../../shared/pdf/hr-pdf-renderer';
-
-const COMPANY_NAME = 'CRCC International Consulting';
+  fmtGeneratedDate,
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
 
 @Injectable()
 export class ProjectReportPdfService {
@@ -30,67 +21,110 @@ export class ProjectReportPdfService {
     });
     if (!project) throw new NotFoundException('Project not found');
 
-    // Aggregate site ops counts
-    const [openRfis, overdueRfis, openIssues, openPunchItems] = await Promise.all([
-      this.prisma.rfi.count({ where: { projectId, status: { notIn: ['CLOSED', 'VOID'] as any }, deletedAt: null } }).catch(() => 0),
-      this.prisma.rfi.count({ where: { projectId, status: { notIn: ['CLOSED', 'VOID'] as any }, dueDate: { lt: new Date() }, deletedAt: null } }).catch(() => 0),
-      this.prisma.issue.count({ where: { projectId, status: { not: 'CLOSED' as any }, deletedAt: null } }).catch(() => 0),
-      this.prisma.punchItem.count({ where: { projectId, status: { not: 'CLOSED' as any }, deletedAt: null } }).catch(() => 0),
-    ]);
+    const [openRfis, overdueRfis, openIssues, openPunchItems] =
+      await Promise.all([
+        this.prisma.rfi
+          .count({
+            where: {
+              projectId,
+              status: { notIn: ['CLOSED', 'VOID'] as never },
+              deletedAt: null,
+            },
+          })
+          .catch(() => 0),
+        this.prisma.rfi
+          .count({
+            where: {
+              projectId,
+              status: { notIn: ['CLOSED', 'VOID'] as never },
+              dueDate: { lt: new Date() },
+              deletedAt: null,
+            },
+          })
+          .catch(() => 0),
+        this.prisma.issue
+          .count({
+            where: {
+              projectId,
+              status: { not: 'CLOSED' as never },
+              deletedAt: null,
+            },
+          })
+          .catch(() => 0),
+        this.prisma.punchItem
+          .count({
+            where: {
+              projectId,
+              status: { not: 'CLOSED' as never },
+              deletedAt: null,
+            },
+          })
+          .catch(() => 0),
+      ]);
 
-    // Task status breakdown
     const taskGroups = await this.prisma.task
-      .groupBy({ by: ['status'], where: { projectId, deletedAt: null }, _count: { _all: true } })
+      .groupBy({
+        by: ['status'],
+        where: { projectId, deletedAt: null },
+        _count: { _all: true },
+      })
       .catch(() => []);
-    const taskCount = taskGroups.reduce((s, g) => s + g._count._all, 0);
+    const taskCount = taskGroups.reduce((sum, group) => sum + group._count._all, 0);
 
-    const fontPath = resolveFontPath();
     const generatedAt = new Date();
-    const doc = createDoc('Project Report');
-    const footerLeft = `${COMPANY_NAME} — Project Report ${project.projectCode}`;
+    const buffer = await renderPayslipPdf({ title: 'Project Report' }, (p) => {
+      p.brand(bilingualTitle('Project Report', '项目报告'));
+      p.subtitleRight(project.projectCode);
+      p.line(project.name, { color: '#333333' });
+      p.rule();
 
-    const buffer = await docToBuffer(doc, fontPath, (d) => {
-      let y = drawPageHeader(d, COMPANY_NAME, 'Project Report', project.name);
-      y = drawMeta(d, y, fmtTs(generatedAt), '');
-      y += 6;
-
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Project Overview', y);
-      y = drawKvTable(d, [
+      p.section('PROJECT OVERVIEW');
+      p.fields([
         ['Project Code', project.projectCode],
         ['Name', project.name],
         ['Status', project.status],
-        ['Type', (project as any).projectType ?? '-'],
+        ['Type', dash((project as { projectType?: string }).projectType)],
         ['Planned Finish', fmtDate(project.plannedFinishDate)],
-        ['Budget', project.budget != null ? `${Number(project.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${(project as any).currency ?? ''}` : '-'],
-        ['Overall Progress', project.overallProgressPct != null ? `${project.overallProgressPct}%` : '-'],
-      ], y);
-      y += 8;
+        [
+          'Budget',
+          project.budget != null
+            ? `${Number(project.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${(project as { currency?: string }).currency ?? ''}`
+            : '-',
+        ],
+        [
+          'Overall Progress',
+          project.overallProgressPct != null
+            ? `${project.overallProgressPct}%`
+            : '-',
+        ],
+      ]);
 
-      y = ensureSpace(d, y, 35);
-      y = drawSectionTitle(d, 'Site Operations', y);
-      y = drawKvTable(d, [
+      p.section('SITE OPERATIONS');
+      p.fields([
         ['Open RFIs', String(openRfis)],
         ['Overdue RFIs', String(overdueRfis)],
         ['Open Issues', String(openIssues)],
         ['Open Punch Items', String(openPunchItems)],
-      ], y);
-      y += 8;
+      ]);
 
-      y = ensureSpace(d, y, 35);
-      y = drawSectionTitle(d, 'Tasks by Status', y);
-      if (taskGroups.length > 0) {
-        const colW = [CW * 0.5, CW * 0.25, CW * 0.25];
-        const statusRows = taskGroups.map((g) => [
-          String(g.status),
-          String(g._count._all),
-          taskCount > 0 ? `${Math.round((g._count._all / taskCount) * 100)}%` : '0%',
-        ]);
-        y = drawItemsTable(d, ['Status', 'Count', 'Share'], statusRows, colW, y);
+      p.section('TASKS BY STATUS', 'Share');
+      if (taskGroups.length === 0) {
+        p.field('Tasks', String(taskCount), 1);
       } else {
-        y = drawKvTable(d, [['Tasks', `${taskCount}`]], y);
+        for (const group of taskGroups) {
+          const share =
+            taskCount > 0
+              ? `${Math.round((group._count._all / taskCount) * 100)}%`
+              : '0%';
+          p.field(String(group.status), `${group._count._all} · ${share}`, 1);
+        }
       }
-    }, footerLeft);
+
+      p.footerNotes([
+        `Generated ${fmtGeneratedDate(generatedAt)}`,
+        'This project report is system-generated.',
+      ]);
+    });
 
     const safe = project.projectCode.replace(/[^a-zA-Z0-9-_]/g, '_');
     const dateStamp = generatedAt.toISOString().slice(0, 10);

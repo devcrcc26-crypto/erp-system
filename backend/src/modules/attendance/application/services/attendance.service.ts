@@ -27,6 +27,7 @@ import {
   AttendanceMode,
   AttendanceScanReviewDecision,
   AttendanceUnmatchedStatus,
+  HolidayNationality,
   Nationality,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -103,7 +104,11 @@ import {
   markAttendanceMonthRecalcStale,
   markPayrollAttendanceSnapshotStale,
 } from '../utils/attendance-recalc-policy.util';
-import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
+import type { PolicyValues } from '../../../../shared/policy/policy-definitions';
+import {
+  getPolicy,
+  loadPolicySnapshot,
+} from '../../../../shared/policy/policy-reader.util';
 import {
   inactiveSpanOn,
   loadInactiveSpansForMonth,
@@ -288,6 +293,29 @@ type ScheduleDayLike = {
   checkMode?: string | null;
   latestScanTime?: string | null;
 };
+
+type HolidayRowForAttendance = {
+  name: string;
+  date: Date;
+  isRecurring: boolean;
+  appliesToNationality: HolidayNationality;
+};
+
+/** Shared reads for bulk import / month recalcs (avoid N× DB hits). */
+type CalculateDailyLogsShared = {
+  holidays?: HolidayRowForAttendance[];
+  employeeNationality?: Nationality | null;
+  policy?: PolicyValues;
+};
+
+/** Prefetched per-employee schedule resolvers keyed by employee id. */
+type ScheduleResolverCache = Map<
+  string,
+  Promise<(date: Date) => ScheduleDayLike[]>
+>;
+
+/** Bound parallel work during import confirm / month recalc. */
+const IMPORT_CONCURRENCY = 8;
 
 /**
  * Weekday rows of a work schedule with the schedule's check mode attached.
@@ -735,38 +763,54 @@ export class AttendanceService
     month: number,
     year: number,
     lastExportDate?: Date | null,
+    shared?: CalculateDailyLogsShared,
   ): Promise<{ logs: AttendanceDailyLogInput[]; summary: AttendanceDailySummary }> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { nationality: true },
-    });
-    if (!employee) {
-      throw new NotFoundException('Employee not found');
+    let nationality = shared?.employeeNationality;
+    if (nationality === undefined) {
+      const employee = await this.prisma.user.findFirst({
+        where: { id: employeeId, companyId, deletedAt: null },
+        select: { nationality: true },
+      });
+      if (!employee) {
+        throw new NotFoundException('Employee not found');
+      }
+      nationality = employee.nationality;
     }
 
-    const holidays = await this.prisma.publicHoliday.findMany({
-      where: {
-        companyId,
-        isActive: true,
-        deletedAt: null,
-      },
-      select: {
-        name: true,
-        date: true,
-        isRecurring: true,
-        appliesToNationality: true,
-      },
-    });
+    const holidays =
+      shared?.holidays ??
+      (await this.prisma.publicHoliday.findMany({
+        where: {
+          companyId,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          name: true,
+          date: true,
+          isRecurring: true,
+          appliesToNationality: true,
+        },
+      }));
 
     const applicableHolidays = holidays.filter((holiday) =>
       holidayAppliesToNationality(
         holiday.appliesToNationality,
-        employee.nationality,
+        nationality,
       ),
     );
 
-    // Each day uses the schedule assigned on that date (effective-dated).
-    const scheduleCache = new Map<string, ScheduleDayLike[]>();
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0));
+    const policy =
+      shared?.policy ??
+      (await loadPolicySnapshot(this.prisma, companyId, monthStart));
+    const resolveScheduleDays = await this.buildEmployeeScheduleDayResolver(
+      employeeId,
+      companyId,
+      monthStart,
+      monthEnd,
+    );
 
     const exportDayKey = lastExportDate
       ? lastExportDate.toISOString().slice(0, 10)
@@ -779,12 +823,7 @@ export class AttendanceService
       const date =
         day.date instanceof Date ? day.date : new Date(String(day.date));
       const dayOfWeek = date.getUTCDay();
-      const scheduleDays = await this.resolveScheduleDaysCached(
-        scheduleCache,
-        employeeId,
-        companyId,
-        date,
-      );
+      const scheduleDays = resolveScheduleDays(date);
       const scheduleDay = scheduleDays.find(
         (row) => row.dayOfWeek === dayOfWeek,
       );
@@ -827,7 +866,7 @@ export class AttendanceService
         const late = isLateAfterGrace(
           day.clockInLocal,
           scheduleDay.morningStart,
-          await getPolicy(this.prisma, companyId, 'lateGraceMinutes', date),
+          policy.lateGraceMinutes,
         );
         isLate = late.isLate;
         lateMinutes = late.lateMinutes;
@@ -863,12 +902,7 @@ export class AttendanceService
         isLastExportDay,
         scheduledEnd: scheduledEndForDay(scheduleDay),
         scanOnly,
-        earlyDepartureGraceMinutes: await getPolicy(
-          this.prisma,
-          companyId,
-          'earlyDepartureGraceMinutes',
-          date,
-        ),
+        earlyDepartureGraceMinutes: policy.earlyDepartureGraceMinutes,
       });
 
       logs.push({
@@ -1368,8 +1402,44 @@ export class AttendanceService
       }
     }
 
-    const prepared = await Promise.all(
-      rowsToImport.map(async (row) => {
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const importEmployeeIds = [
+      ...new Set(rowsToImport.map((row) => row.matchedEmployeeId)),
+    ];
+    const [companyHolidays, importPolicy, nationalityRows] = await Promise.all([
+      this.prisma.publicHoliday.findMany({
+        where: {
+          companyId,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          name: true,
+          date: true,
+          isRecurring: true,
+          appliesToNationality: true,
+        },
+      }),
+      loadPolicySnapshot(this.prisma, companyId, monthStart),
+      importEmployeeIds.length > 0
+        ? this.prisma.user.findMany({
+            where: {
+              companyId,
+              deletedAt: null,
+              id: { in: importEmployeeIds },
+            },
+            select: { id: true, nationality: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; nationality: Nationality | null }>),
+    ]);
+    const nationalityByEmployeeId = new Map(
+      nationalityRows.map((row) => [row.id, row.nationality]),
+    );
+
+    const prepared = await this.mapWithConcurrency(
+      rowsToImport,
+      IMPORT_CONCURRENCY,
+      async (row) => {
         const { logs, summary } = await this.calculateDailyLogs(
           row.matchedEmployeeId,
           companyId,
@@ -1377,6 +1447,12 @@ export class AttendanceService
           month,
           year,
           lastExportDate,
+          {
+            holidays: companyHolidays,
+            policy: importPolicy,
+            employeeNationality:
+              nationalityByEmployeeId.get(row.matchedEmployeeId) ?? null,
+          },
         );
         return {
           row,
@@ -1384,7 +1460,7 @@ export class AttendanceService
           summary,
           recordId: randomUUID(),
         };
-      }),
+      },
     );
 
     let batchId = '';
@@ -1520,78 +1596,96 @@ export class AttendanceService
 
         const now = new Date();
 
-        for (const identity of identitiesToUpsert) {
-          const attendanceName = normaliseAttendanceName(identity.attendanceName);
-          await tx.attendanceIdentity.upsert({
-            where: {
-              companyId_attendanceId_attendanceName: {
-                companyId,
-                attendanceId: identity.attendanceId,
-                attendanceName,
-              },
-            },
-            create: {
-              id: randomUUID(),
-              companyId,
-              attendanceId: identity.attendanceId,
-              attendanceName,
-              status: AttendanceIdentityStatus.MAPPED,
-              userId: identity.userId,
-              reason: null,
-              decidedBy: userId,
-              decidedAt: now,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-            update: {
-              status: AttendanceIdentityStatus.MAPPED,
-              userId: identity.userId,
-              reason: null,
-              decidedBy: userId,
-              decidedAt: now,
-              updatedBy: userId,
-              deletedAt: null,
-              deletedBy: null,
-            },
-          });
-        }
-
-        for (const ignoredRow of ignoredThisImport) {
-          const attendanceName = normaliseAttendanceName(
-            ignoredRow.attendanceName,
+        // Build upsert factories (not promises) so work starts only when awaited.
+        const identityUpsertFns: Array<() => Promise<unknown>> = [
+          ...identitiesToUpsert.map((identity) => {
+            const attendanceName = normaliseAttendanceName(
+              identity.attendanceName,
+            );
+            return () =>
+              tx.attendanceIdentity.upsert({
+                where: {
+                  companyId_attendanceId_attendanceName: {
+                    companyId,
+                    attendanceId: identity.attendanceId,
+                    attendanceName,
+                  },
+                },
+                create: {
+                  id: randomUUID(),
+                  companyId,
+                  attendanceId: identity.attendanceId,
+                  attendanceName,
+                  status: AttendanceIdentityStatus.MAPPED,
+                  userId: identity.userId,
+                  reason: null,
+                  decidedBy: userId,
+                  decidedAt: now,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+                update: {
+                  status: AttendanceIdentityStatus.MAPPED,
+                  userId: identity.userId,
+                  reason: null,
+                  decidedBy: userId,
+                  decidedAt: now,
+                  updatedBy: userId,
+                  deletedAt: null,
+                  deletedBy: null,
+                },
+              });
+          }),
+          ...ignoredThisImport.map((ignoredRow) => {
+            const attendanceName = normaliseAttendanceName(
+              ignoredRow.attendanceName,
+            );
+            return () =>
+              tx.attendanceIdentity.upsert({
+                where: {
+                  companyId_attendanceId_attendanceName: {
+                    companyId,
+                    attendanceId: ignoredRow.attendanceId,
+                    attendanceName,
+                  },
+                },
+                create: {
+                  id: randomUUID(),
+                  companyId,
+                  attendanceId: ignoredRow.attendanceId,
+                  attendanceName,
+                  status: AttendanceIdentityStatus.IGNORED,
+                  userId: null,
+                  reason: ignoredRow.reason,
+                  decidedBy: userId,
+                  decidedAt: now,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+                update: {
+                  status: AttendanceIdentityStatus.IGNORED,
+                  userId: null,
+                  reason: ignoredRow.reason,
+                  decidedBy: userId,
+                  decidedAt: now,
+                  updatedBy: userId,
+                  deletedAt: null,
+                  deletedBy: null,
+                },
+              });
+          }),
+        ];
+        const IDENTITY_CHUNK = 20;
+        for (
+          let offset = 0;
+          offset < identityUpsertFns.length;
+          offset += IDENTITY_CHUNK
+        ) {
+          await Promise.all(
+            identityUpsertFns
+              .slice(offset, offset + IDENTITY_CHUNK)
+              .map((run) => run()),
           );
-          await tx.attendanceIdentity.upsert({
-            where: {
-              companyId_attendanceId_attendanceName: {
-                companyId,
-                attendanceId: ignoredRow.attendanceId,
-                attendanceName,
-              },
-            },
-            create: {
-              id: randomUUID(),
-              companyId,
-              attendanceId: ignoredRow.attendanceId,
-              attendanceName,
-              status: AttendanceIdentityStatus.IGNORED,
-              userId: null,
-              reason: ignoredRow.reason,
-              decidedBy: userId,
-              decidedAt: now,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-            update: {
-              status: AttendanceIdentityStatus.IGNORED,
-              userId: null,
-              reason: ignoredRow.reason,
-              decidedBy: userId,
-              decidedAt: now,
-              updatedBy: userId,
-              deletedAt: null,
-              deletedBy: null,
-            },
-          });
         }
 
         const unmatchedRows: Array<{
@@ -2176,6 +2270,94 @@ export class AttendanceService
         },
       },
     });
+  }
+
+  /**
+   * Removes a previously ignored identity from the current import preview so
+   * HR can assign it. Soft-deletes the IGNORED identity (it will not auto-ignore
+   * on future imports) and moves the row from ignored → rejected in the cache.
+   */
+  async unignorePreviewRow(
+    dto: { previewToken: string; ignoredIndex: number },
+    companyId: string,
+    userId: string,
+  ): Promise<{
+    previewToken: string;
+    ignored: AttendanceMatchResult[];
+    rejected: AttendanceMatchResult[];
+  }> {
+    const cached = await this.previewCache.get<CachedAttendancePreview>(
+      dto.previewToken,
+    );
+    if (!cached) {
+      throw new BadRequestException(
+        'Import session expired. Please upload the file again.',
+      );
+    }
+    if (cached.companyId !== companyId) {
+      throw new ForbiddenException(
+        'Preview does not belong to the current company',
+      );
+    }
+
+    reviveMatchResultDates(cached.ignored ?? []);
+    reviveMatchResultDates(cached.rejected);
+
+    const ignored = [...(cached.ignored ?? [])];
+    if (
+      !Number.isInteger(dto.ignoredIndex) ||
+      dto.ignoredIndex < 0 ||
+      dto.ignoredIndex >= ignored.length
+    ) {
+      throw new BadRequestException('Ignored row index is out of range');
+    }
+
+    const [row] = ignored.splice(dto.ignoredIndex, 1);
+    if (row.identityId) {
+      const identity = await this.prisma.attendanceIdentity.findFirst({
+        where: {
+          id: row.identityId,
+          companyId,
+          deletedAt: null,
+          status: AttendanceIdentityStatus.IGNORED,
+        },
+      });
+      if (identity) {
+        await this.prisma.attendanceIdentity.update({
+          where: { id: identity.id },
+          data: {
+            deletedAt: new Date(),
+            deletedBy: userId,
+            updatedBy: userId,
+          },
+        });
+      }
+    }
+
+    const restored: AttendanceMatchResult = {
+      ...row,
+      confidence: 'NO_MATCH',
+      identityId: null,
+      matchNote: null,
+      matchedEmployeeId: null,
+      matchedEmployeeName: null,
+      matchedEmployeeErpId: null,
+      score: null,
+    };
+    const rejected = [...cached.rejected, restored];
+
+    const next: CachedAttendancePreview = {
+      ...cached,
+      ignored,
+      rejected,
+    };
+    await this.previewCache.set(dto.previewToken, next);
+
+    return {
+      previewToken: dto.previewToken,
+      ignored,
+      rejected,
+    };
   }
 
   /**
@@ -5162,6 +5344,7 @@ export class AttendanceService
       { isWorkingDay: boolean; isHalfDay: boolean }
     >();
     const scheduleCache = new Map<string, ScheduleDayLike[]>();
+    const scheduleResolvers: ScheduleResolverCache = new Map();
 
     const rememberScheduleFlags = async (date: Date): Promise<{
       isWorkingDay: boolean;
@@ -5174,6 +5357,11 @@ export class AttendanceService
         employeeId,
         companyId,
         date,
+        {
+          resolvers: scheduleResolvers,
+          rangeStart: monthStart,
+          rangeEnd: monthEnd,
+        },
       );
       const scheduleDay = scheduleDays.find(
         (row) => row.dayOfWeek === date.getUTCDay(),
@@ -5808,6 +5996,7 @@ export class AttendanceService
     let skippedLockedMonths = 0;
 
     const scheduleCache = new Map<string, ScheduleDayLike[]>();
+    const scheduleResolvers: ScheduleResolverCache = new Map();
 
     for (const record of records) {
       const status = record.importBatch.monthlyApproval?.status;
@@ -5856,6 +6045,12 @@ export class AttendanceService
         : null;
 
       let daysChanged = 0;
+      const recordMonthStart = new Date(
+        Date.UTC(record.year, record.month - 1, 1),
+      );
+      const recordMonthEnd = new Date(Date.UTC(record.year, record.month, 0));
+      // Fresh resolver per month so range matches the record being updated.
+      scheduleResolvers.delete(employeeId);
 
       for (const log of record.dailyLogs) {
         const logDay = toUtcDateOnlySafe(log.date);
@@ -5868,6 +6063,11 @@ export class AttendanceService
           employeeId,
           companyId,
           logDay,
+          {
+            resolvers: scheduleResolvers,
+            rangeStart: recordMonthStart,
+            rangeEnd: recordMonthEnd,
+          },
         );
         const dayOfWeek = logDay.getUTCDay();
         const scheduleDay = scheduleDays.find(
@@ -6005,38 +6205,105 @@ export class AttendanceService
   }
 
   /**
+   * Prefetches assignments for a date range once; returns a sync day→weekday map.
+   */
+  private async buildEmployeeScheduleDayResolver(
+    employeeId: string,
+    companyId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<(date: Date) => ScheduleDayLike[]> {
+    const resolveActive =
+      await this.workScheduleService.createActiveScheduleResolver(
+        employeeId,
+        companyId,
+        rangeStart,
+        rangeEnd,
+      );
+    const byScheduleId = new Map<string, ScheduleDayLike[]>();
+    const fallback = this.fallbackWeekdaySchedule();
+    return (date: Date): ScheduleDayLike[] => {
+      const schedule = resolveActive(date);
+      if (!schedule) {
+        return fallback;
+      }
+      let days = byScheduleId.get(schedule.id);
+      if (!days) {
+        days = toScheduleDayLikes(schedule);
+        byScheduleId.set(schedule.id, days);
+      }
+      return days;
+    };
+  }
+
+  /**
    * Loads and caches weekday schedule rows for a calendar day.
+   * Pass `resolvers` + range so each employee pays only one assignment query.
    */
   private async resolveScheduleDaysCached(
     cache: Map<string, ScheduleDayLike[]>,
     employeeId: string,
     companyId: string,
     date: Date,
+    options?: {
+      resolvers?: ScheduleResolverCache;
+      rangeStart?: Date;
+      rangeEnd?: Date;
+    },
   ): Promise<ScheduleDayLike[]> {
-    try {
-      const schedule = await this.workScheduleService.getActiveSchedule(
+    const dayKey = `${employeeId}|${date.toISOString().slice(0, 10)}`;
+    const hit = cache.get(dayKey);
+    if (hit) {
+      return hit;
+    }
+
+    const rangeStart = options?.rangeStart ?? date;
+    const rangeEnd = options?.rangeEnd ?? date;
+    const resolvers = options?.resolvers ?? new Map();
+
+    let pending = resolvers.get(employeeId);
+    if (!pending) {
+      pending = this.buildEmployeeScheduleDayResolver(
         employeeId,
         companyId,
-        date,
+        rangeStart,
+        rangeEnd,
       );
-      const cacheKey = schedule.id;
-      const cached = cache.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
-      const days = toScheduleDayLikes(schedule);
-      cache.set(cacheKey, days);
-      return days;
-    } catch {
-      const fallbackKey = '__fallback__';
-      const cached = cache.get(fallbackKey);
-      if (cached) {
-        return cached;
-      }
-      const fallback = this.fallbackWeekdaySchedule();
-      cache.set(fallbackKey, fallback);
-      return fallback;
+      resolvers.set(employeeId, pending);
     }
+    const resolve = await pending;
+    const days = resolve(date);
+    cache.set(dayKey, days);
+    return days;
+  }
+
+  /**
+   * Runs async work over items with a fixed concurrency ceiling.
+   */
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    mapper: (item: T, index: number) => Promise<R>,
+  ): Promise<R[]> {
+    if (items.length === 0) {
+      return [];
+    }
+    const results = new Array<R>(items.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(Math.max(1, concurrency), items.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (true) {
+          const index = nextIndex;
+          nextIndex += 1;
+          if (index >= items.length) {
+            return;
+          }
+          results[index] = await mapper(items[index], index);
+        }
+      }),
+    );
+    return results;
   }
 
   /**
@@ -6281,6 +6548,9 @@ export class AttendanceService
       ReturnType<typeof summarizeMissingEmployeeCoverage>
     >();
     const scheduleCache = new Map<string, ScheduleDayLike[]>();
+    const scheduleResolvers: ScheduleResolverCache = new Map();
+    const coverageMonthStart = new Date(Date.UTC(year, month - 1, 1));
+    const coverageMonthEnd = new Date(Date.UTC(year, month, 0));
 
     for (const employee of employees) {
       const overlapping = contractsGrouped.get(employee.id) ?? [];
@@ -6323,6 +6593,11 @@ export class AttendanceService
           employee.id,
           companyId,
           date,
+          {
+            resolvers: scheduleResolvers,
+            rangeStart: coverageMonthStart,
+            rangeEnd: coverageMonthEnd,
+          },
         );
         const scheduleDay = scheduleDays.find(
           (row) => row.dayOfWeek === date.getUTCDay(),

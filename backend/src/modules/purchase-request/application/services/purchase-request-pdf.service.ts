@@ -1,25 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { formatEnglishName } from '../../../../shared/utils/user-display.util';
 import {
-  CW,
-  createDoc,
+  bilingualTitle,
   dash,
-  docToBuffer,
-  drawItemsTable,
-  drawKvTable,
-  drawMeta,
-  drawPageHeader,
-  drawSectionTitle,
-  ensureSpace,
   fmtDate,
   fmtEtb,
-  fmtTs,
-  fullName,
-  resolveFontPath,
-} from '../../../../shared/pdf/hr-pdf-renderer';
-
-const COMPANY_NAME = 'CRCC International Consulting';
+  fmtGeneratedDate,
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
 
 @Injectable()
 export class PurchaseRequestPdfService {
@@ -32,7 +22,15 @@ export class PurchaseRequestPdfService {
     const request = await this.prisma.purchaseRequest.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        employee: { select: { firstName: true, lastName: true } },
+        employee: {
+          select: {
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+            employeeId: true,
+          },
+        },
         items: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -52,56 +50,74 @@ export class PurchaseRequestPdfService {
     });
     if (!request) throw new NotFoundException('Purchase request not found');
 
-    const fontPath = resolveFontPath();
     const generatedAt = new Date();
-    const doc = createDoc('Purchase Request');
-    const footerLeft = `${COMPANY_NAME} — Purchase Request ${request.requestNumber}`;
+    const employeeName = formatEnglishName(request.employee);
+    const documents = (request.attachmentFolder?.documents ?? [])
+      .map((d) => d.name.trim())
+      .filter((name) => name.length > 0);
 
-    const buffer = await docToBuffer(doc, fontPath, (d) => {
-      let y = drawPageHeader(d, COMPANY_NAME, 'Purchase Request');
-      y = drawMeta(d, y, fmtTs(generatedAt), fullName(request.employee));
-      y += 6;
+    const buffer = await renderPayslipPdf({ title: 'Purchase Request' }, (p) => {
+      p.brand(bilingualTitle('Purchase Request', '采购申请'));
+      p.subtitleRight(request.requestNumber);
+      p.rule();
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Overview', y);
-      y = drawKvTable(d, [
-        ['Request Number', request.requestNumber],
-        ['Status', request.status],
-        ['Employee', fullName(request.employee)],
-        ['Title', dash(request.title)],
-        ['Justification', dash(request.justification)],
-        ['Vendor', dash(request.vendorName)],
-        ['Vendor Email', dash(request.vendorEmail)],
-        ['Vendor Phone', dash(request.vendorPhone)],
-        ['Required By', fmtDate(request.requiredByDate)],
-        ['Item Count', String((request as any).itemCount ?? request.items.length)],
-        ['Estimated Total', fmtEtb(request.totalEstimatedEtb)],
-        ['Submitted At', request.submittedAt ? fmtDate(request.submittedAt) : '-'],
-        ['Created At', fmtDate(request.createdAt)],
-      ], y);
-      y += 8;
+      p.pair(
+        `Employee / 员工:  ${employeeName}`,
+        `ID / 工号: ${request.employee?.employeeId ?? '-'}`,
+      );
+      p.pair(
+        `Status / 状态: ${request.status}`,
+        `Required by / 需用日期: ${fmtDate(request.requiredByDate)}`,
+      );
+      p.pair(
+        `Vendor / 供应商: ${dash(request.vendorName)}`,
+        `Phone / 电话: ${dash(request.vendorPhone)}`,
+      );
+      p.pair(
+        `Email / 邮箱: ${dash(request.vendorEmail)}`,
+        `Submitted / 提交: ${request.submittedAt ? fmtDate(request.submittedAt) : '-'}`,
+      );
+      p.line(`Title / 标题: ${dash(request.title)}`);
+      p.line('Justification / 事由:');
+      p.wrapped(dash(request.justification));
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Items', y);
-      const itemRows = request.items.map((item) => [
-        dash(item.itemName),
-        dash(item.description ?? (item as any).modelSpec),
-        String(item.quantity),
-        dash(item.unit),
-        fmtEtb(item.unitPrice),
-        fmtEtb(item.totalPriceEtb),
-      ]);
-      const itemCols = [CW * 0.22, CW * 0.28, CW * 0.08, CW * 0.1, CW * 0.16, CW * 0.16];
-      y = drawItemsTable(d, ['Item', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total'], itemRows, itemCols, y);
-      y += 8;
-
-      const docs = (request.attachmentFolder?.documents ?? []).map((doc) => doc.name);
-      if (docs.length > 0) {
-        y = ensureSpace(d, y, 30);
-        y = drawSectionTitle(d, 'Documents', y);
-        y = drawItemsTable(d, ['Document Name'], docs.map((n) => [n]), [CW], y);
+      p.rule();
+      p.section('ITEMS / 明细', 'Amount (ETB)');
+      if (request.items.length === 0) {
+        p.line('No items recorded / 无明细', { indent: 1, color: '#333333' });
+      } else {
+        for (const item of request.items) {
+          const description = [item.description, item.modelSpec]
+            .map((part) => part?.trim())
+            .filter((part): part is string => Boolean(part))
+            .join(' / ');
+          p.field(dash(item.itemName), fmtEtb(item.totalPriceEtb), 1);
+          p.wrapped(
+            [
+              description || null,
+              `${formatQuantity(Number(item.quantity))} ${dash(item.unit)} × ${fmtEtb(item.unitPrice)}`,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            { indent: 24, size: 8 },
+          );
+        }
       }
-    }, footerLeft);
+      p.total('TOTAL / 合计', `ETB ${fmtEtb(request.totalEstimatedEtb)}`);
+
+      if (documents.length > 0) {
+        p.rule();
+        p.section('DOCUMENTS / 附件');
+        for (const name of documents) {
+          p.line(`•  ${name}`, { indent: 1, color: '#333333' });
+        }
+      }
+
+      p.footerNotes([
+        `Created ${fmtDate(request.createdAt)} · Generated ${fmtGeneratedDate(generatedAt)}`,
+        'This purchase request is system-generated.',
+      ]);
+    });
 
     const safe = request.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
     const dateStamp = generatedAt.toISOString().slice(0, 10);
@@ -111,4 +127,11 @@ export class PurchaseRequestPdfService {
       filename: `purchase-request_${safe}_${dateStamp}.pdf`,
     };
   }
+}
+
+function formatQuantity(value: number): string {
+  if (!Number.isFinite(value)) return '-';
+  const rounded = Math.round(value * 100) / 100;
+  if (Number.isInteger(rounded)) return String(rounded);
+  return rounded.toFixed(2).replace(/\.?0+$/, '');
 }

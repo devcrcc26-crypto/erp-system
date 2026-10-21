@@ -1,22 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
-  CW,
-  createDoc,
-  docToBuffer,
-  drawItemsTable,
-  drawKvTable,
-  drawMeta,
-  drawPageHeader,
-  drawSectionTitle,
-  ensureSpace,
+  bilingualTitle,
   fmtDate,
-  fmtTs,
-  resolveFontPath,
-} from '../../../../shared/pdf/hr-pdf-renderer';
+  fmtGeneratedDate,
+  PAYSLIP_COMPANY,
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
 import { ReportingService } from './reporting.service';
-
-const COMPANY_NAME = 'CRCC International Consulting';
 
 @Injectable()
 export class SystemReportPdfService {
@@ -32,7 +23,28 @@ export class SystemReportPdfService {
     const summary = (await this.reportingService.getPortfolioSummary({
       companyId,
       userId,
-    })) as any;
+    })) as unknown as {
+      companyName?: string;
+      title?: string;
+      completionRate?: number;
+      baseCurrency?: string;
+      projects?: {
+        total?: number;
+        active?: number;
+        averageProgressPct?: number;
+        totalBudget?: number;
+        byStatus?: Record<string, number>;
+      };
+      organization?: { branches?: number; departments?: number };
+      siteOps?: {
+        totalOpen?: number;
+        openRfis?: number;
+        overdueRfis?: number;
+        openIssues?: number;
+        openPunchItems?: number;
+      };
+      audit?: { last30Days?: number };
+    };
 
     const projects = await this.prisma.project.findMany({
       where: { companyId, deletedAt: null },
@@ -49,68 +61,97 @@ export class SystemReportPdfService {
       },
     });
 
-    const fontPath = resolveFontPath();
     const generatedAt = new Date();
-    const doc = createDoc('System Report');
-    const footerLeft = `${summary.companyName ?? COMPANY_NAME} — System Report`;
+    const companyName = summary.companyName ?? PAYSLIP_COMPANY;
+    const reportTitle = summary.title ?? 'System Report';
 
-    const buffer = await docToBuffer(doc, fontPath, (d) => {
-      let y = drawPageHeader(d, summary.companyName ?? COMPANY_NAME, summary.title ?? 'System Report');
-      y = drawMeta(d, y, fmtTs(generatedAt), '');
-      y += 6;
+    const buffer = await renderPayslipPdf({ title: reportTitle }, (p) => {
+      p.brand(bilingualTitle(reportTitle, '系统报告'));
+      p.subtitleRight(companyName);
+      p.rule();
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Executive Summary', y);
-      y = drawKvTable(d, [
+      p.section('EXECUTIVE SUMMARY');
+      p.fields([
         ['Total Projects', String(summary.projects?.total ?? '-')],
         ['Active Projects', String(summary.projects?.active ?? '-')],
         ['Completion Rate', `${summary.completionRate ?? '-'}%`],
-        ['Average Progress', summary.projects?.averageProgressPct != null ? `${summary.projects.averageProgressPct}%` : '-'],
-        ['Total Budget', summary.projects?.totalBudget ? `${Number(summary.projects.totalBudget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${summary.baseCurrency ?? ''}` : '-'],
+        [
+          'Average Progress',
+          summary.projects?.averageProgressPct != null
+            ? `${summary.projects.averageProgressPct}%`
+            : '-',
+        ],
+        [
+          'Total Budget',
+          summary.projects?.totalBudget
+            ? `${Number(summary.projects.totalBudget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${summary.baseCurrency ?? ''}`
+            : '-',
+        ],
         ['Branches', String(summary.organization?.branches ?? '-')],
         ['Departments', String(summary.organization?.departments ?? '-')],
         ['Open Site Ops', String(summary.siteOps?.totalOpen ?? '-')],
         ['Audit (Last 30 Days)', String(summary.audit?.last30Days ?? '-')],
-      ], y);
-      y += 8;
+      ]);
 
-      const statusEntries = Object.entries(summary.projects?.byStatus ?? {}).filter(([, c]) => (c as number) > 0).sort(([, a], [, b]) => (b as number) - (a as number));
+      const statusEntries = Object.entries(summary.projects?.byStatus ?? {})
+        .filter(([, count]) => (count as number) > 0)
+        .sort(([, a], [, b]) => (b as number) - (a as number));
       if (statusEntries.length > 0) {
-        y = ensureSpace(d, y, 30);
-        y = drawSectionTitle(d, 'Portfolio — By Status', y);
+        p.section('PORTFOLIO — BY STATUS', 'Share');
         const total = summary.projects?.total ?? 1;
-        const colW = [CW * 0.5, CW * 0.25, CW * 0.25];
-        y = drawItemsTable(d, ['Status', 'Count', 'Share'], statusEntries.map(([s, c]) => [s, String(c), `${Math.round(((c as number) / total) * 100)}%`]), colW, y);
-        y += 8;
+        for (const [status, count] of statusEntries) {
+          const share = `${Math.round(((count as number) / total) * 100)}%`;
+          p.field(status, `${count} · ${share}`, 1);
+        }
       }
 
-      y = ensureSpace(d, y, 30);
-      y = drawSectionTitle(d, 'Site Ops', y);
-      y = drawKvTable(d, [
+      p.section('SITE OPS');
+      p.fields([
         ['Open RFIs', String(summary.siteOps?.openRfis ?? '-')],
         ['Overdue RFIs', String(summary.siteOps?.overdueRfis ?? '-')],
         ['Open Issues', String(summary.siteOps?.openIssues ?? '-')],
         ['Open Punch Items', String(summary.siteOps?.openPunchItems ?? '-')],
-      ], y);
-      y += 8;
-
-      y = ensureSpace(d, y, 30);
-      y = drawSectionTitle(d, 'Project Register', y);
-      const projCols = [CW * 0.13, CW * 0.27, CW * 0.13, CW * 0.12, CW * 0.1, CW * 0.13, CW * 0.12];
-      const projRows = projects.map((p) => [
-        p.projectCode,
-        p.name,
-        p.status,
-        p.projectType ?? '-',
-        p.overallProgressPct != null ? `${p.overallProgressPct}%` : '-',
-        p.budget != null ? `${Number(p.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '-',
-        fmtDate(p.plannedFinishDate),
       ]);
-      y = drawItemsTable(d, ['Code', 'Name', 'Status', 'Type', 'Progress', 'Budget', 'Planned Finish'], projRows, projCols, y);
-    }, footerLeft);
+
+      p.rule();
+      p.section('PROJECT REGISTER', 'Progress');
+      if (projects.length === 0) {
+        p.line('No projects', { indent: 1, color: '#333333' });
+      } else {
+        for (const project of projects) {
+          p.field(
+            `${project.projectCode} · ${project.name}`,
+            project.overallProgressPct != null
+              ? `${project.overallProgressPct}%`
+              : '-',
+            1,
+          );
+          p.wrapped(
+            [
+              project.status,
+              project.projectType ?? null,
+              project.budget != null
+                ? Number(project.budget).toLocaleString('en-US', {
+                    maximumFractionDigits: 0,
+                  })
+                : null,
+              `Finish ${fmtDate(project.plannedFinishDate)}`,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            { indent: 24, size: 8 },
+          );
+        }
+      }
+
+      p.footerNotes([
+        `Generated ${fmtGeneratedDate(generatedAt)}`,
+        'This system report is system-generated.',
+      ]);
+    });
 
     const dateStamp = generatedAt.toISOString().slice(0, 10);
-    const safeCompany = (summary.companyName ?? COMPANY_NAME).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const safeCompany = companyName.replace(/[^a-zA-Z0-9-_]/g, '_');
     return {
       buffer,
       mimeType: 'application/pdf',

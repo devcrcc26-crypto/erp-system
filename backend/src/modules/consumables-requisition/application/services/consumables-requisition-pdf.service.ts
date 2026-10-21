@@ -2,23 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
-  CW,
-  createDoc,
+  bilingualTitle,
   dash,
-  docToBuffer,
-  drawItemsTable,
-  drawKvTable,
-  drawMeta,
-  drawPageHeader,
-  drawSectionTitle,
-  ensureSpace,
   fmtDate,
-  fmtTs,
+  fmtGeneratedDate,
   fullName,
-  resolveFontPath,
-} from '../../../../shared/pdf/hr-pdf-renderer';
-
-const COMPANY_NAME = 'CRCC International Consulting';
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
 
 @Injectable()
 export class ConsumablesRequisitionPdfService {
@@ -34,59 +24,86 @@ export class ConsumablesRequisitionPdfService {
         employee: { select: { firstName: true, lastName: true } },
         items: {
           orderBy: { createdAt: 'asc' },
-          select: { itemName: true, itemCode: true, modelSpec: true, description: true, quantity: true, unit: true },
+          select: {
+            itemName: true,
+            itemCode: true,
+            modelSpec: true,
+            description: true,
+            quantity: true,
+            unit: true,
+          },
         },
       },
     });
     if (!req) throw new NotFoundException('Consumables requisition not found');
 
-    const fontPath = resolveFontPath();
     const generatedAt = new Date();
-    const doc = createDoc('Consumables Requisition');
-    const footerLeft = `${COMPANY_NAME} — Consumables Requisition ${(req as any).requestNumber}`;
+    const requestNumber = String(
+      (req as { requestNumber?: string }).requestNumber ?? id,
+    );
 
-    const buffer = await docToBuffer(doc, fontPath, (d) => {
-      let y = drawPageHeader(d, COMPANY_NAME, 'Consumables Requisition');
-      y = drawMeta(d, y, fmtTs(generatedAt), fullName(req.employee));
-      y += 6;
+    const buffer = await renderPayslipPdf(
+      { title: 'Consumables Requisition' },
+      (p) => {
+        p.brand(bilingualTitle('Consumables Requisition', '耗材申请'));
+        p.subtitleRight(requestNumber);
+        p.rule();
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Overview', y);
-      y = drawKvTable(d, [
-        ['Request Number', (req as any).requestNumber],
-        ['Status', req.status],
-        ['Employee', fullName(req.employee)],
-        ['Title', dash((req as any).title)],
-        ['Purpose', dash((req as any).purpose)],
-        ['Department', dash((req as any).department)],
-        ['Required By', fmtDate((req as any).requiredByDate)],
-        ['Item Count', String((req as any).itemCount ?? req.items.length)],
-        ['Submitted At', (req as any).submittedAt ? fmtDate((req as any).submittedAt) : '-'],
-        ['Created At', fmtDate(req.createdAt)],
-      ], y);
-      y += 8;
+        p.section('OVERVIEW');
+        p.fields([
+          ['Request Number', requestNumber],
+          ['Status', req.status],
+          ['Employee', fullName(req.employee)],
+          ['Title', dash((req as { title?: string }).title)],
+          ['Purpose', dash((req as { purpose?: string }).purpose)],
+          ['Department', dash((req as { department?: string }).department)],
+          [
+            'Required By',
+            fmtDate((req as { requiredByDate?: Date }).requiredByDate),
+          ],
+          [
+            'Item Count',
+            String(
+              (req as { itemCount?: number }).itemCount ?? req.items.length,
+            ),
+          ],
+          [
+            'Submitted At',
+            (req as { submittedAt?: Date }).submittedAt
+              ? fmtDate((req as { submittedAt?: Date }).submittedAt)
+              : '-',
+          ],
+          ['Created At', fmtDate(req.createdAt)],
+        ]);
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Items', y);
-      const itemRows = req.items.map((item) => [
-        dash(item.itemName),
-        dash(item.itemCode),
-        dash(item.modelSpec),
-        dash(item.description),
-        String(item.quantity),
-        dash(item.unit),
-      ]);
-      const colW = [CW * 0.2, CW * 0.15, CW * 0.15, CW * 0.25, CW * 0.1, CW * 0.15];
-      y = drawItemsTable(
-        d,
-        ['Item Name', 'Item Code', 'Model/Spec', 'Description', 'Qty', 'Unit'],
-        itemRows,
-        colW,
-        y,
-      );
-    }, footerLeft);
+        p.rule();
+        p.section('ITEMS', 'Qty');
+        if (req.items.length === 0) {
+          p.line('No items recorded', { indent: 1, color: '#333333' });
+        } else {
+          for (const item of req.items) {
+            p.field(
+              dash(item.itemName),
+              `${item.quantity} ${dash(item.unit)}`,
+              1,
+            );
+            p.wrapped(
+              [dash(item.itemCode), dash(item.modelSpec), dash(item.description)]
+                .filter((part) => part !== '-')
+                .join(' · ') || '-',
+              { indent: 24, size: 8 },
+            );
+          }
+        }
 
-    const safe = ((req as any).requestNumber as string).replace(/[^a-zA-Z0-9-_]/g, '_');
+        p.footerNotes([
+          `Generated ${fmtGeneratedDate(generatedAt)}`,
+          'This consumables requisition is system-generated.',
+        ]);
+      },
+    );
+
+    const safe = requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
     const dateStamp = generatedAt.toISOString().slice(0, 10);
     return {
       buffer,

@@ -2,23 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
-  CW,
-  createDoc,
+  bilingualTitle,
   dash,
-  docToBuffer,
-  drawItemsTable,
-  drawKvTable,
-  drawMeta,
-  drawPageHeader,
-  drawSectionTitle,
-  ensureSpace,
   fmtDate,
-  fmtTs,
+  fmtGeneratedDate,
   fullName,
-  resolveFontPath,
-} from '../../../../shared/pdf/hr-pdf-renderer';
-
-const COMPANY_NAME = 'CRCC International Consulting';
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
 
 @Injectable()
 export class MaterialRequisitionPdfService {
@@ -35,66 +25,104 @@ export class MaterialRequisitionPdfService {
         project: { select: { projectCode: true, name: true } },
         items: {
           orderBy: { createdAt: 'asc' },
-          select: { itemName: true, itemCode: true, description: true, quantity: true, unit: true },
+          select: {
+            itemName: true,
+            itemCode: true,
+            description: true,
+            quantity: true,
+            unit: true,
+          },
         },
-        attachmentFolder: { include: { documents: { select: { name: true } } } },
+        attachmentFolder: {
+          include: { documents: { select: { name: true } } },
+        },
       },
     });
     if (!req) throw new NotFoundException('Material requisition not found');
 
-    const fontPath = resolveFontPath();
     const generatedAt = new Date();
-    const doc = createDoc('Material Requisition');
-    const footerLeft = `${COMPANY_NAME} — Material Requisition ${(req as any).requestNumber}`;
+    const requestNumber = String(
+      (req as { requestNumber?: string }).requestNumber ?? id,
+    );
+    const projectLabel = req.project
+      ? [req.project.projectCode, req.project.name].filter(Boolean).join(' – ')
+      : '-';
+    const docs = req.attachmentFolder?.documents ?? [];
 
-    const buffer = await docToBuffer(doc, fontPath, (d) => {
-      let y = drawPageHeader(d, COMPANY_NAME, 'Material Requisition');
-      y = drawMeta(d, y, fmtTs(generatedAt), fullName(req.employee));
-      y += 6;
+    const buffer = await renderPayslipPdf(
+      { title: 'Material Requisition' },
+      (p) => {
+        p.brand(bilingualTitle('Material Requisition', '材料申请'));
+        p.subtitleRight(requestNumber);
+        p.rule();
 
-      const projectLabel = req.project
-        ? [req.project.projectCode, req.project.name].filter(Boolean).join(' – ')
-        : '-';
+        p.section('OVERVIEW');
+        p.fields([
+          ['Request Number', requestNumber],
+          ['Status', req.status],
+          ['Employee', fullName(req.employee)],
+          ['Title', dash((req as { title?: string }).title)],
+          ['Purpose', dash((req as { purpose?: string }).purpose)],
+          [
+            'Warehouse Location',
+            dash((req as { warehouseLocation?: string }).warehouseLocation),
+          ],
+          [
+            'Required By',
+            fmtDate((req as { requiredByDate?: Date }).requiredByDate),
+          ],
+          ['Project', projectLabel],
+          [
+            'Item Count',
+            String(
+              (req as { itemCount?: number }).itemCount ?? req.items.length,
+            ),
+          ],
+          [
+            'Submitted At',
+            (req as { submittedAt?: Date }).submittedAt
+              ? fmtDate((req as { submittedAt?: Date }).submittedAt)
+              : '-',
+          ],
+          ['Created At', fmtDate(req.createdAt)],
+        ]);
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Overview', y);
-      y = drawKvTable(d, [
-        ['Request Number', (req as any).requestNumber],
-        ['Status', req.status],
-        ['Employee', fullName(req.employee)],
-        ['Title', dash((req as any).title)],
-        ['Purpose', dash((req as any).purpose)],
-        ['Warehouse Location', dash((req as any).warehouseLocation)],
-        ['Required By', fmtDate((req as any).requiredByDate)],
-        ['Project', projectLabel],
-        ['Item Count', String((req as any).itemCount ?? req.items.length)],
-        ['Submitted At', (req as any).submittedAt ? fmtDate((req as any).submittedAt) : '-'],
-        ['Created At', fmtDate(req.createdAt)],
-      ], y);
-      y += 8;
+        p.rule();
+        p.section('ITEMS', 'Qty');
+        if (req.items.length === 0) {
+          p.line('No items recorded', { indent: 1, color: '#333333' });
+        } else {
+          for (const item of req.items) {
+            p.field(
+              dash(item.itemName),
+              `${item.quantity} ${dash(item.unit)}`,
+              1,
+            );
+            p.wrapped(
+              [dash(item.itemCode), dash(item.description)]
+                .filter((part) => part !== '-')
+                .join(' · ') || '-',
+              { indent: 24, size: 8 },
+            );
+          }
+        }
 
-      y = ensureSpace(d, y, 40);
-      y = drawSectionTitle(d, 'Items', y);
-      const itemRows = req.items.map((item) => [
-        dash(item.itemName),
-        dash(item.itemCode),
-        dash(item.description),
-        String(item.quantity),
-        dash(item.unit),
-      ]);
-      const colW = [CW * 0.25, CW * 0.2, CW * 0.3, CW * 0.12, CW * 0.13];
-      y = drawItemsTable(d, ['Item Name', 'Item Code', 'Description', 'Qty', 'Unit'], itemRows, colW, y);
-      y += 8;
+        if (docs.length > 0) {
+          p.rule();
+          p.section('DOCUMENTS');
+          for (const doc of docs) {
+            p.line(`•  ${doc.name}`, { indent: 1, color: '#333333' });
+          }
+        }
 
-      const docs = req.attachmentFolder?.documents ?? [];
-      if (docs.length > 0) {
-        y = ensureSpace(d, y, 30);
-        y = drawSectionTitle(d, 'Documents', y);
-        y = drawItemsTable(d, ['Document Name'], docs.map((doc) => [doc.name]), [CW], y);
-      }
-    }, footerLeft);
+        p.footerNotes([
+          `Generated ${fmtGeneratedDate(generatedAt)}`,
+          'This material requisition is system-generated.',
+        ]);
+      },
+    );
 
-    const safe = ((req as any).requestNumber as string).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const safe = requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
     const dateStamp = generatedAt.toISOString().slice(0, 10);
     return {
       buffer,

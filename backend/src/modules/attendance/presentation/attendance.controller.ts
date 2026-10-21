@@ -41,6 +41,7 @@ import {
   ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
   UpdateAttendanceIdentityDto,
+  UnignoreAttendancePreviewRowDto,
   UpsertFieldMovementDraftEntriesDto,
   RemoveFieldMovementDraftDayDto,
 } from '../application/dtos/attendance.dto';
@@ -101,6 +102,24 @@ export class AttendanceController {
     @Body() dto: ConfirmAttendanceImportDto,
   ): Promise<AttendanceImportSummary> {
     return this.attendanceService.confirmImport(dto, companyId, user.userId);
+  }
+
+  @Post('import/preview/unignore')
+  @RequireAnyPermission({ module: 'attendance', action: 'create' })
+  @ApiOperation({
+    summary:
+      'Remove a previously ignored identity from the import preview so it can be assigned',
+  })
+  unignorePreviewRow(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: UnignoreAttendancePreviewRowDto,
+  ): Promise<unknown> {
+    return this.attendanceService.unignorePreviewRow(
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 
   @Get('import/history')

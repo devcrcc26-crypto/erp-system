@@ -35,6 +35,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   getAttendanceImportHistory,
   searchAttendanceEmployees,
+  unignoreAttendancePreviewRow,
 } from '@/lib/api/attendance.api';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -196,6 +197,7 @@ export default function AttendanceImportModal({
     useState<AttendanceImportBatch | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rejectedExpanded, setRejectedExpanded] = useState(false);
+  const [unignoringIndex, setUnignoringIndex] = useState<number | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -217,6 +219,7 @@ export default function AttendanceImportModal({
     setSearchLoading(false);
     setExistingBatch(null);
     setErrorMessage(null);
+    setUnignoringIndex(null);
     setRejectedExpanded(false);
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
@@ -567,6 +570,39 @@ export default function AttendanceImportModal({
     setEmployeeSearchResults([]);
     setExistingBatch(null);
     setErrorMessage(null);
+    setUnignoringIndex(null);
+  }
+
+  /**
+   * Clears a stored IGNORED identity and moves the row into Rejected so it can
+   * be assigned on this import.
+   */
+  async function handleUnignoreStored(ignoredIndex: number): Promise<void> {
+    if (!preview) {
+      return;
+    }
+    setUnignoringIndex(ignoredIndex);
+    setErrorMessage(null);
+    try {
+      const result = await unignoreAttendancePreviewRow({
+        previewToken: preview.previewToken,
+        ignoredIndex,
+      });
+      setPreview({
+        ...preview,
+        ignored: result.ignored,
+        rejected: result.rejected,
+      });
+      setRejectedExpanded(true);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ApiRequestError
+          ? error.message
+          : t('pages.hr.attendance.importModal.unignoreFailed'),
+      );
+    } finally {
+      setUnignoringIndex(null);
+    }
   }
 
   function renderEmployeeSelect(
@@ -1208,6 +1244,24 @@ export default function AttendanceImportModal({
                       key: 'reason',
                       render: () =>
                         t('pages.hr.attendance.importModal.ignoredStored'),
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colAssign'),
+                      key: 'undo',
+                      width: 120,
+                      render: (_: unknown, row: IgnoredPreviewRow) => (
+                        <Button
+                          type="link"
+                          className="!px-0"
+                          loading={unignoringIndex === row.ignoredIndex}
+                          disabled={unignoringIndex != null}
+                          onClick={() =>
+                            void handleUnignoreStored(row.ignoredIndex)
+                          }
+                        >
+                          {t('pages.hr.attendance.importModal.undoIgnore')}
+                        </Button>
+                      ),
                     },
                   ]}
                 />

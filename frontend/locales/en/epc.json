@@ -1359,6 +1359,7 @@
           "ignoredEmpty": "No ignored attendance identities for this file.",
           "ignoredStored": "Previously ignored - left company",
           "undoIgnore": "Undo",
+          "unignoreFailed": "Could not remove this identity from ignored. Try again.",
           "ignoreLeftCompany": "Ignore - left company",
           "ignoreTitle": "Ignore this Deli identity?",
           "ignoreReasonPlaceholder": "Why should this person be ignored?",

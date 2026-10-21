@@ -1359,6 +1359,7 @@
           "ignoredEmpty": "本文件没有已忽略的考勤身份。",
           "ignoredStored": "此前已忽略 - 已离职",
           "undoIgnore": "撤销",
+          "unignoreFailed": "无法从忽略列表中移除此身份，请重试。",
           "ignoreLeftCompany": "忽略 - 已离职",
           "ignoreTitle": "忽略此得力身份？",
           "ignoreReasonPlaceholder": "为何忽略此人？",

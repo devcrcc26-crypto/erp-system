@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { fullName } from '../../../../shared/pdf/hr-pdf-renderer';
+import { CW, fullName } from '../../../../shared/pdf/hr-pdf-renderer';
 import {
   HrDocumentPdfService,
   HrDocumentPdfInput,
@@ -84,6 +84,7 @@ export class ExitPermitPdfService {
           item.quantity != null ? String(item.quantity) : '-',
           d(item.unit),
         ]),
+        colWidths: [CW * 0.1, CW * 0.35, CW * 0.3, CW * 0.12, CW * 0.13],
       },
     };
 

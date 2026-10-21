@@ -142,6 +142,20 @@ export class UpdateAttendanceIdentityDto {
   reason?: string | null;
 }
 
+export class UnignoreAttendancePreviewRowDto {
+  @ApiProperty({ description: 'Preview session token from import/preview' })
+  @IsString()
+  @IsNotEmpty()
+  previewToken!: string;
+
+  @ApiProperty({
+    description: 'Index of the row in the preview ignored list',
+  })
+  @IsInt()
+  @Min(0)
+  ignoredIndex!: number;
+}
+
 export class ResolveAttendanceMissingDto {
   @ApiProperty({
     enum: ['MARKED_EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'],
