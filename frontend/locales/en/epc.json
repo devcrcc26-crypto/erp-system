@@ -4183,7 +4183,7 @@
       "consumablesRequisitions": {
         "title": "Import consumables requisition items",
         "description": "Upload a spreadsheet to add line items to employee DRAFT consumables requisitions. Requisitions are created by employee + title when needed (max 20 items each). Requisitions are not auto-submitted.",
-        "requiredColumns": "Required: employeeEmail or employeeId, title, purpose, itemName, quantity, unit. Optional: department, requiredByDate, itemCode, modelSpec, description, unitPrice.",
+        "requiredColumns": "Required: employeeEmail or employeeId, title, purpose, itemName, quantity, unit. Optional: department, requiredByDate, itemCode, modelSpec, description.",
         "importRows": "Import {{count}} item",
         "importRowsPlural": "Import {{count}} items",
         "created": "{{count}} consumables item created.",
@@ -4193,7 +4193,7 @@
       "consumablesRequisitionItems": {
         "title": "Import requisition items",
         "description": "Upload a spreadsheet to add line items to this DRAFT or RETURNED consumables requisition (max 20 items).",
-        "requiredColumns": "Required: itemName, quantity, unit. Optional: itemCode, modelSpec, description, unitPrice.",
+        "requiredColumns": "Required: itemName, quantity, unit. Optional: itemCode, modelSpec, description.",
         "importRows": "Import {{count}} item",
         "importRowsPlural": "Import {{count}} items",
         "created": "{{count}} consumables item created.",

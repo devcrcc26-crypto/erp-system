@@ -293,11 +293,6 @@ export class ConsumablesRequisitionService
         description: dto.description?.trim() ?? null,
         quantity: new Prisma.Decimal(dto.quantity),
         unit: dto.unit.trim(),
-        unitPrice:
-          dto.unitPrice !== undefined && dto.unitPrice !== null
-            ? new Prisma.Decimal(dto.unitPrice)
-            : null,
-        budgetAmount: this.computeBudgetAmount(dto.quantity, dto.unitPrice),
       },
     });
 
@@ -327,12 +322,6 @@ export class ConsumablesRequisitionService
       dto.quantity !== undefined
         ? dto.quantity
         : Number(existing.quantity);
-    const nextUnitPrice =
-      dto.unitPrice !== undefined
-        ? dto.unitPrice
-        : existing.unitPrice !== null
-          ? Number(existing.unitPrice)
-          : null;
 
     await this.prisma.consumablesRequisitionItem.update({
       where: { id: itemId },
@@ -353,11 +342,6 @@ export class ConsumablesRequisitionService
             : existing.description,
         quantity: new Prisma.Decimal(nextQuantity),
         unit: dto.unit !== undefined ? dto.unit.trim() : existing.unit,
-        unitPrice:
-          nextUnitPrice !== null && nextUnitPrice !== undefined
-            ? new Prisma.Decimal(nextUnitPrice)
-            : null,
-        budgetAmount: this.computeBudgetAmount(nextQuantity, nextUnitPrice),
       },
     });
 
@@ -970,16 +954,6 @@ export class ConsumablesRequisitionService
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
-  }
-
-  private computeBudgetAmount(
-    quantity: number,
-    unitPrice?: number | null,
-  ): Prisma.Decimal | null {
-    if (unitPrice === undefined || unitPrice === null) {
-      return null;
-    }
-    return new Prisma.Decimal(quantity * unitPrice);
   }
 
   private async nextRequestNumber(): Promise<string> {

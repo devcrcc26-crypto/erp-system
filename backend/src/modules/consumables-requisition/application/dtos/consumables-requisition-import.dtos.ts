@@ -24,7 +24,6 @@ export class ConsumablesRequisitionImportRowPreviewDto extends ImportRowPreviewD
   description?: string;
   quantity?: number;
   unit?: string;
-  unitPrice?: number;
 }
 
 export class ConsumablesRequisitionImportPreviewResponseDto

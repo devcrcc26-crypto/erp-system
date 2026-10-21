@@ -171,6 +171,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         payload: {
           itemName: values.itemName,
           itemCode: (values.itemCode as string | undefined) || undefined,
+          modelSpec: (values.modelSpec as string | undefined) || undefined,
           description: (values.description as string | undefined) || undefined,
           quantity: Number(values.quantity),
           unit: values.unit,
@@ -281,8 +282,6 @@ export default function ConsumablesRequisitionDetailPageContent({
           description: t('hr.table.description'),
           quantity: t('hr.table.quantity'),
           unit: t('hr.table.unit'),
-          unitPrice: t('hr.table.unitPrice'),
-          budgetAmount: t('hr.form.budgetAmount'),
           none: t('pages.hr.consumables.pdfNone'),
           page: t('pages.hr.consumables.pdfPage'),
           of: t('pages.hr.consumables.pdfOf'),
@@ -766,6 +765,7 @@ export default function ConsumablesRequisitionDetailPageContent({
             itemForm.setFieldsValue({
               itemName: editingItem.itemName,
               itemCode: editingItem.itemCode ?? '',
+              modelSpec: editingItem.modelSpec ?? '',
               description: editingItem.description ?? '',
               quantity: Number(editingItem.quantity),
               unit: editingItem.unit,
@@ -815,6 +815,18 @@ export default function ConsumablesRequisitionDetailPageContent({
               ]}
             >
               <Input maxLength={50} />
+            </Form.Item>
+            <Form.Item
+              name="modelSpec"
+              label={t('hr.form.modelSpec')}
+              className="sm:col-span-2"
+            >
+              <Input.TextArea
+                rows={3}
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                maxLength={500}
+                showCount
+              />
             </Form.Item>
             <Form.Item
               name="description"

@@ -51,9 +51,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   quantity: 'quantity',
   qty: 'quantity',
   unit: 'unit',
-  unitprice: 'unitPrice',
-  'unit price': 'unitPrice',
-  unit_price: 'unitPrice',
 };
 
 interface ParsedImportRow {
@@ -69,7 +66,6 @@ interface ParsedImportRow {
   description: string;
   quantity: string;
   unit: string;
-  unitPrice: string;
 }
 
 const DATE_FIELDS = new Set<keyof ParsedImportRow>(['requiredByDate']);
@@ -102,7 +98,6 @@ export class ConsumablesRequisitionImportService {
         description: 'Box of 50',
         quantity: '2',
         unit: 'boxes',
-        unitPrice: '150',
       },
       note:
         'Each row adds a line item to a DRAFT consumables requisition for that employee and title (requisition is created if needed). Max 20 items per requisition. Requisitions are not auto-submitted.',
@@ -127,7 +122,6 @@ export class ConsumablesRequisitionImportService {
         description: 'Box of 50',
         quantity: '2',
         unit: 'boxes',
-        unitPrice: '150',
       },
       note:
         'Each valid row adds a line item to this DRAFT or RETURNED consumables requisition (max 20 items).',
@@ -234,7 +228,6 @@ export class ConsumablesRequisitionImportService {
       { header: 'description', key: 'description', width: 28 },
       { header: 'quantity', key: 'quantity', width: 10 },
       { header: 'unit', key: 'unit', width: 10 },
-      { header: 'unitPrice', key: 'unitPrice', width: 12 },
     );
     sheet.columns = columns;
     sheet.addRow(input.sample);
@@ -268,11 +261,6 @@ export class ConsumablesRequisitionImportService {
     instructions.addRow(['description', 'No', 'Item description']);
     instructions.addRow(['quantity', 'Yes', 'Positive number']);
     instructions.addRow(['unit', 'Yes', 'e.g. pcs, boxes']);
-    instructions.addRow([
-      'unitPrice',
-      'No',
-      'Estimated unit price in ETB (non-negative)',
-    ]);
     instructions.addRow([]);
     instructions.addRow(['Note', '', input.note]);
 
@@ -372,7 +360,6 @@ export class ConsumablesRequisitionImportService {
           description: row.description,
           quantity: row.quantity,
           unit: row.unit,
-          unitPrice: row.unitPrice,
         };
         await this.consumablesRequisitionService.addItem(
           requisitionId,
@@ -469,7 +456,6 @@ export class ConsumablesRequisitionImportService {
         description: '',
         quantity: '',
         unit: '',
-        unitPrice: '',
       };
 
       columnMap.forEach((field, colNumber) => {
@@ -531,7 +517,6 @@ export class ConsumablesRequisitionImportService {
             preview.itemCode ?? '',
             preview.quantity,
             preview.unit,
-            preview.unitPrice,
           ),
         );
       }
@@ -634,18 +619,6 @@ export class ConsumablesRequisitionImportService {
       return { ...base, status: 'error', message: quantityResult.message };
     }
 
-    let unitPrice: number | undefined;
-    if (row.unitPrice.trim()) {
-      const priceResult = this.parseNonNegativeNumber(
-        row.unitPrice,
-        'unitPrice',
-      );
-      if (!priceResult.ok) {
-        return { ...base, status: 'error', message: priceResult.message };
-      }
-      unitPrice = priceResult.value;
-    }
-
     const itemCode = row.itemCode.trim();
     const key = this.rowKey(
       employeeId,
@@ -654,7 +627,6 @@ export class ConsumablesRequisitionImportService {
       itemCode,
       quantityResult.value,
       row.unit.trim(),
-      unitPrice,
     );
     if (keysInFile.has(key)) {
       return {
@@ -667,7 +639,6 @@ export class ConsumablesRequisitionImportService {
         description: row.description.trim() || undefined,
         quantity: quantityResult.value,
         unit: row.unit.trim(),
-        unitPrice,
       };
     }
 
@@ -680,7 +651,6 @@ export class ConsumablesRequisitionImportService {
       description: row.description.trim() || undefined,
       quantity: quantityResult.value,
       unit: row.unit.trim(),
-      unitPrice,
     };
   }
 
@@ -691,9 +661,8 @@ export class ConsumablesRequisitionImportService {
     itemCode: string,
     quantity: number,
     unit: string,
-    unitPrice?: number,
   ): string {
-    return `${employeeId}|${title.trim().toLowerCase()}|${itemName}|${itemCode}|${quantity}|${unit}|${unitPrice ?? ''}`;
+    return `${employeeId}|${title.trim().toLowerCase()}|${itemName}|${itemCode}|${quantity}|${unit}`;
   }
 
   private async resolveEmployee(
@@ -771,20 +740,6 @@ export class ConsumablesRequisitionImportService {
       return {
         ok: false,
         message: `${fieldLabel} must be a positive number`,
-      };
-    }
-    return { ok: true, value: num };
-  }
-
-  private parseNonNegativeNumber(
-    value: string,
-    fieldLabel: string,
-  ): { ok: true; value: number } | { ok: false; message: string } {
-    const num = Number(value);
-    if (!Number.isFinite(num) || num < 0) {
-      return {
-        ok: false,
-        message: `${fieldLabel} must be a non-negative number`,
       };
     }
     return { ok: true, value: num };

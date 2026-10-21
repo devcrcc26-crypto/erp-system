@@ -6,7 +6,6 @@ import {
   formatConsumablesRequisitionEmployeeName,
   formatConsumablesRequisitionStatus,
 } from '@/lib/utils/consumables-requisition-display';
-import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 const TEAL: [number, number, number] = [16, 152, 138];
@@ -40,8 +39,6 @@ export interface ConsumablesRequisitionPdfLabels {
   description: string;
   quantity: string;
   unit: string;
-  unitPrice: string;
-  budgetAmount: string;
   none: string;
   page: string;
   of: string;
@@ -178,10 +175,8 @@ export function exportConsumablesRequisitionPdf(
           dash(item.description),
           String(item.quantity),
           dash(item.unit),
-          item.unitPrice != null ? formatEtbAmount(item.unitPrice) : '-',
-          item.budgetAmount != null ? formatEtbAmount(item.budgetAmount) : '-',
         ])
-      : [[labels.none, '-', '-', '-', '-', '-', '-', '-']];
+      : [[labels.none, '-', '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -196,8 +191,6 @@ export function exportConsumablesRequisitionPdf(
         labels.description,
         labels.quantity,
         labels.unit,
-        labels.unitPrice,
-        labels.budgetAmount,
       ],
     ],
     body: itemRows,

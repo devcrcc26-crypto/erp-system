@@ -4183,7 +4183,7 @@
       "consumablesRequisitions": {
         "title": "导入低值易耗品明细",
         "description": "上传表格为员工草稿低值易耗品申请添加明细。按员工 + 标题自动创建或复用草稿申请（每单最多 20 项）。不会自动提交审批。",
-        "requiredColumns": "必填：employeeEmail 或 employeeId、title、purpose、itemName、quantity、unit。可选：department、requiredByDate、itemCode、modelSpec、description、unitPrice。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、title、purpose、itemName、quantity、unit。可选：department、requiredByDate、itemCode、modelSpec、description。",
         "importRows": "导入 {{count}} 条明细",
         "importRowsPlural": "导入 {{count}} 条明细",
         "created": "已创建 {{count}} 条易耗品明细。",
@@ -4193,7 +4193,7 @@
       "consumablesRequisitionItems": {
         "title": "导入申请明细",
         "description": "上传表格向本草稿或退回状态的低值易耗品申请添加明细（最多 20 项）。",
-        "requiredColumns": "必填：itemName、quantity、unit。可选：itemCode、modelSpec、description、unitPrice。",
+        "requiredColumns": "必填：itemName、quantity、unit。可选：itemCode、modelSpec、description。",
         "importRows": "导入 {{count}} 条明细",
         "importRowsPlural": "导入 {{count}} 条明细",
         "created": "已创建 {{count}} 条易耗品明细。",

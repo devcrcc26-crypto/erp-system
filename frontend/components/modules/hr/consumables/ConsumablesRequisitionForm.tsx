@@ -42,7 +42,6 @@ import { useCreateConsumablesRequisition } from '@/lib/query/consumables-requisi
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 interface Step1Values {
@@ -53,17 +52,15 @@ interface Step1Values {
 
 type ItemFormValues = Omit<
   AddConsumablesRequisitionItemPayload,
-  'description' | 'itemCode' | 'modelSpec' | 'unitPrice'
+  'description' | 'itemCode' | 'modelSpec'
 > & {
   description?: string;
   itemCode?: string;
   modelSpec?: string;
-  unitPrice?: number | null;
 };
 
 interface ClientItem extends AddConsumablesRequisitionItemPayload {
   _key: string;
-  budgetAmount?: number;
 }
 
 interface ConsumablesRequisitionFormProps {
@@ -76,31 +73,6 @@ let keyCounter = 0;
 function nextKey(): string {
   keyCounter += 1;
   return `item-${keyCounter}`;
-}
-
-function computeLineBudget(
-  quantity: number | null | undefined,
-  unitPrice: number | null | undefined,
-): number | undefined {
-  if (
-    quantity == null ||
-    unitPrice == null ||
-    unitPrice === undefined ||
-    Number.isNaN(quantity) ||
-    Number.isNaN(unitPrice)
-  ) {
-    return undefined;
-  }
-  return quantity * unitPrice;
-}
-
-function sumBudgetAmount(items: readonly ClientItem[]): number {
-  return items.reduce((sum, item) => {
-    const line =
-      item.budgetAmount ??
-      computeLineBudget(item.quantity, item.unitPrice ?? undefined);
-    return sum + (line ?? 0);
-  }, 0);
 }
 
 /**
@@ -191,7 +163,6 @@ export default function ConsumablesRequisitionForm({
       description: item.description ?? '',
       quantity: item.quantity,
       unit: item.unit,
-      unitPrice: item.unitPrice ?? undefined,
     });
     setShowItemForm(true);
   }
@@ -205,10 +176,7 @@ export default function ConsumablesRequisitionForm({
   async function saveItem(): Promise<void> {
     try {
       const values = await itemForm.validateFields();
-      const unitPrice =
-        values.unitPrice != null ? Number(values.unitPrice) : undefined;
       const quantity = Number(values.quantity);
-      const budgetAmount = computeLineBudget(quantity, unitPrice);
       const entry: ClientItem = {
         _key: editingKey ?? nextKey(),
         itemName: values.itemName,
@@ -217,8 +185,6 @@ export default function ConsumablesRequisitionForm({
         description: values.description || undefined,
         quantity,
         unit: values.unit,
-        unitPrice,
-        budgetAmount,
       };
       if (editingKey) {
         setItems((prev) =>
@@ -291,7 +257,7 @@ export default function ConsumablesRequisitionForm({
 
       await Promise.all(
         items.map((item) => {
-          const { _key: _unused, budgetAmount: _budget, ...payload } = item;
+          const { _key: _unused, ...payload } = item;
           return apiPost<ConsumablesRequisitionDetail>(
             `/hr/consumables/${created.id}/items`,
             payload,
@@ -328,8 +294,7 @@ export default function ConsumablesRequisitionForm({
     }
   }
 
-  const totalBudget = sumBudgetAmount(items);
-  const tableScrollX = isNarrow ? 520 : isCompact ? 720 : 960;
+  const tableScrollX = isNarrow ? 480 : isCompact ? 640 : 800;
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
@@ -340,11 +305,7 @@ export default function ConsumablesRequisitionForm({
         <div className="min-w-0">
           <span className="erp-users-cell-strong">{row.itemName}</span>
           <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
-            {[
-              row.itemCode,
-              `${row.quantity} ${row.unit}`.trim(),
-              row.unitPrice != null ? formatEtbAmount(row.unitPrice) : null,
-            ]
+            {[row.itemCode, `${row.quantity} ${row.unit}`.trim()]
               .filter(Boolean)
               .join(' · ') || '-'}
           </p>
@@ -401,34 +362,6 @@ export default function ConsumablesRequisitionForm({
       render: (value: string) => (
         <span className="erp-users-cell-sub">{value}</span>
       ),
-    },
-    {
-      title: t('hr.table.unitPrice'),
-      key: 'unitPrice',
-      width: isNarrow ? 96 : 110,
-      align: 'right',
-      responsive: ['md'],
-      render: (_: unknown, row: ClientItem) => (
-        <span className="erp-users-cell-sub tabular-nums">
-          {row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '-'}
-        </span>
-      ),
-    },
-    {
-      title: t('hr.form.budgetAmount'),
-      key: 'budgetAmount',
-      width: isNarrow ? 100 : 120,
-      align: 'right',
-      render: (_: unknown, row: ClientItem) => {
-        const amount =
-          row.budgetAmount ??
-          computeLineBudget(row.quantity, row.unitPrice ?? undefined);
-        return (
-          <span className="erp-users-cell-strong tabular-nums">
-            {amount != null ? formatEtbAmount(amount) : '-'}
-          </span>
-        );
-      },
     },
     {
       title: '',
@@ -559,12 +492,6 @@ export default function ConsumablesRequisitionForm({
                     {t('hr.form.itemCount', { count: items.length })} /{' '}
                     {CONSUMABLES_MAX_ITEMS}
                   </Typography.Text>
-                  {totalBudget > 0 ? (
-                    <Typography.Text className="text-sm font-medium tabular-nums">
-                      {t('hr.form.totalBudgetAmount')}:{' '}
-                      <strong>{formatEtbAmount(totalBudget)}</strong>
-                    </Typography.Text>
-                  ) : null}
                 </div>
               }
               addButton={
@@ -617,16 +544,10 @@ export default function ConsumablesRequisitionForm({
                   footer={
                     items.length > 0
                       ? () => (
-                          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-sm sm:pr-2">
                             <span className="erp-users-cell-sub">
                               {t('hr.form.itemCount', { count: items.length })}
                             </span>
-                            {totalBudget > 0 ? (
-                              <span className="erp-users-cell-strong tabular-nums">
-                                {t('hr.form.totalBudgetAmount')}:{' '}
-                                <strong>{formatEtbAmount(totalBudget)}</strong>
-                              </span>
-                            ) : null}
                           </div>
                         )
                       : undefined
@@ -669,12 +590,6 @@ export default function ConsumablesRequisitionForm({
                   label={t('hr.labels.purpose')}
                   value={detailsSnapshot.purpose?.trim() || '-'}
                 />
-                <ReviewItem
-                  label={t('hr.form.totalBudgetAmount')}
-                  value={
-                    totalBudget > 0 ? formatEtbAmount(totalBudget) : '-'
-                  }
-                />
               </div>
             </FormLayout>
 
@@ -696,16 +611,10 @@ export default function ConsumablesRequisitionForm({
                   footer={
                     items.length > 0
                       ? () => (
-                          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2 px-1 text-sm sm:pr-2">
                             <span className="erp-users-cell-sub">
                               {t('hr.form.itemCount', { count: items.length })}
                             </span>
-                            {totalBudget > 0 ? (
-                              <span className="erp-users-cell-strong tabular-nums">
-                                {t('hr.form.totalBudgetAmount')}:{' '}
-                                <strong>{formatEtbAmount(totalBudget)}</strong>
-                              </span>
-                            ) : null}
                           </div>
                         )
                       : undefined
@@ -763,7 +672,6 @@ export default function ConsumablesRequisitionForm({
       detailsSnapshot,
       declarationConfirmed,
       files,
-      totalBudget,
       tableScrollX,
       isNarrow,
       isCompact,
@@ -871,15 +779,14 @@ export default function ConsumablesRequisitionForm({
                 label={t('hr.form.modelSpec')}
                 className="erp-hr-item-drawer-span-2"
               >
-                <Input
+                <Input.TextArea
+                  rows={3}
+                  autoSize={{ minRows: 2, maxRows: 6 }}
                   placeholder={t('hr.placeholder.enterModelSpec')}
                   maxLength={500}
+                  showCount
                 />
               </Form.Item>
-              <Form.Item name="unitPrice" label={t('hr.form.unitPrice')}>
-                <InputNumber min={0} className="w-full" />
-              </Form.Item>
-              <ItemBudgetPreview form={itemForm} />
               <Form.Item
                 name="description"
                 label={t('hr.form.description')}
@@ -917,29 +824,5 @@ function ReviewItem({
         {value}
       </p>
     </div>
-  );
-}
-
-function ItemBudgetPreview({
-  form,
-}: {
-  form: ReturnType<typeof Form.useForm<ItemFormValues>>[0];
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const quantity = Form.useWatch('quantity', form);
-  const unitPrice = Form.useWatch('unitPrice', form);
-  const budgetAmount = computeLineBudget(
-    quantity != null ? Number(quantity) : undefined,
-    unitPrice != null ? Number(unitPrice) : undefined,
-  );
-
-  return (
-    <Form.Item label={t('hr.form.budgetAmount')}>
-      <Input
-        readOnly
-        value={budgetAmount != null ? formatEtbAmount(budgetAmount) : '-'}
-        style={{ background: tokens.colorPageBg }}
-      />
-    </Form.Item>
   );
 }

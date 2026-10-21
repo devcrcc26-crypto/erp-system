@@ -92,7 +92,6 @@ export async function exportConsumablesRequisitionItemsExcel(input: {
       { header: 'description', key: 'description', width: 28 },
       { header: 'quantity', key: 'quantity', width: 10 },
       { header: 'unit', key: 'unit', width: 10 },
-      { header: 'unitPrice', key: 'unitPrice', width: 12 },
     ],
     rows: flatRows,
   });
@@ -120,7 +119,6 @@ export async function exportConsumablesRequisitionDetailItemsExcel(input: {
       { header: 'description', key: 'description', width: 28 },
       { header: 'quantity', key: 'quantity', width: 10 },
       { header: 'unit', key: 'unit', width: 10 },
-      { header: 'unitPrice', key: 'unitPrice', width: 12 },
     ],
     rows: (requisition.items ?? []).map((item) => ({
       itemName: cell(item.itemName),
@@ -129,7 +127,6 @@ export async function exportConsumablesRequisitionDetailItemsExcel(input: {
       description: cell(item.description),
       quantity: cell(item.quantity),
       unit: cell(item.unit),
-      unitPrice: cell(item.unitPrice),
     })),
   });
 }
@@ -154,6 +151,5 @@ function mapItemExportRow(
     description: cell(item.description),
     quantity: cell(item.quantity),
     unit: cell(item.unit),
-    unitPrice: cell(item.unitPrice),
   };
 }

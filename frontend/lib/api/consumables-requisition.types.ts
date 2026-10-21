@@ -24,8 +24,6 @@ export interface ConsumablesRequisitionItem {
   description?: string | null;
   quantity: number | string;
   unit: string;
-  unitPrice?: number | string | null;
-  budgetAmount?: number | string | null;
 }
 
 export interface ConsumablesRequisitionListItem {
@@ -98,7 +96,6 @@ export interface AddConsumablesRequisitionItemPayload {
   description?: string;
   quantity: number;
   unit: string;
-  unitPrice?: number;
 }
 
 export interface UpdateConsumablesRequisitionItemPayload {
@@ -108,7 +105,6 @@ export interface UpdateConsumablesRequisitionItemPayload {
   description?: string;
   quantity?: number;
   unit?: string;
-  unitPrice?: number;
 }
 
 export interface ListConsumablesRequisitionsParams {
