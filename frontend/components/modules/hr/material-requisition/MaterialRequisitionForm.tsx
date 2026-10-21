@@ -9,11 +9,16 @@ import {
   InputNumber,
   Space,
   Table,
-  Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Inbox } from 'lucide-react';
 import dayjs from 'dayjs';
+import HrFormItemsSection, {
+  HrDrawerFormSection,
+} from '@/components/modules/hr/shared/HrFormItemsSection';
+import HrItemFormDrawer from '@/components/modules/hr/shared/HrItemFormDrawer';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -370,126 +375,52 @@ export default function MaterialRequisitionForm({
         title: t('hr.section.items'),
         validate: () => validateItemsStep(),
         content: (
-          <FormLayout
-            variant="pro"
+          <HrFormItemsSection
+            titleId="material-requisition-items-title"
             title={t('hr.section.items')}
-            description={t(
-              'pages.hr.materialRequisition.itemsStepDescription',
-            )}
-            extra={
-              !showItemForm ? (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={openAddItem}
-                >
-                  {t('hr.buttons.addItem')}
-                </Button>
-              ) : undefined
+            count={items.length}
+            headerExtra={
+              <p className="m-0 px-4 pt-4 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+                {t('pages.hr.materialRequisition.itemsStepDescription')}
+              </p>
+            }
+            addButton={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openAddItem}
+              >
+                {t('hr.buttons.addItem')}
+              </Button>
             }
           >
-            <div
-              className={
-                showItemForm
-                  ? 'mb-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4'
-                  : 'hidden'
-              }
-              style={
-                showItemForm ? { background: tokens.colorPageBg } : undefined
-              }
-              aria-hidden={!showItemForm}
-            >
-              <Typography.Text
-                strong
-                style={{ display: 'block', marginBottom: 12 }}
-              >
-                {editingKey ? t('hr.form.editItem') : t('hr.form.newItem')}
-              </Typography.Text>
-              <Form
-                form={itemForm}
-                layout="vertical"
-                requiredMark={false}
-                component={false}
-              >
-                <div className="erp-form-grid-2">
-                  <Form.Item
-                    name="itemName"
-                    label={t('hr.form.itemName')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.itemNameRequired'),
-                      },
-                    ]}
-                  >
-                    <Input maxLength={200} />
-                  </Form.Item>
-                  <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
-                    <Input
-                      placeholder={t('hr.placeholder.enterItemCode')}
-                      maxLength={100}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="quantity"
-                    label={t('hr.form.quantity')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.quantityRequired'),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={0.01} className="w-full" />
-                  </Form.Item>
-                  <Form.Item
-                    name="unit"
-                    label={t('hr.form.unit')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.unitRequired'),
-                      },
-                    ]}
-                  >
-                    <Input
-                      placeholder={t('hr.placeholder.enterUnit')}
-                      maxLength={50}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="description"
-                    label={t('hr.form.description')}
-                    className="sm:col-span-2"
-                  >
-                    <Input.TextArea rows={3} maxLength={1000} showCount />
-                  </Form.Item>
-                </div>
-              </Form>
-              <div className="flex justify-end gap-2">
-                <Button onClick={cancelItemForm}>
-                  {t('hr.buttons.cancel')}
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={() => void saveItem()}
-                >
-                  {editingKey ? t('common.save') : t('hr.buttons.addItem')}
-                </Button>
-              </div>
-            </div>
-
             <Table<ClientItem>
               rowKey="_key"
-              size="small"
+              size="middle"
+              tableLayout="fixed"
+              className="erp-pro-table erp-users-table"
               columns={itemColumns}
               dataSource={items}
               pagination={false}
-              locale={{ emptyText: t('hr.empty.noItems') }}
+              locale={{
+                emptyText: (
+                  <TableEmptyState
+                    icon={<Inbox size={28} strokeWidth={1.5} />}
+                    title={t('hr.empty.noItems')}
+                    description={t(
+                      'pages.hr.materialRequisition.itemsStepDescription',
+                    )}
+                    action={{
+                      label: t('hr.buttons.addItem'),
+                      onClick: openAddItem,
+                    }}
+                  />
+                ),
+              }}
               footer={
                 items.length > 0
                   ? () => (
-                      <div className="flex justify-end pr-2 text-sm font-medium">
+                      <div className="flex justify-end px-1 text-sm font-medium sm:pr-2">
                         <span style={{ color: tokens.colorTextSecondary }}>
                           {t('hr.form.itemCount', { count: items.length })}
                         </span>
@@ -498,7 +429,7 @@ export default function MaterialRequisitionForm({
                   : undefined
               }
             />
-          </FormLayout>
+          </HrFormItemsSection>
         ),
       },
       {
@@ -581,9 +512,6 @@ export default function MaterialRequisitionForm({
     [
       onBehalf,
       t,
-      showItemForm,
-      editingKey,
-      itemForm,
       itemColumns,
       reviewItemColumns,
       items,
@@ -591,6 +519,13 @@ export default function MaterialRequisitionForm({
       files,
     ],
   );
+
+  const itemDrawerTitle = editingKey
+    ? t('hr.form.editItem')
+    : t('hr.form.newItem');
+  const itemDrawerHint = editingKey
+    ? t('hr.dialog.editMaterialItemHint')
+    : t('hr.dialog.addMaterialItemHint');
 
   return (
     <Form<Step1Values>
@@ -618,6 +553,80 @@ export default function MaterialRequisitionForm({
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitRequest')}
       />
+      <HrItemFormDrawer
+        open={showItemForm}
+        onClose={cancelItemForm}
+        editing={Boolean(editingKey)}
+        title={itemDrawerTitle}
+        hint={itemDrawerHint}
+        onSave={saveItem}
+        drawerClassName="erp-material-item-drawer"
+      >
+        <Form
+          form={itemForm}
+          layout="vertical"
+          requiredMark={false}
+          component={false}
+          className="erp-drawer-form"
+        >
+          <HrDrawerFormSection title={t('hr.section.itemDetails')}>
+            <div className="erp-hr-item-drawer-grid">
+              <Form.Item
+                name="itemName"
+                label={t('hr.form.itemName')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.itemNameRequired'),
+                  },
+                ]}
+              >
+                <Input maxLength={200} />
+              </Form.Item>
+              <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
+                <Input
+                  placeholder={t('hr.placeholder.enterItemCode')}
+                  maxLength={100}
+                />
+              </Form.Item>
+              <Form.Item
+                name="quantity"
+                label={t('hr.form.quantity')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.quantityRequired'),
+                  },
+                ]}
+              >
+                <InputNumber min={0.01} className="w-full" />
+              </Form.Item>
+              <Form.Item
+                name="unit"
+                label={t('hr.form.unit')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.unitRequired'),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t('hr.placeholder.enterUnit')}
+                  maxLength={50}
+                />
+              </Form.Item>
+              <Form.Item
+                name="description"
+                label={t('hr.form.description')}
+                className="erp-hr-item-drawer-span-2"
+              >
+                <Input.TextArea rows={3} maxLength={1000} showCount />
+              </Form.Item>
+            </div>
+          </HrDrawerFormSection>
+        </Form>
+      </HrItemFormDrawer>
     </Form>
   );
 }

@@ -17,6 +17,10 @@ import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import { Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
+import HrFormItemsSection, {
+  HrDrawerFormSection,
+} from '@/components/modules/hr/shared/HrFormItemsSection';
+import HrItemFormDrawer from '@/components/modules/hr/shared/HrItemFormDrawer';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -539,12 +543,31 @@ export default function ConsumablesRequisitionForm({
         title: t('hr.section.items'),
         validate: () => validateItemsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.items')}
-            description={t('pages.hr.consumables.itemsStepDescription')}
-            extra={
-              !showItemForm ? (
+          <div className="flex flex-col gap-4">
+            <ErpNotice
+              tone="warning"
+              title={t('hr.messages.consumablesLowValueOnly')}
+              description={t('hr.messages.consumablesLowValueOnlyDesc')}
+            />
+            <HrFormItemsSection
+              titleId="consumables-requisition-items-title"
+              title={t('hr.section.items')}
+              count={items.length}
+              headerExtra={
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3">
+                  <Typography.Text type="secondary" className="text-sm">
+                    {t('hr.form.itemCount', { count: items.length })} /{' '}
+                    {CONSUMABLES_MAX_ITEMS}
+                  </Typography.Text>
+                  {totalBudget > 0 ? (
+                    <Typography.Text className="text-sm font-medium tabular-nums">
+                      {t('hr.form.totalBudgetAmount')}:{' '}
+                      <strong>{formatEtbAmount(totalBudget)}</strong>
+                    </Typography.Text>
+                  ) : null}
+                </div>
+              }
+              addButton={
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -560,159 +583,58 @@ export default function ConsumablesRequisitionForm({
                 >
                   {t('hr.buttons.addItem')}
                 </Button>
-              ) : undefined
-            }
-          >
-            <ErpNotice
-              tone="warning"
-              className="mb-4"
-              title={t('hr.messages.consumablesLowValueOnly')}
-              description={t('hr.messages.consumablesLowValueOnlyDesc')}
-            />
-
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <Typography.Text type="secondary" className="text-sm">
-                {t('hr.form.itemCount', { count: items.length })} /{' '}
-                {CONSUMABLES_MAX_ITEMS}
-              </Typography.Text>
-              {totalBudget > 0 ? (
-                <Typography.Text className="text-sm font-medium tabular-nums">
-                  {t('hr.form.totalBudgetAmount')}:{' '}
-                  <strong>{formatEtbAmount(totalBudget)}</strong>
-                </Typography.Text>
-              ) : null}
-            </div>
-
-            <div
-              className={
-                showItemForm
-                  ? 'mb-4 rounded-[12px] border border-[#e8ebef] p-4'
-                  : 'hidden'
               }
-              style={
-                showItemForm ? { background: tokens.colorPageBg } : undefined
-              }
-              aria-hidden={!showItemForm}
             >
-              <Typography.Text
-                strong
-                style={{ display: 'block', marginBottom: 12 }}
-              >
-                {editingKey ? t('hr.form.editItem') : t('hr.form.newItem')}
-              </Typography.Text>
-              <Form
-                form={itemForm}
-                layout="vertical"
-                requiredMark={false}
-                component={false}
-              >
-                <div className="erp-form-grid-2">
-                  <Form.Item
-                    name="itemName"
-                    label={t('hr.form.itemName')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.itemNameRequired'),
-                      },
-                    ]}
-                  >
-                    <Input maxLength={200} />
-                  </Form.Item>
-                  <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
-                    <Input
-                      placeholder={t('hr.placeholder.enterItemCode')}
-                      maxLength={100}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="quantity"
-                    label={t('hr.form.quantity')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.quantityRequired'),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={0.01} className="w-full" />
-                  </Form.Item>
-                  <Form.Item
-                    name="unit"
-                    label={t('hr.form.unit')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.unitRequired'),
-                      },
-                    ]}
-                  >
-                    <Input
-                      placeholder={t('hr.placeholder.enterUnit')}
-                      maxLength={50}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="modelSpec"
-                    label={t('hr.form.modelSpec')}
-                    className="sm:col-span-2"
-                  >
-                    <Input
-                      placeholder={t('hr.placeholder.enterModelSpec')}
-                      maxLength={500}
-                    />
-                  </Form.Item>
-                  <Form.Item name="unitPrice" label={t('hr.form.unitPrice')}>
-                    <InputNumber min={0} className="w-full" />
-                  </Form.Item>
-                  <ItemBudgetPreview form={itemForm} />
-                  <Form.Item
-                    name="description"
-                    label={t('hr.form.description')}
-                    className="sm:col-span-2"
-                  >
-                    <Input.TextArea rows={3} maxLength={1000} showCount />
-                  </Form.Item>
-                </div>
-              </Form>
-              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
-                <Button type="primary" onClick={() => void saveItem()}>
-                  {editingKey ? t('common.save') : t('hr.buttons.addItem')}
-                </Button>
-              </div>
-            </div>
-
-            <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
-              <Table<ClientItem>
-                rowKey="_key"
-                size="small"
-                className="erp-data-table erp-pro-table erp-users-table"
-                columns={itemColumns}
-                dataSource={items}
-                pagination={false}
-                locale={{ emptyText: itemsEmpty }}
-                scroll={{ x: tableScrollX }}
-                footer={
-                  items.length > 0
-                    ? () => (
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
-                          <span className="erp-users-cell-sub">
-                            {t('hr.form.itemCount', { count: items.length })}
-                          </span>
-                          {totalBudget > 0 ? (
-                            <span className="erp-users-cell-strong tabular-nums">
-                              {t('hr.form.totalBudgetAmount')}:{' '}
-                              <strong>{formatEtbAmount(totalBudget)}</strong>
+              <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
+                <Table<ClientItem>
+                  rowKey="_key"
+                  size="middle"
+                  tableLayout="fixed"
+                  className="erp-data-table erp-pro-table erp-users-table"
+                  columns={itemColumns}
+                  dataSource={items}
+                  pagination={false}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<ShoppingBag size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t(
+                          'pages.hr.consumables.itemsStepDescription',
+                        )}
+                        action={
+                          atMax
+                            ? undefined
+                            : {
+                                label: t('hr.buttons.addItem'),
+                                onClick: openAddItem,
+                              }
+                        }
+                      />
+                    ),
+                  }}
+                  scroll={{ x: tableScrollX }}
+                  footer={
+                    items.length > 0
+                      ? () => (
+                          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
+                            <span className="erp-users-cell-sub">
+                              {t('hr.form.itemCount', { count: items.length })}
                             </span>
-                          ) : null}
-                        </div>
-                      )
-                    : undefined
-                }
-              />
-            </div>
-          </FormLayout>
+                            {totalBudget > 0 ? (
+                              <span className="erp-users-cell-strong tabular-nums">
+                                {t('hr.form.totalBudgetAmount')}:{' '}
+                                <strong>{formatEtbAmount(totalBudget)}</strong>
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </div>
+            </HrFormItemsSection>
+          </div>
         ),
       },
       {
@@ -834,9 +756,6 @@ export default function ConsumablesRequisitionForm({
     [
       onBehalf,
       t,
-      showItemForm,
-      editingKey,
-      itemForm,
       itemColumns,
       reviewItemColumns,
       items,
@@ -846,11 +765,17 @@ export default function ConsumablesRequisitionForm({
       files,
       totalBudget,
       tableScrollX,
-      itemsEmpty,
       isNarrow,
       isCompact,
     ],
   );
+
+  const itemDrawerTitle = editingKey
+    ? t('hr.form.editItem')
+    : t('hr.form.newItem');
+  const itemDrawerHint = editingKey
+    ? t('hr.dialog.editConsumablesItemHint')
+    : t('hr.dialog.addConsumablesItemHint');
 
   return (
     <Form<Step1Values>
@@ -878,6 +803,94 @@ export default function ConsumablesRequisitionForm({
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitRequest')}
       />
+      <HrItemFormDrawer
+        open={showItemForm}
+        onClose={cancelItemForm}
+        editing={Boolean(editingKey)}
+        title={itemDrawerTitle}
+        hint={itemDrawerHint}
+        onSave={saveItem}
+        drawerClassName="erp-consumables-item-drawer"
+      >
+        <Form
+          form={itemForm}
+          layout="vertical"
+          requiredMark={false}
+          component={false}
+          className="erp-drawer-form"
+        >
+          <HrDrawerFormSection title={t('hr.section.itemDetails')}>
+            <div className="erp-hr-item-drawer-grid">
+              <Form.Item
+                name="itemName"
+                label={t('hr.form.itemName')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.itemNameRequired'),
+                  },
+                ]}
+              >
+                <Input maxLength={200} />
+              </Form.Item>
+              <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
+                <Input
+                  placeholder={t('hr.placeholder.enterItemCode')}
+                  maxLength={100}
+                />
+              </Form.Item>
+              <Form.Item
+                name="quantity"
+                label={t('hr.form.quantity')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.quantityRequired'),
+                  },
+                ]}
+              >
+                <InputNumber min={0.01} className="w-full" />
+              </Form.Item>
+              <Form.Item
+                name="unit"
+                label={t('hr.form.unit')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.unitRequired'),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t('hr.placeholder.enterUnit')}
+                  maxLength={50}
+                />
+              </Form.Item>
+              <Form.Item
+                name="modelSpec"
+                label={t('hr.form.modelSpec')}
+                className="erp-hr-item-drawer-span-2"
+              >
+                <Input
+                  placeholder={t('hr.placeholder.enterModelSpec')}
+                  maxLength={500}
+                />
+              </Form.Item>
+              <Form.Item name="unitPrice" label={t('hr.form.unitPrice')}>
+                <InputNumber min={0} className="w-full" />
+              </Form.Item>
+              <ItemBudgetPreview form={itemForm} />
+              <Form.Item
+                name="description"
+                label={t('hr.form.description')}
+                className="erp-hr-item-drawer-span-2"
+              >
+                <Input.TextArea rows={3} maxLength={1000} showCount />
+              </Form.Item>
+            </div>
+          </HrDrawerFormSection>
+        </Form>
+      </HrItemFormDrawer>
     </Form>
   );
 }

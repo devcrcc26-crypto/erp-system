@@ -10,7 +10,6 @@ import {
   Select,
   Space,
   Table,
-  Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -18,7 +17,13 @@ import {
   EditOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
+import { DoorOpen } from 'lucide-react';
 import type { Dayjs } from 'dayjs';
+import HrFormItemsSection, {
+  HrDrawerFormSection,
+} from '@/components/modules/hr/shared/HrFormItemsSection';
+import HrItemFormDrawer from '@/components/modules/hr/shared/HrItemFormDrawer';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import LocalFileImageThumb from '@/components/ui/DocumentImageThumb/LocalFileImageThumb';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -422,120 +427,51 @@ export default function ExitPermitForm({
         title: t('hr.section.items'),
         validate: () => validateItemsStep(),
         content: (
-          <FormLayout
-            variant="pro"
+          <HrFormItemsSection
+            titleId="exit-permit-items-title"
             title={t('hr.section.items')}
-            description={t('pages.hr.exitPermit.itemsStepDescription')}
-            extra={
-              !showItemForm ? (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={openAddItem}
-                >
-                  {t('hr.buttons.addItem')}
-                </Button>
-              ) : undefined
+            count={items.length}
+            headerExtra={
+              <p className="m-0 px-4 pt-4 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+                {t('pages.hr.exitPermit.itemsStepDescription')}
+              </p>
+            }
+            addButton={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openAddItem}
+              >
+                {t('hr.buttons.addItem')}
+              </Button>
             }
           >
-            <div
-              className={
-                showItemForm
-                  ? 'mb-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4'
-                  : 'hidden'
-              }
-              style={
-                showItemForm ? { background: tokens.colorPageBg } : undefined
-              }
-              aria-hidden={!showItemForm}
-            >
-              <Typography.Text
-                strong
-                style={{ display: 'block', marginBottom: 12 }}
-              >
-                {editingKey ? t('hr.form.editItem') : t('hr.form.newItem')}
-              </Typography.Text>
-              <Form
-                form={itemForm}
-                layout="vertical"
-                requiredMark={false}
-                component={false}
-              >
-                <div className="erp-form-grid-1">
-                  <Form.Item
-                    name="itemName"
-                    label={t('hr.form.itemName')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.itemNameRequired'),
-                      },
-                    ]}
-                  >
-                    <Input maxLength={100} />
-                  </Form.Item>
-                  <Form.Item name="issue" label={t('hr.form.issue')}>
-                    <Input maxLength={100} />
-                  </Form.Item>
-                  <Form.Item
-                    name="quantity"
-                    label={t('hr.form.quantity')}
-                    rules={[
-                      {
-                        required: true,
-                        message: t('hr.validation.quantityRequired'),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={1} className="w-full" />
-                  </Form.Item>
-                  <Form.Item name="unit" label={t('hr.form.unit')}>
-                    <Input
-                      placeholder={t('hr.placeholder.enterUnit')}
-                      maxLength={100}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    label={t('hr.form.itemImage')}
-                    className="sm:col-span-2"
-                    extra={t('hr.hints.itemImageOptional')}
-                  >
-                    <FileUploadInput
-                      files={itemImageFile ? [itemImageFile] : []}
-                      onChange={(nextFiles) =>
-                        setItemImageFile(nextFiles[0] ?? null)
-                      }
-                      accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-                      multiple={false}
-                    />
-                  </Form.Item>
-                </div>
-              </Form>
-              <div className="flex justify-end gap-2">
-                <Button onClick={cancelItemForm}>
-                  {t('hr.buttons.cancel')}
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={() => void saveItem()}
-                >
-                  {editingKey ? t('common.save') : t('hr.buttons.addItem')}
-                </Button>
-              </div>
-            </div>
-
             <Table<ClientItem>
               rowKey="_key"
-              size="small"
+              size="middle"
+              tableLayout="fixed"
+              className="erp-pro-table erp-users-table"
               columns={itemColumns}
               dataSource={items}
               pagination={false}
               scroll={{ x: 'max-content' }}
-              locale={{ emptyText: t('hr.empty.noItems') }}
+              locale={{
+                emptyText: (
+                  <TableEmptyState
+                    icon={<DoorOpen size={28} strokeWidth={1.5} />}
+                    title={t('hr.empty.noItems')}
+                    description={t('pages.hr.exitPermit.itemsStepDescription')}
+                    action={{
+                      label: t('hr.buttons.addItem'),
+                      onClick: openAddItem,
+                    }}
+                  />
+                ),
+              }}
               footer={
                 items.length > 0
                   ? () => (
-                      <div className="flex justify-end pr-2 text-sm font-medium">
+                      <div className="flex justify-end px-1 text-sm font-medium sm:pr-2">
                         <span style={{ color: tokens.colorTextSecondary }}>
                           {t('hr.form.itemCount', { count: items.length })}
                         </span>
@@ -544,7 +480,7 @@ export default function ExitPermitForm({
                   : undefined
               }
             />
-          </FormLayout>
+          </HrFormItemsSection>
         ),
       },
       {
@@ -632,9 +568,6 @@ export default function ExitPermitForm({
     [
       onBehalf,
       t,
-      showItemForm,
-      editingKey,
-      itemForm,
       itemColumns,
       reviewItemColumns,
       items,
@@ -644,10 +577,16 @@ export default function ExitPermitForm({
       departmentOptions,
       departmentsQuery.isLoading,
       directionOptions,
-      itemImageFile,
       lookupUserName,
     ],
   );
+
+  const itemDrawerTitle = editingKey
+    ? t('hr.form.editItem')
+    : t('hr.form.newItem');
+  const itemDrawerHint = editingKey
+    ? t('hr.dialog.editExitPermitItemHint')
+    : t('hr.dialog.addExitPermitItemHint');
 
   return (
     <Form<Step1Values>
@@ -675,6 +614,72 @@ export default function ExitPermitForm({
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitRequest')}
       />
+      <HrItemFormDrawer
+        open={showItemForm}
+        onClose={cancelItemForm}
+        editing={Boolean(editingKey)}
+        title={itemDrawerTitle}
+        hint={itemDrawerHint}
+        onSave={saveItem}
+        drawerClassName="erp-exit-permit-item-drawer"
+      >
+        <Form
+          form={itemForm}
+          layout="vertical"
+          requiredMark={false}
+          component={false}
+          className="erp-drawer-form"
+        >
+          <HrDrawerFormSection title={t('hr.section.itemDetails')}>
+            <div className="erp-hr-item-drawer-grid-single">
+              <Form.Item
+                name="itemName"
+                label={t('hr.form.itemName')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.itemNameRequired'),
+                  },
+                ]}
+              >
+                <Input maxLength={100} />
+              </Form.Item>
+              <Form.Item name="issue" label={t('hr.form.issue')}>
+                <Input maxLength={100} />
+              </Form.Item>
+              <Form.Item
+                name="quantity"
+                label={t('hr.form.quantity')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.quantityRequired'),
+                  },
+                ]}
+              >
+                <InputNumber min={1} className="w-full" />
+              </Form.Item>
+              <Form.Item name="unit" label={t('hr.form.unit')}>
+                <Input
+                  placeholder={t('hr.placeholder.enterUnit')}
+                  maxLength={100}
+                />
+              </Form.Item>
+            </div>
+          </HrDrawerFormSection>
+          <HrDrawerFormSection title={t('hr.form.itemImage')}>
+            <FileUploadInput
+              files={itemImageFile ? [itemImageFile] : []}
+              onChange={(nextFiles) => setItemImageFile(nextFiles[0] ?? null)}
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              multiple={false}
+            />
+            <p className="erp-hr-item-drawer-field-hint">
+              {t('hr.hints.itemImageOptional')}
+            </p>
+          </HrDrawerFormSection>
+        </Form>
+      </HrItemFormDrawer>
     </Form>
   );
 }
