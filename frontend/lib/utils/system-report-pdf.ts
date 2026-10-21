@@ -13,10 +13,6 @@ import {
 } from '@/lib/utils/project-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 
-const TEAL: [number, number, number] = [16, 152, 138];
-const NAVY: [number, number, number] = [27, 43, 75];
-const MUTED: [number, number, number] = [111, 114, 119];
-const BORDER: [number, number, number] = [229, 231, 235];
 const PAGE_MARGIN = 14;
 
 interface SystemReportPdfInput {
@@ -36,13 +32,14 @@ function pct(part: number, total: number): string {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFillColor(...BORDER);
-  doc.rect(PAGE_MARGIN, y, doc.internal.pageSize.getWidth() - PAGE_MARGIN * 2, 7, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...NAVY);
-  doc.text(title.toUpperCase(), PAGE_MARGIN + 2, y + 5);
-  return y + 11;
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 80, 80);
+  doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.2);
+  doc.line(PAGE_MARGIN, y + 6, doc.internal.pageSize.getWidth() - PAGE_MARGIN, y + 6);
+  return y + 10;
 }
 
 function ensureSpace(doc: jsPDF, y: number, needed: number): number {
@@ -64,20 +61,20 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = PAGE_MARGIN;
 
-  doc.setFillColor(...TEAL);
-  doc.rect(0, 0, pageWidth, 32, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text(labels.title, PAGE_MARGIN, 14);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(summary.companyName, PAGE_MARGIN, 21);
-  doc.setFontSize(8);
-  doc.text(labels.subtitle, PAGE_MARGIN, 27);
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  doc.text(summary.companyName, PAGE_MARGIN, PAGE_MARGIN);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(labels.title, PAGE_MARGIN, PAGE_MARGIN + 7);
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(PAGE_MARGIN, PAGE_MARGIN + 12, pageWidth - PAGE_MARGIN, PAGE_MARGIN + 12);
+  y = PAGE_MARGIN + 18;
 
-  y = 40;
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(120, 120, 120);
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatDisplayDateTime(summary.generatedAt)}`,
@@ -91,9 +88,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 72, fontStyle: 'bold' },
       1: { halign: 'right' },
@@ -138,9 +136,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.status, labels.count, labels.share]],
     body: statusRows.length > 0 ? statusRows : [['-', '0', '0%']],
   });
@@ -159,9 +158,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.type, labels.count, labels.share]],
     body: typeRows.length > 0 ? typeRows : [['-', '0', '0%']],
   });
@@ -172,9 +172,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.value]],
     body: [
       [labels.branches, String(summary.organization.branches)],
@@ -191,9 +192,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.value]],
     body: [
       [labels.openRfis, String(summary.siteOps.openRfis)],
@@ -214,9 +216,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.value]],
     body: [
       [labels.auditLast30Days, String(summary.audit.last30Days)],
@@ -227,15 +230,16 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   y = ensureSpace(doc, y, 24);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(80, 80, 80);
   doc.text(labels.auditModules, PAGE_MARGIN, y);
   y += 5;
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.module, labels.count]],
     body: moduleRows,
   });
@@ -260,10 +264,10 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'striped',
-    headStyles: { fillColor: NAVY, fontSize: 7 },
-    bodyStyles: { fontSize: 7 },
-    styles: { overflow: 'linebreak', cellWidth: 'wrap' },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2, overflow: 'linebreak', cellWidth: 'wrap' },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { fontSize: 7, textColor: [40, 40, 40] },
     head: [
       [
         labels.code,
@@ -285,7 +289,7 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
     doc.setFontSize(7);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(
       `${labels.footer} - ${labels.title} - Page ${page} of ${pageCount}`,
       PAGE_MARGIN,

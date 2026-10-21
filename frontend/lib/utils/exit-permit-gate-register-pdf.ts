@@ -13,9 +13,6 @@ import {
   exportPersonName,
 } from '@/lib/utils/hr-export-excel';
 
-const TEAL: [number, number, number] = [16, 152, 138];
-const NAVY: [number, number, number] = [27, 43, 75];
-const MUTED: [number, number, number] = [111, 114, 119];
 const PAGE_MARGIN = 10;
 
 export type ExitPermitGateRegisterDirection = ExitPermitDirection | 'ALL';
@@ -92,24 +89,28 @@ export function exportExitPermitGateRegisterPdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  doc.setFillColor(...TEAL);
-  doc.rect(0, 0, pageWidth, 28, 'F');
-  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  doc.text(companyName, PAGE_MARGIN, PAGE_MARGIN);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text(companyName, PAGE_MARGIN, 11);
-  doc.setFontSize(16);
-  doc.text(labels.documentTitle, PAGE_MARGIN, 20);
+  doc.text(labels.documentTitle, PAGE_MARGIN, PAGE_MARGIN + 7);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setTextColor(80, 80, 80);
   doc.text(
     labels.subtitleForDirection(directionLabel, dateLabel),
     PAGE_MARGIN,
-    26,
+    PAGE_MARGIN + 14,
   );
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(PAGE_MARGIN, PAGE_MARGIN + 18, pageWidth - PAGE_MARGIN, PAGE_MARGIN + 18);
 
-  let y = 34;
-  doc.setTextColor(...MUTED);
+  let y = PAGE_MARGIN + 24;
+  doc.setTextColor(120, 120, 120);
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatTimestamp(generatedAt)}`,
@@ -129,7 +130,7 @@ export function exportExitPermitGateRegisterPdf(
   );
 
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(9);
   doc.text(labels.permitCount(sorted.length), PAGE_MARGIN, y);
   y += 6;
@@ -176,20 +177,21 @@ export function exportExitPermitGateRegisterPdf(
   for (const section of sections) {
     if (input.direction === 'ALL') {
       y = ensureSpace(doc, y, 18, pageHeight);
-      doc.setFillColor(229, 231, 235);
-      doc.rect(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN * 2, 7, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...NAVY);
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
       const sectionTitle =
         section.key === 'ENTRANCE'
           ? labels.sectionEntrance
           : labels.sectionExit;
       doc.text(
         `${sectionTitle.toUpperCase()} (${section.permits.length})`,
-        PAGE_MARGIN + 2,
-        y + 5,
+        PAGE_MARGIN,
+        y + 4,
       );
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.line(PAGE_MARGIN, y + 6, pageWidth - PAGE_MARGIN, y + 6);
       y += 10;
     }
 
@@ -226,7 +228,7 @@ export function exportExitPermitGateRegisterPdf(
         y = ensureSpace(doc, y, 20, pageHeight);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.setTextColor(...MUTED);
+        doc.setTextColor(120, 120, 120);
         doc.text(labels.noPermits, PAGE_MARGIN, y);
         y += 8;
       }
@@ -237,9 +239,10 @@ export function exportExitPermitGateRegisterPdf(
     autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-      theme: 'striped',
-      headStyles: { fillColor: TEAL, fontSize: 7.5, cellPadding: 1.5 },
-      bodyStyles: { fontSize: 7.5, cellPadding: 1.5, valign: 'top' },
+      theme: 'plain',
+      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
+      bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5, valign: 'top' },
       columnStyles: {
         0: { cellWidth: 24 },
         1: { cellWidth: 32 },
@@ -260,14 +263,14 @@ export function exportExitPermitGateRegisterPdf(
     y = ensureSpace(doc, y, 20, pageHeight);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(labels.noPermits, PAGE_MARGIN, y);
   }
 
   y = ensureSpace(doc, y, 14, pageHeight);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(120, 120, 120);
   doc.text(
     doc.splitTextToSize(labels.footer, pageWidth - PAGE_MARGIN * 2) as string[],
     PAGE_MARGIN,
@@ -280,7 +283,7 @@ export function exportExitPermitGateRegisterPdf(
     doc.setPage(page);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(
       `${HR_PDF_COMPANY_NAME} — ${docTitleShort} — ${dateLabel}`,
       PAGE_MARGIN,

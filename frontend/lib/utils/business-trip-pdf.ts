@@ -12,10 +12,6 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
-const TEAL: [number, number, number] = [16, 152, 138];
-const NAVY: [number, number, number] = [27, 43, 75];
-const MUTED: [number, number, number] = [111, 114, 119];
-const BORDER: [number, number, number] = [229, 231, 235];
 const PAGE_MARGIN = 14;
 
 export interface BusinessTripPdfLabels {
@@ -78,13 +74,14 @@ interface BusinessTripPdfInput {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFillColor(...BORDER);
-  doc.rect(PAGE_MARGIN, y, doc.internal.pageSize.getWidth() - PAGE_MARGIN * 2, 7, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...NAVY);
-  doc.text(title.toUpperCase(), PAGE_MARGIN + 2, y + 5);
-  return y + 11;
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 80, 80);
+  doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.2);
+  doc.line(PAGE_MARGIN, y + 6, doc.internal.pageSize.getWidth() - PAGE_MARGIN, y + 6);
+  return y + 10;
 }
 
 function ensureSpace(doc: jsPDF, y: number, needed: number): number {
@@ -111,25 +108,24 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   const generatedAt = new Date().toISOString();
   const originLabel = `${trip.originCity}, ${trip.originCountry}`;
   const destinationLabel = `${trip.destinationCity}, ${trip.destinationCountry}`;
-  const routeTitle = `${originLabel} → ${destinationLabel}`;
   const submitterName = formatBusinessTripSubmitterName(trip.submitter);
 
   let y = PAGE_MARGIN;
 
-  doc.setFillColor(...TEAL);
-  doc.rect(0, 0, pageWidth, 32, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text(labels.title, PAGE_MARGIN, 14);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(routeTitle, PAGE_MARGIN, 21);
-  doc.setFontSize(8);
-  doc.text(`${trip.tripNumber} · ${companyName}`, PAGE_MARGIN, 27);
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  doc.text(companyName, PAGE_MARGIN, PAGE_MARGIN);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(labels.title, PAGE_MARGIN, PAGE_MARGIN + 7);
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(PAGE_MARGIN, PAGE_MARGIN + 12, pageWidth - PAGE_MARGIN, PAGE_MARGIN + 12);
+  y = PAGE_MARGIN + 18;
 
-  y = 40;
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(120, 120, 120);
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatDisplayDateTime(generatedAt)}`,
@@ -143,9 +139,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 55, fontStyle: 'bold' },
       1: { cellWidth: 'auto' },
@@ -175,9 +172,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 55, fontStyle: 'bold' },
       1: { cellWidth: 'auto' },
@@ -208,9 +206,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 55, fontStyle: 'bold' },
       1: { cellWidth: 'auto' },
@@ -225,9 +224,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 55, fontStyle: 'bold' },
       1: { cellWidth: 'auto' },
@@ -264,9 +264,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-    theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 7.5, cellPadding: 2 },
+    theme: 'plain',
+    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 2 },
     head: [
       [
         labels.passengerName,
@@ -293,9 +294,10 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
     autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-      theme: 'striped',
-      headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-      bodyStyles: { fontSize: 8, cellPadding: 2 },
+      theme: 'plain',
+      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+      bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
       head: [[labels.documents]],
       body: documentNames.map((name) => [name]),
     });
@@ -305,7 +307,7 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
     doc.setFontSize(7);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(
       `${labels.footer} - ${labels.title} - ${labels.page} ${page} ${labels.of} ${pageCount}`,
       PAGE_MARGIN,

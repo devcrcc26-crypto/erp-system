@@ -4,18 +4,14 @@ import autoTable from 'jspdf-autotable';
 /**
  * Shared PDF layout builder for HR single-record exports.
  *
- * Produces a formal internal document: the CRCC International Consulting
- * header band, a request metadata strip, one or more label/value sections, an
- * optional items table, and a page footer. Every HR detail page's PDF export
- * is one call to `exportHrDocumentPdf` with its own fields.
+ * Produces a formal internal document: company name header, a request metadata
+ * strip, one or more label/value sections, an optional items table, and a page
+ * footer. Every HR detail page's PDF export is one call to `exportHrDocumentPdf`
+ * with its own fields.
  */
 
 export const HR_PDF_COMPANY_NAME = 'CRCC International Consulting';
 
-const TEAL: [number, number, number] = [16, 152, 138];
-const NAVY: [number, number, number] = [27, 43, 75];
-const MUTED: [number, number, number] = [111, 114, 119];
-const BAND: [number, number, number] = [229, 231, 235];
 const PAGE_MARGIN = 14;
 const EM_DASH = '-';
 
@@ -41,9 +37,9 @@ export interface HrPdfItemsTable {
 }
 
 export interface HrPdfInput {
-  /** Document title in the header band, e.g. `Vehicle Application`. */
+  /** Document title in the header, e.g. `Vehicle Application`. */
   documentTitle: string;
-  /** Second line of the header band - the record's own subject. */
+  /** Second line of the header - the record's own subject. */
   subtitle?: string | null;
   /** Request or application number shown in the header and file name. */
   requestNumber: string;
@@ -89,29 +85,27 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const generatedAt = new Date();
 
-  doc.setFillColor(...TEAL);
-  doc.rect(0, 0, pageWidth, 34, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(HR_PDF_COMPANY_NAME, PAGE_MARGIN, 12);
-  doc.setFontSize(15);
-  doc.text(input.documentTitle, PAGE_MARGIN, 21);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  doc.text(HR_PDF_COMPANY_NAME, PAGE_MARGIN, PAGE_MARGIN);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(input.documentTitle, PAGE_MARGIN, PAGE_MARGIN + 7);
   if (input.subtitle?.trim()) {
-    doc.text(truncate(input.subtitle.trim(), 90), PAGE_MARGIN, 27);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(truncate(input.subtitle.trim(), 90), PAGE_MARGIN, PAGE_MARGIN + 14);
   }
-  doc.setFontSize(8);
-  doc.text(input.requestNumber, pageWidth - PAGE_MARGIN, 12, {
-    align: 'right',
-  });
-  if (companyName !== HR_PDF_COMPANY_NAME) {
-    doc.text(companyName, pageWidth - PAGE_MARGIN, 27, { align: 'right' });
-  }
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  const headerLineY = input.subtitle?.trim() ? PAGE_MARGIN + 18 : PAGE_MARGIN + 12;
+  doc.line(PAGE_MARGIN, headerLineY, pageWidth - PAGE_MARGIN, headerLineY);
 
-  let y = 42;
-  doc.setTextColor(...MUTED);
+  let y = headerLineY + 8;
+  doc.setTextColor(120, 120, 120);
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatTimestamp(generatedAt)}`,
@@ -123,6 +117,9 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
     pageWidth / 2,
     y,
   );
+  if (companyName !== HR_PDF_COMPANY_NAME) {
+    doc.text(companyName, pageWidth - PAGE_MARGIN, y, { align: 'right' });
+  }
   y += 8;
 
   for (const section of input.sections) {
@@ -134,9 +131,10 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
     autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-      theme: 'grid',
-      headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-      bodyStyles: { fontSize: 8, cellPadding: 2, valign: 'top' },
+      theme: 'plain',
+      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+      bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2, valign: 'top' },
       columnStyles: {
         0: { cellWidth: 52, fontStyle: 'bold' },
         1: { cellWidth: 'auto' },
@@ -158,9 +156,10 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
     autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-      theme: 'striped',
-      headStyles: { fillColor: TEAL, fontSize: 7.5, cellPadding: 1.5 },
-      bodyStyles: { fontSize: 7.5, cellPadding: 1.5 },
+      theme: 'plain',
+      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
+      bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5 },
       columnStyles,
       head: [table.head],
       body:
@@ -180,7 +179,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
     y = ensureSpace(doc, y, 16);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(
       doc.splitTextToSize(
         input.footerNote.trim(),
@@ -195,7 +194,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
     doc.setFontSize(7);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(120, 120, 120);
     doc.text(
       `${HR_PDF_COMPANY_NAME} - ${input.documentTitle} ${input.requestNumber}`,
       PAGE_MARGIN,
@@ -215,19 +214,14 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFillColor(...BAND);
-  doc.rect(
-    PAGE_MARGIN,
-    y,
-    doc.internal.pageSize.getWidth() - PAGE_MARGIN * 2,
-    7,
-    'F',
-  );
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...NAVY);
-  doc.text(title.toUpperCase(), PAGE_MARGIN + 2, y + 5);
-  return y + 11;
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 80, 80);
+  doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.2);
+  doc.line(PAGE_MARGIN, y + 6, doc.internal.pageSize.getWidth() - PAGE_MARGIN, y + 6);
+  return y + 10;
 }
 
 function ensureSpace(doc: jsPDF, y: number, needed: number): number {
