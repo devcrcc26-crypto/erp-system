@@ -280,7 +280,8 @@ export default function PurchaseRequestDetailPageContent({
           requestTitle: t('hr.form.title'),
           justification: t('hr.form.justification'),
           vendorName: t('hr.form.vendor'),
-          vendorContact: t('hr.form.vendorContact'),
+          vendorEmail: t('hr.form.vendorEmail'),
+          vendorPhone: t('hr.form.vendorPhone'),
           requiredByDate: t('hr.form.requiredByDate'),
           itemCount: t('hr.section.items'),
           estimatedTotal: t('hr.form.estimatedTotal'),
@@ -704,9 +705,14 @@ export default function PurchaseRequestDetailPageContent({
                       <p className="erp-users-cell-strong m-0 mt-1">
                         {request.vendorName}
                       </p>
-                      {request.vendorContact ? (
+                      {request.vendorEmail ? (
                         <p className="erp-users-cell-sub m-0 mt-0.5">
-                          {request.vendorContact}
+                          {request.vendorEmail}
+                        </p>
+                      ) : null}
+                      {request.vendorPhone ? (
+                        <p className="erp-users-cell-sub m-0 mt-0.5">
+                          {request.vendorPhone}
                         </p>
                       ) : null}
                     </div>

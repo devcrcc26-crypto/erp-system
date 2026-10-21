@@ -401,7 +401,8 @@ async function seedPurchaseRequests(
     title: string;
     justification: string;
     vendorName: string;
-    vendorContact: string;
+    vendorEmail?: string;
+    vendorPhone?: string;
     requiredByDate: string | null;
     projectId: string | null | undefined;
     status: HrRequestStatus;
@@ -413,7 +414,7 @@ async function seedPurchaseRequests(
       justification:
         'Required for ongoing structural design work. Current stock depleted.',
       vendorName: 'Addis Office Supplies Ltd',
-      vendorContact: '+251 911 000 000',
+      vendorPhone: '+251 911 000 000',
       requiredByDate: '2026-08-20',
       projectId: activeProjects[0]?.id,
       status: 'APPROVED',
@@ -450,7 +451,7 @@ async function seedPurchaseRequests(
       justification:
         'Annual AutoCAD license renewal for structural design team.',
       vendorName: 'Autodesk Reseller Ethiopia',
-      vendorContact: '+251 922 000 000',
+      vendorPhone: '+251 922 000 000',
       requiredByDate: '2026-09-01',
       projectId: null,
       status: 'IN_REVIEW',
@@ -471,7 +472,7 @@ async function seedPurchaseRequests(
       justification:
         'Safety equipment required for upcoming site visits per HSE policy.',
       vendorName: 'Safety First Ethiopia',
-      vendorContact: '+251 933 000 000',
+      vendorPhone: '+251 933 000 000',
       requiredByDate: '2026-08-15',
       projectId: activeProjects[0]?.id,
       status: 'SUBMITTED',
@@ -508,7 +509,7 @@ async function seedPurchaseRequests(
       justification:
         'Advanced structural analysis software needed for complex project calculations.',
       vendorName: 'CSI Software Distributor',
-      vendorContact: '+251 944 000 000',
+      vendorPhone: '+251 944 000 000',
       requiredByDate: '2026-09-15',
       projectId: activeProjects[1]?.id,
       status: 'APPROVED',
@@ -537,7 +538,7 @@ async function seedPurchaseRequests(
       justification:
         'New engineering room requires furniture for 3 additional staff.',
       vendorName: 'Addis Furniture Center',
-      vendorContact: '+251 955 000 000',
+      vendorPhone: '+251 955 000 000',
       requiredByDate: '2026-09-10',
       projectId: null,
       status: 'RETURNED',
@@ -574,7 +575,7 @@ async function seedPurchaseRequests(
       justification:
         'Topographic survey equipment required for site boundary determination.',
       vendorName: 'Geo Instruments Ltd',
-      vendorContact: '+251 966 000 000',
+      vendorPhone: '+251 966 000 000',
       requiredByDate: '2026-08-25',
       projectId: activeProjects[0]?.id,
       status: 'APPROVED',
@@ -611,7 +612,7 @@ async function seedPurchaseRequests(
       justification:
         'Monthly replenishment of plotter consumables for drawing production.',
       vendorName: 'Tech Supplies Ethiopia',
-      vendorContact: '+251 977 000 000',
+      vendorPhone: '+251 977 000 000',
       requiredByDate: '2026-08-10',
       projectId: null,
       status: 'APPROVED',
@@ -640,7 +641,7 @@ async function seedPurchaseRequests(
       justification:
         'Soil testing equipment for geotechnical investigation on new project.',
       vendorName: 'Lab Equipment International',
-      vendorContact: '+251 988 000 000',
+      vendorPhone: '+251 988 000 000',
       requiredByDate: '2026-09-20',
       projectId: activeProjects[1]?.id,
       status: 'SUBMITTED',
@@ -677,7 +678,7 @@ async function seedPurchaseRequests(
       justification:
         'Replacement laptops for engineers whose machines are over 5 years old.',
       vendorName: 'Techno Computers Addis',
-      vendorContact: '+251 999 000 000',
+      vendorPhone: '+251 999 000 000',
       requiredByDate: '2026-09-05',
       projectId: null,
       status: 'REJECTED',
@@ -706,7 +707,7 @@ async function seedPurchaseRequests(
       justification:
         'Two-way radios for site team communication during construction phase.',
       vendorName: 'Radio Communications Ethiopia',
-      vendorContact: '+251 900 000 000',
+      vendorPhone: '+251 900 000 000',
       requiredByDate: '2026-08-30',
       projectId: activeProjects[2]?.id,
       status: 'IN_REVIEW',
@@ -778,7 +779,7 @@ async function seedPurchaseRequests(
         title: pr.title,
         justification: pr.justification,
         vendorName: pr.vendorName,
-        vendorContact: pr.vendorContact,
+        vendorPhone: pr.vendorPhone,
         requiredByDate: pr.requiredByDate
           ? parseDateOnly(pr.requiredByDate)
           : null,

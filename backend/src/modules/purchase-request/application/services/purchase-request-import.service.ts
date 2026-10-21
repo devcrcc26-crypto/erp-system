@@ -42,6 +42,12 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   vendorname: 'vendorName',
   'vendor name': 'vendorName',
   vendor_name: 'vendorName',
+  vendoremail: 'vendorEmail',
+  'vendor email': 'vendorEmail',
+  vendor_email: 'vendorEmail',
+  vendorphone: 'vendorPhone',
+  'vendor phone': 'vendorPhone',
+  vendor_phone: 'vendorPhone',
   vendorcontact: 'vendorContact',
   'vendor contact': 'vendorContact',
   vendor_contact: 'vendorContact',
@@ -71,6 +77,9 @@ interface ParsedImportRow {
   title: string;
   justification: string;
   vendorName: string;
+  vendorEmail: string;
+  vendorPhone: string;
+  /** Legacy single column; mapped to email or phone when @ present */
   vendorContact: string;
   requiredByDate: string;
   itemName: string;
@@ -108,6 +117,8 @@ export class PurchaseRequestImportService {
         title: 'Site tools replenishment',
         justification: 'Replace worn hand tools for Phase 2',
         vendorName: '',
+        vendorEmail: '',
+        vendorPhone: '',
         vendorContact: '',
         requiredByDate: new Date().toISOString().slice(0, 10),
         itemName: 'Hammer',
@@ -137,6 +148,8 @@ export class PurchaseRequestImportService {
         title: '',
         justification: '',
         vendorName: '',
+        vendorEmail: '',
+        vendorPhone: '',
         vendorContact: '',
         requiredByDate: '',
         itemName: 'Hammer',
@@ -237,7 +250,8 @@ export class PurchaseRequestImportService {
         { header: 'title', key: 'title', width: 28 },
         { header: 'justification', key: 'justification', width: 36 },
         { header: 'vendorName', key: 'vendorName', width: 20 },
-        { header: 'vendorContact', key: 'vendorContact', width: 20 },
+        { header: 'vendorEmail', key: 'vendorEmail', width: 24 },
+        { header: 'vendorPhone', key: 'vendorPhone', width: 18 },
         { header: 'requiredByDate', key: 'requiredByDate', width: 14 },
       );
     }
@@ -275,7 +289,13 @@ export class PurchaseRequestImportService {
       ]);
       instructions.addRow(['justification', 'Yes', 'Business justification']);
       instructions.addRow(['vendorName', 'No', 'Optional preferred vendor']);
-      instructions.addRow(['vendorContact', 'No', 'Optional vendor contact']);
+      instructions.addRow(['vendorEmail', 'No', 'Optional vendor email']);
+      instructions.addRow(['vendorPhone', 'No', 'Optional vendor phone number']);
+      instructions.addRow([
+        'vendorContact',
+        'Legacy',
+        'Deprecated — use vendorEmail / vendorPhone',
+      ]);
       instructions.addRow(['requiredByDate', 'No', 'YYYY-MM-DD']);
     }
     instructions.addRow(['itemName', 'Yes', 'Line item name']);
@@ -367,7 +387,8 @@ export class PurchaseRequestImportService {
               title: row.title,
               justification: row.justification,
               vendorName: row.vendorName,
-              vendorContact: row.vendorContact,
+              vendorEmail: row.vendorEmail,
+              vendorPhone: row.vendorPhone,
               requiredByDate: row.requiredByDate,
             };
             const request =
@@ -488,6 +509,8 @@ export class PurchaseRequestImportService {
         title: '',
         justification: '',
         vendorName: '',
+        vendorEmail: '',
+        vendorPhone: '',
         vendorContact: '',
         requiredByDate: '',
         itemName: '',
@@ -644,7 +667,9 @@ export class PurchaseRequestImportService {
       base.title = title;
       base.justification = justification;
       base.vendorName = row.vendorName.trim() || undefined;
-      base.vendorContact = row.vendorContact.trim() || undefined;
+      const vendorFields = this.resolveVendorFields(row);
+      base.vendorEmail = vendorFields.vendorEmail;
+      base.vendorPhone = vendorFields.vendorPhone;
 
       const dateResult = this.parseImportDate(
         row.requiredByDate,
@@ -793,6 +818,23 @@ export class PurchaseRequestImportService {
       return { ok: false, message: `Employee not found for id: ${employeeId}` };
     }
     return { ok: true, ...user };
+  }
+
+  private resolveVendorFields(row: ParsedImportRow): {
+    vendorEmail?: string;
+    vendorPhone?: string;
+  } {
+    let vendorEmail = row.vendorEmail.trim() || undefined;
+    let vendorPhone = row.vendorPhone.trim() || undefined;
+    const legacy = row.vendorContact.trim();
+    if (legacy) {
+      if (legacy.includes('@')) {
+        vendorEmail = vendorEmail ?? legacy.toLowerCase();
+      } else {
+        vendorPhone = vendorPhone ?? legacy;
+      }
+    }
+    return { vendorEmail, vendorPhone };
   }
 
   private parsePositiveNumber(

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -35,11 +36,17 @@ export class CreatePurchaseRequestDto extends OnBehalfSubmissionDto {
   @MaxLength(200)
   vendorName?: string;
 
-  @ApiPropertyOptional({ maxLength: 500 })
+  @ApiPropertyOptional({ maxLength: 320 })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(320)
+  vendorEmail?: string;
+
+  @ApiPropertyOptional({ maxLength: 50 })
   @IsOptional()
   @IsString()
-  @MaxLength(500)
-  vendorContact?: string;
+  @MaxLength(50)
+  vendorPhone?: string;
 
   @ApiPropertyOptional({ example: '2026-09-01' })
   @IsOptional()
@@ -69,11 +76,17 @@ export class UpdatePurchaseRequestDto {
   @MaxLength(200)
   vendorName?: string;
 
-  @ApiPropertyOptional({ maxLength: 500 })
+  @ApiPropertyOptional({ maxLength: 320 })
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(320)
+  vendorEmail?: string;
+
+  @ApiPropertyOptional({ maxLength: 50 })
   @IsOptional()
   @IsString()
-  @MaxLength(500)
-  vendorContact?: string;
+  @MaxLength(50)
+  vendorPhone?: string;
 
   @ApiPropertyOptional({ example: '2026-09-01' })
   @IsOptional()

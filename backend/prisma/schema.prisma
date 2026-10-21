@@ -5362,7 +5362,8 @@ model PurchaseRequest {
   title              String
   justification      String
   vendorName         String?               @map("vendor_name")
-  vendorContact      String?               @map("vendor_contact")
+  vendorEmail        String?               @map("vendor_email")
+  vendorPhone        String?               @map("vendor_phone")
   requiredByDate     DateTime?             @map("required_by_date") @db.Date
   totalEstimatedCost Decimal               @default(0) @map("total_estimated_cost") @db.Decimal(14, 2)
   currency           SupportedCurrency     @default(ETB)

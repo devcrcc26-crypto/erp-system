@@ -54,7 +54,8 @@ export interface PurchaseRequestListItem {
   itemCount: number;
   requiredByDate?: string | null;
   vendorName?: string | null;
-  vendorContact?: string | null;
+  vendorEmail?: string | null;
+  vendorPhone?: string | null;
   approvalRequestId?: string | null;
   currentTierLabel?: string | null;
   employee?: PurchaseRequestUserSummary;
@@ -88,7 +89,8 @@ export interface CreatePurchaseRequestPayload extends OnBehalfPayload {
   justification: string;
   requiredByDate?: string;
   vendorName?: string;
-  vendorContact?: string;
+  vendorEmail?: string;
+  vendorPhone?: string;
 }
 
 export interface UpdatePurchaseRequestPayload {
@@ -96,7 +98,8 @@ export interface UpdatePurchaseRequestPayload {
   justification?: string;
   requiredByDate?: string;
   vendorName?: string;
-  vendorContact?: string;
+  vendorEmail?: string;
+  vendorPhone?: string;
 }
 
 export interface AddPurchaseRequestItemPayload {

@@ -202,7 +202,10 @@ export class PurchaseRequestService
         title: trimmedTitle,
         justification: trimmedJustification,
         vendorName: dto.vendorName?.trim() ?? null,
-        vendorContact: dto.vendorContact?.trim() ?? null,
+        vendorEmail: dto.vendorEmail?.trim()
+          ? dto.vendorEmail.trim().toLowerCase()
+          : null,
+        vendorPhone: dto.vendorPhone?.trim() ? dto.vendorPhone.trim() : null,
         requiredByDate: dto.requiredByDate
           ? this.parseRequiredByDate(dto.requiredByDate)
           : null,
@@ -236,8 +239,19 @@ export class PurchaseRequestService
         ...(dto.vendorName !== undefined
           ? { vendorName: dto.vendorName?.trim() ?? null }
           : {}),
-        ...(dto.vendorContact !== undefined
-          ? { vendorContact: dto.vendorContact?.trim() ?? null }
+        ...(dto.vendorEmail !== undefined
+          ? {
+              vendorEmail: dto.vendorEmail?.trim()
+                ? dto.vendorEmail.trim().toLowerCase()
+                : null,
+            }
+          : {}),
+        ...(dto.vendorPhone !== undefined
+          ? {
+              vendorPhone: dto.vendorPhone?.trim()
+                ? dto.vendorPhone.trim()
+                : null,
+            }
           : {}),
         ...(dto.requiredByDate !== undefined
           ? {

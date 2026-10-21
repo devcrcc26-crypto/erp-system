@@ -15,7 +15,8 @@ interface HeaderFormValues {
   justification: string;
   requiredByDate?: dayjs.Dayjs | null;
   vendorName?: string;
-  vendorContact?: string;
+  vendorEmail?: string;
+  vendorPhone?: string;
 }
 
 /**
@@ -41,7 +42,8 @@ export default function PurchaseRequestNewForm(): React.ReactNode {
           ? values.requiredByDate.format('YYYY-MM-DD')
           : undefined,
         vendorName: values.vendorName?.trim() || undefined,
-        vendorContact: values.vendorContact?.trim() || undefined,
+        vendorEmail: values.vendorEmail?.trim() || undefined,
+        vendorPhone: values.vendorPhone?.trim() || undefined,
       });
       router.replace(`/hr/purchase-requests/${created.id}`);
     } catch (error: unknown) {
@@ -103,15 +105,33 @@ export default function PurchaseRequestNewForm(): React.ReactNode {
             </Form.Item>
 
             {vendorName ? (
-              <Form.Item
-                name="vendorContact"
-                label={t('hr.form.vendorContact')}
-              >
-                <Input
-                  placeholder={t('hr.placeholder.enterVendorContact')}
-                  maxLength={200}
-                />
-              </Form.Item>
+              <>
+                <Form.Item
+                  name="vendorEmail"
+                  label={t('hr.form.vendorEmail')}
+                  rules={[
+                    {
+                      type: 'email',
+                      message: t('common.invalidEmail'),
+                    },
+                  ]}
+                >
+                  <Input
+                    type="email"
+                    placeholder={t('hr.placeholder.enterVendorEmail')}
+                    maxLength={320}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="vendorPhone"
+                  label={t('hr.form.vendorPhone')}
+                >
+                  <Input
+                    placeholder={t('hr.placeholder.enterVendorPhone')}
+                    maxLength={50}
+                  />
+                </Form.Item>
+              </>
             ) : null}
           </div>
 

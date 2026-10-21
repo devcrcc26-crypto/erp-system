@@ -32,7 +32,8 @@ export interface PurchaseRequestPdfLabels {
   requestTitle: string;
   justification: string;
   vendorName: string;
-  vendorContact: string;
+  vendorEmail: string;
+  vendorPhone: string;
   requiredByDate: string;
   itemCount: string;
   estimatedTotal: string;
@@ -140,7 +141,8 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
       [labels.requestTitle, dash(request.title)],
       [labels.justification, dash(request.justification)],
       [labels.vendorName, dash(request.vendorName)],
-      [labels.vendorContact, dash(request.vendorContact)],
+      [labels.vendorEmail, dash(request.vendorEmail)],
+      [labels.vendorPhone, dash(request.vendorPhone)],
       [
         labels.requiredByDate,
         request.requiredByDate

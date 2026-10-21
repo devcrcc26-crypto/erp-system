@@ -19,7 +19,8 @@ export class PurchaseRequestImportRowPreviewDto extends ImportRowPreviewDto {
   title?: string;
   justification?: string;
   vendorName?: string;
-  vendorContact?: string;
+  vendorEmail?: string;
+  vendorPhone?: string;
   requiredByDate?: string;
   itemName?: string;
   modelSpec?: string;

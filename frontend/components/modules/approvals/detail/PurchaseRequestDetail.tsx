@@ -184,12 +184,20 @@ export default function PurchaseRequestDetail({
           {request.vendorName ? (
             <MetaItem label={t('hr.form.vendor')}>
               <p className="m-0">{request.vendorName}</p>
-              {request.vendorContact ? (
+              {request.vendorEmail ? (
                 <p
                   className="m-0 text-xs"
                   style={{ color: tokens.colorTextSecondary }}
                 >
-                  {request.vendorContact}
+                  {request.vendorEmail}
+                </p>
+              ) : null}
+              {request.vendorPhone ? (
+                <p
+                  className="m-0 text-xs"
+                  style={{ color: tokens.colorTextSecondary }}
+                >
+                  {request.vendorPhone}
                 </p>
               ) : null}
             </MetaItem>

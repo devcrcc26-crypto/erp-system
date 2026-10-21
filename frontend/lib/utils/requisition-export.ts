@@ -216,7 +216,6 @@ export function buildConsumablesRequisitionExportSheets(
         { header: 'Description', key: 'description', width: 34 },
         { header: 'Quantity', key: 'quantity', width: 12 },
         { header: 'Unit', key: 'unit', width: 12 },
-        { header: 'Unit Price (ETB)', key: 'unitPrice', width: 18 },
       ],
       rows: rows.flatMap((row) =>
         (byId.get(row.id)?.items ?? []).map((item) => ({
@@ -228,7 +227,6 @@ export function buildConsumablesRequisitionExportSheets(
           description: exportCell(item.description),
           quantity: exportNumber(item.quantity),
           unit: exportCell(item.unit),
-          unitPrice: exportEtb(item.unitPrice),
         })),
       ),
     },
