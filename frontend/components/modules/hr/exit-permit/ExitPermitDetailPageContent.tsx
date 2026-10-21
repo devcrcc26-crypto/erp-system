@@ -46,9 +46,7 @@ import {
   useUpdateExitPermitItem,
 } from '@/lib/query/exit-permit';
 import { exitPermitItemImages } from '@/lib/utils/exit-permit-item-images';
-import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportExitPermitPdf } from '@/lib/utils/exit-permit-export';
+import { openExitPermitDetailPdf } from '@/lib/query/exit-permit';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   exitPermitStatusVariant,
@@ -104,7 +102,6 @@ export default function ExitPermitDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const canViewHr = useCanViewHr();
   const detailQuery = useExitPermit(permitId);
@@ -118,6 +115,7 @@ export default function ExitPermitDetailPageContent({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [itemForm] = Form.useForm<UpdateExitPermitItemPayload>();
 
   useSetHeaderExtra(null);
@@ -389,17 +387,16 @@ export default function ExitPermitDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!permit) {
-      return;
+    if (!permitId || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await openExitPermitDetailPdf(permitId);
+    } catch (err) {
+      notifyApiError(messageApi, err, 'Failed to export PDF');
+    } finally {
+      setExportingPdf(false);
     }
-
-      await exportExitPermitPdf({
-        permit,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
   }
 
   return (
@@ -417,10 +414,13 @@ export default function ExitPermitDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-            <ExportPdfButton
-              compact={isNarrow}
-              buildPdf={() => handleExportPdf()}
-            />
+            <Button
+              onClick={() => void handleExportPdf()}
+              loading={exportingPdf}
+              disabled={!permit}
+            >
+              {isNarrow ? 'PDF' : 'Export PDF'}
+            </Button>
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}

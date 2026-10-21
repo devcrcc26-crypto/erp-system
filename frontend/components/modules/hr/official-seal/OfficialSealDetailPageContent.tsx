@@ -30,12 +30,11 @@ import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { OFFICIAL_SEAL_FILE_ACCEPT } from '@/lib/constants/official-seal-upload';
 import {
   useCancelOfficialSeal,
+  openOfficialSealPdf,
   useIssueOfficialSeal,
   useOfficialSeal,
 } from '@/lib/query/official-seal';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportSealPdf } from '@/lib/utils/seal-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -91,7 +90,6 @@ export default function OfficialSealDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useOfficialSeal(sealId);
@@ -228,18 +226,9 @@ export default function OfficialSealDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!seal) {
-      return;
-    }
-
-      await exportSealPdf({
-        kind: 'official',
-        seal,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
+    if (!seal) return;
+    await openOfficialSealPdf(seal.id);
   }
 
   return (

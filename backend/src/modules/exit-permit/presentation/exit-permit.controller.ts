@@ -3,6 +3,7 @@ import { CreateExitPermitDto, CreateExitPermitItemDto, ListExitPermitsDto, Updat
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { ExitPermitGateRegisterPdfService } from "../application/services/exit-permit-gate-register-pdf.service";
+import { ExitPermitPdfService } from "../application/services/exit-permit-pdf.service";
 import { ExitPermitService } from "../application/services/exit-permit.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
@@ -49,6 +50,7 @@ export class ExitPermitController {
     constructor(
         private readonly exitPermitService: ExitPermitService,
         private readonly exitPermitGateRegisterPdfService: ExitPermitGateRegisterPdfService,
+        private readonly exitPermitPdfService: ExitPermitPdfService,
     ){}
 
     @Post()
@@ -74,6 +76,39 @@ export class ExitPermitController {
         @Query() query: ListExitPermitsDto,
     ){
         return this.exitPermitService.listRequests(query,companyId, user.userId);
+    }
+
+    @Get('gate-register/pdf')
+    @ApiOperation({ summary: 'Download gate register as PDF (landscape)' })
+    @ApiProduces('application/pdf')
+    @ApiQuery({ name: 'date', required: true, description: 'YYYY-MM-DD' })
+    @ApiQuery({ name: 'direction', required: false, enum: ['ENTRANCE', 'EXIT', 'ALL'] })
+    async downloadGateRegisterPdf(
+        @CurrentCompany() companyId: string,
+        @Query('date') date: string,
+        @Query('direction') direction?: string,
+    ): Promise<StreamableFile> {
+        const dir = (direction === 'ENTRANCE' || direction === 'EXIT') ? direction : 'ALL';
+        const file = await this.exitPermitGateRegisterPdfService.getPdf(date, dir, companyId);
+        return new StreamableFile(file.buffer, {
+            type: file.mimeType,
+            disposition: contentDisposition('inline', file.filename),
+        });
+    }
+
+    @Get(':id/pdf')
+    @ApiOperation({ summary: 'Download a single exit permit as PDF' })
+    @ApiProduces('application/pdf')
+    async downloadPdf(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+    ): Promise<StreamableFile> {
+        const file = await this.exitPermitPdfService.getPdf(id, companyId);
+        return new StreamableFile(file.buffer, {
+            type: file.mimeType,
+            disposition: contentDisposition('inline', file.filename),
+        });
     }
 
     @Get(':id')
@@ -199,23 +234,6 @@ export class ExitPermitController {
         return this.exitPermitService.cancelRequest(id, companyId, user.userId);
     }
 
-    @Get('gate-register/pdf')
-    @ApiOperation({ summary: 'Download gate register as PDF (landscape)' })
-    @ApiProduces('application/pdf')
-    @ApiQuery({ name: 'date', required: true, description: 'YYYY-MM-DD' })
-    @ApiQuery({ name: 'direction', required: false, enum: ['ENTRANCE', 'EXIT', 'ALL'] })
-    async downloadGateRegisterPdf(
-        @CurrentCompany() companyId: string,
-        @Query('date') date: string,
-        @Query('direction') direction?: string,
-    ): Promise<StreamableFile> {
-        const dir = (direction === 'ENTRANCE' || direction === 'EXIT') ? direction : 'ALL';
-        const file = await this.exitPermitGateRegisterPdfService.getPdf(date, dir, companyId);
-        return new StreamableFile(file.buffer, {
-            type: file.mimeType,
-            disposition: contentDisposition('inline', file.filename),
-        });
-    }
 }
 
 function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {

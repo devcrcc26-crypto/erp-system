@@ -22,13 +22,12 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
+  openVehicleApplicationPdf,
   useCancelVehicleApplication,
   useReleaseVehicleApplication,
   useVehicleApplication,
 } from '@/lib/query/vehicle-application';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportVehicleApplicationPdf } from '@/lib/utils/vehicle-application-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatDriveType,
@@ -81,7 +80,6 @@ export default function VehicleApplicationDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const detailQuery = useVehicleApplication(applicationId);
   const cancelMutation = useCancelVehicleApplication(applicationId);
@@ -203,17 +201,9 @@ export default function VehicleApplicationDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!application) {
-      return;
-    }
-
-      await exportVehicleApplicationPdf({
-        application,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
+    if (!application) return;
+    await openVehicleApplicationPdf(application.id);
   }
 
   return (

@@ -28,14 +28,13 @@ import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButt
 import CompanyAssetPhoto from '@/components/modules/hr/company-asset/CompanyAssetPhoto';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { exportCompanyAssetPdf } from '@/lib/utils/company-asset-export';
 import type {
   AssetStatus,
   CompanyAssetAssignmentListItem,
 } from '@/lib/api/company-asset.types';
 import {
+  openCompanyAssetPdf,
   useAcknowledgeAssetReturn,
   useCompanyAsset,
   useCompanyAssetAssignments,
@@ -134,7 +133,6 @@ export default function CompanyAssetDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const detailQuery = useCompanyAsset(assetId);
   const statusMutation = useUpdateCompanyAssetStatus(assetId);
   const deleteMutation = useDeleteCompanyAsset();
@@ -455,17 +453,9 @@ export default function CompanyAssetDetailPageContent({
 
   const showOverflowMenu = isNarrow;
 
-  /** Renders this asset with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!asset) {
-      return;
-    }
-
-    await exportCompanyAssetPdf({
-      asset,
-      companyName: pdfContext.companyName,
-      preparedBy: pdfContext.preparedBy,
-    });
+    if (!asset) return;
+    await openCompanyAssetPdf(asset.id);
   }
 
   return (

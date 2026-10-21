@@ -1,6 +1,6 @@
 'use client';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
+import { apiClient, apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
 import { ListOfficialSealsParams, OfficialSealDetail, OfficialSealListItem, SubmitOfficialSealPayload } from "../api/official-seal.types";
 import { PaginatedResult } from "../api/types";
 import { toQueryString } from "./pm-query-utils";
@@ -191,4 +191,18 @@ export function useIssueOfficialSeal(id: string) {
             );
         },
     });
+}
+export async function openOfficialSealPdf(id: string): Promise<void> {
+  const response = await apiClient.get(`${OFFICIAL_SEAL_PATH}/${id}/pdf`, { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

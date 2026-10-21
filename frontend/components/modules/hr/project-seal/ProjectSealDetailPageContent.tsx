@@ -30,12 +30,11 @@ import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { PROJECT_SEAL_FILE_ACCEPT } from '@/lib/constants/project-seal-upload';
 import {
   useCancelProjectSeal,
+  openProjectSealPdf,
   useIssueProjectSeal,
   useProjectSeal,
 } from '@/lib/query/project-seal';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportSealPdf } from '@/lib/utils/seal-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -91,7 +90,6 @@ export default function ProjectSealDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useProjectSeal(sealId);
@@ -229,16 +227,8 @@ export default function ProjectSealDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   async function handleExportPdf(): Promise<void> {
-    if (!seal) {
-      return;
-    }
-
-      await exportSealPdf({
-        kind: 'project',
-        seal,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
+    if (!seal) return;
+    await openProjectSealPdf(seal.id);
   }
 
   return (

@@ -23,13 +23,12 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
+  openVehicleRefuelingPdf,
   useCancelVehicleRefueling,
   useUploadRefuelingReceipt,
   useVehicleRefueling,
 } from '@/lib/query/vehicle-refueling';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportVehicleRefuelingPdf } from '@/lib/utils/vehicle-refueling-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -83,7 +82,6 @@ export default function VehicleRefuelingDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const detailQuery = useVehicleRefueling(refuelingId);
   const cancelMutation = useCancelVehicleRefueling(refuelingId);
@@ -196,17 +194,9 @@ export default function VehicleRefuelingDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!refueling) {
-      return;
-    }
-
-      await exportVehicleRefuelingPdf({
-        refueling,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
+    if (!refueling) return;
+    await openVehicleRefuelingPdf(refueling.id);
   }
 
   return (

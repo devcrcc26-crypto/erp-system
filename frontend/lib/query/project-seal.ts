@@ -2,7 +2,7 @@ import { toQueryString } from "./pm-query-utils";
 import { ListProjectSealsParams, ProjectSealDetail, ProjectSealListItem, SubmitProjectSealPayload } from "../api/project-seal.types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PaginatedResult } from "../api/types";
-import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
+import { apiClient, apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
 import { appendSealSubmitFields, sealSubmitJsonFields } from "../utils/seal-submit-fields";
 import { approvalKeys } from "./approvals";
 
@@ -187,4 +187,18 @@ export function useIssueProjectSeal(id: string) {
             );
         },
     })
+}
+export async function openProjectSealPdf(id: string): Promise<void> {
+  const response = await apiClient.get(`${PROJECT_SEAL_PATH}/${id}/pdf`, { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

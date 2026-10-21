@@ -10,8 +10,9 @@ import {
 const d = (v: string | number | null | undefined): string =>
   v == null || v === '' ? '-' : String(v);
 
-const etb = (v: number | null | undefined): string =>
-  v == null ? '-' : `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
+function monthsDiff(from: Date, to: Date): number {
+  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+}
 
 @Injectable()
 export class CompanyAssetPdfService {
@@ -27,16 +28,53 @@ export class CompanyAssetPdfService {
     const record = await this.prisma.companyAsset.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        assignedTo: { select: { firstName: true, lastName: true } },
+        assetAssignments: {
+          where: { returnedAt: null, deletedAt: null },
+          include: {
+            employee: { select: { firstName: true, lastName: true } },
+          },
+          take: 1,
+          orderBy: { assignedAt: 'desc' },
+        },
       },
     });
     if (!record) throw new NotFoundException('Company asset not found');
+
+    const activeAssignment = record.assetAssignments[0] ?? null;
+    const assignedTo = activeAssignment?.employee ?? null;
+    const assignedAt = activeAssignment?.assignedAt ?? null;
 
     const subtitle = d(record.assetName) !== '-'
       ? d(record.assetName)
       : `${d(record.brand)} ${d(record.model)}`.trim();
 
-    const requestNumber = d(record.assetCode) !== '-' ? d(record.assetCode) : d(record.serialNumber);
+    const requestNumber = (record.assetCode || record.serialNumber) ?? record.id;
+
+    // Compute simple depreciation from stored fields
+    const now = new Date();
+    const originalValue = record.originalValue?.toNumber() ?? null;
+    const usefulLifeMonths = record.usefulLifeMonths ?? null;
+    const startUseDate = record.startUseDate;
+    const monthsDepreciated = startUseDate ? Math.max(0, monthsDiff(startUseDate, now)) : null;
+    const monthlyDepreciation =
+      originalValue != null && usefulLifeMonths && usefulLifeMonths > 0
+        ? originalValue / usefulLifeMonths
+        : null;
+    const accumulated =
+      monthlyDepreciation != null && monthsDepreciated != null
+        ? Math.min(monthlyDepreciation * monthsDepreciated, originalValue ?? 0)
+        : null;
+    const netValue =
+      originalValue != null && accumulated != null ? originalValue - accumulated : null;
+    const depreciationPct =
+      originalValue != null && originalValue > 0 && accumulated != null
+        ? (accumulated / originalValue) * 100
+        : null;
+
+    const etb = (v: number | null): string =>
+      v == null
+        ? '-'
+        : `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
 
     const input: HrDocumentPdfInput = {
       documentTitle: 'Company Asset Card',
@@ -70,8 +108,8 @@ export class CompanyAssetPdfService {
         {
           title: 'Custody',
           rows: [
-            ['Assigned To', fullName(record.assignedTo) || 'Unassigned'],
-            ['Assigned At', record.assignedAt ? new Date(record.assignedAt).toISOString().slice(0, 10) : '-'],
+            ['Assigned To', fullName(assignedTo) || 'Unassigned'],
+            ['Assigned At', assignedAt ? new Date(assignedAt).toISOString().slice(0, 10) : '-'],
             ['Managing Department', d(record.managingDepartment)],
             ['Storage Location', d(record.storageLocation)],
           ],
@@ -81,14 +119,14 @@ export class CompanyAssetPdfService {
         title: 'Ledger & Depreciation (ETB)',
         headers: ['Measure', 'Value'],
         rows: [
-          ['Start Use Date', record.startUseDate ? new Date(record.startUseDate).toISOString().slice(0, 10) : '-'],
-          ['Useful Life (Months)', d(record.usefulLifeMonths)],
-          ['Original Value', etb(record.originalValue)],
-          ['Months Depreciated', d(record.monthsDepreciated)],
-          ['Monthly Depreciation', etb(record.monthlyDepreciation)],
-          ['Accumulated Depreciation', etb(record.accumulatedDepreciation)],
-          ['Net Value', etb(record.netValue)],
-          ['Depreciation %', record.depreciationPercent != null ? `${record.depreciationPercent}%` : '-'],
+          ['Start Use Date', startUseDate ? new Date(startUseDate).toISOString().slice(0, 10) : '-'],
+          ['Useful Life (Months)', d(usefulLifeMonths)],
+          ['Original Value', etb(originalValue)],
+          ['Months Depreciated', d(monthsDepreciated)],
+          ['Monthly Depreciation', etb(monthlyDepreciation)],
+          ['Accumulated Depreciation', etb(accumulated)],
+          ['Net Value', etb(netValue)],
+          ['Depreciation %', depreciationPct != null ? `${depreciationPct.toFixed(1)}%` : '-'],
         ],
         colWidths: [CW * 0.6, CW * 0.4],
       },
@@ -96,7 +134,7 @@ export class CompanyAssetPdfService {
 
     const buffer = await this.hrDocPdf.render(input);
     const safe = requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = new Date().toISOString().slice(0, 10);
+    const dateStamp = now.toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',

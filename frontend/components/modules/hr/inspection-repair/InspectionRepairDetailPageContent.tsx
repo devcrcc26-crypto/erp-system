@@ -27,12 +27,11 @@ import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { InspectionRepairStatus } from '@/lib/api/inspection-repair.types';
 import {
   useCancelInspectionRepair,
+  openInspectionRepairPdf,
   useInspectionRepair,
   useUpdateInspectionRepair,
 } from '@/lib/query/inspection-repair';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
-import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
-import { exportInspectionRepairPdf } from '@/lib/utils/inspection-repair-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatInspectionRepairEmployeeName,
@@ -96,7 +95,6 @@ export default function InspectionRepairDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const pdfContext = useHrPdfContext();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useInspectionRepair(requestId);
@@ -251,17 +249,9 @@ export default function InspectionRepairDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   async function handleExportPdf(): Promise<void> {
-    if (!request) {
-      return;
-    }
-
-      await exportInspectionRepairPdf({
-        request,
-        companyName: pdfContext.companyName,
-        preparedBy: pdfContext.preparedBy,
-      });
+    if (!request) return;
+    await openInspectionRepairPdf(request.id);
   }
 
   return (
