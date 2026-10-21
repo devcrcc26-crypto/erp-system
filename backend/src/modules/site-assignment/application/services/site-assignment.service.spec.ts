@@ -120,14 +120,22 @@ describe('SiteAssignmentService', () => {
     };
     hrApprovalChain = {
       buildSiteAssignmentApprovalChain: asyncMock([]),
-      startChainAboveSubmitter: asyncMock([
-        {
-          tierOrder: 1,
-          label: "Submitter's Reports to",
-          approverId: ABOVE_ID,
-          resolver: 'SUBMITTER_REPORTS_TO',
-        },
-      ]),
+      startChainAboveSubmitter: jest
+        .fn<(...args: unknown[]) => Promise<unknown>>()
+        .mockImplementation(async (...args: unknown[]) => {
+          const tiers = args[0] as unknown[];
+          if (!Array.isArray(tiers) || tiers.length === 0) {
+            return [];
+          }
+          return [
+            {
+              tierOrder: 1,
+              label: "Submitter's Reports to",
+              approverId: ABOVE_ID,
+              resolver: 'SUBMITTER_REPORTS_TO',
+            },
+          ];
+        }),
     };
     backdatingPolicy = {
       validateSubmissionDates: asyncMock({
@@ -341,14 +349,20 @@ describe('SiteAssignmentService', () => {
       expect(options.resolvedTiers.tiers.map((t) => t.approverId)).toEqual([ABOVE_ID]);
     });
 
-    it('delegate filing keeps the normal chain', async () => {
+    it('delegate filing also lifts the chain above the submitter', async () => {
       await service.submitRequest(
         { ...base, onBehalfOfEmployeeId: REPORT_A } as never,
         COMPANY_ID,
         HR_ID,
       );
-      expect(hrApprovalChain.startChainAboveSubmitter).not.toHaveBeenCalled();
-      const options = approvalsService.submitRequest.mock.calls[0]?.[3] as { initiatedAs: string };
+      expect(hrApprovalChain.startChainAboveSubmitter).toHaveBeenCalledWith(
+        reportsToTier,
+        HR_ID,
+        COMPANY_ID,
+      );
+      const options = approvalsService.submitRequest.mock.calls[0]?.[3] as {
+        initiatedAs: string;
+      };
       expect(options.initiatedAs).toBe('DELEGATE');
     });
 
@@ -385,7 +399,7 @@ describe('SiteAssignmentService', () => {
           COMPANY_ID,
           SUPERVISOR_ID,
         ),
-      ).rejects.toThrow('No site assignments were created. 1 crew member(s) failed validation.');
+      ).rejects.toThrow(/No site assignments were created\..*can't file a site assignment/);
       expect(approvalsService.submitRequest).not.toHaveBeenCalled();
       expect(prisma.siteAssignment.create).not.toHaveBeenCalled();
     });

@@ -32,17 +32,28 @@ describe('buildSiteAssignmentApprovalChain', () => {
     expect(chain[0]?.label).toBe('Reports to');
   });
 
-  it('Employee with no Reports to → BadRequestException', async () => {
+  it('Employee with no Reports to → HR Manager fallback', async () => {
     jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
     jest.spyOn(service, 'getReportsToRequired').mockRejectedValue(
       new BadRequestException(
         'Employee has no Reports to assigned - ask HR to set a supervisor before submitting.',
       ),
     );
+    jest.spyOn(service, 'getHRManager').mockResolvedValue({ id: HR_MANAGER_ID });
 
-    await expect(
-      service.buildSiteAssignmentApprovalChain(ARCH_EMP_ID, COMPANY_ID),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    const chain = await service.buildSiteAssignmentApprovalChain(
+      ARCH_EMP_ID,
+      COMPANY_ID,
+    );
+
+    expect(chain).toEqual([
+      {
+        tierOrder: 1,
+        label: 'HR Manager',
+        approverId: HR_MANAGER_ID,
+        resolver: 'ROLE:HR Manager',
+      },
+    ]);
   });
 
   it.each(['General Manager', 'Managing Director', 'System Administrator'])(

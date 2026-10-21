@@ -414,7 +414,7 @@ export class HrApprovalChainService {
    * No Department Head / HR Manager / GM fallbacks.
    * GM / Managing Director / System Administrator → HR Manager (never an empty
    * chain: approved assignments make scheduled hours claimable as OT).
-   * Missing Reports to → BadRequestException.
+   * Missing Reports to → HR Manager fallback (approver-only / unassigned subjects).
    */
   async buildSiteAssignmentApprovalChain(
     employeeId: string,
@@ -552,16 +552,32 @@ export class HrApprovalChainService {
       ]);
     }
 
-    const reportsTo = await this.getReportsToRequired(employeeId, companyId);
-
-    return this.finalizeTiers([
-      {
-        order: 1,
-        label: 'Reports to',
-        approverId: reportsTo.id,
-        resolver: 'REPORTS_TO',
-      },
-    ]);
+    try {
+      const reportsTo = await this.getReportsToRequired(employeeId, companyId);
+      return this.finalizeTiers([
+        {
+          order: 1,
+          label: 'Reports to',
+          approverId: reportsTo.id,
+          resolver: 'REPORTS_TO',
+        },
+      ]);
+    } catch (error: unknown) {
+      // Site assignment (HR_MANAGER executives): subjects with no Reports to
+      // (common for approver-only accounts) still need a real approver tier.
+      if (executives !== 'HR_MANAGER' || !(error instanceof BadRequestException)) {
+        throw error;
+      }
+      const hrManager = await this.getHRManager(companyId);
+      return this.finalizeTiers([
+        {
+          order: 1,
+          label: 'HR Manager',
+          approverId: hrManager.id,
+          resolver: 'ROLE:HR Manager',
+        },
+      ]);
+    }
   }
 
   /**

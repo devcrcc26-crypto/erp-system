@@ -219,8 +219,8 @@ export class SiteAssignmentService
     }
     if (errors.length > 0) {
       throw new BadRequestException({
-        message: `No site assignments were created. ${errors.length} crew member(s) failed validation.`,
-        errors,
+        message: `No site assignments were created. ${errors.join(' · ')}`,
+        details: { errors },
       });
     }
 
@@ -300,7 +300,13 @@ export class SiteAssignmentService
         employeeId,
         companyId,
       );
-    if (initiatedAs === RequestInitiatorType.SUPERVISOR) {
+    // Supervisor and HR/delegate filings: the submitter must never approve
+    // their own request (e.g. HR Manager filing for someone with no Reports to,
+    // where the fallback tier would otherwise be themselves).
+    if (
+      initiatedAs === RequestInitiatorType.SUPERVISOR ||
+      initiatedAs === RequestInitiatorType.DELEGATE
+    ) {
       resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
         resolvedTiers,
         userId,
