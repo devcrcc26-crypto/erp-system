@@ -16,7 +16,8 @@ export type OnBehalfModuleCode =
   | 'INSPECTION_REPAIR'
   | 'EXIT_PERMIT'
   | 'SITE_ASSIGNMENT'
-  | 'WORK_FROM_HOME';
+  | 'WORK_FROM_HOME'
+  | 'ASSET_REQUEST';
 
 /** Request types governed by the allowedInitiators policy. */
 export type InitiatorModuleCode =

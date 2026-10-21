@@ -133,6 +133,7 @@ const MODULE_AUDIT: Record<
     module: 'work-from-home',
     recordType: 'WorkFromHomeDay',
   },
+  ASSET_REQUEST: { module: 'asset-request', recordType: 'AssetRequest' },
 };
 
 /**

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Max, MaxLength, IsInt, Min, IsOptional, IsUUID, IsEnum, IsDateString, IsNumber } from "class-validator";
+import { IsNotEmpty, IsString, Max, MaxLength, IsInt, Min, IsOptional, IsUUID, IsEnum, IsDateString, IsNumber, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { AssetStatus } from "@prisma/client";
@@ -108,6 +108,11 @@ export class CreateCompanyAssetDto{
     @IsString()
     @MaxLength(200)
     storageLocation?: string;
+
+    @ApiPropertyOptional({ description: 'Requires GM approval to assign' })
+    @IsOptional()
+    @IsBoolean()
+    requiresGmApproval?: boolean;
 
     @ApiPropertyOptional({ description: 'Photo document ID' })
     @IsOptional()
@@ -221,6 +226,11 @@ export class UpdateCompanyAssetDto {
     @MaxLength(200)
     storageLocation?: string;
 
+    @ApiPropertyOptional({ description: 'Requires GM approval to assign' })
+    @IsOptional()
+    @IsBoolean()
+    requiresGmApproval?: boolean;
+
     @ApiPropertyOptional({description: 'Photo Document ID'})
     @IsOptional()
     @IsUUID()
@@ -300,6 +310,11 @@ export class IssueCompanyAssetAssignmentDto {
     @IsString()
     @MaxLength(2000)
     notes?: string;
+
+    @ApiPropertyOptional({ description: "Asset request ID that triggered this assignment" })
+    @IsOptional()
+    @IsUUID()
+    assetRequestId?: string;
 }
 
 export class ReturnCompanyAssetAssignmentDto {
@@ -310,6 +325,32 @@ export class ReturnCompanyAssetAssignmentDto {
     returnedTo?: string;
 
     @ApiPropertyOptional({ description: "Return notes", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    returnedNotes?: string;
+
+    @ApiPropertyOptional({ description: "Reason for returning the asset", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    returnReason?: string;
+
+    @ApiPropertyOptional({ description: "Handover notes (credentials, access codes, etc.)", maxLength: 4000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(4000)
+    handoverNotes?: string;
+}
+
+export class AcknowledgeAssetReturnDto {
+    @ApiPropertyOptional({ description: "Where the asset was returned to", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    returnedTo?: string;
+
+    @ApiPropertyOptional({ description: "HR acknowledgement notes", maxLength: 2000 })
     @IsOptional()
     @IsString()
     @MaxLength(2000)

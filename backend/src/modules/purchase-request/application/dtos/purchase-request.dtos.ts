@@ -46,10 +46,6 @@ export class CreatePurchaseRequestDto extends OnBehalfSubmissionDto {
   @IsDateString()
   requiredByDate?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  projectId?: string;
 }
 
 export class UpdatePurchaseRequestDto {
@@ -83,11 +79,6 @@ export class UpdatePurchaseRequestDto {
   @IsOptional()
   @IsDateString()
   requiredByDate?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  projectId?: string;
 }
 
 export class AddPurchaseRequestItemDto {
@@ -208,11 +199,6 @@ export class ListPurchaseRequestsDto {
   @IsOptional()
   @IsUUID()
   employeeId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  projectId?: string;
 
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()

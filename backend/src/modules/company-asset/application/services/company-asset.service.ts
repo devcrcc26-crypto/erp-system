@@ -15,6 +15,7 @@ import { activeOnly } from "@/shared/prisma/soft-delete.util";
 import { PermissionService } from "@/shared/permissions/permission.service";
 
 import {
+  AcknowledgeAssetReturnDto,
   CreateCompanyAssetDto,
   ListCompanyAssetsDto,
   IssueCompanyAssetAssignmentDto,
@@ -601,6 +602,8 @@ export class CompanyAssetService {
           },
           returnedBy: { select: { id: true, firstName: true, lastName: true } },
           issuedBy: { select: { id: true, firstName: true, lastName: true } },
+          returnInitiator: { select: { id: true, firstName: true, lastName: true } },
+          hrAcknowledgedBy: { select: { id: true, firstName: true, lastName: true } },
         },
       }),
       this.prisma.assetAssignment.count({ where }),
@@ -660,6 +663,10 @@ export class CompanyAssetService {
           returnedAt: null,
           returnedNotes: null,
           issuedById: userId,
+          approvalRequestId: null,
+          employeeAcknowledged: false,
+          acknowledgedAt: null,
+          assetRequestId: dto.assetRequestId ?? null,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -680,7 +687,11 @@ export class CompanyAssetService {
     });
   }
 
-  /** Returns an asset from an active assignment (updates AssetAssignment + sets asset AVAILABLE). */
+  /**
+   * Step 1 — Initiates an asset return. Both the employee and HR can call this.
+   * Records who initiated and captures reason + handover notes.
+   * Does NOT yet set returnedAt or change asset status (that happens in acknowledgeReturn).
+   */
   async returnAssetAssignment(
     assetId: string,
     assignmentId: string,
@@ -704,26 +715,66 @@ export class CompanyAssetService {
       throw new NotFoundException("Active assignment not found");
     }
 
+    if (assignment.returnInitiatedAt) {
+      throw new ConflictException("Return already initiated for this assignment");
+    }
+
     const now = new Date();
 
-    const returnedTo = dto.returnedTo?.trim() || null;
-    const returnedNotes = dto.returnedNotes?.trim() || null;
+    return this.prisma.assetAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        returnInitiatedBy: userId,
+        returnInitiatedAt: now,
+        returnReason: dto.returnReason?.trim() || null,
+        handoverNotes: dto.handoverNotes?.trim() || null,
+        updatedBy: userId,
+      },
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true } },
+        returnInitiator: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+  }
+
+  /**
+   * Step 2 — HR acknowledges the return, completing the asset return.
+   * Sets returnedAt, changes asset status to AVAILABLE.
+   */
+  async acknowledgeReturn(
+    assetId: string,
+    assignmentId: string,
+    dto: AcknowledgeAssetReturnDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const assignment = await this.prisma.assetAssignment.findFirst({
+      where: activeOnly({ id: assignmentId, companyId, assetId, returnedAt: null }),
+    });
+
+    if (!assignment) {
+      throw new NotFoundException("Active assignment not found");
+    }
+
+    const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.assetAssignment.update({
         where: { id: assignmentId },
         data: {
-          returnedTo,
+          returnedTo: dto.returnedTo?.trim() || null,
           returnedById: userId,
           returnedAt: now,
-          returnedNotes,
+          returnedNotes: dto.returnedNotes?.trim() || null,
+          hrAcknowledgedReturn: true,
+          hrAcknowledgedAt: now,
+          hrAcknowledgedById: userId,
           updatedBy: userId,
         },
         include: {
           employee: { select: { id: true, firstName: true, lastName: true } },
-          returnedBy: {
-            select: { id: true, firstName: true, lastName: true },
-          },
+          returnedBy: { select: { id: true, firstName: true, lastName: true } },
+          hrAcknowledgedBy: { select: { id: true, firstName: true, lastName: true } },
         },
       });
 
@@ -779,6 +830,7 @@ export class CompanyAssetService {
           : null,
       managingDepartment: dto.managingDepartment?.trim() || null,
       storageLocation: dto.storageLocation?.trim() || null,
+      requiresGmApproval: dto.requiresGmApproval ?? false,
     };
   }
 
@@ -822,6 +874,9 @@ export class CompanyAssetService {
         : {}),
       ...(dto.storageLocation !== undefined
         ? { storageLocation: dto.storageLocation?.trim() || null }
+        : {}),
+      ...(dto.requiresGmApproval !== undefined
+        ? { requiresGmApproval: dto.requiresGmApproval }
         : {}),
     };
   }

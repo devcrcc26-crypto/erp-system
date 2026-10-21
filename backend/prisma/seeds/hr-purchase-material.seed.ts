@@ -782,7 +782,6 @@ async function seedPurchaseRequests(
         requiredByDate: pr.requiredByDate
           ? parseDateOnly(pr.requiredByDate)
           : null,
-        projectId: pr.projectId ?? null,
         totalEstimatedCost: totalEtb,
         currency: SupportedCurrency.ETB,
         totalEstimatedEtb: totalEtb,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
+import { Button, Checkbox, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
 import type { InputNumberProps } from 'antd';
 import { Paperclip, X } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -43,6 +43,7 @@ interface FormValues {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
+  requiresGmApproval?: boolean;
 }
 
 interface CompanyAssetFormProps {
@@ -74,6 +75,7 @@ function buildLedgerPayload(values: FormValues) {
     originalValue: values.originalValue ?? undefined,
     managingDepartment: values.managingDepartment?.trim() || undefined,
     storageLocation: values.storageLocation?.trim() || undefined,
+    requiresGmApproval: values.requiresGmApproval ?? false,
   };
 }
 
@@ -97,6 +99,7 @@ function mapAssetToFormValues(asset: CompanyAssetDetail): FormValues {
       asset.originalValue != null ? Number(asset.originalValue) : undefined,
     managingDepartment: asset.managingDepartment ?? undefined,
     storageLocation: asset.storageLocation ?? undefined,
+    requiresGmApproval: asset.requiresGmApproval ?? false,
   };
 }
 
@@ -145,6 +148,7 @@ export default function CompanyAssetForm({
         asset.originalValue != null ? Number(asset.originalValue) : undefined,
       managingDepartment: asset.managingDepartment ?? undefined,
       storageLocation: asset.storageLocation ?? undefined,
+      requiresGmApproval: asset.requiresGmApproval ?? false,
     };
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
@@ -465,6 +469,12 @@ export default function CompanyAssetForm({
                 />
               </Form.Item>
             </div>
+            <Form.Item
+              name="requiresGmApproval"
+              valuePropName="checked"
+            >
+              <Checkbox>Requires GM approval when assigning this asset</Checkbox>
+            </Form.Item>
           </FormLayout>
         ),
       },

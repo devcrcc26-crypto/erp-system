@@ -71,7 +71,6 @@ const DOCUMENT_SELECT = {
 
 const REQUEST_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
-  project: { select: { id: true, name: true, projectCode: true } },
   items: {
     orderBy: { createdAt: 'asc' as const },
     include: {
@@ -178,16 +177,6 @@ export class PurchaseRequestService
       actorUserId,
     );
 
-    if (dto.projectId) {
-      const project = await this.prisma.project.findFirst({
-        where: activeOnly({ id: dto.projectId, companyId }),
-        select: { id: true },
-      });
-      if (!project) {
-        throw new NotFoundException('Project not found');
-      }
-    }
-
     if (!forceCreate) {
       const existing = await this.prisma.purchaseRequest.findFirst({
         where: activeOnly({
@@ -218,7 +207,6 @@ export class PurchaseRequestService
         requiredByDate: dto.requiredByDate
           ? this.parseRequiredByDate(dto.requiredByDate)
           : null,
-        projectId: dto.projectId ?? null,
         status: PurchaseRequestStatus.DRAFT,
         createdBy: actorUserId,
         updatedBy: actorUserId,
@@ -238,16 +226,6 @@ export class PurchaseRequestService
     userId: string,
   ): Promise<unknown> {
     await this.assertEditableOwner(id, companyId, userId);
-
-    if (dto.projectId) {
-      const project = await this.prisma.project.findFirst({
-        where: activeOnly({ id: dto.projectId, companyId }),
-        select: { id: true },
-      });
-      if (!project) {
-        throw new NotFoundException('Project not found');
-      }
-    }
 
     await this.prisma.purchaseRequest.update({
       where: { id },
@@ -269,7 +247,6 @@ export class PurchaseRequestService
                 : null,
             }
           : {}),
-        ...(dto.projectId !== undefined ? { projectId: dto.projectId } : {}),
         updatedBy: userId,
       },
     });
@@ -605,7 +582,6 @@ export class PurchaseRequestService
       ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
         : {}),
-      ...(filters.projectId ? { projectId: filters.projectId } : {}),
       ...(filters.search?.trim()
         ? {
             OR: [
@@ -658,7 +634,6 @@ export class PurchaseRequestService
         orderBy: { createdAt: 'desc' },
         include: {
           employee: { select: USER_SELECT },
-          project: { select: { id: true, name: true, projectCode: true } },
           _count: { select: { items: true } },
           approvalRequest: {
             select: {

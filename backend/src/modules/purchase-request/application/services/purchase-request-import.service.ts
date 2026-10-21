@@ -48,12 +48,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   requiredbydate: 'requiredByDate',
   'required by date': 'requiredByDate',
   required_by_date: 'requiredByDate',
-  projectid: 'projectId',
-  'project id': 'projectId',
-  project_id: 'projectId',
-  projectcode: 'projectCode',
-  'project code': 'projectCode',
-  project_code: 'projectCode',
   itemname: 'itemName',
   'item name': 'itemName',
   item_name: 'itemName',
@@ -79,8 +73,6 @@ interface ParsedImportRow {
   vendorName: string;
   vendorContact: string;
   requiredByDate: string;
-  projectId: string;
-  projectCode: string;
   itemName: string;
   modelSpec: string;
   description: string;
@@ -118,8 +110,6 @@ export class PurchaseRequestImportService {
         vendorName: '',
         vendorContact: '',
         requiredByDate: new Date().toISOString().slice(0, 10),
-        projectId: '',
-        projectCode: '',
         itemName: 'Hammer',
         modelSpec: '',
         description: 'Claw hammer 16oz',
@@ -149,8 +139,6 @@ export class PurchaseRequestImportService {
         vendorName: '',
         vendorContact: '',
         requiredByDate: '',
-        projectId: '',
-        projectCode: '',
         itemName: 'Hammer',
         modelSpec: '',
         description: 'Claw hammer 16oz',
@@ -251,8 +239,6 @@ export class PurchaseRequestImportService {
         { header: 'vendorName', key: 'vendorName', width: 20 },
         { header: 'vendorContact', key: 'vendorContact', width: 20 },
         { header: 'requiredByDate', key: 'requiredByDate', width: 14 },
-        { header: 'projectId', key: 'projectId', width: 36 },
-        { header: 'projectCode', key: 'projectCode', width: 16 },
       );
     }
     columns.push(
@@ -291,12 +277,6 @@ export class PurchaseRequestImportService {
       instructions.addRow(['vendorName', 'No', 'Optional preferred vendor']);
       instructions.addRow(['vendorContact', 'No', 'Optional vendor contact']);
       instructions.addRow(['requiredByDate', 'No', 'YYYY-MM-DD']);
-      instructions.addRow(['projectId', 'No', 'Project UUID']);
-      instructions.addRow([
-        'projectCode',
-        'No',
-        'Project code - used when projectId is blank',
-      ]);
     }
     instructions.addRow(['itemName', 'Yes', 'Line item name']);
     instructions.addRow(['modelSpec', 'No', 'Model / specifications']);
@@ -389,7 +369,6 @@ export class PurchaseRequestImportService {
               vendorName: row.vendorName,
               vendorContact: row.vendorContact,
               requiredByDate: row.requiredByDate,
-              projectId: row.projectId,
             };
             const request =
               await this.purchaseRequestService.findOrCreateDraftRequest(
@@ -511,8 +490,6 @@ export class PurchaseRequestImportService {
         vendorName: '',
         vendorContact: '',
         requiredByDate: '',
-        projectId: '',
-        projectCode: '',
         itemName: '',
         modelSpec: '',
         description: '',
@@ -679,11 +656,6 @@ export class PurchaseRequestImportService {
       }
       base.requiredByDate = dateResult.value;
 
-      const projectResult = await this.resolveProject(ctx.companyId, row);
-      if (!projectResult.ok) {
-        return { ...base, status: 'error', message: projectResult.message };
-      }
-      base.projectId = projectResult.id;
     }
 
     if (!row.itemName.trim()) {
@@ -821,47 +793,6 @@ export class PurchaseRequestImportService {
       return { ok: false, message: `Employee not found for id: ${employeeId}` };
     }
     return { ok: true, ...user };
-  }
-
-  private async resolveProject(
-    companyId: string,
-    row: ParsedImportRow,
-  ): Promise<{ ok: true; id?: string } | { ok: false; message: string }> {
-    const projectId = row.projectId.trim();
-    const projectCode = row.projectCode.trim();
-
-    if (!projectId && !projectCode) {
-      return { ok: true, id: undefined };
-    }
-
-    if (projectId) {
-      if (!this.isUuid(projectId)) {
-        return { ok: false, message: 'projectId must be a valid UUID' };
-      }
-      const project = await this.prisma.project.findFirst({
-        where: activeOnly({ companyId, id: projectId }),
-        select: { id: true },
-      });
-      if (!project) {
-        return { ok: false, message: `Project not found for id: ${projectId}` };
-      }
-      return { ok: true, id: project.id };
-    }
-
-    const project = await this.prisma.project.findFirst({
-      where: activeOnly({
-        companyId,
-        projectCode: { equals: projectCode, mode: 'insensitive' as const },
-      }),
-      select: { id: true },
-    });
-    if (!project) {
-      return {
-        ok: false,
-        message: `Project not found for code: ${projectCode}`,
-      };
-    }
-    return { ok: true, id: project.id };
   }
 
   private parsePositiveNumber(

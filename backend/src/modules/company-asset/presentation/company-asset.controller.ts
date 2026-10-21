@@ -27,6 +27,7 @@ import { RequireAnyPermission } from "@/shared/permissions/require-any-permissio
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
 
 import {
+  AcknowledgeAssetReturnDto,
   CreateCompanyAssetDto,
   ListCompanyAssetsDto,
   IssueCompanyAssetAssignmentDto,
@@ -231,6 +232,49 @@ export class CompanyAssetController {
   ): Promise<unknown> {
     const dto = await parseDto(ReturnCompanyAssetAssignmentDto, body);
     return this.companyAssetService.returnAssetAssignment(
+      assetId,
+      assignmentId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post(":assetId/assignments/:assignmentId/initiate-return")
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: "Initiate asset return (employee or HR, step 1 of two-step return)" })
+  async initiateReturn(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("assetId") assetId: string,
+    @Param("assignmentId") assignmentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(ReturnCompanyAssetAssignmentDto, body);
+    return this.companyAssetService.returnAssetAssignment(
+      assetId,
+      assignmentId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post(":assetId/assignments/:assignmentId/acknowledge-return")
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: "assets", action: "edit" },
+  )
+  @ApiOperation({ summary: "HR acknowledges an asset return (step 2 of two-step return)" })
+  async acknowledgeReturn(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("assetId") assetId: string,
+    @Param("assignmentId") assignmentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(AcknowledgeAssetReturnDto, body);
+    return this.companyAssetService.acknowledgeReturn(
       assetId,
       assignmentId,
       dto,

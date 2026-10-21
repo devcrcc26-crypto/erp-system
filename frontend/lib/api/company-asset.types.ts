@@ -17,9 +17,18 @@ export interface CompanyAssetAssignmentListItem {
   returnedTo?: string | null;
   returnedAt?: string | null;
   returnedNotes?: string | null;
+  returnInitiatedBy?: string | null;
+  returnInitiatedAt?: string | null;
+  returnReason?: string | null;
+  handoverNotes?: string | null;
+  hrAcknowledgedReturn?: boolean;
+  hrAcknowledgedAt?: string | null;
+  hrAcknowledgedById?: string | null;
   employee: AssetUserRef;
   issuedBy?: AssetUserRef | null;
   returnedBy?: AssetUserRef | null;
+  returnInitiator?: AssetUserRef | null;
+  hrAcknowledgedBy?: AssetUserRef | null;
 }
 
 export interface CompanyAssetDepreciationFields {
@@ -50,6 +59,7 @@ export interface CompanyAssetListItem extends CompanyAssetDepreciationFields {
   originalValue?: number | string | null;
   managingDepartment?: string | null;
   storageLocation?: string | null;
+  requiresGmApproval?: boolean;
   photoDocumentId?: string | null;
   assignedTo?: AssetUserRef | null;
   assignedAt?: string | null;
@@ -81,6 +91,7 @@ export interface CreateCompanyAssetPayload {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
+  requiresGmApproval?: boolean;
   photoDocumentId?: string;
 }
 
@@ -102,6 +113,7 @@ export interface UpdateCompanyAssetPayload {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
+  requiresGmApproval?: boolean;
   photoDocumentId?: string;
 }
 
@@ -130,6 +142,13 @@ export interface IssueCompanyAssetAssignmentPayload {
 }
 
 export interface ReturnCompanyAssetAssignmentPayload {
+  returnedTo?: string;
+  returnedNotes?: string;
+  returnReason?: string;
+  handoverNotes?: string;
+}
+
+export interface AcknowledgeAssetReturnPayload {
   returnedTo?: string;
   returnedNotes?: string;
 }

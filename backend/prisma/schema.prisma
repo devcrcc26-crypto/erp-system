@@ -86,6 +86,7 @@ enum FolderContextType {
   EXIT_PERMIT
   FIELD_MOVEMENT_LOG
   ANNOUNCEMENT
+  ASSET_REQUEST
 }
 
 enum Nationality {
@@ -348,6 +349,7 @@ model Company {
   EmployeeContracts        EmployeeContract[]
   companyAssets            CompanyAsset[]
   assetAssignments         AssetAssignment[]
+  assetRequests            AssetRequest[]
   leavePolicies            LeavePolicy[]
   ExitPermits              ExitPermit[]
   announcements            Announcement[]
@@ -912,6 +914,11 @@ model User {
   assetAssignmentsAsReturnedBy    AssetAssignment[]         @relation("AssetAssignmentReturnedBy")
   assetAssignmentsCreated         AssetAssignment[]         @relation("AssetAssignmentCreator")
   assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
+  assetAssignmentsReturnInitiated AssetAssignment[]         @relation("AssetAssignmentReturnInitiator")
+  assetAssignmentsHrAcknowledged  AssetAssignment[]         @relation("AssetAssignmentHrAcknowledger")
+  assetRequestsAsEmployee         AssetRequest[]            @relation("AssetRequestEmployee")
+  assetRequestsCreated            AssetRequest[]            @relation("AssetRequestCreator")
+  assetRequestsUpdated            AssetRequest[]            @relation("AssetRequestUpdater")
   leavePolicy                     LeavePolicy?              @relation("EmployeeLeavePolicy", fields: [leavePolicyId], references: [id])
   createdLeavePolicies            LeavePolicy[]             @relation("LeavePolicyCreator")
   workSchedule                    WorkSchedule?             @relation("EmployeeWorkSchedule", fields: [workScheduleId], references: [id], onDelete: SetNull)
@@ -1386,6 +1393,7 @@ model DocumentFolder {
   userProfiles               User[]                 @relation("UserProfileFolder")
   exitPermits                ExitPermit[]
   announcements              Announcement[]
+  assetRequests              AssetRequest[]
 
 
   @@index([companyId], map: "idx_document_folder_company_id")
@@ -2128,7 +2136,6 @@ model Project {
   issues         Issue[]
   punchItems     PunchItem[]
   closeout       Closeout?
-  purchaseRequests PurchaseRequest[]
   materialRequisitions MaterialRequisition[]
   vehicleApplications  VehicleApplication[]
   siteAssignments      SiteAssignment[]
@@ -3804,6 +3811,8 @@ model ApprovalRequest {
   exitPermit             ExitPermit?
   fieldMovementLog       FieldMovementLog?
   siteAssignment         SiteAssignment?
+  assetRequest           AssetRequest?
+  assetAssignment        AssetAssignment?       @relation("AssetAssignmentApproval")
 
   @@index([categoryId], map: "idx_approval_request_category")
   @@index([companyId], map: "idx_approval_request_company")
@@ -5354,7 +5363,6 @@ model PurchaseRequest {
   vendorName         String?               @map("vendor_name")
   vendorContact      String?               @map("vendor_contact")
   requiredByDate     DateTime?             @map("required_by_date") @db.Date
-  projectId          String?               @map("project_id")
   totalEstimatedCost Decimal               @default(0) @map("total_estimated_cost") @db.Decimal(14, 2)
   currency           SupportedCurrency     @default(ETB)
   totalEstimatedEtb  Decimal               @default(0) @map("total_estimated_etb") @db.Decimal(14, 2)
@@ -5372,7 +5380,6 @@ model PurchaseRequest {
 
   company          Company               @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   employee         User                  @relation("PurchaseRequestEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  project          Project?              @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvalRequest  ApprovalRequest?      @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   creator          User                  @relation("PurchaseRequestCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -5384,7 +5391,6 @@ model PurchaseRequest {
   @@index([employeeId], map: "idx_purchase_request_employee")
   @@index([status], map: "idx_purchase_request_status")
   @@index([companyId, deletedAt], map: "idx_purchase_request_company_deleted")
-  @@index([projectId], map: "idx_purchase_request_project")
   @@index([attachmentFolderId], map: "idx_purchase_request_attachment_folder")
   @@map("purchase_request")
 }
@@ -6027,6 +6033,7 @@ model CompanyAsset {
     originalValue      Decimal?  @map("original_value") @db.Decimal(14, 2)
     managingDepartment String?   @map("managing_department")
     storageLocation    String?   @map("storage_location")
+    requiresGmApproval Boolean   @default(false) @map("requires_gm_approval")
     createdAt     DateTime          @default(now()) @map("created_at")
     updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
     updatedBy     String            @map("updated_by")
@@ -6042,6 +6049,7 @@ model CompanyAsset {
 
     assetAssignments AssetAssignment[] @relation("AssetAssignment")
     inspectionRepairs InspectionRepair[]
+    assetRequests  AssetRequest[]  @relation("AssetRequestFulfilledBy")
 
 
     @@unique([companyId, serialNumber])
@@ -6071,18 +6079,31 @@ model AssetAssignment {
     updatedBy     String            @map("updated_by")
     createdAt     DateTime @default(now()) @map("created_at")
     updatedAt     DateTime @updatedAt @map("updated_at")
-    deletedAt     DateTime? @map("deleted_at")
-    deletedBy     String?   @map("deleted_by")
+    deletedAt             DateTime? @map("deleted_at")
+    deletedBy             String?   @map("deleted_by")
+    approvalRequestId     String?   @unique @map("approval_request_id")
+    employeeAcknowledged  Boolean   @default(false) @map("employee_acknowledged")
+    acknowledgedAt        DateTime? @map("acknowledged_at")
+    assetRequestId        String?   @map("asset_request_id")
+    returnInitiatedBy     String?   @map("return_initiated_by")
+    returnInitiatedAt     DateTime? @map("return_initiated_at")
+    returnReason          String?   @map("return_reason")
+    handoverNotes         String?   @map("handover_notes")
+    hrAcknowledgedReturn  Boolean   @default(false) @map("hr_acknowledged_return")
+    hrAcknowledgedAt      DateTime? @map("hr_acknowledged_at")
+    hrAcknowledgedById    String?   @map("hr_acknowledged_by_id")
 
-
-
-    company           Company       @relation(fields: [companyId], references: [id])
-    asset             CompanyAsset  @relation("AssetAssignment", fields: [assetId], references: [id])
-    employee          User          @relation("AssetAssignmentEmployee", fields: [userId], references: [id])
-    issuedBy          User          @relation("AssetAssignmentIssuedBy", fields: [issuedById], references: [id])
-    returnedBy        User?         @relation("AssetAssignmentReturnedBy", fields: [returnedById], references: [id])
-    creator           User          @relation("AssetAssignmentCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-    updater           User          @relation("AssetAssignmentUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    company             Company          @relation(fields: [companyId], references: [id])
+    asset               CompanyAsset     @relation("AssetAssignment", fields: [assetId], references: [id])
+    employee            User             @relation("AssetAssignmentEmployee", fields: [userId], references: [id])
+    issuedBy            User             @relation("AssetAssignmentIssuedBy", fields: [issuedById], references: [id])
+    returnedBy          User?            @relation("AssetAssignmentReturnedBy", fields: [returnedById], references: [id])
+    returnInitiator     User?            @relation("AssetAssignmentReturnInitiator", fields: [returnInitiatedBy], references: [id])
+    hrAcknowledgedBy    User?            @relation("AssetAssignmentHrAcknowledger", fields: [hrAcknowledgedById], references: [id])
+    creator             User             @relation("AssetAssignmentCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater             User             @relation("AssetAssignmentUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    approvalRequest     ApprovalRequest? @relation("AssetAssignmentApproval", fields: [approvalRequestId], references: [id])
+    assetRequest        AssetRequest?    @relation(fields: [assetRequestId], references: [id])
 
     @@index([companyId, assetId], map: "idx_company_asset_assignment_asset")
     @@index([companyId, userId], map: "idx_company_asset_assignment_user")
@@ -6090,6 +6111,57 @@ model AssetAssignment {
     @@index([companyId, returnedById], map: "idx_company_asset_assignment_returned_by")
     @@index([companyId, deletedAt], map: "idx_company_asset_assignment_deleted")
     @@map("asset_assignment")
+}
+
+model AssetRequest {
+  id                 String             @id @default(uuid())
+  companyId          String             @map("company_id")
+  requestNumber      String             @map("request_number")
+  employeeId         String             @map("employee_id")
+  assetCategory      String             @map("asset_category")
+  assetType          String?            @map("asset_type")
+  reason             String
+  requiredByDate     DateTime?          @map("required_by_date") @db.Date
+  notes              String?
+  status             AssetRequestStatus @default(DRAFT)
+  approvalRequestId  String?            @unique @map("approval_request_id")
+  fulfilledByAssetId String?            @map("fulfilled_by_asset_id")
+  attachmentFolderId String?            @map("attachment_folder_id")
+  submittedAt        DateTime?          @map("submitted_at")
+  completedAt        DateTime?          @map("completed_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  createdBy          String             @map("created_by")
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at")
+  updatedBy          String             @map("updated_by")
+  deletedAt          DateTime?          @map("deleted_at")
+  deletedBy          String?            @map("deleted_by")
+
+  company          Company          @relation(fields: [companyId], references: [id])
+  employee         User             @relation("AssetRequestEmployee", fields: [employeeId], references: [id])
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  fulfilledByAsset CompanyAsset?    @relation("AssetRequestFulfilledBy", fields: [fulfilledByAssetId], references: [id])
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
+  creator          User             @relation("AssetRequestCreator", fields: [createdBy], references: [id])
+  updater          User             @relation("AssetRequestUpdater", fields: [updatedBy], references: [id])
+  assetAssignments AssetAssignment[]
+
+  @@unique([companyId, requestNumber])
+  @@index([companyId], map: "idx_asset_request_company")
+  @@index([employeeId], map: "idx_asset_request_employee")
+  @@index([status], map: "idx_asset_request_status")
+  @@index([companyId, deletedAt], map: "idx_asset_request_company_deleted")
+  @@map("asset_request")
+}
+
+enum AssetRequestStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+  FULFILLED
 }
 
 enum ExitDirection {

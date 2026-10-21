@@ -23,6 +23,7 @@ import type {
   UpdateCompanyAssetPayload,
   UpdateCompanyAssetStatusPayload,
   IssueCompanyAssetAssignmentPayload,
+  AcknowledgeAssetReturnPayload,
   ReturnCompanyAssetAssignmentPayload,
 } from '@/lib/api/company-asset.types';
 import type { PaginationMeta } from '@/lib/api/types';
@@ -253,6 +254,42 @@ export function useReturnCompanyAssetAssignment(
       void queryClient.invalidateQueries({
         queryKey: companyAssetKeys.detail(assetId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
+      });
+    },
+  });
+}
+
+export function useInitiateAssetReturn(assetId: string, assignmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ReturnCompanyAssetAssignmentPayload) =>
+      apiPost<CompanyAssetAssignmentListItem>(
+        `${ASSETS_PATH}/${assetId}/assignments/${assignmentId}/initiate-return`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: companyAssetKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: companyAssetKeys.detail(assetId) });
+      void queryClient.invalidateQueries({
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
+      });
+    },
+  });
+}
+
+export function useAcknowledgeAssetReturn(assetId: string, assignmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AcknowledgeAssetReturnPayload) =>
+      apiPost<CompanyAssetAssignmentListItem>(
+        `${ASSETS_PATH}/${assetId}/assignments/${assignmentId}/acknowledge-return`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: companyAssetKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: companyAssetKeys.detail(assetId) });
       void queryClient.invalidateQueries({
         queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
       });

@@ -299,7 +299,6 @@ export default function PurchaseRequestDetailPageContent({
           vendorName: t('hr.form.vendor'),
           vendorContact: t('hr.form.vendorContact'),
           requiredByDate: t('hr.form.requiredByDate'),
-          project: t('hr.table.project'),
           itemCount: t('hr.section.items'),
           estimatedTotal: t('hr.form.estimatedTotal'),
           submittedAt: t('hr.table.submittedDate'),

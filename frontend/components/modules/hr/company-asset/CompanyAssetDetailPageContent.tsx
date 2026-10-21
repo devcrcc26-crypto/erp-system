@@ -36,6 +36,7 @@ import type {
   CompanyAssetAssignmentListItem,
 } from '@/lib/api/company-asset.types';
 import {
+  useAcknowledgeAssetReturn,
   useCompanyAsset,
   useCompanyAssetAssignments,
   useIssueCompanyAssetAssignment,
@@ -82,6 +83,13 @@ interface IssueAssetFormValues {
 }
 
 interface ReturnAssetFormValues {
+  returnedTo?: string;
+  returnedNotes?: string;
+  returnReason?: string;
+  handoverNotes?: string;
+}
+
+interface AcknowledgeReturnFormValues {
   returnedTo?: string;
   returnedNotes?: string;
 }
@@ -158,6 +166,9 @@ export default function CompanyAssetDetailPageContent({
 
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnForm] = Form.useForm<ReturnAssetFormValues>();
+  const [acknowledgeModalOpen, setAcknowledgeModalOpen] = useState(false);
+  const [acknowledgeForm] = Form.useForm<AcknowledgeReturnFormValues>();
+  const acknowledgeMutation = useAcknowledgeAssetReturn(assetId, activeAssignmentId);
 
   const asset = detailQuery.data;
   const depreciation = asset ? resolveAssetDepreciation(asset) : null;
@@ -171,8 +182,9 @@ export default function CompanyAssetDetailPageContent({
   const canChangeStatus = asset
     ? canChangeAssetStatusManually(asset.status)
     : false;
+  const isReturnPending = Boolean(activeAssignment?.returnInitiatedAt && !activeAssignment?.returnedAt);
   const canIssue = asset?.status === 'AVAILABLE' && !activeAssignment;
-  const canReturn = Boolean(activeAssignment);
+  const canReturn = Boolean(activeAssignment) && !isReturnPending;
   const manualStatusOptions = useMemo(
     () =>
       ASSET_MANUAL_STATUS_OPTIONS.map((option) => ({
@@ -238,6 +250,24 @@ export default function CompanyAssetDetailPageContent({
                 </MetaItem>
               </div>
             ) : null}
+            {assignment.returnReason ? (
+              <div className="md:col-span-2">
+                <MetaItem label="Return Reason">
+                  <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                    {assignment.returnReason}
+                  </p>
+                </MetaItem>
+              </div>
+            ) : null}
+            {assignment.handoverNotes ? (
+              <div className="md:col-span-2">
+                <MetaItem label="Handover Notes">
+                  <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                    {assignment.handoverNotes}
+                  </p>
+                </MetaItem>
+              </div>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -299,6 +329,8 @@ export default function CompanyAssetDetailPageContent({
       await returnMutation.mutateAsync({
         returnedTo: values.returnedTo?.trim() || undefined,
         returnedNotes: values.returnedNotes?.trim() || undefined,
+        returnReason: values.returnReason?.trim() || undefined,
+        handoverNotes: values.handoverNotes?.trim() || undefined,
       });
       messageApi.success(t('hr.assetMessages.assignmentReturned'));
       await assignmentsQuery.refetch();
@@ -400,7 +432,13 @@ export default function CompanyAssetDetailPageContent({
     icon: <EditOutlined />,
     onClick: () => router.push(`/hr/company-asset/${assetId}/edit`),
   });
-  if (canReturn) {
+  if (isReturnPending) {
+    overflowMenuItems.push({
+      key: 'acknowledge-return',
+      label: 'Acknowledge Return',
+      onClick: () => setAcknowledgeModalOpen(true),
+    });
+  } else if (canReturn) {
     overflowMenuItems.push({
       key: 'return',
       label: t('hr.assetButtons.returnAsset'),
@@ -473,7 +511,11 @@ export default function CompanyAssetDetailPageContent({
                       : t('hr.assetButtons.changeStatus')}
                   </Button>
                 ) : null}
-                {canReturn ? (
+                {isReturnPending ? (
+                  <Button type="primary" onClick={() => setAcknowledgeModalOpen(true)}>
+                    Acknowledge Return
+                  </Button>
+                ) : canReturn ? (
                   <Button type="primary" onClick={() => setReturnModalOpen(true)}>
                     {t('hr.assetButtons.returnAsset')}
                   </Button>
@@ -570,7 +612,11 @@ export default function CompanyAssetDetailPageContent({
           <DetailSection
             title={t('hr.assetSection.currentAssignment')}
             action={
-              activeAssignment ? (
+              isReturnPending ? (
+                <Button type="primary" onClick={() => setAcknowledgeModalOpen(true)}>
+                  Acknowledge Return
+                </Button>
+              ) : activeAssignment ? (
                 <Button type="primary" onClick={() => setReturnModalOpen(true)}>
                   {t('hr.assetButtons.returnAsset')}
                 </Button>
@@ -584,9 +630,16 @@ export default function CompanyAssetDetailPageContent({
             {activeAssignment ? (
               <div className="flex flex-col gap-4">
                 <StatusBadge
-                  label={t('hr.assetStatus.IN_USE')}
-                  variant={assetStatusVariant('IN_USE')}
+                  label={isReturnPending ? 'Return Pending' : t('hr.assetStatus.IN_USE')}
+                  variant={isReturnPending ? 'warning' : assetStatusVariant('IN_USE')}
                 />
+                {isReturnPending ? (
+                  <ErpNotice
+                    tone="warning"
+                    title="Return initiated — awaiting HR acknowledgement"
+                    description={activeAssignment.returnReason ?? undefined}
+                  />
+                ) : null}
                 {renderAssignmentFields(activeAssignment, {
                   includeReturnFields: false,
                 })}
@@ -932,17 +985,75 @@ export default function CompanyAssetDetailPageContent({
                 placeholder={t('hr.assetPlaceholder.returnedTo')}
               />
             </Form.Item>
+            <Form.Item name="returnReason" label="Return Reason">
+              <Input.TextArea
+                rows={2}
+                maxLength={2000}
+                showCount
+                placeholder="Why is this asset being returned?"
+              />
+            </Form.Item>
+            <Form.Item name="handoverNotes" label="Handover Notes (credentials, access codes, etc.)">
+              <Input.TextArea
+                rows={3}
+                maxLength={4000}
+                showCount
+                placeholder="Document any credentials, access codes, or special instructions"
+              />
+            </Form.Item>
             <Form.Item
               name="returnedNotes"
               label={t('hr.assetLabels.returnedNotes')}
               className="mb-0"
             >
               <Input.TextArea
-                rows={3}
+                rows={2}
                 maxLength={2000}
                 showCount
                 placeholder={t('hr.assetPlaceholder.returnNotes')}
               />
+            </Form.Item>
+          </Form>
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={acknowledgeModalOpen}
+        title="Acknowledge Asset Return"
+        description="Confirm that you have received this asset back."
+        confirmLabel="Acknowledge Return"
+        onConfirm={async () => {
+          if (!activeAssignment) return;
+          let values: AcknowledgeReturnFormValues;
+          try {
+            values = await acknowledgeForm.validateFields();
+          } catch {
+            return;
+          }
+          try {
+            await acknowledgeMutation.mutateAsync({
+              returnedTo: values.returnedTo?.trim() || undefined,
+              returnedNotes: values.returnedNotes?.trim() || undefined,
+            });
+            messageApi.success('Asset return acknowledged');
+            acknowledgeForm.resetFields();
+            setAcknowledgeModalOpen(false);
+            await assignmentsQuery.refetch();
+            await detailQuery.refetch();
+          } catch (error: unknown) {
+            notifyApiError(error, 'Failed to acknowledge return', messageApi, t);
+          }
+        }}
+        onCancel={() => { acknowledgeForm.resetFields(); setAcknowledgeModalOpen(false); }}
+        confirmLoading={acknowledgeMutation.isPending}
+      >
+        <div className="pt-3">
+          <Form form={acknowledgeForm} layout="vertical" requiredMark={false} disabled={acknowledgeMutation.isPending}>
+            <Form.Item name="returnedTo" label={t('hr.assetLabels.returnedTo')}>
+              <Input maxLength={200} placeholder={t('hr.assetPlaceholder.returnedTo')} />
+            </Form.Item>
+            <Form.Item name="returnedNotes" label={t('hr.assetLabels.returnedNotes')} className="mb-0">
+              <Input.TextArea rows={2} maxLength={2000} showCount placeholder={t('hr.assetPlaceholder.returnNotes')} />
             </Form.Item>
           </Form>
         </div>

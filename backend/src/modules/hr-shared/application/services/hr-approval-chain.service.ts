@@ -118,6 +118,7 @@ export const HR_ON_BEHALF_MODULE_CODES = [
   'EXIT_PERMIT',
   'SITE_ASSIGNMENT',
   'WORK_FROM_HOME',
+  'ASSET_REQUEST',
 ] as const;
 
 export type HrOnBehalfModuleCode = (typeof HR_ON_BEHALF_MODULE_CODES)[number];
@@ -813,6 +814,9 @@ export class HrApprovalChainService {
 
       case 'INSPECTION_REPAIR':
         return [];
+
+      case 'ASSET_REQUEST':
+        return this.buildMaterialRequisitionApprovalChain(employeeId, companyId);
     }
   }
 

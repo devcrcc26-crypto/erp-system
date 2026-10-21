@@ -35,7 +35,6 @@ export interface PurchaseRequestPdfLabels {
   vendorName: string;
   vendorContact: string;
   requiredByDate: string;
-  project: string;
   itemCount: string;
   estimatedTotal: string;
   submittedAt: string;
@@ -99,11 +98,6 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const generatedAt = new Date().toISOString();
   const employeeName = formatPurchaseRequestEmployeeName(request.employee);
-  const projectLabel = request.project
-    ? [request.project.projectCode, request.project.name]
-        .filter(Boolean)
-        .join(' - ')
-    : '-';
 
   let y = PAGE_MARGIN;
 
@@ -156,7 +150,6 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
           ? formatProjectDate(request.requiredByDate)
           : '-',
       ],
-      [labels.project, projectLabel],
       [labels.itemCount, String(request.itemCount ?? request.items.length)],
       [labels.estimatedTotal, formatEtbAmount(request.totalEstimatedEtb)],
       [

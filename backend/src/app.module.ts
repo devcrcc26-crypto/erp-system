@@ -29,6 +29,7 @@ import { MaterialRequisitionModule } from './modules/material-requisition/materi
 import { ConsumablesRequisitionModule } from './modules/consumables-requisition/consumables-requisition.module';
 import { CompanyVehicleModule } from './modules/company-vehicle/company-vehicle.module';
 import { CompanyAssetModule } from './modules/company-asset/company-asset.module';
+import { AssetRequestModule } from './modules/asset-request/asset-request.module';
 import { VehicleApplicationModule } from './modules/vehicle-application/vehicle-application.module';
 import { VehicleRefuelingModule } from './modules/vehicle-refueling/vehicle-refueling.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
@@ -106,6 +107,7 @@ import { DraftsModule } from './modules/drafts/drafts.module';
     ConsumablesRequisitionModule,
     CompanyVehicleModule,
     CompanyAssetModule,
+    AssetRequestModule,
     VehicleApplicationModule,
     VehicleRefuelingModule,
     InspectionRepairModule,

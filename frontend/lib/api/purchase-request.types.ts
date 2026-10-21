@@ -17,12 +17,6 @@ export interface PurchaseRequestUserSummary {
   email?: string | null;
 }
 
-export interface PurchaseRequestProjectSummary {
-  id: string;
-  name: string;
-  projectCode?: string | null;
-}
-
 export interface PurchaseRequestDocumentSummary {
   id: string;
   name: string;
@@ -58,13 +52,11 @@ export interface PurchaseRequestListItem {
   currency: string;
   itemCount: number;
   requiredByDate?: string | null;
-  projectId?: string | null;
   vendorName?: string | null;
   vendorContact?: string | null;
   approvalRequestId?: string | null;
   currentTierLabel?: string | null;
   employee?: PurchaseRequestUserSummary;
-  project?: PurchaseRequestProjectSummary;
   createdAt: string;
   submittedAt?: string | null;
   completedAt?: string | null;
@@ -94,7 +86,6 @@ export interface CreatePurchaseRequestPayload extends OnBehalfPayload {
   title: string;
   justification: string;
   requiredByDate?: string;
-  projectId?: string;
   vendorName?: string;
   vendorContact?: string;
 }
@@ -103,7 +94,6 @@ export interface UpdatePurchaseRequestPayload {
   title?: string;
   justification?: string;
   requiredByDate?: string;
-  projectId?: string;
   vendorName?: string;
   vendorContact?: string;
 }
@@ -136,7 +126,6 @@ export interface ListPurchaseRequestsParams {
   search?: string;
   status?: PurchaseRequestStatus | PurchaseRequestStatus[];
   employeeId?: string;
-  projectId?: string;
   dateFrom?: string;
   dateTo?: string;
   amountMin?: number;
