@@ -29,11 +29,11 @@ export class CreateCompanyAssetDto{
     @Max(new Date().getFullYear() + 1)
     year!: number;
 
-    @ApiProperty({maxLength: 50, description: 'Color'})
+    @ApiPropertyOptional({maxLength: 50, description: 'Color'})
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
     @MaxLength(50)
-    color!: string;
+    color?: string;
 
     @ApiProperty({maxLength: 100, example: 'Laptop', description:'Asset category'})
     @IsString()

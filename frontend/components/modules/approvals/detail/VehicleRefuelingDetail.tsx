@@ -13,6 +13,7 @@ import { useVehicleRefueling } from '@/lib/query/vehicle-refueling';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatVehicleRefuelingEmployeeName } from '@/lib/utils/vehicle-refueling-display';
 
 /**
  * Vehicle refueling body for the Approvals detail inbox (read-only).

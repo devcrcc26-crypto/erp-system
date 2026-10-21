@@ -235,7 +235,7 @@ export class CompanyAssetService {
         brand: dto.brand.trim(),
         model: dto.model.trim(),
         year: dto.year,
-        color: dto.color.trim(),
+        color: dto.color?.trim() ?? '',
         type: dto.type.trim(),
         status: AssetStatus.AVAILABLE,
         description: dto.description?.trim() || null,

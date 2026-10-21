@@ -58,7 +58,6 @@ const DETAILS_FIELDS = [
   'brand',
   'model',
   'year',
-  'color',
 ] as const;
 
 function buildLedgerPayload(values: FormValues) {
@@ -206,7 +205,6 @@ export default function CompanyAssetForm({
       !values.serialNumber?.trim() ||
       !values.brand?.trim() ||
       !values.model?.trim() ||
-      !values.color?.trim() ||
       !values.type?.trim() ||
       values.year == null
     ) {
@@ -220,7 +218,7 @@ export default function CompanyAssetForm({
         brand: values.brand.trim(),
         model: values.model.trim(),
         year: values.year,
-        color: values.color.trim(),
+        color: values.color?.trim() || undefined,
         type: values.type.trim(),
         description: values.description?.trim() || undefined,
         ...buildLedgerPayload(values),
@@ -354,12 +352,6 @@ export default function CompanyAssetForm({
               <Form.Item
                 name="color"
                 label={t('hr.assetLabels.color')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.assetValidation.colorRequired'),
-                  },
-                ]}
               >
                 <Input
                   maxLength={50}
@@ -396,18 +388,6 @@ export default function CompanyAssetForm({
                 <Input
                   maxLength={100}
                   placeholder={t('hr.assetPlaceholder.assetCode')}
-                />
-              </Form.Item>
-              <Form.Item name="cardNumber" label={t('hr.assetLabels.cardNumber')}>
-                <Input
-                  maxLength={100}
-                  placeholder={t('hr.assetPlaceholder.cardNumber')}
-                />
-              </Form.Item>
-              <Form.Item name="assetName" label={t('hr.assetLabels.assetName')}>
-                <Input
-                  maxLength={200}
-                  placeholder={t('hr.assetPlaceholder.assetName')}
                 />
               </Form.Item>
               <Form.Item

@@ -16,7 +16,6 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
-import { isDateInFuture } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -142,7 +141,6 @@ export class VehicleRefuelingService
     const now = new Date();
     const id = randomUUID();
     const fuelDate = this.parseDateOnly(dto.fuelDate);
-    this.assertFuelDateNotFuture(dto.fuelDate);
 
     if (resolvedTiers.length === 0) {
       await this.prisma.vehicleRefueling.create({
@@ -301,8 +299,6 @@ export class VehicleRefuelingService
     if (!vehicle) {
       throw new NotFoundException('Vehicle not found');
     }
-
-    this.assertFuelDateNotFuture(dto.fuelDate);
 
     return this.prisma.vehicleRefueling.create({
       data: {
@@ -738,19 +734,6 @@ export class VehicleRefuelingService
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
-  }
-
-  /** Rejects YYYY-MM-DD fuel dates after today (company calendar day, Africa/Addis_Ababa). */
-  private assertFuelDateNotFuture(value: string): void {
-    let inFuture: boolean;
-    try {
-      inFuture = isDateInFuture(value);
-    } catch {
-      throw new BadRequestException(`Invalid date: ${value}`);
-    }
-    if (inFuture) {
-      throw new BadRequestException('Fuel date cannot be in the future');
-    }
   }
 
   private computeTotalCostEtb(

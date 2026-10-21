@@ -78,7 +78,7 @@ export interface CreateCompanyAssetPayload {
   brand: string;
   model: string;
   year: number;
-  color: string;
+  color?: string;
   type: string;
   description?: string;
   assetCode?: string;
