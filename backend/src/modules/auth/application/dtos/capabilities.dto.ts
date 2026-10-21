@@ -229,6 +229,17 @@ export class CapabilitiesDto {
   canManageBusinessTrip!: boolean;
 
   @ApiProperty({
+    description: 'Can view purchase requests (purchase-request.view)',
+  })
+  canViewPurchaseRequest!: boolean;
+
+  @ApiProperty({
+    description:
+      'Can create and submit purchase requests (purchase-request.create)',
+  })
+  canCreatePurchaseRequest!: boolean;
+
+  @ApiProperty({
     description:
       'Company toggle modules.projectManagement.enabled (env default when unset).',
   })

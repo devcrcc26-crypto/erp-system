@@ -1,4 +1,4 @@
-import PurchaseRequestDetailPageContent from '@/components/modules/hr/purchase-request/PurchaseRequestDetailPageContent';
+import PurchaseRequestEditPageContent from '@/components/modules/hr/purchase-request/PurchaseRequestEditPageContent';
 
 export default async function PurchaseRequestEditPage({
   params,
@@ -6,6 +6,5 @@ export default async function PurchaseRequestEditPage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactNode> {
   const { id } = await params;
-  return <PurchaseRequestDetailPageContent requestId={id} />;
+  return <PurchaseRequestEditPageContent requestId={id} />;
 }
-

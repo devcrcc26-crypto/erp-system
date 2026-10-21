@@ -19,24 +19,12 @@ const viewOnly: Flags = { canView: true, canCreate: false, canEdit: false, canDe
 const viewCreate: Flags = { canView: true, canCreate: true, canEdit: false, canDelete: false, canApprove: false, canExport: false };
 const manageFl: Flags = { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canExport: false };
 
-const ALL_ROLES = [
+/** HR Manager and executive roles — create, submit, and manage purchase requests. */
+const PURCHASE_REQUEST_ACCESS_ROLES = [
   'System Administrator',
   'HR Manager',
-  'HR Officer',
-  'HR Assistant',
-  'HR Specialist',
   'General Manager',
   'Managing Director',
-  'Department Head',
-  'Discipline Head',
-  'Employee',
-];
-
-const MANAGE_ROLES = [
-  'System Administrator',
-  'HR Manager',
-  'HR Officer',
-  'HR Assistant',
 ];
 
 const GRANTS: Array<{ module: string; action: string; description: string; roles: string[]; flags: Flags }> = [
@@ -44,21 +32,21 @@ const GRANTS: Array<{ module: string; action: string; description: string; roles
     module: 'purchase-request',
     action: 'view',
     description: 'View purchase requests',
-    roles: ALL_ROLES,
+    roles: PURCHASE_REQUEST_ACCESS_ROLES,
     flags: viewOnly,
   },
   {
     module: 'purchase-request',
     action: 'create',
     description: 'Submit and cancel purchase requests',
-    roles: ALL_ROLES,
+    roles: PURCHASE_REQUEST_ACCESS_ROLES,
     flags: viewCreate,
   },
   {
     module: 'purchase-request',
     action: 'manage',
     description: 'Manage purchase requests (HR)',
-    roles: MANAGE_ROLES,
+    roles: PURCHASE_REQUEST_ACCESS_ROLES,
     flags: manageFl,
   },
 ];

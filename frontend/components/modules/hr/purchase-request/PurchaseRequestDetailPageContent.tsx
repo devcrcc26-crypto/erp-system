@@ -1,14 +1,13 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/hr/overtime/overtime-entries-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
   Dropdown,
-  Form,
   Grid,
-  Input,
-  InputNumber,
-  Modal,
   Skeleton,
   Space,
   Tag,
@@ -21,6 +20,8 @@ import {
   EditOutlined,
   FilePdfOutlined,
   MoreOutlined,
+  PlusOutlined,
+  SendOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
@@ -29,23 +30,20 @@ import { useRouter } from 'next/navigation';
 import { DocumentPreviewGroup } from '@/components/shared/preview';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
+import PurchaseRequestItemDrawer from '@/components/modules/hr/purchase-request/PurchaseRequestItemDrawer';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import HorizontalScrollHint from '@/components/ui/HorizontalScrollHint/HorizontalScrollHint';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanCreatePurchaseRequest } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import type {
-  PurchaseRequestItem,
-  UpdatePurchaseRequestItemPayload,
-} from '@/lib/api/purchase-request.types';
+import type { PurchaseRequestItem } from '@/lib/api/purchase-request.types';
 import {
   downloadPurchaseRequestItemsImportTemplate,
   useCancelPurchaseRequest,
@@ -53,7 +51,7 @@ import {
   usePurchaseRequest,
   usePurchaseRequestItemsImport,
   usePurchaseRequestItemsImportPreview,
-  useUpdatePurchaseRequestItem,
+  useSubmitPurchaseRequest,
 } from '@/lib/query/purchase-request';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
@@ -62,12 +60,10 @@ import { exportPurchaseRequestPdf } from '@/lib/utils/purchase-request-pdf';
 import {
   formatEtbAmount,
   formatPurchaseItemDescription,
-  formatPurchaseItemDescriptionInput,
-  parsePurchaseItemDescription,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
+  purchaseRequestItemImages,
   purchaseRequestStatusVariant,
-  requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -115,30 +111,35 @@ export default function PurchaseRequestDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const canViewHr = useCanViewHr();
+  const fluidItemsTable = screens.lg !== false;
+  const tableScrollX = screens.lg
+    ? 960
+    : screens.md
+      ? 720
+      : screens.sm
+        ? 560
+        : 420;
+  const canManagePurchaseRequest = useCanCreatePurchaseRequest();
   const currentUser = useCurrentUser();
   const authUser = useAuthStore((state) => state.user);
   const detailQuery = usePurchaseRequest(requestId);
   const cancelMutation = useCancelPurchaseRequest(requestId);
   const deleteItemMutation = useDeletePurchaseRequestItem(requestId);
-  const updateItemMutation = useUpdatePurchaseRequestItem(requestId);
+  const submitMutation = useSubmitPurchaseRequest(requestId);
   const itemsImportPreview = usePurchaseRequestItemsImportPreview(requestId);
   const itemsImportCommit = usePurchaseRequestItemsImport(requestId);
 
   const [editingItem, setEditingItem] = useState<PurchaseRequestItem | null>(
     null,
   );
+  const [itemDrawerOpen, setItemDrawerOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [itemForm] = Form.useForm<
-    UpdatePurchaseRequestItemPayload & {
-      descriptionWithModelSpec?: string;
-    }
-  >();
 
   useSetHeaderExtra(null);
 
@@ -147,7 +148,9 @@ export default function PurchaseRequestDetailPageContent({
     Boolean(request) && request?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     request?.status === 'DRAFT' || request?.status === 'RETURNED';
-  const canEdit = Boolean((isOwner || canViewHr) && isDraftOrReturned);
+  const canEdit = Boolean(
+    (isOwner || canManagePurchaseRequest) && isDraftOrReturned,
+  );
   const canCancel =
     Boolean(isOwner) &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
@@ -159,44 +162,34 @@ export default function PurchaseRequestDetailPageContent({
     [request?.approvalRequest?.tiers],
   );
 
-  function openEditItem(item: PurchaseRequestItem): void {
-    setItemImageFile(null);
-    setEditingItem(item);
-  }
-
-  function closeEditItem(): void {
+  function openAddItem(): void {
     setEditingItem(null);
-    setItemImageFile(null);
+    setItemDrawerOpen(true);
   }
 
-  async function handleUpdateItem(): Promise<void> {
-    if (!editingItem) {
-      return;
-    }
+  function openEditItem(item: PurchaseRequestItem): void {
+    setEditingItem(item);
+    setItemDrawerOpen(true);
+  }
+
+  function closeItemDrawer(): void {
+    setItemDrawerOpen(false);
+    setEditingItem(null);
+  }
+
+  async function handleSubmitRequest(): Promise<void> {
     try {
-      const values = await itemForm.validateFields();
-      const { description, modelSpec } = parsePurchaseItemDescription(
-        values.descriptionWithModelSpec as string | undefined,
-      );
-      await updateItemMutation.mutateAsync({
-        itemId: editingItem.id,
-        payload: {
-          itemName: values.itemName,
-          modelSpec,
-          description,
-          quantity: Number(values.quantity),
-          unit: values.unit,
-          unitPrice: Number(values.unitPrice),
-          currency: 'ETB',
-          file: itemImageFile ?? undefined,
-        },
-      });
-      messageApi.success(t('hr.messages.purchaseRequestItemUpdated'));
-      closeEditItem();
+      const updated = await submitMutation.mutateAsync(supportingFiles);
+      messageApi.success(t('hr.messages.purchaseRequestSubmitted'));
+      setConfirmSubmit(false);
+      setSupportingFiles([]);
+      if (updated.approvalRequestId) {
+        router.push(`/approvals/${updated.approvalRequestId}`);
+      }
     } catch (error: unknown) {
       notifyApiError(
         error,
-        t('hr.messages.purchaseRequestItemUpdateFailed'),
+        t('hr.messages.purchaseRequestSubmitFailed'),
         messageApi,
         t,
       );
@@ -319,6 +312,7 @@ export default function PurchaseRequestDetailPageContent({
         dataIndex: 'itemName',
         key: 'itemName',
         ellipsis: true,
+        ...(fluidItemsTable ? { minWidth: 140 } : {}),
         render: (value: string) => (
           <span className="erp-users-cell-strong">{value}</span>
         ),
@@ -326,8 +320,15 @@ export default function PurchaseRequestDetailPageContent({
       {
         title: t('hr.table.descriptionWithModelSpec'),
         key: 'description',
+        width: 180,
         ellipsis: true,
         responsive: ['md'],
+        onHeaderCell: () => ({
+          style: { width: 180, maxWidth: 180 },
+        }),
+        onCell: () => ({
+          style: { width: 180, maxWidth: 180 },
+        }),
         render: (_: unknown, row: PurchaseRequestItem) => (
           <span className="erp-users-cell-sub">
             {formatPurchaseItemDescription(row.description, row.modelSpec)}
@@ -339,22 +340,21 @@ export default function PurchaseRequestDetailPageContent({
         key: 'image',
         width: 100,
         responsive: ['lg'],
-        render: (_: unknown, row: PurchaseRequestItem) =>
-          row.image ? (
+        render: (_: unknown, row: PurchaseRequestItem) => {
+          const docs = purchaseRequestItemImages(row);
+          return docs.length > 0 ? (
             <div
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <AttachmentDownloadList
-                compact
-                documents={[row.image]}
-              />
+              <AttachmentDownloadList compact documents={docs} />
             </div>
           ) : (
             <span className="erp-users-cell-sub text-xs">
               {t('hr.labels.noItemImage')}
             </span>
-          ),
+          );
+        },
       },
       {
         title: t('hr.table.quantity'),
@@ -437,7 +437,7 @@ export default function PurchaseRequestDetailPageContent({
           ]
         : []),
     ],
-    [canEdit, isNarrow, t],
+    [canEdit, fluidItemsTable, isNarrow, t],
   );
 
   if (detailQuery.isLoading) {
@@ -470,7 +470,9 @@ export default function PurchaseRequestDetailPageContent({
     );
   }
 
-  const gmRequired = requiresGmApproval(request.totalEstimatedEtb);
+  const canEditItems = canEdit;
+  const canEditHeader = canEdit;
+  const canSubmit = canEditItems && request.items.length > 0;
   const employeeName = formatPurchaseRequestEmployeeName(request.employee);
   const backHref = '/hr/purchase-requests';
 
@@ -493,16 +495,11 @@ export default function PurchaseRequestDetailPageContent({
   }
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
-  const tableScrollX = screens.lg
-    ? 960
-    : screens.md
-      ? 720
-      : screens.sm
-        ? 560
-        : 420;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-purchase-request-detail-page ${DETAIL_PAGE_V2}`}>
+    <div
+      className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-purchase-request-detail-page w-full max-w-none ${DETAIL_PAGE_V2}`}
+    >
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -560,17 +557,31 @@ export default function PurchaseRequestDetailPageContent({
                 ) : null}
               </>
             )}
-            {canEdit ? (
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() =>
-                  router.push(`/hr/purchase-requests/${requestId}/edit`)
-                }
-                aria-label={t('common.update')}
-              >
-                {isNarrow ? undefined : t('common.update')}
-              </Button>
+            {canEditHeader || canEditItems ? (
+              <Space.Compact>
+                {canEditHeader ? (
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() =>
+                      router.push(`/hr/purchase-requests/${requestId}/edit`)
+                    }
+                    aria-label={t('common.update')}
+                  >
+                    {isNarrow ? undefined : t('common.update')}
+                  </Button>
+                ) : null}
+                {canEditItems ? (
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    disabled={!canSubmit}
+                    onClick={() => setConfirmSubmit(true)}
+                    aria-label={t('hr.buttons.submitRequest')}
+                  >
+                    {isNarrow ? undefined : t('hr.buttons.submitRequest')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
             ) : null}
           </div>
         </div>
@@ -585,11 +596,9 @@ export default function PurchaseRequestDetailPageContent({
               />
               {isDirectApproved ? (
                 <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
-              ) : gmRequired ? (
+              ) : request.approvalRequestId || isDraftOrReturned ? (
                 <Tag color="orange">{t('hr.labels.gmApprovalRequired')}</Tag>
-              ) : (
-                <Tag color="cyan">{t('hr.labels.hrApprovalSufficient')}</Tag>
-              )}
+              ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
               <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
@@ -665,253 +674,222 @@ export default function PurchaseRequestDetailPageContent({
         />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection title={t('hr.section.requestDetails')}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <p className="erp-users-stat-label m-0">
-                    {t('hr.form.justification')}
-                  </p>
-                  <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
-                    {request.justification}
-                  </p>
-                </div>
-                {request.vendorName ? (
-                  <div>
+      {canEditItems ? (
+        <ErpNotice
+          tone="warning"
+          title={t('hr.messages.purchaseRequestRequiresGmApproval')}
+          description={`${t('hr.form.estimatedTotal')}: ${formatEtbAmount(request.totalEstimatedEtb)}`}
+        />
+      ) : null}
+
+      <div className="flex w-full min-w-0 flex-col gap-3 sm:gap-4">
+        <div className="grid w-full min-w-0 grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+          <div className="erp-pro-card min-w-0 overflow-hidden">
+            <div className="erp-employee-tab-panel erp-contract-detail-body">
+              <DetailSection title={t('hr.section.requestDetails')}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
                     <p className="erp-users-stat-label m-0">
-                      {t('hr.form.vendor')}
+                      {t('hr.form.justification')}
                     </p>
-                    <p className="erp-users-cell-strong m-0 mt-1">
-                      {request.vendorName}
+                    <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
+                      {request.justification}
                     </p>
-                    {request.vendorContact ? (
-                      <p className="erp-users-cell-sub m-0 mt-0.5">
-                        {request.vendorContact}
+                  </div>
+                  {request.vendorName ? (
+                    <div>
+                      <p className="erp-users-stat-label m-0">
+                        {t('hr.form.vendor')}
                       </p>
-                    ) : null}
-                  </div>
-                ) : null}
-                {request.completedAt ? (
-                  <div>
-                    <p className="erp-users-stat-label m-0">
-                      {t('hr.labels.completedAt')}
-                    </p>
-                    <p className="erp-users-cell-strong m-0 mt-1">
-                      {formatProjectDate(request.completedAt)}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </DetailSection>
-
-            <DetailSection
-              title={t('hr.section.items')}
-              bodyClassName="!p-0"
-              action={
-                <Space.Compact>
-                  <Button
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    loading={exporting}
-                    onClick={() => void handleExportItems()}
-                  >
-                    {t('pages.hr.purchaseRequest.exportItems')}
-                  </Button>
-                  {canEdit ? (
-                    <Button
-                      size="small"
-                      icon={<UploadOutlined />}
-                      onClick={() => setImportOpen(true)}
-                    >
-                      {t('common.importFromExcel')}
-                    </Button>
+                      <p className="erp-users-cell-strong m-0 mt-1">
+                        {request.vendorName}
+                      </p>
+                      {request.vendorContact ? (
+                        <p className="erp-users-cell-sub m-0 mt-0.5">
+                          {request.vendorContact}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
-                </Space.Compact>
-              }
-            >
-              <DocumentPreviewGroup documents={request.items.flatMap((item) => (item.image ? [item.image] : []))}>
-                <HorizontalScrollHint>
-                  <DataTable<PurchaseRequestItem>
-                    rowKey="id"
-                    className="erp-pro-table erp-users-table"
-                    size="small"
-                    columns={itemColumns}
-                    dataSource={request.items}
-                    pagination={false}
-                    scroll={{ x: tableScrollX }}
-                    locale={{
-                      emptyText: (
-                        <TableEmptyState
-                          icon={<ShoppingCart size={28} strokeWidth={1.5} />}
-                          title={t('hr.empty.noItems')}
-                          description={t(
-                            'pages.hr.purchaseRequest.itemsStepDescription',
-                          )}
-                        />
-                      ),
-                    }}
-                    footer={
-                      request.items.length > 0
-                        ? () => (
-                            <div className="flex flex-wrap justify-end gap-4 px-3 py-2 text-sm">
-                              <span className="erp-users-cell-sub">
-                                {t('hr.form.itemCount', {
-                                  count: request.items.length,
-                                })}
-                              </span>
-                              <span className="erp-users-cell-strong">
-                                {t('hr.form.estimatedTotal')}:{' '}
-                                {formatEtbAmount(request.totalEstimatedEtb)}
-                              </span>
-                            </div>
-                          )
-                        : undefined
-                    }
-                  />
-                </HorizontalScrollHint>
-              </DocumentPreviewGroup>
-            </DetailSection>
-
-            {(request.documents?.length ?? 0) > 0 ? (
-              <DetailSection title={t('hr.section.attachments')}>
-                <AttachmentDownloadList documents={request.documents!} />
-              </DetailSection>
-            ) : null}
-          </div>
-        </div>
-
-        <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
-          {isDirectApproved || tiers.length === 0 ? (
-            <div className="erp-pro-card">
-              <DetailSection title={t('hr.section.approvalChain')}>
-                <p className="erp-users-cell-sub m-0">
-                  {isDirectApproved
-                    ? t('hr.messages.directApprovalNoChain')
-                    : t('hr.empty.noApprovalChain')}
-                </p>
+                  {request.completedAt ? (
+                    <div>
+                      <p className="erp-users-stat-label m-0">
+                        {t('hr.labels.completedAt')}
+                      </p>
+                      <p className="erp-users-cell-strong m-0 mt-1">
+                        {formatProjectDate(request.completedAt)}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               </DetailSection>
             </div>
-          ) : (
-            <ApprovalTierTimeline
-              tiers={tiers}
-              currentTier={request.approvalRequest?.currentTier ?? 1}
-            />
-          )}
-        </aside>
+          </div>
+
+          <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
+            {isDirectApproved || tiers.length === 0 ? (
+              <div className="erp-pro-card">
+                <DetailSection title={t('hr.section.approvalChain')}>
+                  <p className="erp-users-cell-sub m-0">
+                    {isDirectApproved
+                      ? t('hr.messages.directApprovalNoChain')
+                      : t('hr.empty.noApprovalChain')}
+                  </p>
+                </DetailSection>
+              </div>
+            ) : (
+              <ApprovalTierTimeline
+                tiers={tiers}
+                currentTier={request.approvalRequest?.currentTier ?? 1}
+              />
+            )}
+          </aside>
+        </div>
+
+        <section
+          className="erp-pro-card erp-ot-entries erp-purchase-request-items-card min-w-0 w-full"
+          aria-labelledby="purchase-request-items-title"
+        >
+            <div className="erp-ot-entries-header">
+              <h3
+                id="purchase-request-items-title"
+                className="erp-ot-entries-title"
+              >
+                {t('hr.section.items')}
+                <span className="erp-ot-entries-count">
+                  {request.items.length.toLocaleString()}
+                </span>
+              </h3>
+              <div className="erp-ot-entries-actions">
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  disabled={request.items.length === 0}
+                  onClick={() => void handleExportItems()}
+                  aria-label={t('pages.hr.purchaseRequest.exportItems')}
+                >
+                  {isNarrow
+                    ? undefined
+                    : t('pages.hr.purchaseRequest.exportItems')}
+                </Button>
+                {canEditItems ? (
+                  <>
+                    <Button
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                      aria-label={t('common.importFromExcel')}
+                    >
+                      {isNarrow ? undefined : t('common.importFromExcel')}
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={openAddItem}
+                    >
+                      {t('hr.buttons.addItem')}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+            <DocumentPreviewGroup
+              documents={request.items.flatMap((item) =>
+                purchaseRequestItemImages(item),
+              )}
+            >
+              <DataTable<PurchaseRequestItem>
+                rowKey="id"
+                className="erp-pro-table erp-users-table w-full erp-purchase-request-items-table"
+                size="middle"
+                tableLayout={fluidItemsTable ? 'auto' : 'fixed'}
+                columns={itemColumns}
+                dataSource={request.items}
+                pagination={false}
+                scroll={fluidItemsTable ? false : { x: tableScrollX }}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<ShoppingCart size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t(
+                          'pages.hr.purchaseRequest.itemsStepDescription',
+                        )}
+                        action={
+                          canEditItems
+                            ? {
+                                label: t('hr.buttons.addItem'),
+                                onClick: openAddItem,
+                              }
+                            : undefined
+                        }
+                      />
+                    ),
+                  }}
+                  footer={
+                    request.items.length > 0
+                      ? () => (
+                          <div className="flex flex-wrap justify-end gap-4 px-3 py-2 text-sm">
+                            <span className="erp-users-cell-sub">
+                              {t('hr.form.itemCount', {
+                                count: request.items.length,
+                              })}
+                            </span>
+                            <span className="erp-users-cell-strong">
+                              {t('hr.form.estimatedTotal')}:{' '}
+                              {formatEtbAmount(request.totalEstimatedEtb)}
+                            </span>
+                          </div>
+                        )
+                      : undefined
+                  }
+              />
+            </DocumentPreviewGroup>
+          </section>
+
+        {canEditItems ? (
+          <div className="erp-pro-card min-w-0 w-full px-4 py-4 sm:px-5">
+              <DetailSection title={t('hr.section.attachments')}>
+                <p className="erp-users-cell-sub m-0 mb-3 text-[13px]">
+                  {t('pages.hr.purchaseRequest.attachmentsStepDescription')}
+                </p>
+                <FileUploadInput
+                  files={supportingFiles}
+                  onChange={setSupportingFiles}
+                  multiple
+                />
+                {(request.documents?.length ?? 0) > 0 ? (
+                  <div className="mt-4 border-t border-[#e8ebef] pt-4">
+                    <AttachmentDownloadList documents={request.documents!} />
+                  </div>
+                ) : null}
+              </DetailSection>
+            </div>
+        ) : (request.documents?.length ?? 0) > 0 ? (
+          <div className="erp-pro-card min-w-0 w-full px-4 py-4 sm:px-5">
+            <DetailSection title={t('hr.section.attachments')}>
+              <AttachmentDownloadList documents={request.documents!} />
+            </DetailSection>
+          </div>
+        ) : null}
       </div>
 
-      <Modal
-        open={Boolean(editingItem)}
-        title={t('hr.dialog.editPurchaseRequestItemTitle')}
-        onCancel={closeEditItem}
-        onOk={() => void handleUpdateItem()}
-        okText={t('hr.buttons.save')}
-        confirmLoading={updateItemMutation.isPending}
-        width={560}
-        forceRender
-        afterOpenChange={(open) => {
-          if (open && editingItem) {
-            itemForm.setFieldsValue({
-              itemName: editingItem.itemName,
-              descriptionWithModelSpec: formatPurchaseItemDescriptionInput(
-                editingItem.description,
-                editingItem.modelSpec,
-              ),
-              quantity: Number(editingItem.quantity),
-              unit: editingItem.unit,
-              unitPrice: Number(editingItem.unitPrice),
-            });
-            return;
-          }
-          if (!open) {
-            itemForm.resetFields();
-            setItemImageFile(null);
-          }
-        }}
-        styles={{ body: { paddingTop: 16 } }}
-      >
-        <Form form={itemForm} layout="vertical" requiredMark={false}>
-          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-            <Form.Item
-              name="itemName"
-              label={t('hr.form.itemName')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.itemNameRequired'),
-                },
-              ]}
-            >
-              <Input maxLength={200} />
-            </Form.Item>
-            <Form.Item
-              name="descriptionWithModelSpec"
-              label={t('hr.form.descriptionWithModelSpec')}
-              className="sm:col-span-2"
-            >
-              <Input.TextArea
-                rows={2}
-                maxLength={1502}
-                showCount
-                placeholder={t('hr.placeholder.enterDescriptionWithModelSpec')}
-              />
-            </Form.Item>
-            <Form.Item
-              name="quantity"
-              label={t('hr.form.quantity')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.quantityRequired'),
-                },
-              ]}
-            >
-              <InputNumber min={0.001} className="w-full" />
-            </Form.Item>
-            <Form.Item
-              name="unit"
-              label={t('hr.form.unit')}
-              rules={[
-                { required: true, message: t('hr.validation.unitRequired') },
-              ]}
-            >
-              <Input maxLength={50} />
-            </Form.Item>
-            <Form.Item
-              name="unitPrice"
-              label={t('hr.form.unitPrice')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.unitPriceRequired'),
-                },
-              ]}
-            >
-              <InputNumber min={0} className="w-full" addonAfter="ETB" />
-            </Form.Item>
-          </div>
-          <Form.Item
-            label={t('hr.form.itemImage')}
-            extra={
-              editingItem?.image
-                ? t('hr.hints.replaceItemImage', {
-                    name: editingItem.image.name,
-                  })
-                : t('hr.hints.itemImageOptional')
-            }
-          >
-            <FileUploadInput
-              files={itemImageFile ? [itemImageFile] : []}
-              onChange={(nextFiles) => setItemImageFile(nextFiles[0] ?? null)}
-              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-              multiple={false}
-              disabled={updateItemMutation.isPending}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <PurchaseRequestItemDrawer
+        open={itemDrawerOpen}
+        requestId={requestId}
+        editingItem={editingItem}
+        onClose={closeItemDrawer}
+      />
+
+      <ConfirmDialog
+        open={confirmSubmit}
+        className="erp-hr-travel-modal"
+        title={t('hr.dialog.submitPurchaseRequestTitle')}
+        description={t('hr.dialog.submitPurchaseRequestDesc')}
+        confirmLabel={t('hr.buttons.submitRequest')}
+        confirmLoading={submitMutation.isPending}
+        onConfirm={() => void handleSubmitRequest()}
+        onCancel={() => setConfirmSubmit(false)}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}

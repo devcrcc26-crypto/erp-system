@@ -121,6 +121,7 @@ export interface UpdatePurchaseRequestItemPayload {
   unit?: string;
   unitPrice?: number;
   currency?: SupportedCurrency;
+  files?: File[];
   file?: File;
 }
 

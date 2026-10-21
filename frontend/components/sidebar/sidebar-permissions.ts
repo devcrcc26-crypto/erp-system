@@ -82,7 +82,10 @@ export function resolveSidebarPermissions(
   // Self-service per diem list and detail (own requests); HR staff also have hr.view.
   grant('perDiem.access', true);
   grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet - the /hr route guard requires hr.view.
-  grant('procurement.access', hr);
+  grant(
+    'procurement.access',
+    caps.canCreatePurchaseRequest || caps.canViewPurchaseRequest,
+  );
   grant('fleet.access', hr);
   grant('administration.access', hr);
   grant('announcements.manage', caps.canManageAnnouncements ?? false);

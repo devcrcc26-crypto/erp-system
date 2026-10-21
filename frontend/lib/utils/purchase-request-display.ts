@@ -1,5 +1,7 @@
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import type {
+  PurchaseRequestDocumentSummary,
+  PurchaseRequestItem,
   PurchaseRequestStatus,
   PurchaseRequestUserSummary,
 } from '@/lib/api/purchase-request.types';
@@ -114,4 +116,14 @@ export function parsePurchaseItemDescription(combined?: string | null): {
   }
 
   return { description: trimmed };
+}
+
+/** Line item images from API (`images` array or legacy single `image`). */
+export function purchaseRequestItemImages(
+  item: PurchaseRequestItem,
+): PurchaseRequestDocumentSummary[] {
+  if (item.images && item.images.length > 0) {
+    return item.images;
+  }
+  return item.image ? [item.image] : [];
 }

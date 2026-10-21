@@ -185,6 +185,16 @@ export function useCanManageBusinessTrip(): boolean {
   );
 }
 
+/** True when the session can open purchase request HR pages. */
+export function useCanViewPurchaseRequest(): boolean {
+  return useAuthStore((state) => state.capabilities.canViewPurchaseRequest);
+}
+
+/** True when the session can create and submit purchase requests. */
+export function useCanCreatePurchaseRequest(): boolean {
+  return useAuthStore((state) => state.capabilities.canCreatePurchaseRequest);
+}
+
 /** True when the session can list and manage users. */
 export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);

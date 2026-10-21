@@ -181,101 +181,23 @@ export class HrApprovalChainService {
 
 
   /**
-   * Approval chain for purchase requests.
-   * Employee → Reports to → HR Officer → GM when total ETB > 10,000.
-   * HR Officer / above skip Reports to (and HR self-approval).
-   * Empty array = auto-approve (HR+ with total ≤ 10,000).
+   * Approval chain for purchase requests — single General Manager tier (always).
    */
   async buildPurchaseApprovalChain(
-    submitterId: string,
-    totalEtb: number,
+    _submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     // AUTO_APPROVE_WRAP:buildPurchaseApprovalChain
     return this.withAutoApproveFallback(async () => {
-
-    const primaryRole =
-      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
-
-    const submitter = await this.prisma.user.findFirst({
-      where: activeOnly({ id: submitterId, companyId }),
-      include: {
-        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
-      },
-    });
-
-    if (!submitter) {
-      throw new BadRequestException('Employee not found');
-    }
-
-    const isHrOrAbove = [
-      'HR Officer',
-      'HR Manager',
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-
-    const isDisciplineLeadOrAbove =
-      [
-        'Discipline Lead',
-        'HR Officer',
-        'HR Manager',
-        'General Manager',
-        'Managing Director',
-        'System Administrator',
-      ].includes(primaryRole) || submitter.ledDisciplines.length > 0;
-
-    const tiers: ChainTierDraft[] = [];
-
-    if (!isDisciplineLeadOrAbove) {
-      const reportsTo = await this.getReportsToRequired(submitterId, companyId);
-      tiers.push({
-        order: 1,
-        label: 'Reports to',
-        approverId: reportsTo.id,
-        resolver: 'REPORTS_TO',
-      });
-    }
-
-    if (!isHrOrAbove) {
-      const hrOfficer = await this.getHROfficer(companyId);
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'HR Officer',
-        approverId: hrOfficer.id,
-        resolver: 'ROLE:HR Officer',
-      });
-    }
-
-    if (totalEtb > 10000 && !isGmOrAbove) {
       const gm = await this.getGeneralManager(companyId);
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'General Manager',
-        approverId: gm.id,
-        resolver: 'ROLE:General Manager',
-      });
-    }
-
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
-    );
-
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
-  
+      return [
+        {
+          tierOrder: 1,
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+      ];
     });
   }
 
@@ -784,11 +706,7 @@ export class HrApprovalChainService {
         return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
 
       case 'PURCHASE_REQUEST':
-        return this.buildPurchaseApprovalChain(
-          employeeId,
-          Number.MAX_SAFE_INTEGER,
-          companyId,
-        );
+        return this.buildPurchaseApprovalChain(employeeId, companyId);
 
       case 'MATERIAL_REQUISITION':
         return this.buildMaterialRequisitionApprovalChain(employeeId, companyId);

@@ -13,6 +13,7 @@ import FormSchemaRenderer, {
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanCreatePurchaseRequest } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalCategorySummary } from '@/lib/api/approvals.types';
@@ -62,6 +63,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const categoriesQuery = useApprovalCategories();
   const submitMutation = useSubmitApprovalRequest();
+  const canCreatePurchaseRequest = useCanCreatePurchaseRequest();
 
   const [selectedCategory, setSelectedCategory] =
     useState<ApprovalCategorySummary | null>(null);
@@ -159,7 +161,9 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   // Backend already omits non-requestable categories; keep a client guard for older caches.
   const categories = (categoriesQuery.data ?? []).filter(
-    (category) => category.isUserRequestable !== false,
+    (category) =>
+      category.isUserRequestable !== false &&
+      (category.code !== 'PURCHASE_REQUEST' || canCreatePurchaseRequest),
   );
 
   if (!selectedCategory) {

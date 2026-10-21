@@ -84,6 +84,7 @@ export class SessionCapabilitiesService {
       'overtime',
       'flight',
       'business-trip',
+      'purchase-request',
       'payroll',
       'announcements',
       'schedule',
@@ -115,6 +116,7 @@ export class SessionCapabilitiesService {
     const overtime = permissionMap.overtime;
     const flight = permissionMap.flight;
     const businessTrip = permissionMap['business-trip'];
+    const purchaseRequest = permissionMap['purchase-request'];
     const payroll = permissionMap.payroll;
     const announcements = permissionMap.announcements;
     const schedule = permissionMap.schedule;
@@ -152,6 +154,8 @@ export class SessionCapabilitiesService {
       canViewBusinessTrip: businessTrip.canView,
       canCreateBusinessTrip: businessTrip.canCreate,
       canManageBusinessTrip: businessTrip.canEdit,
+      canViewPurchaseRequest: purchaseRequest.canView,
+      canCreatePurchaseRequest: purchaseRequest.canCreate,
       modulesProjectManagementEnabled: pmModuleEnabled,
       isSystemAdministrator: systemAdministrator,
       isSystemAdmin,

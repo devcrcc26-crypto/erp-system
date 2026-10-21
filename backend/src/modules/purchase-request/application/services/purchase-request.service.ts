@@ -40,6 +40,7 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { PURCHASE_REQUEST_SUBMITTER_ROLES } from '../purchase-request-submitter.roles';
 import {
   AddPurchaseRequestItemDto,
   CreatePurchaseRequestDto,
@@ -132,11 +133,14 @@ export class PurchaseRequestService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
-      userId,
-      companyId,
-      dto.onBehalfOfEmployeeId,
-    );
+    await this.assertPurchaseRequestSubmitter(companyId, userId);
+    const onBehalfId = dto.onBehalfOfEmployeeId?.trim();
+    if (onBehalfId && onBehalfId !== userId) {
+      throw new ForbiddenException(
+        'On-behalf submission is not allowed for purchase requests',
+      );
+    }
+    const employeeId = userId;
     const created = await this.findOrCreateDraftRequest(
       employeeId,
       dto,
@@ -144,14 +148,6 @@ export class PurchaseRequestService
       userId,
       true,
     );
-    await this.onBehalfService.recordOnBehalfCreate({
-      moduleCode: 'PURCHASE_REQUEST',
-      companyId,
-      actorUserId: userId,
-      employeeId,
-      recordId: created.id,
-      autoApproveTier: dto.autoApproveTier,
-    });
     return this.getRequest(created.id, companyId, userId);
   }
 
@@ -439,6 +435,7 @@ export class PurchaseRequestService
     if (!request) {
       throw new NotFoundException('Purchase request not found');
     }
+    await this.assertPurchaseRequestSubmitter(companyId, userId);
     if (!(await this.onBehalfService.canActForRecord(userId, companyId, request))) {
       throw new ForbiddenException('Only the request owner can submit it');
     }
@@ -456,32 +453,8 @@ export class PurchaseRequestService
     const resolvedTiers =
       await this.hrApprovalChain.buildPurchaseApprovalChain(
         request.employeeId,
-        totalEtb,
         companyId,
       );
-
-    if (resolvedTiers.length === 0) {
-      if (files?.length > 0) {
-        await this.uploadRequestFiles(request, files, companyId, userId);
-      }
-
-      const now = new Date();
-      await this.prisma.purchaseRequest.update({
-        where: { id },
-        data: {
-          status: PurchaseRequestStatus.APPROVED,
-          submittedAt: now,
-          completedAt: now,
-          updatedBy: userId,
-        },
-      });
-
-      this.logger.log(
-        `Purchase request ${request.requestNumber} auto-approved (HR+ submitter, no further tiers)`,
-      );
-
-      return this.getRequest(id, companyId, userId);
-    }
 
     const approval = (await this.approvalsService.submitRequest(
       {
@@ -498,7 +471,7 @@ export class PurchaseRequestService
       request.employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Purchase request value chain',
+          ruleName: 'Purchase request GM approval',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
@@ -518,20 +491,6 @@ export class PurchaseRequestService
         completedAt: null,
         updatedBy: userId,
       },
-    });
-
-    await this.onBehalfService.applyAutoApprove({
-      moduleCode: 'PURCHASE_REQUEST',
-      companyId,
-      actorUserId: userId,
-      employeeId: request.employeeId,
-      approvalRequestId: approval.id,
-      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
-        'PURCHASE_REQUEST',
-        id,
-        userId,
-        companyId,
-      ),
     });
 
     return this.getRequest(id, companyId, userId);
@@ -778,6 +737,22 @@ export class PurchaseRequestService
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Only HR Manager and executive roles may create or submit purchase requests.
+   */
+  private async assertPurchaseRequestSubmitter(
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const primaryRole =
+      (await this.hrApprovalChain.getPrimaryRoleName(userId, companyId)) ?? '';
+    if (!PURCHASE_REQUEST_SUBMITTER_ROLES.includes(primaryRole)) {
+      throw new ForbiddenException(
+        'Only HR Manager and above can submit purchase requests',
+      );
+    }
+  }
 
   private async assertCanManageRequest(
     record: { employeeId: string; createdBy: string },

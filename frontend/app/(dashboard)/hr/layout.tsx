@@ -5,8 +5,10 @@ import { Alert, Spin } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   useCanAccessPayroll,
+  useCanCreatePurchaseRequest,
   useCanManageAnnouncements,
   useCanViewHr,
+  useCanViewPurchaseRequest,
 } from '@/hooks/use-auth-capabilities';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -29,6 +31,8 @@ export default function HrSectionLayout({
   const canViewHr = useCanViewHr();
   const canAccessPayroll = useCanAccessPayroll();
   const canManageAnnouncements = useCanManageAnnouncements();
+  const canViewPurchaseRequest = useCanViewPurchaseRequest();
+  const canCreatePurchaseRequest = useCanCreatePurchaseRequest();
 
   const isEmployeeSelfServiceRoute =
     pathname.startsWith('/hr/overtime') ||
@@ -43,12 +47,15 @@ export default function HrSectionLayout({
   const isWfhAssignRoute = pathname.startsWith('/hr/work-from-home');
   const isPayrollRoute = pathname.startsWith('/hr/payroll');
   const isAnnouncementsRoute = pathname.startsWith('/hr/announcements');
+  const isPurchaseRequestRoute = pathname.startsWith('/hr/purchase-requests');
   const allowed =
     canViewHr ||
     isEmployeeSelfServiceRoute ||
     isWfhAssignRoute ||
     (isPayrollRoute && canAccessPayroll) ||
-    (isAnnouncementsRoute && canManageAnnouncements);
+    (isAnnouncementsRoute && canManageAnnouncements) ||
+    (isPurchaseRequestRoute &&
+      (canViewPurchaseRequest || canCreatePurchaseRequest));
 
   useEffect(() => {
     if (!permLoading && !allowed) {

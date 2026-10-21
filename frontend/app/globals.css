@@ -5826,6 +5826,21 @@ main::-webkit-scrollbar,
   color: #0f6e56;
 }
 
+.erp-purchase-request-detail-page .erp-purchase-request-items-card {
+  width: 100%;
+  max-width: none;
+}
+
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .erp-table-scroll,
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .ant-table-wrapper,
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .ant-table,
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .ant-table-container,
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .ant-table-content,
+.erp-purchase-request-detail-page .erp-purchase-request-items-card .ant-table-content > table {
+  width: 100% !important;
+  max-width: none !important;
+}
+
 .erp-expense-claim-detail-page .erp-expense-receipt-download-btn {
   color: #6b7280;
 }

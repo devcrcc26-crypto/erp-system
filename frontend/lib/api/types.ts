@@ -691,6 +691,8 @@ export interface AuthCapabilities {
   canViewBusinessTrip: boolean;
   canCreateBusinessTrip: boolean;
   canManageBusinessTrip: boolean;
+  canViewPurchaseRequest: boolean;
+  canCreatePurchaseRequest: boolean;
   /** Company setting modules.projectManagement.enabled */
   modulesProjectManagementEnabled: boolean;
   isSystemAdministrator: boolean;
@@ -762,6 +764,8 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewBusinessTrip: false,
   canCreateBusinessTrip: false,
   canManageBusinessTrip: false,
+  canViewPurchaseRequest: false,
+  canCreatePurchaseRequest: false,
   modulesProjectManagementEnabled: false,
   isSystemAdministrator: false,
   isSystemAdmin: false,
