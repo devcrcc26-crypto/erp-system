@@ -5852,7 +5852,7 @@
       "editExpenseItemTitle": "编辑报销明细",
       "addExpenseItemHint": "金额将自动换算为比尔（ETB）用于审批汇总。",
       "editExpenseItemHint": "更新明细。仅在需要更换时重新上传收据。",
-      "addPurchaseItemHint": "填写数量、单价和币种。行金额将换算为 ETB 用于审批。",
+      "addPurchaseItemHint": "填写数量与 ETB 单价。行合计用于审批阈值。",
       "editPurchaseItemHint": "更新本行明细。仅在需要时更换图片。",
       "addMaterialItemHint": "填写物料名称、数量与单位，便于仓库发料。",
       "editMaterialItemHint": "继续前请更新本行物料明细。",

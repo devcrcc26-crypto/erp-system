@@ -15,7 +15,6 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { PurchaseRequestItem } from '@/lib/api/purchase-request.types';
 import { usePurchaseRequest } from '@/lib/query/purchase-request';
 import {
-  formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
 } from '@/lib/utils/purchase-request-display';
@@ -78,7 +77,7 @@ export default function PurchaseRequestDetail({
             {row.quantity} {row.unit}
           </p>
           <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums lg:hidden">
-            {formatCurrencyAmount(row.unitPrice, row.currency)}
+            {formatEtbAmount(row.unitPrice)}
           </p>
         </div>
       ),
@@ -132,7 +131,7 @@ export default function PurchaseRequestDetail({
       responsive: ['lg'],
       render: (_: unknown, row: PurchaseRequestItem) => (
         <span className="tabular-nums whitespace-nowrap">
-          {formatCurrencyAmount(row.unitPrice, row.currency)}
+          {formatEtbAmount(row.unitPrice)}
         </span>
       ),
     },

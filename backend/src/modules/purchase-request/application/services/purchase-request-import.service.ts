@@ -19,7 +19,7 @@ type AuditContext = { companyId: string; userId: string };
 
 const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 500;
-const CURRENCY_VALUES = Object.values(SupportedCurrency);
+const PURCHASE_REQUEST_CURRENCY = SupportedCurrency.ETB;
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -286,8 +286,8 @@ export class PurchaseRequestImportService {
     instructions.addRow(['unitPrice', 'Yes', 'Positive number']);
     instructions.addRow([
       'currency',
-      'Yes',
-      CURRENCY_VALUES.join(' | '),
+      'No',
+      `Optional; must be ${PURCHASE_REQUEST_CURRENCY} if provided (defaults to ${PURCHASE_REQUEST_CURRENCY})`,
     ]);
     instructions.addRow([]);
     instructions.addRow(['Note', '', input.note]);
@@ -395,7 +395,7 @@ export class PurchaseRequestImportService {
         await this.purchaseRequestService.addItem(
           requestId,
           dto,
-          undefined,
+          [],
           ctx.companyId,
           ctx.userId,
         );
@@ -817,18 +817,17 @@ export class PurchaseRequestImportService {
   ):
     | { ok: true; value: SupportedCurrency }
     | { ok: false; message: string } {
-    if (!value.trim()) {
-      return { ok: false, message: 'currency is required' };
-    }
     const normalized = value.trim().toUpperCase();
-    const match = CURRENCY_VALUES.find((entry) => entry === normalized);
-    if (!match) {
+    if (!normalized) {
+      return { ok: true, value: PURCHASE_REQUEST_CURRENCY };
+    }
+    if (normalized !== PURCHASE_REQUEST_CURRENCY) {
       return {
         ok: false,
-        message: `currency must be one of: ${CURRENCY_VALUES.join(', ')}`,
+        message: `currency must be ${PURCHASE_REQUEST_CURRENCY}`,
       };
     }
-    return { ok: true, value: match };
+    return { ok: true, value: PURCHASE_REQUEST_CURRENCY };
   }
 
   private parseImportDate(

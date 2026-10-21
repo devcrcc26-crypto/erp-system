@@ -38,6 +38,7 @@ export interface PurchaseRequestItem {
   totalPriceEtb: number | string;
   exchangeRate?: number | string;
   image?: PurchaseRequestDocumentSummary | null;
+  images?: PurchaseRequestDocumentSummary[];
 }
 
 export interface PurchaseRequestListItem {
@@ -106,6 +107,9 @@ export interface AddPurchaseRequestItemPayload {
   unit: string;
   unitPrice: number;
   currency: SupportedCurrency;
+  /** One or more reference images for the line item. */
+  files?: File[];
+  /** @deprecated Use files — kept for single-file update flows. */
   file?: File;
 }
 

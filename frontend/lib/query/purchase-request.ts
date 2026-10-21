@@ -192,12 +192,17 @@ export function buildPurchaseRequestItemFormData(
   if (payload.unitPrice !== undefined) {
     formData.append('unitPrice', String(payload.unitPrice));
   }
-  if (payload.currency !== undefined) {
-    formData.append('currency', payload.currency);
-  }
-  if (payload.file) {
-    formData.append('file', payload.file);
-  }
+  formData.append('currency', payload.currency ?? 'ETB');
+  const uploadFiles =
+    payload.files && payload.files.length > 0
+      ? payload.files
+      : payload.file
+        ? [payload.file]
+        : [];
+  const useFilesField = Boolean(payload.files && payload.files.length > 0);
+  uploadFiles.forEach((file) => {
+    formData.append(useFilesField ? 'files' : 'file', file);
+  });
   return formData;
 }
 

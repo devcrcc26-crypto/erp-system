@@ -3,7 +3,6 @@ import autoTable from 'jspdf-autotable';
 import type { PurchaseRequestDetail } from '@/lib/api/purchase-request.types';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import {
-  formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
   formatPurchaseRequestEmployeeName,
@@ -44,9 +43,7 @@ export interface PurchaseRequestPdfLabels {
   quantity: string;
   unit: string;
   unitPrice: string;
-  currency: string;
   lineTotal: string;
-  lineTotalEtb: string;
   none: string;
   page: string;
   of: string;
@@ -172,12 +169,10 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
           ),
           String(item.quantity),
           dash(item.unit),
-          formatCurrencyAmount(item.unitPrice, item.currency),
-          item.currency,
-          formatCurrencyAmount(item.totalPrice, item.currency),
+          formatEtbAmount(item.unitPrice),
           formatEtbAmount(item.totalPriceEtb),
         ])
-      : [['-', labels.none, '-', '-', '-', '-', '-', '-']];
+      : [['-', labels.none, '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -191,9 +186,7 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
         labels.quantity,
         labels.unit,
         labels.unitPrice,
-        labels.currency,
         labels.lineTotal,
-        labels.lineTotalEtb,
       ],
     ],
     body: itemRows,

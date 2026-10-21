@@ -9,7 +9,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Select,
   Skeleton,
   Space,
   Tag,
@@ -45,7 +44,6 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type {
   PurchaseRequestItem,
-  SupportedCurrency,
   UpdatePurchaseRequestItemPayload,
 } from '@/lib/api/purchase-request.types';
 import {
@@ -62,7 +60,6 @@ import { useAuthStore } from '@/stores/auth.store';
 import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-request-export-excel';
 import { exportPurchaseRequestPdf } from '@/lib/utils/purchase-request-pdf';
 import {
-  formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
   formatPurchaseItemDescriptionInput,
@@ -78,12 +75,6 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
-const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
-  { value: 'ETB', label: 'ETB' },
-  { value: 'USD', label: 'USD' },
-  { value: 'CNY', label: 'CNY' },
-];
-
 function DetailSection({
   title,
   children,
@@ -145,7 +136,6 @@ export default function PurchaseRequestDetailPageContent({
   const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<
     UpdatePurchaseRequestItemPayload & {
-      currency: SupportedCurrency;
       descriptionWithModelSpec?: string;
     }
   >();
@@ -197,7 +187,7 @@ export default function PurchaseRequestDetailPageContent({
           quantity: Number(values.quantity),
           unit: values.unit,
           unitPrice: Number(values.unitPrice),
-          currency: values.currency,
+          currency: 'ETB',
           file: itemImageFile ?? undefined,
         },
       });
@@ -308,9 +298,7 @@ export default function PurchaseRequestDetailPageContent({
           quantity: t('hr.table.quantity'),
           unit: t('hr.table.unit'),
           unitPrice: t('hr.table.unitPrice'),
-          currency: t('hr.form.currency'),
           lineTotal: t('hr.table.total'),
-          lineTotalEtb: t('hr.form.etbEquivalent'),
           none: t('pages.hr.purchaseRequest.pdfNone'),
           page: t('pages.hr.purchaseRequest.pdfPage'),
           of: t('pages.hr.purchaseRequest.pdfOf'),
@@ -396,7 +384,7 @@ export default function PurchaseRequestDetailPageContent({
         responsive: ['md'],
         render: (_: unknown, row: PurchaseRequestItem) => (
           <span className="erp-users-cell-sub tabular-nums">
-            {formatCurrencyAmount(row.unitPrice, row.currency)}
+            {formatEtbAmount(row.unitPrice)}
           </span>
         ),
       },
@@ -834,7 +822,6 @@ export default function PurchaseRequestDetailPageContent({
               quantity: Number(editingItem.quantity),
               unit: editingItem.unit,
               unitPrice: Number(editingItem.unitPrice),
-              currency: editingItem.currency,
             });
             return;
           }
@@ -902,14 +889,7 @@ export default function PurchaseRequestDetailPageContent({
                 },
               ]}
             >
-              <InputNumber min={0} className="w-full" />
-            </Form.Item>
-            <Form.Item
-              name="currency"
-              label={t('hr.form.currency')}
-              rules={[{ required: true }]}
-            >
-              <Select options={CURRENCY_OPTIONS} />
+              <InputNumber min={0} className="w-full" addonAfter="ETB" />
             </Form.Item>
           </div>
           <Form.Item

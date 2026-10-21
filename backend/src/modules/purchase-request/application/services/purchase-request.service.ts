@@ -13,6 +13,7 @@ import {
   FolderContextType,
   Prisma,
   PurchaseRequestStatus,
+  SupportedCurrency,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -31,7 +32,6 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
-import { CurrencyService } from '../../../../shared/currency/currency.service';
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import type {
@@ -75,6 +75,10 @@ const REQUEST_DETAIL_INCLUDE = {
     orderBy: { createdAt: 'asc' as const },
     include: {
       image: { select: DOCUMENT_SELECT },
+      images: {
+        orderBy: { sortOrder: 'asc' as const },
+        include: { document: { select: DOCUMENT_SELECT } },
+      },
     },
   },
   attachmentFolder: {
@@ -108,7 +112,6 @@ export class PurchaseRequestService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly onBehalfService: OnBehalfService,
-    private readonly currencyService: CurrencyService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -260,7 +263,7 @@ export class PurchaseRequestService
   async addItem(
     requestId: string,
     dto: AddPurchaseRequestItemDto,
-    file: UploadedFile | undefined,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
@@ -274,35 +277,50 @@ export class PurchaseRequestService
       throw new NotFoundException('Purchase request not found');
     }
 
-    const rate =
-      dto.currency === 'ETB'
-        ? 1
-        : await this.currencyService.getRate(dto.currency, 'ETB', companyId);
+    this.assertPurchaseRequestEtbCurrency(dto.currency);
 
+    const rate = 1;
     const totalPrice = dto.quantity * dto.unitPrice;
-    const totalPriceEtb = totalPrice * rate;
+    const totalPriceEtb = totalPrice;
 
-    let documentId: string | null = null;
-    if (file?.buffer?.length) {
-      documentId = await this.uploadItemImage(request, companyId, userId, file);
-    }
+    const uploadedDocumentIds = await this.uploadItemImages(
+      request,
+      companyId,
+      userId,
+      files,
+    );
+    const documentId = uploadedDocumentIds[0] ?? null;
+    const itemId = randomUUID();
 
-    await this.prisma.purchaseRequestItem.create({
-      data: {
-        id: randomUUID(),
-        requestId,
-        itemName: dto.itemName.trim(),
-        modelSpec: dto.modelSpec?.trim() || null,
-        description: dto.description?.trim() ?? null,
-        quantity: new Prisma.Decimal(dto.quantity),
-        unit: dto.unit.trim(),
-        unitPrice: new Prisma.Decimal(dto.unitPrice),
-        currency: dto.currency,
-        totalPrice: new Prisma.Decimal(totalPrice),
-        totalPriceEtb: new Prisma.Decimal(totalPriceEtb),
-        exchangeRate: new Prisma.Decimal(rate),
-        documentId,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.purchaseRequestItem.create({
+        data: {
+          id: itemId,
+          requestId,
+          itemName: dto.itemName.trim(),
+          modelSpec: dto.modelSpec?.trim() || null,
+          description: dto.description?.trim() ?? null,
+          quantity: new Prisma.Decimal(dto.quantity),
+          unit: dto.unit.trim(),
+          unitPrice: new Prisma.Decimal(dto.unitPrice),
+          currency: 'ETB',
+          totalPrice: new Prisma.Decimal(totalPrice),
+          totalPriceEtb: new Prisma.Decimal(totalPriceEtb),
+          exchangeRate: new Prisma.Decimal(rate),
+          documentId,
+        },
+      });
+
+      if (uploadedDocumentIds.length > 0) {
+        await tx.purchaseRequestItemImage.createMany({
+          data: uploadedDocumentIds.map((documentId, sortOrder) => ({
+            id: randomUUID(),
+            itemId,
+            documentId,
+            sortOrder,
+          })),
+        });
+      }
     });
 
     await this.recalculateTotals(requestId, userId);
@@ -337,17 +355,16 @@ export class PurchaseRequestService
       throw new NotFoundException('Purchase request item not found');
     }
 
-    const nextCurrency = dto.currency ?? existing.currency;
+    if (dto.currency !== undefined) {
+      this.assertPurchaseRequestEtbCurrency(dto.currency);
+    }
+
     const nextQuantity = dto.quantity ?? Number(existing.quantity);
     const nextUnitPrice = dto.unitPrice ?? Number(existing.unitPrice);
 
-    const rate =
-      nextCurrency === 'ETB'
-        ? 1
-        : await this.currencyService.getRate(nextCurrency, 'ETB', companyId);
-
+    const rate = 1;
     const totalPrice = nextQuantity * nextUnitPrice;
-    const totalPriceEtb = totalPrice * rate;
+    const totalPriceEtb = totalPrice;
 
     let documentId = existing.documentId;
     if (file?.buffer?.length) {
@@ -369,7 +386,7 @@ export class PurchaseRequestService
         quantity: new Prisma.Decimal(nextQuantity),
         unit: dto.unit !== undefined ? dto.unit.trim() : existing.unit,
         unitPrice: new Prisma.Decimal(nextUnitPrice),
-        currency: nextCurrency,
+        currency: 'ETB',
         totalPrice: new Prisma.Decimal(totalPrice),
         totalPriceEtb: new Prisma.Decimal(totalPriceEtb),
         exchangeRate: new Prisma.Decimal(rate),
@@ -549,6 +566,7 @@ export class PurchaseRequestService
     return {
       ...requestRest,
       documents: attachmentFolder?.documents ?? [],
+      items: request.items.map((item) => this.mapPurchaseRequestItem(item)),
       itemCount: request.items.length,
       currentTierLabel: pendingTier?.label ?? null,
     };
@@ -1018,6 +1036,65 @@ export class PurchaseRequestService
         .filter(Boolean) as PurchaseRequestStatus[];
     }
     return [status as PurchaseRequestStatus];
+  }
+
+  private mapPurchaseRequestItem(item: {
+    image: {
+      id: string;
+      name: string;
+      fileType: string | null;
+      fileSizeBytes: number | null;
+    } | null;
+    images: Array<{
+      document: {
+        id: string;
+        name: string;
+        fileType: string | null;
+        fileSizeBytes: number | null;
+      };
+    }>;
+  } & Record<string, unknown>): Record<string, unknown> {
+    const gallery =
+      item.images.length > 0
+        ? item.images.map((row) => row.document)
+        : item.image
+          ? [item.image]
+          : [];
+
+    const { images: _galleryRows, ...rest } = item;
+
+    return {
+      ...rest,
+      image: gallery[0] ?? null,
+      images: gallery,
+    };
+  }
+
+  private async uploadItemImages(
+    request: { id: string; requestNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+    files: UploadedFile[],
+  ): Promise<string[]> {
+    const documentIds: string[] = [];
+    for (const file of files) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      documentIds.push(
+        await this.uploadItemImage(request, companyId, userId, file),
+      );
+    }
+    return documentIds;
+  }
+
+  /** Purchase requests are priced in ETB only. */
+  private assertPurchaseRequestEtbCurrency(currency: SupportedCurrency): void {
+    if (currency !== SupportedCurrency.ETB) {
+      throw new BadRequestException(
+        'Purchase request items must use ETB currency',
+      );
+    }
   }
 
   /** Required-by dates must be today or later (company timezone). */

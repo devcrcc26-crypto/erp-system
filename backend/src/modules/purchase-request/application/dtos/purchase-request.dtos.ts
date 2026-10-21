@@ -118,7 +118,7 @@ export class AddPurchaseRequestItemDto {
   @IsPositive()
   unitPrice!: number;
 
-  @ApiProperty({ enum: SupportedCurrency, default: SupportedCurrency.ETB })
+  @ApiProperty({ enum: [SupportedCurrency.ETB], default: SupportedCurrency.ETB })
   @IsEnum(SupportedCurrency)
   currency!: SupportedCurrency;
 }
@@ -164,7 +164,7 @@ export class UpdatePurchaseRequestItemDto {
   @IsPositive()
   unitPrice?: number;
 
-  @ApiPropertyOptional({ enum: SupportedCurrency })
+  @ApiPropertyOptional({ enum: [SupportedCurrency.ETB] })
   @IsOptional()
   @IsEnum(SupportedCurrency)
   currency?: SupportedCurrency;

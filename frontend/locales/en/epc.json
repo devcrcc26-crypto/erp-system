@@ -5853,7 +5853,7 @@
       "editExpenseItemTitle": "Edit Expense Item",
       "addExpenseItemHint": "Amounts convert to ETB automatically for approval totals.",
       "editExpenseItemHint": "Update the line item. Re-upload a receipt only if you need to replace it.",
-      "addPurchaseItemHint": "Enter quantity, unit price, and currency. Line totals convert to ETB for approval.",
+      "addPurchaseItemHint": "Enter quantity and unit price in ETB. Line totals drive approval thresholds.",
       "editPurchaseItemHint": "Update this line. Replace the photo only if you need a new image.",
       "addMaterialItemHint": "Describe each material line with quantity and unit for warehouse fulfilment.",
       "editMaterialItemHint": "Update this material line before you continue.",

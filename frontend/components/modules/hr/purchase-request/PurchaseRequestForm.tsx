@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
   Space,
   Table,
   Tooltip,
@@ -36,13 +35,10 @@ import { apiPostForm } from '@/lib/api/client';
 import type {
   AddPurchaseRequestItemPayload,
   PurchaseRequestDetail,
-  SupportedCurrency,
 } from '@/lib/api/purchase-request.types';
 import { useCreatePurchaseRequest, buildPurchaseRequestItemFormData } from '@/lib/query/purchase-request';
-import { useCurrencyRates } from '@/lib/query/currency';
 import { tokens } from '@/lib/theme/tokens';
 import {
-  formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
   formatPurchaseItemDescriptionInput,
@@ -77,12 +73,6 @@ interface PurchaseRequestFormProps {
   onSuccess: (result: PurchaseRequestDetail) => void;
 }
 
-const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
-  { value: 'ETB', label: 'ETB' },
-  { value: 'USD', label: 'USD' },
-  { value: 'CNY', label: 'CNY' },
-];
-
 const DETAILS_FIELDS = ['title', 'justification'] as const;
 
 let keyCounter = 0;
@@ -108,35 +98,25 @@ export default function PurchaseRequestForm({
   const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
-  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [itemImageFiles, setItemImageFiles] = useState<File[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const ratesQuery = useCurrencyRates();
   const createMutation = useCreatePurchaseRequest();
-
-  function getRate(currency: SupportedCurrency): number {
-    if (currency === 'ETB') {
-      return 1;
-    }
-    return ratesQuery.data?.[currency] ?? 1;
-  }
 
   const totalEtb = useMemo(
     () =>
-      items.reduce((sum, item) => {
-        const line = Number(item.unitPrice) * Number(item.quantity);
-        return sum + line * getRate(item.currency);
-      }, 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, ratesQuery.data],
+      items.reduce(
+        (sum, item) =>
+          sum + Number(item.unitPrice) * Number(item.quantity),
+        0,
+      ),
+    [items],
   );
 
   function itemLineEtb(item: ClientItem): number {
-    return (
-      Number(item.unitPrice) * Number(item.quantity) * getRate(item.currency)
-    );
+    return Number(item.unitPrice) * Number(item.quantity);
   }
 
   function resetForm(): void {
@@ -147,6 +127,7 @@ export default function PurchaseRequestForm({
     setDetailsSnapshot({});
     setEditingKey(null);
     setShowItemForm(false);
+    setItemImageFiles([]);
     setFiles([]);
     setFormError(null);
   }
@@ -179,8 +160,7 @@ export default function PurchaseRequestForm({
   function openAddItem(): void {
     setEditingKey(null);
     itemForm.resetFields();
-    itemForm.setFieldValue('currency', 'ETB');
-    setItemImageFile(null);
+    setItemImageFiles([]);
     setShowItemForm(true);
   }
 
@@ -195,9 +175,8 @@ export default function PurchaseRequestForm({
       quantity: item.quantity,
       unit: item.unit,
       unitPrice: item.unitPrice,
-      currency: item.currency,
     });
-    setItemImageFile(item.file ?? null);
+    setItemImageFiles(item.files ?? []);
     setShowItemForm(true);
   }
 
@@ -205,7 +184,7 @@ export default function PurchaseRequestForm({
     setShowItemForm(false);
     setEditingKey(null);
     itemForm.resetFields();
-    setItemImageFile(null);
+    setItemImageFiles([]);
   }
 
   async function saveItem(): Promise<void> {
@@ -222,8 +201,8 @@ export default function PurchaseRequestForm({
         quantity: Number(values.quantity),
         unit: values.unit,
         unitPrice: Number(values.unitPrice),
-        currency: values.currency,
-        file: itemImageFile ?? undefined,
+        currency: 'ETB',
+        files: itemImageFiles.length > 0 ? itemImageFiles : undefined,
       };
       if (editingKey) {
         setItems((prev) =>
@@ -322,20 +301,32 @@ export default function PurchaseRequestForm({
       title: t('hr.table.itemImage'),
       key: 'image',
       width: 100,
-      render: (_: unknown, row: ClientItem) =>
-        row.file ? (
-          <Tooltip title={row.file.name}>
-            <span className="inline-flex">
-              <ProfileFileTypeIcon
-                name={row.file.name}
-                fileType={row.file.type}
-                size="sm"
-              />
+      render: (_: unknown, row: ClientItem) => {
+        const rowFiles = row.files ?? [];
+        if (rowFiles.length === 0) {
+          return '-';
+        }
+        const label = rowFiles.map((file) => file.name).join(', ');
+        return (
+          <Tooltip title={label}>
+            <span className="inline-flex flex-wrap items-center gap-1">
+              {rowFiles.slice(0, 3).map((file, index) => (
+                <ProfileFileTypeIcon
+                  key={`${file.name}-${file.size}-${index}`}
+                  name={file.name}
+                  fileType={file.type}
+                  size="sm"
+                />
+              ))}
+              {rowFiles.length > 3 ? (
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  +{rowFiles.length - 3}
+                </span>
+              ) : null}
             </span>
           </Tooltip>
-        ) : (
-          '-'
-        ),
+        );
+      },
     },
     {
       title: t('hr.table.quantity'),
@@ -351,7 +342,7 @@ export default function PurchaseRequestForm({
       width: 130,
       align: 'right',
       render: (_: unknown, row: ClientItem) =>
-        formatCurrencyAmount(row.unitPrice, row.currency),
+        formatEtbAmount(row.unitPrice),
     },
     {
       title: t('hr.table.total'),
@@ -762,24 +753,16 @@ export default function PurchaseRequestForm({
                   },
                 ]}
               >
-                <InputNumber min={0} className="w-full" />
-              </Form.Item>
-              <Form.Item
-                name="currency"
-                label={t('hr.form.currency')}
-                initialValue="ETB"
-                rules={[{ required: true }]}
-              >
-                <Select options={CURRENCY_OPTIONS} />
+                <InputNumber min={0} className="w-full" addonAfter="ETB" />
               </Form.Item>
             </div>
           </HrDrawerFormSection>
           <HrDrawerFormSection title={t('hr.form.itemImage')}>
             <FileUploadInput
-              files={itemImageFile ? [itemImageFile] : []}
-              onChange={(nextFiles) => setItemImageFile(nextFiles[0] ?? null)}
+              files={itemImageFiles}
+              onChange={setItemImageFiles}
               accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-              multiple={false}
+              multiple
             />
             <p className="erp-hr-item-drawer-field-hint">
               {t('hr.hints.itemImageOptional')}

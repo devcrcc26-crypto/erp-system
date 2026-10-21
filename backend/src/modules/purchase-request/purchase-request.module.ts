@@ -8,7 +8,7 @@ import { PurchaseRequestController } from './presentation/controllers/purchase-r
 
 /**
  * Purchase request module - multi-item procurement requests with per-item
- * currency conversion, attachment support, and a value-tiered approval chain.
+ * ETB line pricing, attachment support, and a value-tiered approval chain.
  */
 @Module({
   imports: [ApprovalsModule, HrSharedModule],

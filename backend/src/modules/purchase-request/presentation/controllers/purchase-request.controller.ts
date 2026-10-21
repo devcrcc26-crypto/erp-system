@@ -236,24 +236,27 @@ export class PurchaseRequestController {
         quantity: { type: 'number' },
         unit: { type: 'string' },
         unitPrice: { type: 'number' },
-        currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
-        file: { type: 'string', format: 'binary' },
+        currency: { type: 'string', enum: ['ETB'], default: 'ETB' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(FilesInterceptor('files', 20, { storage: memoryStorage() }))
   async addItem(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
     const dto = await parseDto(AddPurchaseRequestItemDto, body);
     return this.purchaseRequestService.addItem(
       id,
       dto,
-      file,
+      files ?? [],
       companyId,
       user.userId,
     );
@@ -273,7 +276,7 @@ export class PurchaseRequestController {
         quantity: { type: 'number' },
         unit: { type: 'string' },
         unitPrice: { type: 'number' },
-        currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
+        currency: { type: 'string', enum: ['ETB'], default: 'ETB' },
         file: { type: 'string', format: 'binary' },
       },
     },
