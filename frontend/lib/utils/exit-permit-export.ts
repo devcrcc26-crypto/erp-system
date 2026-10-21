@@ -106,8 +106,12 @@ export function exportExitPermitPdf(input: {
 }): void {
   const { permit, companyName, preparedBy } = input;
 
+  const isApproved = permit.status === 'APPROVED';
+
   exportHrDocumentPdf({
-    documentTitle: 'Equipment & Materials Exit Permit',
+    documentTitle: isApproved
+      ? 'Approved Gate Pass — Equipment & Materials'
+      : 'Equipment & Materials Exit Permit',
     subtitle: `${exportEnumLabel(permit.direction)} - ${exportDate(permit.date)}`,
     requestNumber: permit.requestNumber,
     companyName,
@@ -151,7 +155,8 @@ export function exportExitPermitPdf(input: {
       ]),
       numericColumns: [0, 3],
     },
-    footerNote:
-      'Gate check: the items listed above were verified against this permit at the time of passage.',
+    footerNote: isApproved
+      ? 'Approved gate pass — post at the gate or carry with goods. Security verifies each item before passage.'
+      : 'Draft or pending — not valid at the gate until approved.',
   });
 }

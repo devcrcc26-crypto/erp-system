@@ -1765,6 +1765,24 @@
         "direction": {
           "ENTRANCE": "入场",
           "EXIT": "出场"
+        },
+        "gateRegister": {
+          "title": "门岗通行证登记",
+          "description": "按日期打印已批准的出入证，供门岗张贴。含全部物品明细及安保核验栏。",
+          "download": "下载 PDF",
+          "directionAll": "入场与出场",
+          "subtitle": "已批准 {{direction}} — {{date}}",
+          "approvedOnly": "仅已批准",
+          "permitCount": "共 {{count}} 张",
+          "verified": "已核验",
+          "footer": "张贴于门岗。安保须核对实物与明细后在「已核验」栏签字。",
+          "empty": "该日期与方向下没有已批准的出入证。",
+          "success": "门岗登记 PDF 已下载。",
+          "error": "无法生成门岗登记 PDF。",
+          "generatedAt": "生成时间",
+          "preparedBy": "编制人",
+          "page": "第",
+          "of": "页，共"
         }
       },
       "consumables": {
@@ -3998,7 +4016,8 @@
         "title": "导入物资出入门证",
         "description": "上传表格，每行一件物品。员工、方向、日期与部门相同的行会合并为一张包含多件物品的草稿门证。",
         "export": "导出门证",
-        "exportWithItems": "导出门证（含物品明细）"
+        "exportWithItems": "导出门证（含物品明细）",
+        "gateRegister": "门岗通行证登记（PDF）"
       },
       "officialSeals": {
         "title": "导入公章使用申请",

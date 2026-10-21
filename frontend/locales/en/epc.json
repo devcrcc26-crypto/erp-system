@@ -1884,6 +1884,24 @@
         "direction": {
           "ENTRANCE": "Entrance",
           "EXIT": "Exit"
+        },
+        "gateRegister": {
+          "title": "Gate pass register",
+          "description": "Print approved permits for a date to post at the gate. Includes every line item with a column for security verification.",
+          "download": "Download PDF",
+          "directionAll": "Entrance and exit",
+          "subtitle": "Approved {{direction}} permits — {{date}}",
+          "approvedOnly": "Approved permits only",
+          "permitCount": "{{count}} permit(s)",
+          "verified": "Verified",
+          "footer": "Post at the gate. Security checks each line item against physical goods before signing in the verified column.",
+          "empty": "No approved permits match this date and direction.",
+          "success": "Gate pass register PDF downloaded.",
+          "error": "Could not build the gate pass register PDF.",
+          "generatedAt": "Generated",
+          "preparedBy": "Prepared by",
+          "page": "Page",
+          "of": "of"
         }
       },
       "consumables": {
@@ -3998,7 +4016,8 @@
         "title": "Import exit permits",
         "description": "Upload a spreadsheet with one row per item. Rows sharing the same employee, direction, date and department become one DRAFT permit with several items.",
         "export": "Export permits",
-        "exportWithItems": "Export permits with items"
+        "exportWithItems": "Export permits with items",
+        "gateRegister": "Gate pass register (PDF)"
       },
       "officialSeals": {
         "title": "Import official seal requests",

@@ -15,6 +15,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  FilePdfOutlined,
   FormOutlined,
   InboxOutlined,
   ReloadOutlined,
@@ -60,6 +61,7 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
+import ExitPermitGateRegisterModal from '@/components/modules/hr/exit-permit/ExitPermitGateRegisterModal';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/equipment-and-materials-exit-permit';
@@ -134,6 +136,7 @@ export default function ExitPermitListPageContent(): React.ReactNode {
   >(null);
 
   const [importOpen, setImportOpen] = useState(false);
+  const [gateRegisterOpen, setGateRegisterOpen] = useState(false);
 
   const listQuery = useExitPermitsAll({}, true);
   const usersQuery = useUsersDirectory(
@@ -424,6 +427,31 @@ export default function ExitPermitListPageContent(): React.ReactNode {
             </Tooltip>
             <HrListActions
               compact={isCompact}
+              extra={
+                canViewHr ? (
+                  <Button
+                    icon={<FilePdfOutlined />}
+                    onClick={() => setGateRegisterOpen(true)}
+                    aria-label={t('hr.exportImport.exitPermits.gateRegister')}
+                  >
+                    {isCompact
+                      ? null
+                      : t('hr.exportImport.exitPermits.gateRegister')}
+                  </Button>
+                ) : undefined
+              }
+              extraMenuItems={
+                canViewHr
+                  ? [
+                      {
+                        key: 'gate-register',
+                        icon: <FilePdfOutlined />,
+                        label: t('hr.exportImport.exitPermits.gateRegister'),
+                        onClick: () => setGateRegisterOpen(true),
+                      },
+                    ]
+                  : []
+              }
               exports={[
                 {
                   key: 'permits',
@@ -563,6 +591,14 @@ export default function ExitPermitListPageContent(): React.ReactNode {
           />
         </div>
       </div>
+
+      {canViewHr ? (
+        <ExitPermitGateRegisterModal
+          open={gateRegisterOpen}
+          onClose={() => setGateRegisterOpen(false)}
+          listRows={allRows}
+        />
+      ) : null}
     </div>
   );
 }
