@@ -5,12 +5,13 @@ import { InspectionRepairImportController } from './presentation/controllers/ins
 import { InspectionRepairController } from './presentation/controllers/inspection-repair.controller';
 import { InspectionRepairImportService } from './application/services/inspection-repair-import.service';
 import { InspectionRepairService } from './application/services/inspection-repair.service';
+import { InspectionRepairPdfService } from './application/services/inspection-repair-pdf.service';
 
 @Global()
 @Module({
   imports: [ApprovalsModule, HrSharedModule],
   controllers: [InspectionRepairImportController, InspectionRepairController],
-  providers: [InspectionRepairService, InspectionRepairImportService],
+  providers: [InspectionRepairService, InspectionRepairImportService, InspectionRepairPdfService],
   exports: [InspectionRepairService],
 })
 export class InspectionRepairModule {}

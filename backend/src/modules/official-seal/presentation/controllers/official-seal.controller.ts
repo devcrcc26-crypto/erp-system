@@ -1,5 +1,6 @@
-import { BadRequestException, Controller, Get, Param, Query, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Param, Query, StreamableFile, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { OfficialSealService } from "../../application/services/official-seal.service";
+import { OfficialSealPdfService } from "../../application/services/official-seal-pdf.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
 import { Body, Patch, Post } from "@nestjs/common";
@@ -8,7 +9,7 @@ import { ListOfficialSealsDto, SubmitOfficialSealRequestDto } from "../../applic
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { DelegatePermissionCheck } from "../../../../shared/permissions/delegate-permission-check.decorator";
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { memoryStorage } from "multer";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
@@ -46,7 +47,10 @@ async function parseDto<T extends object>(
 @Controller('hr/official-seal')
 export class OfficialSealController {
 
-    constructor(private readonly officialSealService: OfficialSealService){}
+    constructor(
+      private readonly officialSealService: OfficialSealService,
+      private readonly officialSealPdfService: OfficialSealPdfService,
+    ) {}
 
     @Post()
     @DelegatePermissionCheck()
@@ -180,4 +184,23 @@ export class OfficialSealController {
             buffer: file.buffer,
         });
     }
+
+    @Get(':id/pdf')
+    @ApiOperation({ summary: 'Download official seal request as PDF' })
+    @ApiProduces('application/pdf')
+    async downloadPdf(
+      @Param('id') id: string,
+      @CurrentCompany() companyId: string,
+    ): Promise<StreamableFile> {
+      const file = await this.officialSealPdfService.getPdf(id, companyId);
+      return new StreamableFile(file.buffer, {
+        type: file.mimeType,
+        disposition: contentDisposition('inline', file.filename),
+      });
+    }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

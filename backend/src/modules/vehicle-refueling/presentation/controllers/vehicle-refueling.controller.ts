@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,6 +20,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -32,6 +34,7 @@ import {
   SubmitVehicleRefuelingDto,
 } from '../../application/dtos/vehicle-refueling.dtos';
 import { VehicleRefuelingService } from '../../application/services/vehicle-refueling.service';
+import { VehicleRefuelingPdfService } from '../../application/services/vehicle-refueling-pdf.service';
 
 async function parseDto<T extends object>(
   cls: new () => T,
@@ -65,6 +68,7 @@ async function parseDto<T extends object>(
 export class VehicleRefuelingController {
   constructor(
     private readonly vehicleRefuelingService: VehicleRefuelingService,
+    private readonly vehicleRefuelingPdfService: VehicleRefuelingPdfService,
   ) {}
 
   @Post()
@@ -165,4 +169,23 @@ export class VehicleRefuelingController {
       },
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download vehicle refueling request as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.vehicleRefuelingPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

@@ -8,10 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UseGuards,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -37,6 +38,7 @@ import {
   UpdateCompanyAssetStatusDto,
 } from "../application/dtos/company-asset.dtos";
 import { CompanyAssetService } from "../application/services/company-asset.service";
+import { CompanyAssetPdfService } from "../application/services/company-asset-pdf.service";
 
 async function parseDto<T extends object>(
   cls: new () => T,
@@ -69,7 +71,10 @@ async function parseDto<T extends object>(
 )
 @Controller("organization/assets")
 export class CompanyAssetController {
-  constructor(private readonly companyAssetService: CompanyAssetService) {}
+  constructor(
+    private readonly companyAssetService: CompanyAssetService,
+    private readonly companyAssetPdfService: CompanyAssetPdfService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: "List company assets with search/filter" })
@@ -354,4 +359,23 @@ export class CompanyAssetController {
       user.userId,
     );
   }
+
+  @Get(":id/pdf")
+  @ApiOperation({ summary: "Download company asset card as PDF" })
+  @ApiProduces("application/pdf")
+  async downloadPdf(
+    @Param("id") id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.companyAssetPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition("inline", file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: "inline" | "attachment", filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

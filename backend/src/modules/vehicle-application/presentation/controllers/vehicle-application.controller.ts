@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -14,6 +15,7 @@ import { validate } from 'class-validator';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -27,6 +29,7 @@ import {
   SubmitVehicleApplicationDto,
 } from '../../application/dtos/vehicle-application.dtos';
 import { VehicleApplicationService } from '../../application/services/vehicle-application.service';
+import { VehicleApplicationPdfService } from '../../application/services/vehicle-application-pdf.service';
 
 async function parseDto<T extends object>(
   cls: new () => T,
@@ -60,6 +63,7 @@ async function parseDto<T extends object>(
 export class VehicleApplicationController {
   constructor(
     private readonly vehicleApplicationService: VehicleApplicationService,
+    private readonly vehicleApplicationPdfService: VehicleApplicationPdfService,
   ) {}
 
   @Post()
@@ -148,4 +152,23 @@ export class VehicleApplicationController {
       user.userId,
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download vehicle application as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.vehicleApplicationPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

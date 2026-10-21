@@ -2,11 +2,11 @@ import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
 import { ProjectSealService } from "../../application/services/project-seal.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { AuthenticatedUser } from "@/shared/types/jwt-payload.type";
-import { BadRequestException, Controller, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, StreamableFile, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { Body, Post, Get, Query, Param, Patch } from "@nestjs/common";
 import { UploadedFiles } from "@nestjs/common";
 import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
-import { ApiConsumes, ApiOperation, ApiTags, ApiBody } from "@nestjs/swagger";
+import { ApiConsumes, ApiOperation, ApiProduces, ApiTags, ApiBody } from "@nestjs/swagger";
 import { ApiBearerAuth } from "@nestjs/swagger";
 import { UseGuards } from "@nestjs/common";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
@@ -16,6 +16,7 @@ import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { SubmitProjectSealRequestDto, ListProjectSealsDto } from "../../application/dtos/project-seal.dtos";
+import { ProjectSealPdfService } from "../../application/services/project-seal-pdf.service";
 
 
 async function parseDto<T extends object>(
@@ -48,7 +49,10 @@ async function parseDto<T extends object>(
 )
 @Controller('hr/project-seal')
 export class ProjectSealController {
-    constructor(private readonly projectSealService: ProjectSealService) {}
+    constructor(
+      private readonly projectSealService: ProjectSealService,
+      private readonly projectSealPdfService: ProjectSealPdfService,
+    ) {}
 
 
     @Post()
@@ -170,6 +174,22 @@ export class ProjectSealController {
         });
     }
 
+    @Get(':id/pdf')
+    @ApiOperation({ summary: 'Download project seal request as PDF' })
+    @ApiProduces('application/pdf')
+    async downloadPdf(
+      @Param('id') id: string,
+      @CurrentCompany() companyId: string,
+    ): Promise<StreamableFile> {
+      const file = await this.projectSealPdfService.getPdf(id, companyId);
+      return new StreamableFile(file.buffer, {
+        type: file.mimeType,
+        disposition: contentDisposition('inline', file.filename),
+      });
+    }
+}
 
-    
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

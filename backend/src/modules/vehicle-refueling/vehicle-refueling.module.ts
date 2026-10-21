@@ -4,6 +4,7 @@ import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { StorageModule } from '../../shared/storage/storage.module';
 import { VehicleRefuelingImportService } from './application/services/vehicle-refueling-import.service';
 import { VehicleRefuelingService } from './application/services/vehicle-refueling.service';
+import { VehicleRefuelingPdfService } from './application/services/vehicle-refueling-pdf.service';
 import { VehicleRefuelingImportController } from './presentation/controllers/vehicle-refueling-import.controller';
 import { VehicleRefuelingController } from './presentation/controllers/vehicle-refueling.controller';
 
@@ -15,7 +16,7 @@ import { VehicleRefuelingController } from './presentation/controllers/vehicle-r
 @Module({
   imports: [ApprovalsModule, HrSharedModule, StorageModule],
   controllers: [VehicleRefuelingImportController, VehicleRefuelingController],
-  providers: [VehicleRefuelingService, VehicleRefuelingImportService],
+  providers: [VehicleRefuelingService, VehicleRefuelingImportService, VehicleRefuelingPdfService],
   exports: [VehicleRefuelingService],
 })
 export class VehicleRefuelingModule {}

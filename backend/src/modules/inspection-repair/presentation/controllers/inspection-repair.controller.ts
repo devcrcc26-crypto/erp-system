@@ -6,9 +6,10 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -21,6 +22,7 @@ import {
   UpdateInspectionRepairDto,
 } from '../../application/dtos/inspection-repair.dtos';
 import { InspectionRepairService } from '../../application/services/inspection-repair.service';
+import { InspectionRepairPdfService } from '../../application/services/inspection-repair-pdf.service';
 
 @ApiTags('HR Inspection & Repair')
 @ApiBearerAuth()
@@ -33,6 +35,7 @@ import { InspectionRepairService } from '../../application/services/inspection-r
 export class InspectionRepairController {
   constructor(
     private readonly inspectionRepairService: InspectionRepairService,
+    private readonly inspectionRepairPdfService: InspectionRepairPdfService,
   ) {}
 
   @Post()
@@ -106,4 +109,23 @@ export class InspectionRepairController {
   ): Promise<unknown> {
     return this.inspectionRepairService.cancelRequest(id, companyId, user.userId);
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download inspection/repair request as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.inspectionRepairPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
