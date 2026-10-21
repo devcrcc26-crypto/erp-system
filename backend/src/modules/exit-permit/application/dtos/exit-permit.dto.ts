@@ -67,7 +67,8 @@ export class CreateExitPermitDto extends OnBehalfSubmissionDto {
     direction?: ExitPermitDirection;
 
     @ApiPropertyOptional({
-        description: 'Ignored - exit permits are always dated today (Africa/Addis_Ababa).',
+        description:
+            'Permit date (YYYY-MM-DD). Defaults to today when omitted. Must be today or a future date (Africa/Addis_Ababa).',
     })
     @IsOptional()
     @IsDateString()
@@ -100,7 +101,10 @@ export class UpdateExitPermitDto{
     @IsEnum(ExitPermitDirection)
     direction?: ExitPermitDirection;
 
-    @ApiPropertyOptional({ description: 'Must be today (YYYY-MM-DD) when provided.' })
+    @ApiPropertyOptional({
+        description:
+            'Permit date (YYYY-MM-DD). Must be today or a future date when provided.',
+    })
     @IsOptional()
     @IsDateString()
     date?: string;

@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   Dropdown,
   Grid,
+  Modal,
   Skeleton,
   Tag,
   Typography,
@@ -19,6 +20,7 @@ import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestD
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -43,6 +45,7 @@ import {
   formatProjectSealUrgency,
   projectSealStatusVariant,
 } from '@/lib/utils/project-seal';
+import { formatSealCategory } from '@/lib/utils/seal-category';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
@@ -84,20 +87,20 @@ export default function ProjectSealDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const canViewHr = useCanViewHr();
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const pdfContext = useHrPdfContext();
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useProjectSeal(sealId);
   const cancelMutation = useCancelProjectSeal(sealId);
   const issueMutation = useIssueProjectSeal(sealId);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | undefined>();
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useSetHeaderExtra(null);
 
@@ -118,6 +121,16 @@ export default function ProjectSealDetailPageContent({
     [seal?.approvalRequest?.tiers],
   );
 
+  function openIssueModal(): void {
+    setSelectedFile(null);
+    setIssueModalOpen(true);
+  }
+
+  function closeIssueModal(): void {
+    setIssueModalOpen(false);
+    setSelectedFile(null);
+  }
+
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
@@ -133,14 +146,11 @@ export default function ProjectSealDetailPageContent({
     }
   }
 
-  async function handleIssueSeal(file?: File): Promise<void> {
+  async function handleIssueSeal(): Promise<void> {
     try {
-      await issueMutation.mutateAsync(file);
-      setSelectedFile(undefined);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      await issueMutation.mutateAsync(selectedFile ?? undefined);
       messageApi.success(t('hr.messages.projectSealIssued'));
+      closeIssueModal();
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -181,8 +191,15 @@ export default function ProjectSealDetailPageContent({
     );
   }
 
-  const employeeName =
-    formatProjectSealEmployeeName(seal.employee) || '-';
+  const employeeName = formatProjectSealEmployeeName(seal.employee);
+  const metaCategoryOrCopies = seal.sealCategory?.trim()
+    ? formatSealCategory(seal.sealCategory, t)
+    : seal.copyCount != null
+      ? String(seal.copyCount)
+      : '-';
+  const metaCategoryLabel = seal.sealCategory?.trim()
+    ? t('hr.form.sealCategory')
+    : t('hr.form.copyCount');
 
   const overflowMenuItems: MenuProps['items'] = [];
   if (seal.approvalRequestId) {
@@ -190,6 +207,13 @@ export default function ProjectSealDetailPageContent({
       key: 'approvals',
       label: t('hr.buttons.viewInApprovals'),
       onClick: () => router.push(`/approvals/${seal.approvalRequestId}`),
+    });
+  }
+  if (showIssueSeal) {
+    overflowMenuItems.push({
+      key: 'issue',
+      label: t('hr.buttons.issueSeal'),
+      onClick: openIssueModal,
     });
   }
   if (canCancel) {
@@ -204,7 +228,6 @@ export default function ProjectSealDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  /** Renders this record with the shared HR document layout. */
   function handleExportPdf(): void {
     if (!seal) {
       return;
@@ -271,6 +294,15 @@ export default function ProjectSealDetailPageContent({
                     {isCompact ? undefined : t('hr.buttons.cancelRequest')}
                   </Button>
                 ) : null}
+                {showIssueSeal ? (
+                  <Button
+                    type="primary"
+                    onClick={openIssueModal}
+                    aria-label={t('hr.buttons.issueSeal')}
+                  >
+                    {t('hr.buttons.issueSeal')}
+                  </Button>
+                ) : null}
               </>
             )}
           </div>
@@ -285,13 +317,17 @@ export default function ProjectSealDetailPageContent({
                 variant={projectSealStatusVariant(seal.status)}
               />
               {isDirectApproved ? (
-                <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+                <Tag color="blue" className="rounded-xl">
+                  {t('hr.labels.directApproval')}
+                </Tag>
               ) : null}
               {seal.sealedDocument?.id ? (
-                <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
+                <Tag color="green" className="rounded-xl">
+                  {t('hr.labels.sealAttached')}
+                </Tag>
               ) : null}
               {(seal.documents?.length ?? 0) > 0 ? (
-                <Tag color="blue">
+                <Tag color="blue" className="rounded-xl">
                   {t('hr.labels.documentToSealAttached')}
                 </Tag>
               ) : null}
@@ -330,17 +366,17 @@ export default function ProjectSealDetailPageContent({
         </div>
         <div className="erp-users-stat">
           <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.issued')}</p>
-            <p className="erp-employee-meta-value">
-              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'}
+            <p className="erp-users-stat-label">{metaCategoryLabel}</p>
+            <p className="erp-employee-meta-value truncate">
+              {metaCategoryOrCopies}
             </p>
           </div>
         </div>
         <div className="erp-users-stat">
           <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.issuedBy')}</p>
-            <p className="erp-employee-meta-value truncate">
-              {formatProjectSealEmployeeName(seal.issuer) || '-'}
+            <p className="erp-users-stat-label">{t('hr.labels.issued')}</p>
+            <p className="erp-employee-meta-value">
+              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'}
             </p>
           </div>
         </div>
@@ -374,11 +410,16 @@ export default function ProjectSealDetailPageContent({
                 <MetaItem label={t('hr.form.fileName')}>
                   {seal.fileName}
                 </MetaItem>
-                <MetaItem label={t('hr.form.description')}>
-                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                    {seal.description}
-                  </p>
+                <MetaItem label={t('hr.table.employee')}>
+                  {employeeName}
                 </MetaItem>
+                <div className="md:col-span-2">
+                  <MetaItem label={t('hr.form.description')}>
+                    <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                      {seal.description}
+                    </p>
+                  </MetaItem>
+                </div>
                 <MetaItem label={t('hr.labels.dateNeeded')}>
                   {formatProjectDate(seal.dateNeeded ?? null)}
                 </MetaItem>
@@ -389,6 +430,16 @@ export default function ProjectSealDetailPageContent({
                   sealCategory={seal.sealCategory}
                   copyCount={seal.copyCount}
                 />
+                {seal.issuedAt ? (
+                  <MetaItem label={t('hr.labels.issued')}>
+                    {formatProjectDate(seal.issuedAt)}
+                  </MetaItem>
+                ) : null}
+                {seal.issuer ? (
+                  <MetaItem label={t('hr.labels.issuedBy')}>
+                    {formatProjectSealEmployeeName(seal.issuer)}
+                  </MetaItem>
+                ) : null}
                 {seal.completedAt ? (
                   <MetaItem label={t('hr.labels.completedAt')}>
                     {formatProjectDate(seal.completedAt)}
@@ -408,10 +459,16 @@ export default function ProjectSealDetailPageContent({
             ) : null}
 
             {showIssueSeal ? (
-              <DetailSection title={t('hr.section.issueSeal')}>
+              <DetailSection
+                title={t('hr.section.issueSeal')}
+                action={
+                  <Button type="primary" onClick={openIssueModal}>
+                    {t('hr.buttons.issueSeal')}
+                  </Button>
+                }
+              >
                 <ErpNotice
                   tone="info"
-                  className="mb-4"
                   title={t('hr.messages.issueSealApprovedInfo')}
                   description={
                     (seal.documents?.length ?? 0) > 0
@@ -419,32 +476,6 @@ export default function ProjectSealDetailPageContent({
                       : undefined
                   }
                 />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  hidden
-                  accept={PROJECT_SEAL_FILE_ACCEPT}
-                  onChange={(e) =>
-                    setSelectedFile(e.target.files?.[0] ?? undefined)
-                  }
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button onClick={() => fileInputRef.current?.click()}>
-                    {t('hr.buttons.chooseDocumentOptional')}
-                  </Button>
-                  {selectedFile ? (
-                    <Typography.Text type="secondary">
-                      {selectedFile.name}
-                    </Typography.Text>
-                  ) : null}
-                  <Button
-                    type="primary"
-                    loading={issueMutation.isPending}
-                    onClick={() => void handleIssueSeal(selectedFile)}
-                  >
-                    {t('hr.buttons.issueSeal')}
-                  </Button>
-                </div>
               </DetailSection>
             ) : null}
 
@@ -479,6 +510,35 @@ export default function ProjectSealDetailPageContent({
           )}
         </aside>
       </div>
+
+      <Modal
+        open={issueModalOpen}
+        title={t('hr.section.issueSeal')}
+        onCancel={closeIssueModal}
+        onOk={() => void handleIssueSeal()}
+        okText={t('hr.buttons.issueSeal')}
+        confirmLoading={issueMutation.isPending}
+        width={560}
+        destroyOnHidden
+        styles={{ body: { paddingTop: 16 } }}
+      >
+        <Typography.Paragraph type="secondary" className="mb-4">
+          {t('hr.messages.issueSealApprovedInfo')}
+          {(seal.documents?.length ?? 0) > 0
+            ? ` ${t('hr.messages.issueSealDownloadHint')}`
+            : null}
+        </Typography.Paragraph>
+        <FileUploadInput
+          files={selectedFile ? [selectedFile] : []}
+          onChange={(nextFiles) => setSelectedFile(nextFiles[0] ?? null)}
+          accept={PROJECT_SEAL_FILE_ACCEPT}
+          multiple={false}
+          disabled={issueMutation.isPending}
+        />
+        <Typography.Text type="secondary" className="mt-2 block text-xs">
+          {t('hr.buttons.chooseDocumentOptional')}
+        </Typography.Text>
+      </Modal>
 
       <ConfirmDialog
         open={confirmCancel}

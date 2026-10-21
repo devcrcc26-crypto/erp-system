@@ -10,8 +10,8 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../../../shared/prisma/prisma.service";
 import {
-  dateOnlyString,
-  getTodayInTimezone,
+  isDateInPast,
+  parseLocalDateOnly,
   startOfToday,
 } from "../../../../shared/utils/date-validation.util";
 import { ApprovalDecisionRegistry } from "../../../approvals/application/services/approval-decision-registry.service";
@@ -138,8 +138,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
           employeeId,
           departmentId: dto.departmentId ?? null,
           direction: dto.direction,
-          // Exit permits are issued for the current day only; any client date is ignored.
-          date: startOfToday(),
+          date: this.resolveExitPermitDate(dto.date),
           isOnBehalf: employeeId !== userId,
           status: ExitPermitStatus.DRAFT,
           createdBy: userId,
@@ -184,10 +183,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
   ) {
     await this.assertEditableOwner(id, companyId, userId);
 
-    if (dto.date !== undefined && dateOnlyString(dto.date) !== getTodayInTimezone()) {
-      throw new BadRequestException("Exit permit date must be today");
-    }
-
     if (dto.departmentId) {
       const department = await this.prisma.department.findFirst({
         where: activeOnly({ id: dto.departmentId, companyId }),
@@ -208,7 +203,9 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         where: { id },
         data: {
           ...(dto.direction !== undefined ? { direction: dto.direction } : {}),
-          ...(dto.date !== undefined ? { date: startOfToday() } : {}),
+          ...(dto.date !== undefined
+            ? { date: this.resolveExitPermitDate(dto.date) }
+            : {}),
           ...(dto.departmentId !== undefined
             ? { departmentId: dto.departmentId ?? null }
             : {}),
@@ -953,6 +950,25 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
+  }
+
+  /** Exit permit date: today or future (company timezone). Defaults to today when omitted. */
+  private resolveExitPermitDate(value?: string): Date {
+    if (!value?.trim()) {
+      return startOfToday();
+    }
+    let date: Date;
+    try {
+      date = parseLocalDateOnly(value);
+    } catch {
+      throw new BadRequestException('Invalid date format. Expected YYYY-MM-DD');
+    }
+    if (isDateInPast(date)) {
+      throw new BadRequestException(
+        'Exit permit date must be today or a future date',
+      );
+    }
+    return date;
   }
 
 }

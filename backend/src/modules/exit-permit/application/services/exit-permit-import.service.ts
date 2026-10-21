@@ -69,7 +69,7 @@ const EXIT_PERMIT_IMPORT_SCHEMA: ImportColumnSchema = {
       label: 'Date',
       type: 'date',
       example: '2026-09-08',
-      notes: 'Defaults to today when blank.',
+      notes: 'Optional. Today or a future date (YYYY-MM-DD). Defaults to today when blank.',
       width: 14,
     },
     {
