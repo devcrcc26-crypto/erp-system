@@ -23,6 +23,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -41,6 +42,7 @@ import {
   UpdatePurchaseRequestItemDto,
 } from '../../application/dtos/purchase-request.dtos';
 import { PurchaseRequestImportService } from '../../application/services/purchase-request-import.service';
+import { PurchaseRequestPdfService } from '../../application/services/purchase-request-pdf.service';
 import { PurchaseRequestService } from '../../application/services/purchase-request.service';
 
 async function parseDto<T extends object>(
@@ -76,6 +78,7 @@ export class PurchaseRequestController {
   constructor(
     private readonly purchaseRequestService: PurchaseRequestService,
     private readonly purchaseRequestImportService: PurchaseRequestImportService,
+    private readonly purchaseRequestPdfService: PurchaseRequestPdfService,
   ) {}
 
   private importCtx(user: AuthenticatedUser): {
@@ -358,4 +361,23 @@ export class PurchaseRequestController {
   ): Promise<unknown> {
     return this.purchaseRequestService.cancelRequest(id, companyId, user.userId);
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download purchase request as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.purchaseRequestPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

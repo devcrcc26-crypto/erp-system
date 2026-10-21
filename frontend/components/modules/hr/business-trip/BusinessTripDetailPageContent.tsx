@@ -56,7 +56,7 @@ import {
   tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
 import { exportBusinessTripDetailPassengersExcel } from '@/lib/utils/business-trip-export-excel';
-import { exportBusinessTripPdf } from '@/lib/utils/business-trip-pdf';
+import { openBusinessTripPdf } from '@/lib/query/business-trip';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
@@ -168,68 +168,11 @@ export default function BusinessTripDetailPageContent({
     }
   }
 
-  function handleExportPdf(): void {
-    if (!trip) {
-      return;
-    }
+  async function handleExportPdf(): Promise<void> {
+    if (!trip) return;
     setExportingPdf(true);
     try {
-      const preparedBy = currentUser.data
-        ? formatUserName(currentUser.data)
-        : authUser
-          ? formatUserName(authUser)
-          : '-';
-      exportBusinessTripPdf({
-        trip,
-        companyName: authUser?.companyName ?? 'Company',
-        preparedBy,
-        t,
-        labels: {
-          title: t('pages.hr.businessTrip.detail'),
-          generatedAt: t('hr.table.createdDate'),
-          preparedBy: t('hr.labels.createdBy'),
-          footer: t('pages.hr.businessTrip.pdfFooter'),
-          tripOverview: t('pages.hr.businessTrip.pdfOverview'),
-          travelDetails: t('hr.labels.travelDetails'),
-          purposeHost: t('hr.labels.purposeHost'),
-          budgetEstimate: t('hr.labels.budgetEstimate'),
-          passengers: t('hr.section.passengerDetails'),
-          documents: t('hr.section.attachments'),
-          field: t('pages.hr.businessTrip.pdfField'),
-          value: t('pages.hr.businessTrip.pdfValue'),
-          tripNumber: t('hr.table.tripNumber'),
-          status: t('hr.table.status'),
-          submittedBy: t('hr.table.submittedBy'),
-          tripType: t('hr.labels.tripType'),
-          international: t('hr.labels.international'),
-          origin: t('hr.form.origin'),
-          destination: t('hr.form.destination'),
-          departure: t('hr.labels.departure'),
-          return: t('hr.labels.return'),
-          purpose: t('hr.labels.purpose'),
-          hostOrganization: t('hr.form.hostOrganizationName'),
-          hostContactName: t('hr.form.hostContactName'),
-          hostContactPhone: t('hr.form.hostContactPhone'),
-          hostContactEmail: t('hr.form.hostContactEmail'),
-          expectedOutcomes: t('hr.labels.expectedOutcomes'),
-          itinerary: t('hr.labels.itinerary'),
-          notes: t('hr.labels.notes'),
-          estimatedAccommodation: t('hr.labels.estimatedAccommodation'),
-          estimatedPerDiem: t('hr.labels.estimatedPerDiem'),
-          estimatedOther: t('hr.labels.estimatedOther'),
-          estimatedTotal: t('hr.labels.estimatedTotal'),
-          passengerName: t('hr.table.employee'),
-          passengerEmail: t('users.form.email'),
-          passport: t('hr.labels.passport'),
-          visaRequired: t('hr.form.visaRequired'),
-          visaStatus: t('hr.form.visaStatus'),
-          none: t('pages.hr.businessTrip.pdfNone'),
-          required: t('hr.labels.required'),
-          notRequired: t('hr.labels.notRequired'),
-          page: t('pages.hr.businessTrip.pdfPage'),
-          of: t('pages.hr.businessTrip.pdfOf'),
-        },
-      });
+      await openBusinessTripPdf(trip.id);
       messageApi.success(t('pages.hr.businessTrip.exportPdfSuccess'));
     } catch {
       messageApi.error(t('pages.hr.businessTrip.exportPdfError'));

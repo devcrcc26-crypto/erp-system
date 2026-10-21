@@ -70,14 +70,14 @@ export function buildInspectionRepairExportSheets(
 /**
  * Renders a single inspection & repair request as a printable PDF.
  */
-export function exportInspectionRepairPdf(input: {
+export async function exportInspectionRepairPdf(input: {
   request: InspectionRepairDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { request, companyName, preparedBy } = input;
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: 'Inspection & Repair Request',
     subtitle: request.deviceName,
     requestNumber: request.requestNumber,

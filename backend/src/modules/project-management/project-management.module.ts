@@ -37,6 +37,8 @@ import { ProjectScopeService } from './application/services/project-scope.servic
 import { TaskAccessScopeService } from './application/services/task-access-scope.service';
 import { ProjectsService } from './application/services/projects.service';
 import { ProjectExportService } from './application/services/project-export.service';
+import { ProjectsExportPdfService } from './application/services/projects-export-pdf.service';
+import { ProjectReportPdfService } from './application/services/project-report-pdf.service';
 import { PunchItemsService } from './application/services/punch-items.service';
 import { ReviewBatchService } from './application/services/review-batch.service';
 import { ReviewCommentsService } from './application/services/review-comments.service';
@@ -173,6 +175,8 @@ const workflowBullProcessors = redisEnabled
     TaskAssignmentNotificationService,
     ProjectsService,
     ProjectExportService,
+    ProjectsExportPdfService,
+    ProjectReportPdfService,
     ProjectScopeService,
     DisciplineScopeService,
     DocumentNumberService,

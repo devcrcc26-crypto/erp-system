@@ -22,6 +22,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
@@ -40,6 +41,7 @@ import {
   UpdateConsumablesRequisitionItemDto,
 } from '../../application/dtos/consumables-requisition.dtos';
 import { ConsumablesRequisitionImportPreviewResponseDto } from '../../application/dtos/consumables-requisition-import.dtos';
+import { ConsumablesRequisitionPdfService } from '../../application/services/consumables-requisition-pdf.service';
 import { ConsumablesRequisitionImportService } from '../../application/services/consumables-requisition-import.service';
 import { ConsumablesRequisitionService } from '../../application/services/consumables-requisition.service';
 
@@ -75,6 +77,7 @@ async function parseDto<T extends object>(
 export class ConsumablesRequisitionController {
   constructor(
     private readonly consumablesRequisitionService: ConsumablesRequisitionService,
+    private readonly consumablesRequisitionPdfService: ConsumablesRequisitionPdfService,
     private readonly consumablesRequisitionImportService: ConsumablesRequisitionImportService,
   ) {}
 
@@ -344,4 +347,23 @@ export class ConsumablesRequisitionController {
       user.userId,
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download consumables requisition as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.consumablesRequisitionPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

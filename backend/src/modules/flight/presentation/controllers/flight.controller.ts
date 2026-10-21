@@ -23,6 +23,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -37,6 +38,7 @@ import {
   ListFlightApplicationsDto,
   SubmitFlightApplicationDto,
 } from '../../application/dtos/flight.dtos';
+import { FlightApplicationPdfService } from '../../application/services/flight-application-pdf.service';
 import { FlightImportService } from '../../application/services/flight-import.service';
 import { FlightService } from '../../application/services/flight.service';
 
@@ -118,6 +120,7 @@ async function parseFlightSubmitDto(
 export class FlightController {
   constructor(
     private readonly flightService: FlightService,
+    private readonly flightApplicationPdfService: FlightApplicationPdfService,
     private readonly flightImportService: FlightImportService,
   ) {}
 
@@ -471,4 +474,23 @@ export class FlightController {
       user.userId,
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download flight application as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.flightApplicationPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

@@ -204,12 +204,12 @@ export default function VehicleApplicationDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   /** Renders this record with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!application) {
       return;
     }
 
-      exportVehicleApplicationPdf({
+      await exportVehicleApplicationPdf({
         application,
         companyName: pdfContext.companyName,
         preparedBy: pdfContext.preparedBy,

@@ -1,12 +1,13 @@
-import { BadRequestException, Controller, Body, Query,Get, Param, UploadedFile, UploadedFiles, UseGuards, Post, UseInterceptors, Patch, Delete } from "@nestjs/common";
+import { BadRequestException, Controller, Body, Query,Get, Param, UploadedFile, UploadedFiles, UseGuards, Post, UseInterceptors, Patch, Delete, StreamableFile } from "@nestjs/common";
 import { CreateExitPermitDto, CreateExitPermitItemDto, ListExitPermitsDto, UpdateExitPermitDto, UpdateExitPermitItemDto } from "../application/dtos/exit-permit.dto";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
+import { ExitPermitGateRegisterPdfService } from "../application/services/exit-permit-gate-register-pdf.service";
 import { ExitPermitService } from "../application/services/exit-permit.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
 import { AuthenticatedUser } from "@/shared/types/jwt-payload.type";
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiQuery, ApiTags } from "@nestjs/swagger";
 import {PermissionsGuard} from "@/shared/permissions/permissions.guard";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
@@ -47,6 +48,7 @@ async function parseDto<T extends object>(
 export class ExitPermitController {
     constructor(
         private readonly exitPermitService: ExitPermitService,
+        private readonly exitPermitGateRegisterPdfService: ExitPermitGateRegisterPdfService,
     ){}
 
     @Post()
@@ -196,4 +198,27 @@ export class ExitPermitController {
     ){
         return this.exitPermitService.cancelRequest(id, companyId, user.userId);
     }
+
+    @Get('gate-register/pdf')
+    @ApiOperation({ summary: 'Download gate register as PDF (landscape)' })
+    @ApiProduces('application/pdf')
+    @ApiQuery({ name: 'date', required: true, description: 'YYYY-MM-DD' })
+    @ApiQuery({ name: 'direction', required: false, enum: ['ENTRANCE', 'EXIT', 'ALL'] })
+    async downloadGateRegisterPdf(
+        @CurrentCompany() companyId: string,
+        @Query('date') date: string,
+        @Query('direction') direction?: string,
+    ): Promise<StreamableFile> {
+        const dir = (direction === 'ENTRANCE' || direction === 'EXIT') ? direction : 'ALL';
+        const file = await this.exitPermitGateRegisterPdfService.getPdf(date, dir, companyId);
+        return new StreamableFile(file.buffer, {
+            type: file.mimeType,
+            disposition: contentDisposition('inline', file.filename),
+        });
+    }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

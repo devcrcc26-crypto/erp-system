@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF_FONT, registerCjkFont } from '@/lib/utils/pdf-font';
 
 /**
  * Shared PDF layout builder for HR single-record exports.
@@ -78,22 +79,23 @@ const DEFAULT_LABELS: HrPdfLabels = {
 /**
  * Renders and downloads a single-record HR document PDF.
  */
-export function exportHrDocumentPdf(input: HrPdfInput): void {
+export async function exportHrDocumentPdf(input: HrPdfInput): Promise<void> {
   const labels = { ...DEFAULT_LABELS, ...input.labels };
   const companyName = input.companyName?.trim() || HR_PDF_COMPANY_NAME;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  await registerCjkFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const generatedAt = new Date();
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.text(HR_PDF_COMPANY_NAME, PAGE_MARGIN, PAGE_MARGIN);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(14);
   doc.text(input.documentTitle, PAGE_MARGIN, PAGE_MARGIN + 7);
   if (input.subtitle?.trim()) {
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.text(truncate(input.subtitle.trim(), 90), PAGE_MARGIN, PAGE_MARGIN + 14);
@@ -105,7 +107,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
 
   let y = headerLineY + 8;
   doc.setTextColor(120, 120, 120);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatTimestamp(generatedAt)}`,
@@ -132,9 +134,9 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
-      bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2, valign: 'top' },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+      bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40], cellPadding: 2, valign: 'top' },
       columnStyles: {
         0: { cellWidth: 52, fontStyle: 'bold' },
         1: { cellWidth: 'auto' },
@@ -157,9 +159,9 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
-      bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5 },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
+      bodyStyles: { font: PDF_FONT, fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5 },
       columnStyles,
       head: [table.head],
       body:
@@ -177,7 +179,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
 
   if (input.footerNote?.trim()) {
     y = ensureSpace(doc, y, 16);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
     doc.text(
@@ -214,7 +216,7 @@ export function exportHrDocumentPdf(input: HrPdfInput): void {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(80, 80, 80);
   doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);

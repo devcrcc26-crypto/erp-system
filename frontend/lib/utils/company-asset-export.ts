@@ -98,14 +98,14 @@ export function buildCompanyAssetExportSheets(
 /**
  * Renders a single asset as a printable asset card PDF.
  */
-export function exportCompanyAssetPdf(input: {
+export async function exportCompanyAssetPdf(input: {
   asset: CompanyAssetDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { asset, companyName, preparedBy } = input;
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: 'Company Asset Card',
     subtitle: asset.assetName ?? `${asset.brand} ${asset.model}`.trim(),
     requestNumber: asset.assetCode || asset.serialNumber,

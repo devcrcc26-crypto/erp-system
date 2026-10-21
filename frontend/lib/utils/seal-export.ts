@@ -91,15 +91,15 @@ export function buildSealExportSheets(
 /**
  * Renders a single seal usage request as a printable PDF.
  */
-export function exportSealPdf(input: {
+export async function exportSealPdf(input: {
   kind: SealExportKind;
   seal: SealDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { kind, seal, companyName, preparedBy } = input;
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: DOCUMENT_TITLE[kind],
     subtitle: seal.fileName,
     requestNumber: seal.requestNumber,

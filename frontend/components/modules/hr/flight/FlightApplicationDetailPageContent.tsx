@@ -53,7 +53,7 @@ import {
   formatVisaStatus,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
-import { exportFlightApplicationPdf } from '@/lib/utils/flight-application-pdf';
+import { openFlightApplicationPdf } from '@/lib/query/flight';
 import { exportFlightApplicationPassengersExcel } from '@/lib/utils/flight-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -166,59 +166,11 @@ export default function FlightApplicationDetailPageContent({
     }
   }
 
-  function handleExportPdf(): void {
-    if (!application) {
-      return;
-    }
+  async function handleExportPdf(): Promise<void> {
+    if (!application) return;
     setExportingPdf(true);
     try {
-      const preparedBy = currentUser.data
-        ? formatUserName(currentUser.data)
-        : authUser
-          ? formatUserName(authUser)
-          : '-';
-      exportFlightApplicationPdf({
-        application,
-        companyName: authUser?.companyName ?? 'Company',
-        preparedBy,
-        t,
-        labels: {
-          title: t('pages.hr.flight.detail'),
-          subtitle: t('pages.hr.flight.listTitle'),
-          generatedAt: t('hr.table.createdDate'),
-          preparedBy: t('hr.labels.createdBy'),
-          footer: t('pages.hr.flight.pdfFooter'),
-          applicationOverview: t('pages.hr.flight.pdfOverview'),
-          travelDetails: t('hr.labels.travelDetails'),
-          passengers: t('hr.section.passengerDetails'),
-          documents: t('hr.section.attachments'),
-          field: t('pages.hr.flight.pdfField'),
-          value: t('pages.hr.flight.pdfValue'),
-          applicationNumber: t('hr.table.applicationNumber'),
-          status: t('hr.table.status'),
-          submittedBy: t('hr.table.submittedBy'),
-          tripType: t('hr.labels.tripType'),
-          international: t('hr.labels.international'),
-          domestic: t('hr.labels.domestic'),
-          origin: t('hr.form.origin'),
-          destination: t('hr.form.destination'),
-          departure: t('hr.labels.departure'),
-          return: t('hr.labels.return'),
-          ticketClass: t('hr.labels.ticketClass'),
-          purpose: t('hr.labels.purpose'),
-          notes: t('hr.labels.notes'),
-          passengerName: t('hr.table.employee'),
-          passengerEmail: t('users.form.email'),
-          passport: t('hr.labels.passport'),
-          visaRequired: t('hr.form.visaRequired'),
-          visaStatus: t('hr.form.visaStatus'),
-          none: t('pages.hr.flight.pdfNone'),
-          required: t('hr.labels.required'),
-          notRequired: t('hr.labels.notRequired'),
-          page: t('pages.hr.flight.pdfPage'),
-          of: t('pages.hr.flight.pdfOf'),
-        },
-      });
+      await openFlightApplicationPdf(application.id);
       messageApi.success(t('pages.hr.flight.exportPdfSuccess'));
     } catch {
       messageApi.error(t('pages.hr.flight.exportPdfError'));

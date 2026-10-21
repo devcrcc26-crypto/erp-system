@@ -4,6 +4,7 @@ import { HrApprovalChainService } from './application/services/hr-approval-chain
 import { HrExcelImportService } from './application/import-export/hr-excel-import.service';
 import { DayCoverageService } from './application/services/day-coverage.service';
 import { BackdatingPolicyService } from './application/services/backdating-policy.service';
+import { HrDocumentPdfService } from './application/services/hr-document-pdf.service';
 import { BackdatingPolicyController } from './presentation/backdating-policy.controller';
 import { DayCoverageController } from './presentation/day-coverage.controller';
 import { PermissionService } from '../../shared/permissions/permission.service';
@@ -20,6 +21,7 @@ import { PermissionService } from '../../shared/permissions/permission.service';
     HrExcelImportService,
     DayCoverageService,
     BackdatingPolicyService,
+    HrDocumentPdfService,
     PermissionService,
   ],
   exports: [
@@ -27,6 +29,7 @@ import { PermissionService } from '../../shared/permissions/permission.service';
     HrExcelImportService,
     DayCoverageService,
     BackdatingPolicyService,
+    HrDocumentPdfService,
     OnBehalfModule,
   ],
 })

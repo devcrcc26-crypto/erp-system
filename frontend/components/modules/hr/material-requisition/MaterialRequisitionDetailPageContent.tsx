@@ -59,7 +59,7 @@ import {
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
 import { exportMaterialRequisitionDetailItemsExcel } from '@/lib/utils/material-requisition-export-excel';
-import { exportMaterialRequisitionPdf } from '@/lib/utils/material-requisition-pdf';
+import { openMaterialRequisitionPdf } from '@/lib/query/material-requisition';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -237,53 +237,11 @@ export default function MaterialRequisitionDetailPageContent({
     }
   }
 
-  function handleExportPdf(): void {
-    if (!requisition) {
-      return;
-    }
+  async function handleExportPdf(): Promise<void> {
+    if (!requisition) return;
     setExportingPdf(true);
     try {
-      const preparedBy = currentUser.data
-        ? formatUserName(currentUser.data)
-        : authUser
-          ? formatUserName(authUser)
-          : '-';
-      exportMaterialRequisitionPdf({
-        requisition,
-        companyName: authUser?.companyName ?? 'Company',
-        preparedBy,
-        t,
-        labels: {
-          title: t('pages.hr.materialRequisition.detail'),
-          generatedAt: t('hr.table.createdDate'),
-          preparedBy: t('hr.labels.createdBy'),
-          footer: t('pages.hr.materialRequisition.pdfFooter'),
-          overview: t('pages.hr.materialRequisition.pdfOverview'),
-          items: t('hr.section.items'),
-          documents: t('hr.section.attachments'),
-          field: t('pages.hr.materialRequisition.pdfField'),
-          value: t('pages.hr.materialRequisition.pdfValue'),
-          requestNumber: t('hr.table.requestNumber'),
-          status: t('hr.table.status'),
-          employee: t('hr.table.employee'),
-          requestTitle: t('hr.form.title'),
-          purpose: t('hr.labels.purpose'),
-          warehouseLocation: t('hr.form.warehouseLocation'),
-          requiredByDate: t('hr.form.requiredByDate'),
-          project: t('hr.table.project'),
-          itemCount: t('hr.section.items'),
-          submittedAt: t('hr.table.submittedDate'),
-          createdAt: t('hr.table.createdDate'),
-          itemName: t('hr.table.itemName'),
-          itemCode: t('hr.table.itemCode'),
-          description: t('hr.form.description'),
-          quantity: t('hr.form.quantity'),
-          unit: t('hr.form.unit'),
-          none: t('pages.hr.materialRequisition.pdfNone'),
-          page: t('pages.hr.materialRequisition.pdfPage'),
-          of: t('pages.hr.materialRequisition.pdfOf'),
-        },
-      });
+      await openMaterialRequisitionPdf(requisition.id);
       messageApi.success(t('pages.hr.materialRequisition.exportPdfSuccess'));
     } catch {
       messageApi.error(t('pages.hr.materialRequisition.exportPdfError'));

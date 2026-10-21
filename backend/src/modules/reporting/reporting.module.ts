@@ -3,6 +3,7 @@ import { DashboardService } from './application/services/dashboard.service';
 import { HrReportService } from './application/services/hr-report.service';
 import { ReportExecutorService } from './application/services/report-executor.service';
 import { ReportingService } from './application/services/reporting.service';
+import { SystemReportPdfService } from './application/services/system-report-pdf.service';
 import { DashboardController } from './presentation/controllers/dashboard.controller';
 import { HrReportController } from './presentation/controllers/hr-report.controller';
 import { ReportsController } from './presentation/controllers/reports.controller';
@@ -14,6 +15,7 @@ import { ReportsController } from './presentation/controllers/reports.controller
     ReportExecutorService,
     DashboardService,
     HrReportService,
+    SystemReportPdfService,
   ],
   exports: [ReportingService, DashboardService, HrReportService],
 })

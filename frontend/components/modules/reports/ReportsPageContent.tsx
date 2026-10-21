@@ -39,7 +39,7 @@ import { useAllProjects } from '@/lib/query/projects';
 import { formatUserName } from '@/lib/utils/user-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { normalizePortfolioSummary } from '@/lib/utils/portfolio-summary';
-import { exportSystemReportPdf } from '@/lib/utils/system-report-pdf';
+import { openSystemReportPdf } from '@/lib/query/reports';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
@@ -660,29 +660,13 @@ export default function ReportsPageContent(): React.ReactNode {
   );
 
   const handleExportPdf = useCallback((): void => {
-    if (!summary) {
-      return;
-    }
-
+    if (!summary) return;
     setExportingPdf(true);
-    try {
-      const preparedBy = authUser ? formatUserName(authUser) : 'User';
-
-      exportSystemReportPdf({
-        summary,
-        projects,
-        preparedBy,
-        labels: buildSystemReportPdfLabels(t),
-        formatStatusLabel,
-        formatTypeLabel,
-      });
-      messageApi.success(t('pages.systemReports.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.systemReports.exportError'));
-    } finally {
-      setExportingPdf(false);
-    }
-  }, [summary, projects, authUser, t, messageApi]);
+    openSystemReportPdf()
+      .then(() => { messageApi.success(t('pages.systemReports.exportSuccess')); })
+      .catch(() => { messageApi.error(t('pages.systemReports.exportError')); })
+      .finally(() => { setExportingPdf(false); });
+  }, [summary, messageApi, t]);
 
   if (!authHydrated) {
     return <PageLoadingSkeleton />;

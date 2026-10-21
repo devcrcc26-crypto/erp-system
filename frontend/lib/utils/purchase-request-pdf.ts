@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF_FONT, registerCjkFont } from '@/lib/utils/pdf-font';
 import type { PurchaseRequestDetail } from '@/lib/api/purchase-request.types';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import {
@@ -60,7 +61,7 @@ interface PurchaseRequestPdfInput {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(80, 80, 80);
   doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);
@@ -87,20 +88,21 @@ function dash(value: string | null | undefined): string {
 /**
  * Generates a purchase request detail PDF (header + line items, no approvals).
  */
-export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
+export async function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): Promise<void> {
   const { request, companyName, preparedBy, labels, t } = input;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  await registerCjkFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const generatedAt = new Date().toISOString();
   const employeeName = formatPurchaseRequestEmployeeName(request.employee);
 
   let y = PAGE_MARGIN;
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.text(companyName, PAGE_MARGIN, PAGE_MARGIN);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(14);
   doc.text(labels.title, PAGE_MARGIN, PAGE_MARGIN + 7);
   doc.setDrawColor(200, 200, 200);
@@ -109,7 +111,7 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
   y = PAGE_MARGIN + 18;
 
   doc.setTextColor(120, 120, 120);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatDisplayDateTime(generatedAt)}`,
@@ -124,9 +126,9 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 55, fontStyle: 'bold' },
       1: { cellWidth: 'auto' },
@@ -177,9 +179,9 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
-    bodyStyles: { fontSize: 7, textColor: [40, 40, 40], cellPadding: 1.5 },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
+    bodyStyles: { font: PDF_FONT, fontSize: 7, textColor: [40, 40, 40], cellPadding: 1.5 },
     head: [
       [
         labels.itemName,
@@ -204,9 +206,9 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
-      bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+      bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
       head: [[labels.documents]],
       body: documentNames.map((name) => [name]),
     });

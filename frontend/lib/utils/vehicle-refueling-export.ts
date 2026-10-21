@@ -128,14 +128,14 @@ export function buildVehicleRefuelingExportSheets(
 /**
  * Renders a single refueling request as a printable PDF.
  */
-export function exportVehicleRefuelingPdf(input: {
+export async function exportVehicleRefuelingPdf(input: {
   refueling: VehicleRefuelingDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { refueling, companyName, preparedBy } = input;
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: 'Vehicle Refueling Request',
     subtitle: refueling.vehicle
       ? `${refueling.vehicle.plateNumber} - ${refueling.fuelStation}`

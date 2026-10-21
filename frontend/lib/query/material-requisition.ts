@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  apiClient,
   apiDelete,
   apiGet,
   apiGetPaginated,
@@ -399,4 +400,19 @@ export async function downloadMaterialRequisitionItemsImportTemplate(
     `${MATERIAL_REQUISITION_PATH}/${requisitionId}/items/import/template`,
     'material-requisition-items-import-template.xlsx',
   );
+}
+
+export async function openMaterialRequisitionPdf(id: string): Promise<void> {
+  const response = await apiClient.get(`${MATERIAL_REQUISITION_PATH}/${id}/pdf`, { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

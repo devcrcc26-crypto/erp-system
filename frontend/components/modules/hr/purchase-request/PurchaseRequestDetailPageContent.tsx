@@ -56,7 +56,7 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-request-export-excel';
-import { exportPurchaseRequestPdf } from '@/lib/utils/purchase-request-pdf';
+import { openPurchaseRequestPdf } from '@/lib/query/purchase-request';
 import {
   formatEtbAmount,
   formatPurchaseItemDescription,
@@ -248,56 +248,11 @@ export default function PurchaseRequestDetailPageContent({
     }
   }
 
-  function handleExportPdf(): void {
-    if (!request) {
-      return;
-    }
+  async function handleExportPdf(): Promise<void> {
+    if (!request) return;
     setExportingPdf(true);
     try {
-      const preparedBy = currentUser.data
-        ? formatUserName(currentUser.data)
-        : authUser
-          ? formatUserName(authUser)
-          : '-';
-      exportPurchaseRequestPdf({
-        request,
-        companyName: authUser?.companyName ?? 'Company',
-        preparedBy,
-        t,
-        labels: {
-          title: t('pages.hr.purchaseRequest.detail'),
-          generatedAt: t('hr.table.createdDate'),
-          preparedBy: t('hr.labels.createdBy'),
-          footer: t('pages.hr.purchaseRequest.pdfFooter'),
-          overview: t('pages.hr.purchaseRequest.pdfOverview'),
-          items: t('hr.section.items'),
-          documents: t('hr.section.attachments'),
-          field: t('pages.hr.purchaseRequest.pdfField'),
-          value: t('pages.hr.purchaseRequest.pdfValue'),
-          requestNumber: t('hr.table.requestNumber'),
-          status: t('hr.table.status'),
-          employee: t('hr.table.employee'),
-          requestTitle: t('hr.form.title'),
-          justification: t('hr.form.justification'),
-          vendorName: t('hr.form.vendor'),
-          vendorEmail: t('hr.form.vendorEmail'),
-          vendorPhone: t('hr.form.vendorPhone'),
-          requiredByDate: t('hr.form.requiredByDate'),
-          itemCount: t('hr.section.items'),
-          estimatedTotal: t('hr.form.estimatedTotal'),
-          submittedAt: t('hr.table.submittedDate'),
-          createdAt: t('hr.table.createdDate'),
-          itemName: t('hr.table.itemName'),
-          description: t('hr.table.descriptionWithModelSpec'),
-          quantity: t('hr.table.quantity'),
-          unit: t('hr.table.unit'),
-          unitPrice: t('hr.table.unitPrice'),
-          lineTotal: t('hr.table.total'),
-          none: t('pages.hr.purchaseRequest.pdfNone'),
-          page: t('pages.hr.purchaseRequest.pdfPage'),
-          of: t('pages.hr.purchaseRequest.pdfOf'),
-        },
-      });
+      await openPurchaseRequestPdf(request.id);
       messageApi.success(t('pages.hr.purchaseRequest.exportPdfSuccess'));
     } catch {
       messageApi.error(t('pages.hr.purchaseRequest.exportPdfError'));

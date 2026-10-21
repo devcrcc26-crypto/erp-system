@@ -23,6 +23,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -37,6 +38,7 @@ import {
   ListBusinessTripsDto,
   SubmitBusinessTripDto,
 } from '../../application/dtos/business-trip.dtos';
+import { BusinessTripPdfService } from '../../application/services/business-trip-pdf.service';
 import { BusinessTripImportService } from '../../application/services/business-trip-import.service';
 import { BusinessTripService } from '../../application/services/business-trip.service';
 
@@ -127,6 +129,7 @@ export class BusinessTripController {
   constructor(
     private readonly businessTripService: BusinessTripService,
     private readonly businessTripImportService: BusinessTripImportService,
+    private readonly businessTripPdfService: BusinessTripPdfService,
   ) {}
 
   private importCtx(user: AuthenticatedUser): {
@@ -484,4 +487,23 @@ export class BusinessTripController {
       user.userId,
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download business trip application as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.businessTripPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

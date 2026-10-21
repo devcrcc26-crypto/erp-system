@@ -252,12 +252,12 @@ export default function InspectionRepairDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   /** Renders this record with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!request) {
       return;
     }
 
-      exportInspectionRepairPdf({
+      await exportInspectionRepairPdf({
         request,
         companyName: pdfContext.companyName,
         preparedBy: pdfContext.preparedBy,

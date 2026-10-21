@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF_FONT, registerCjkFont } from '@/lib/utils/pdf-font';
 import type {
   ExitPermitDetail,
   ExitPermitDirection,
@@ -64,9 +65,9 @@ export interface ExitPermitGateRegisterPdfInput {
 /**
  * Printable gate register: all approved permits for one date, grouped by direction.
  */
-export function exportExitPermitGateRegisterPdf(
+export async function exportExitPermitGateRegisterPdf(
   input: ExitPermitGateRegisterPdfInput,
-): void {
+): Promise<void> {
   const labels = { ...DEFAULT_LABELS, ...input.labels };
   const companyName = input.companyName?.trim() || HR_PDF_COMPANY_NAME;
   const directionLabels = input.directionLabels ?? {
@@ -86,17 +87,18 @@ export function exportExitPermitGateRegisterPdf(
     unit: 'mm',
     format: 'a4',
   });
+  await registerCjkFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.text(companyName, PAGE_MARGIN, PAGE_MARGIN);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(14);
   doc.text(labels.documentTitle, PAGE_MARGIN, PAGE_MARGIN + 7);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
   doc.text(
@@ -110,7 +112,7 @@ export function exportExitPermitGateRegisterPdf(
 
   let y = PAGE_MARGIN + 24;
   doc.setTextColor(120, 120, 120);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatTimestamp(generatedAt)}`,
@@ -129,7 +131,7 @@ export function exportExitPermitGateRegisterPdf(
     a.requestNumber.localeCompare(b.requestNumber),
   );
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(9);
   doc.text(labels.permitCount(sorted.length), PAGE_MARGIN, y);
@@ -177,7 +179,7 @@ export function exportExitPermitGateRegisterPdf(
   for (const section of sections) {
     if (input.direction === 'ALL') {
       y = ensureSpace(doc, y, 18, pageHeight);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(PDF_FONT, 'bold');
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
       const sectionTitle =
@@ -226,7 +228,7 @@ export function exportExitPermitGateRegisterPdf(
     if (bodyRows.length === 0) {
       if (input.direction !== 'ALL') {
         y = ensureSpace(doc, y, 20, pageHeight);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(PDF_FONT, 'normal');
         doc.setFontSize(9);
         doc.setTextColor(120, 120, 120);
         doc.text(labels.noPermits, PAGE_MARGIN, y);
@@ -240,9 +242,9 @@ export function exportExitPermitGateRegisterPdf(
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
-      bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5, valign: 'top' },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 1.5 },
+      bodyStyles: { font: PDF_FONT, fontSize: 7.5, textColor: [40, 40, 40], cellPadding: 1.5, valign: 'top' },
       columnStyles: {
         0: { cellWidth: 24 },
         1: { cellWidth: 32 },
@@ -261,14 +263,14 @@ export function exportExitPermitGateRegisterPdf(
 
   if (!anyRows) {
     y = ensureSpace(doc, y, 20, pageHeight);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
     doc.text(labels.noPermits, PAGE_MARGIN, y);
   }
 
   y = ensureSpace(doc, y, 14, pageHeight);
-  doc.setFont('helvetica', 'italic');
+  doc.setFont(PDF_FONT, 'italic');
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
   doc.text(
@@ -282,7 +284,7 @@ export function exportExitPermitGateRegisterPdf(
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.setTextColor(120, 120, 120);
     doc.text(
       `${HR_PDF_COMPANY_NAME} — ${docTitleShort} — ${dateLabel}`,

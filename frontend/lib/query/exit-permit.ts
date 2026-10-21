@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  apiClient,
   apiDelete,
   apiGet,
   apiGetPaginated,
@@ -308,4 +309,23 @@ export async function fetchExitPermitDetails(
     results.push(...pages);
   }
   return results;
+}
+
+export async function openExitPermitGateRegisterPdf(
+  date: string,
+  direction: 'ENTRANCE' | 'EXIT' | 'ALL' = 'ALL',
+): Promise<void> {
+  const params = new URLSearchParams({ date, direction });
+  const response = await apiClient.get(`${EXIT_PERMIT_PATH}/gate-register/pdf?${params}`, { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

@@ -23,6 +23,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
@@ -40,6 +41,7 @@ import {
   UpdateMaterialRequisitionDto,
   UpdateMaterialRequisitionItemDto,
 } from '../../application/dtos/material-requisition.dtos';
+import { MaterialRequisitionPdfService } from '../../application/services/material-requisition-pdf.service';
 import { MaterialRequisitionImportService } from '../../application/services/material-requisition-import.service';
 import { MaterialRequisitionService } from '../../application/services/material-requisition.service';
 
@@ -75,6 +77,7 @@ async function parseDto<T extends object>(
 export class MaterialRequisitionController {
   constructor(
     private readonly materialRequisitionService: MaterialRequisitionService,
+    private readonly materialRequisitionPdfService: MaterialRequisitionPdfService,
     private readonly materialRequisitionImportService: MaterialRequisitionImportService,
   ) {}
 
@@ -339,4 +342,23 @@ export class MaterialRequisitionController {
       user.userId,
     );
   }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download material requisition as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.materialRequisitionPdfService.getPdf(id, companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

@@ -456,12 +456,12 @@ export default function CompanyAssetDetailPageContent({
   const showOverflowMenu = isNarrow;
 
   /** Renders this asset with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!asset) {
       return;
     }
 
-    exportCompanyAssetPdf({
+    await exportCompanyAssetPdf({
       asset,
       companyName: pdfContext.companyName,
       preparedBy: pdfContext.preparedBy,

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF_FONT, registerCjkFont } from '@/lib/utils/pdf-font';
 import type { Project } from '@/lib/api/project-management.types';
 import type {
   ProjectReportPdfBreakdownRow,
@@ -56,7 +57,7 @@ function pct(part: number, total: number): string {
 }
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(80, 80, 80);
   doc.text(title.toUpperCase(), PAGE_MARGIN, y + 4);
@@ -88,7 +89,7 @@ function breakdownTableBody(
 /**
  * Generates a structured multi-section PDF for a single project report.
  */
-export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
+export async function exportProjectReportPdf(input: ProjectReportPdfInput): Promise<void> {
   const {
     project,
     generatedAt,
@@ -107,14 +108,15 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
   } = input;
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  await registerCjkFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = PAGE_MARGIN;
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.text(project.projectCode, PAGE_MARGIN, PAGE_MARGIN);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(14);
   doc.text(labels.title, PAGE_MARGIN, PAGE_MARGIN + 7);
   doc.setDrawColor(200, 200, 200);
@@ -123,7 +125,7 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
   y = PAGE_MARGIN + 18;
 
   doc.setTextColor(120, 120, 120);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${formatDisplayDateTime(generatedAt)}`,
@@ -138,9 +140,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3, cellPadding: 2 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40], cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 72, fontStyle: 'bold' },
       1: { halign: 'right' },
@@ -169,9 +171,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.value]],
     body: [
       [labels.openRfis, formatCount(siteOps.openRfis)],
@@ -188,9 +190,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.value]],
     body: [
       [labels.plannedProgress, formatPercent(schedule.plannedProgressPct)],
@@ -209,9 +211,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-      bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+      bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
       head: [[labels.metric, labels.value]],
       body: [
         [labels.activeReviews, formatCount(engineering.activeReviewSessions)],
@@ -229,9 +231,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.count, labels.share]],
     body: breakdownTableBody(taskStatusRows),
   });
@@ -243,9 +245,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.metric, labels.count, labels.share]],
     body: breakdownTableBody(siteOpsRows),
   });
@@ -258,9 +260,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-      bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+      bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
       head: [[labels.metric, labels.count, labels.share]],
       body: breakdownTableBody(packageStatusRows),
     });
@@ -274,9 +276,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       theme: 'plain',
-      styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-      bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+      styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+      bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
       head: [[labels.metric, labels.count, labels.share]],
       body: breakdownTableBody(disciplineStatusRows),
     });
@@ -289,9 +291,9 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'plain',
-    styles: { lineColor: [180, 180, 180], lineWidth: 0.2 },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
-    bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+    styles: { font: PDF_FONT, lineColor: [180, 180, 180], lineWidth: 0.2 },
+    headStyles: { font: PDF_FONT, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, lineColor: [180, 180, 180], lineWidth: 0.3 },
+    bodyStyles: { font: PDF_FONT, fontSize: 8, textColor: [40, 40, 40] },
     head: [[labels.module, labels.snapshot]],
     body:
       moduleSummaryRows.length > 0

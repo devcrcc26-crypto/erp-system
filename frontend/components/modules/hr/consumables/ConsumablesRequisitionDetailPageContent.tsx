@@ -61,7 +61,7 @@ import {
   formatConsumablesRequisitionStatus,
 } from '@/lib/utils/consumables-requisition-display';
 import { exportConsumablesRequisitionDetailItemsExcel } from '@/lib/utils/consumables-requisition-export-excel';
-import { exportConsumablesRequisitionPdf } from '@/lib/utils/consumables-requisition-pdf';
+import { openConsumablesRequisitionPdf } from '@/lib/query/consumables-requisition';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -241,52 +241,11 @@ export default function ConsumablesRequisitionDetailPageContent({
     }
   }
 
-  function handleExportPdf(): void {
-    if (!requisition) {
-      return;
-    }
+  async function handleExportPdf(): Promise<void> {
+    if (!requisition) return;
     setExportingPdf(true);
     try {
-      const preparedBy = currentUser.data
-        ? formatUserName(currentUser.data)
-        : authUser
-          ? formatUserName(authUser)
-          : '-';
-      exportConsumablesRequisitionPdf({
-        requisition,
-        companyName: authUser?.companyName ?? 'Company',
-        preparedBy,
-        t,
-        labels: {
-          title: t('pages.hr.consumables.detail'),
-          generatedAt: t('hr.table.createdDate'),
-          preparedBy: t('hr.labels.createdBy'),
-          footer: t('pages.hr.consumables.pdfFooter'),
-          overview: t('pages.hr.consumables.pdfOverview'),
-          items: t('hr.section.items'),
-          field: t('pages.hr.consumables.pdfField'),
-          value: t('pages.hr.consumables.pdfValue'),
-          requestNumber: t('hr.table.requestNumber'),
-          status: t('hr.table.status'),
-          employee: t('hr.table.employee'),
-          requestTitle: t('hr.form.title'),
-          purpose: t('hr.labels.purpose'),
-          department: t('hr.table.department'),
-          requiredByDate: t('hr.form.requiredByDate'),
-          itemCount: t('hr.section.items'),
-          submittedAt: t('hr.table.submittedDate'),
-          createdAt: t('hr.table.createdDate'),
-          itemName: t('hr.table.itemName'),
-          itemCode: t('hr.table.itemCode'),
-          modelSpec: t('hr.form.modelSpec'),
-          description: t('hr.table.description'),
-          quantity: t('hr.table.quantity'),
-          unit: t('hr.table.unit'),
-          none: t('pages.hr.consumables.pdfNone'),
-          page: t('pages.hr.consumables.pdfPage'),
-          of: t('pages.hr.consumables.pdfOf'),
-        },
-      });
+      await openConsumablesRequisitionPdf(requisition.id);
       messageApi.success(t('pages.hr.consumables.exportPdfSuccess'));
     } catch {
       messageApi.error(t('pages.hr.consumables.exportPdfError'));

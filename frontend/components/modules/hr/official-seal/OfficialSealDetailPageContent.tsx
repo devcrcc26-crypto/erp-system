@@ -229,12 +229,12 @@ export default function OfficialSealDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   /** Renders this record with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!seal) {
       return;
     }
 
-      exportSealPdf({
+      await exportSealPdf({
         kind: 'official',
         seal,
         companyName: pdfContext.companyName,

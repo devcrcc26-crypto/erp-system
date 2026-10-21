@@ -228,12 +228,12 @@ export default function ProjectSealDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!seal) {
       return;
     }
 
-      exportSealPdf({
+      await exportSealPdf({
         kind: 'project',
         seal,
         companyName: pdfContext.companyName,

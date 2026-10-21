@@ -115,15 +115,15 @@ export function buildVehicleApplicationExportSheets(
 /**
  * Renders a single vehicle application as a printable PDF.
  */
-export function exportVehicleApplicationPdf(input: {
+export async function exportVehicleApplicationPdf(input: {
   application: VehicleApplicationDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { application, companyName, preparedBy } = input;
   const passengers = splitPassengerNames(application.passengerNames);
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: 'Vehicle Application',
     subtitle: application.destination,
     requestNumber: application.applicationNumber,

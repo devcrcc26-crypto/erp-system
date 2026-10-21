@@ -50,7 +50,7 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
-import { exportProjectReportPdf } from '@/lib/utils/project-report-pdf';
+import { openProjectReportPdf } from '@/lib/query/projects';
 import { formatUserName } from '@/lib/utils/user-display';
 import { BarChart3 } from 'lucide-react';
 
@@ -569,86 +569,13 @@ export default function ProjectReportsPageContent({
   ]);
 
   const handleExportPdf = useCallback((): void => {
-    if (!project) {
-      return;
-    }
-
+    if (!project) return;
     setExportingPdf(true);
-    try {
-      const preparedBy = authUser ? formatUserName(authUser) : 'User';
-      const generatedAt = new Date().toISOString();
-
-      exportProjectReportPdf({
-        project,
-        generatedAt,
-        preparedBy,
-        labels: buildProjectReportPdfLabels(t),
-        siteOps: hasStats
-          ? {
-              openRfis: stats.openRfis,
-              overdueRfis: stats.overdueRfis,
-              openIssues: stats.openIssues,
-              openPunchItems: stats.openPunchItems,
-            }
-          : {
-              openRfis: null,
-              overdueRfis: null,
-              openIssues: null,
-              openPunchItems: null,
-            },
-        schedule: {
-          plannedProgressPct,
-          actualProgressPct,
-          scheduleVariancePct,
-          taskCount: scheduleFromTasks.taskCount,
-          criticalCount: scheduleFromTasks.criticalCount,
-        },
-        engineering:
-          board && !boardApiUnavailable
-            ? {
-                activeReviewSessions: board.activeReviewSessions,
-                slaOverdueSessions: board.slaOverdueSessions,
-                openComments: board.openComments,
-                pendingSubmittals: board.pendingSubmittals,
-              }
-            : null,
-        taskStatusRows: chartToBreakdownRows(taskStatusChart),
-        siteOpsRows: chartToBreakdownRows(siteOpsChart),
-        packageStatusRows: chartToBreakdownRows(packagesChart),
-        disciplineStatusRows: chartToBreakdownRows(disciplinesChart),
-        moduleSummaryRows: moduleSummary.map((row) => ({
-          module: row.module,
-          snapshot: row.metric,
-        })),
-        formatPercent,
-        formatCount: formatPdfCount,
-      });
-      messageApi.success(t('pages.projectReports.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.projectReports.exportError'));
-    } finally {
-      setExportingPdf(false);
-    }
-  }, [
-    project,
-    authUser,
-    t,
-    messageApi,
-    hasStats,
-    stats,
-    plannedProgressPct,
-    actualProgressPct,
-    scheduleVariancePct,
-    scheduleFromTasks.taskCount,
-    scheduleFromTasks.criticalCount,
-    board,
-    boardApiUnavailable,
-    taskStatusChart,
-    siteOpsChart,
-    packagesChart,
-    disciplinesChart,
-    moduleSummary,
-  ]);
+    openProjectReportPdf(project.id)
+      .then(() => { messageApi.success(t('pages.projectReports.exportSuccess')); })
+      .catch(() => { messageApi.error(t('pages.projectReports.exportError')); })
+      .finally(() => { setExportingPdf(false); });
+  }, [project, messageApi, t]);
 
   if (isLoading) {
     return <PageLoadingSkeleton />;

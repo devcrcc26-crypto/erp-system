@@ -99,16 +99,16 @@ export function buildExitPermitExportSheets(
 /**
  * Renders a single exit permit as a printable PDF with its items table.
  */
-export function exportExitPermitPdf(input: {
+export async function exportExitPermitPdf(input: {
   permit: ExitPermitDetail;
   companyName?: string;
   preparedBy: string;
-}): void {
+}): Promise<void> {
   const { permit, companyName, preparedBy } = input;
 
   const isApproved = permit.status === 'APPROVED';
 
-  exportHrDocumentPdf({
+  await exportHrDocumentPdf({
     documentTitle: isApproved
       ? 'Approved Gate Pass — Equipment & Materials'
       : 'Equipment & Materials Exit Permit',

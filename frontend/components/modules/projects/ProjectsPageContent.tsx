@@ -58,7 +58,7 @@ import {
 } from '@/lib/utils/list-status-tabs';
 import StackedName from '@/components/ui/StackedName/StackedName';
 import { formatUserName } from '@/lib/utils/user-display';
-import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
+import { openProjectsExportPdf } from '@/lib/query/projects';
 import { downloadProjectListExcel } from '@/lib/query/project-exports';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
@@ -114,39 +114,16 @@ export default function ProjectsPageContent(): React.ReactNode {
   const projectsQuery = activeTab === 'active' ? activeProjectsQuery : closedProjectsQuery;
 
   const handleExportPdf = useCallback(async (): Promise<void> => {
-    const trimmedSearch = search.trim();
     setExportingPdf(true);
-
     try {
-      const allProjects = await fetchAllProjects({
-        search: trimmedSearch || undefined,
-        status: activeTab === 'active' ? PROJECT_ACTIVE_STATUSES : PROJECT_CLOSED_STATUSES,
-        responsibleDepartment: departmentFilter,
-        designProperties: designPropertiesFilter,
-        designStage: designStageFilter,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      });
-      const generatedAt = new Date().toISOString();
-      const preparedBy = authUser ? formatUserName(authUser) : 'User';
-
-      exportProjectsPdf({
-        companyName: authUser?.companyName ?? 'Company',
-        generatedAt,
-        preparedBy,
-        projects: allProjects,
-        filters: {
-          search: trimmedSearch || undefined,
-          status: activeTab === 'active' ? PROJECT_ACTIVE_STATUSES : PROJECT_CLOSED_STATUSES,
-        },
-      });
+      await openProjectsExportPdf(activeTab === 'active' ? 'ACTIVE' : 'CLOSED');
       messageApi.success('Project export generated.');
     } catch {
       messageApi.error('Unable to export projects. Please try again.');
     } finally {
       setExportingPdf(false);
     }
-  }, [activeTab, authUser, departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search]);
+  }, [activeTab, messageApi]);
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingExcel(true);

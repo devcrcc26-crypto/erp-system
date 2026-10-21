@@ -7,9 +7,10 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -23,13 +24,17 @@ import {
   UpdateReportScheduleDto,
 } from '../../application/dtos/reporting.dtos';
 import { ReportingService } from '../../application/services/reporting.service';
+import { SystemReportPdfService } from '../../application/services/system-report-pdf.service';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportingService: ReportingService) {}
+  constructor(
+    private readonly reportingService: ReportingService,
+    private readonly systemReportPdfService: SystemReportPdfService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
@@ -169,4 +174,23 @@ export class ReportsController {
     await this.reportingService.deleteSchedule(this.ctx(user), id, scheduleId);
     return { message: 'Schedule deleted' };
   }
+
+  @Get('system-report/pdf')
+  @RequirePermission('reports', 'view')
+  @ApiOperation({ summary: 'Download company-wide system report as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadSystemReportPdf(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    const file = await this.systemReportPdfService.getPdf(user.companyId, user.userId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

@@ -13,7 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PmApi } from '../decorators/pm-api.decorator';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -28,6 +28,8 @@ import {
   UpdateProjectDto,
 } from '../../application/dtos/pm.dtos';
 import { ProjectExportService } from '../../application/services/project-export.service';
+import { ProjectReportPdfService } from '../../application/services/project-report-pdf.service';
+import { ProjectsExportPdfService } from '../../application/services/projects-export-pdf.service';
 import { ProjectsService } from '../../application/services/projects.service';
 
 @ApiTags('Projects')
@@ -39,6 +41,8 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly projectExportService: ProjectExportService,
+    private readonly projectsExportPdfService: ProjectsExportPdfService,
+    private readonly projectReportPdfService: ProjectReportPdfService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
@@ -181,4 +185,43 @@ export class ProjectsController {
     await this.projectsService.deleteProject(this.ctx(user), projectId);
     return { message: 'Project deleted' };
   }
+
+  @Get('export/pdf')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({ summary: 'Export all projects as PDF' })
+  @ApiProduces('application/pdf')
+  @ApiQuery({ name: 'status', required: false })
+  async exportProjectsPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('status') status?: string,
+  ): Promise<StreamableFile> {
+    const file = await this.projectsExportPdfService.getPdf(
+      user.companyId,
+      status ? { status } : undefined,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+
+  @Get(':projectId/report/pdf')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({ summary: 'Download project report as PDF' })
+  @ApiProduces('application/pdf')
+  async downloadProjectReportPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<StreamableFile> {
+    const file = await this.projectReportPdfService.getPdf(projectId, user.companyId);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

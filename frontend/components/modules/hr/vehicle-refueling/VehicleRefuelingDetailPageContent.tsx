@@ -197,12 +197,12 @@ export default function VehicleRefuelingDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   /** Renders this record with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!refueling) {
       return;
     }
 
-      exportVehicleRefuelingPdf({
+      await exportVehicleRefuelingPdf({
         refueling,
         companyName: pdfContext.companyName,
         preparedBy: pdfContext.preparedBy,

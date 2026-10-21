@@ -390,12 +390,12 @@ export default function ExitPermitDetailPageContent({
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
   /** Renders this record with the shared HR document layout. */
-  function handleExportPdf(): void {
+  async function handleExportPdf(): Promise<void> {
     if (!permit) {
       return;
     }
 
-      exportExitPermitPdf({
+      await exportExitPermitPdf({
         permit,
         companyName: pdfContext.companyName,
         preparedBy: pdfContext.preparedBy,

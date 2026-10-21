@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client';
+import { apiClient, apiGet } from '@/lib/api/client';
 import type { PortfolioSummary } from '@/lib/api/reporting.types';
 
 export const reportKeys = {
@@ -21,4 +21,19 @@ export function usePortfolioSummary(
     retry: false,
     ...options,
   });
+}
+
+export async function openSystemReportPdf(): Promise<void> {
+  const response = await apiClient.get('/reports/system-report/pdf', { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
