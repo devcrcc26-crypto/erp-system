@@ -1432,6 +1432,7 @@ export class UserManagementService {
     return {
       id: true,
       firstName: true,
+      middleName: true,
       lastName: true,
       chineseName: true,
       email: true,
