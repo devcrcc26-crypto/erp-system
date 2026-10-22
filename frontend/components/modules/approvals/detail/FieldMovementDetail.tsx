@@ -10,7 +10,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FieldMovementReason } from '@/lib/api/attendance.types';
 import { useFieldMovementLog } from '@/lib/query/attendance';
-import { useCurrentUser } from '@/lib/query/profile';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import {
   formatDateList,
@@ -38,7 +37,6 @@ export default function FieldMovementDetail({
   const { t } = useEpcTranslation();
   const detailQuery = useFieldMovementLog(sourceId);
   const log = detailQuery.data;
-  const currentUser = useCurrentUser();
 
   if (detailQuery.isLoading && !log) {
     return (
@@ -80,22 +78,15 @@ export default function FieldMovementDetail({
 
   const onBehalfCreatorName =
     log.submittedOnBehalf && log.creator ? formatUserName(log.creator) : null;
-  const viewerIsSubmitter =
-    onBehalfCreatorName !== null && log.createdBy === currentUser.data?.id;
 
   return (
     <div className="flex flex-col gap-3">
       {onBehalfCreatorName ? (
         <ErpNotice
-          tone={viewerIsSubmitter ? 'warning' : 'info'}
+          tone="info"
           title={t('pages.hr.fieldMovementLogs.submittedOnBehalf', {
             name: onBehalfCreatorName,
           })}
-          description={
-            viewerIsSubmitter
-              ? t('pages.hr.fieldMovementLogs.submitterCannotApprove')
-              : undefined
-          }
         />
       ) : null}
       <SummaryStrip

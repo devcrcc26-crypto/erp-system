@@ -66,10 +66,7 @@ import {
   isAutoApproveExcludedCategory,
 } from '../../../../shared/config/auto-approve.mode';
 import { ApprovalDecisionRegistry } from './approval-decision-registry.service';
-import {
-  isOnBehalfCreator,
-  ON_BEHALF_CREATOR_APPROVAL_MESSAGE,
-} from '../utils/on-behalf-approval.util';
+import { isOnBehalfCreator } from '../utils/on-behalf-approval.util';
 import {
   ApprovalResolverService,
   type MatchedApprovalRule,
@@ -533,7 +530,7 @@ export class ApprovalsService {
       null; 
 
     // Field movement filed on someone's behalf: who filed it, and whether the
-    // viewer is that person (they may not approve it - see approveTier).
+    // viewer is that person (banner only; assigned approvers may still approve).
     const fieldMovement = request.fieldMovementLog;
     let onBehalf: {
       submittedBy: { id: string; name: string };
@@ -1073,9 +1070,6 @@ export class ApprovalsService {
     }
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
-    if (options?.bypassApproverCheck !== true) {
-      await this.assertNotOnBehalfCreator(request.id, userId);
-    }
     const onBehalfData = actingOnBehalf
       ? { actingApproverId: userId, onBehalfOfApproverId: tier.approverId }
       : {};
@@ -2291,24 +2285,6 @@ export class ApprovalsService {
           } as Prisma.InputJsonValue,
         }),
       );
-    }
-  }
-
-  /**
-   * The person who filed a field movement log on someone's behalf may not
-   * approve it, even when they hold a tier in that employee's chain.
-   * (AUTO_APPROVE_ALL bypasses approver checks and is unaffected.)
-   */
-  private async assertNotOnBehalfCreator(
-    requestId: string,
-    userId: string,
-  ): Promise<void> {
-    const fieldMovement = await this.prisma.fieldMovementLog.findFirst({
-      where: { approvalRequestId: requestId },
-      select: { createdBy: true, employeeId: true },
-    });
-    if (isOnBehalfCreator(fieldMovement, userId)) {
-      throw new ForbiddenException(ON_BEHALF_CREATOR_APPROVAL_MESSAGE);
     }
   }
 

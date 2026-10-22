@@ -14,10 +14,7 @@ import {
 } from '../../../on-behalf/on-behalf.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
-import {
-  isOnBehalfCreator,
-  ON_BEHALF_CREATOR_APPROVAL_MESSAGE,
-} from '../../../approvals/application/utils/on-behalf-approval.util';
+import { isOnBehalfCreator } from '../../../approvals/application/utils/on-behalf-approval.util';
 
 const COMPANY = 'company-1';
 const ADMIN = 'admin-1';
@@ -423,7 +420,7 @@ describe('"Forgot both" clock-in and clock-out', () => {
   });
 });
 
-describe('Creator cannot approve their own on-behalf field movement', () => {
+describe('On-behalf creator may approve when they hold the current tier', () => {
   it('isOnBehalfCreator: only the filer of someone else’s record', () => {
     expect(isOnBehalfCreator({ createdBy: ADMIN, employeeId: EMPLOYEE }, ADMIN)).toBe(true);
     expect(isOnBehalfCreator({ createdBy: ADMIN, employeeId: EMPLOYEE }, 'approver-2')).toBe(false);
@@ -449,6 +446,7 @@ describe('Creator cannot approve their own on-behalf field movement', () => {
             status: ApprovalRequestStatus.PENDING,
             currentTier: 1,
             requestedBy: ADMIN,
+            createdBy,
             requestNumber: 'APR-1',
             deletedAt: null,
           },
@@ -475,12 +473,11 @@ describe('Creator cannot approve their own on-behalf field movement', () => {
     return { service, prisma };
   }
 
-  it('the admin who filed it gets 403 even though they hold the current tier', async () => {
-    const { service, prisma } = buildApprovals(ADMIN);
+  it('the admin who filed it may approve when they hold the current tier', async () => {
+    const { service } = buildApprovals(ADMIN);
     await expect(service.approveTier('req-1', 'tier-1', ADMIN)).rejects.toThrow(
-      new ForbiddenException(ON_BEHALF_CREATOR_APPROVAL_MESSAGE),
+      'reached approval write',
     );
-    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('an approver who did not file it proceeds to the approval write', async () => {

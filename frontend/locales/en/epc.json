@@ -1643,8 +1643,7 @@
         "notFound": "Field movement log not found",
         "add": "Add",
         "addOnBehalf": "Add on behalf",
-        "submittedOnBehalf": "Submitted by {{name}} on behalf",
-        "submitterCannotApprove": "You submitted this on behalf of the employee, so another approver must approve it. You can still return or reject it."
+        "submittedOnBehalf": "Submitted by {{name}} on behalf"
       },
       "flight": {
         "new": "New Flight Application",
