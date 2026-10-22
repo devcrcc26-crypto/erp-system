@@ -10,7 +10,6 @@ import {
   UserCheck,
   Wallet,
 } from 'lucide-react';
-import { Progress, Tag } from 'antd';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useDashboardOperationalStats } from '@/lib/query/dashboard';
@@ -19,11 +18,19 @@ import { formatCount } from './format';
 
 const STATS = 'pages.dashboard.home.stats';
 const ICON = { size: 18, strokeWidth: 1.9 } as const;
+const KPI_ICON = { size: 18, strokeWidth: 1.9 } as const;
 
 function toneClass(tone: 'ok' | 'warn' | 'urgent' | undefined): string {
   if (tone === 'ok') return 'dv2-number--ok';
   if (tone === 'warn') return 'dv2-number--warn';
   if (tone === 'urgent') return 'dv2-number--urgent';
+  return '';
+}
+
+function kpiToneClass(tone: 'ok' | 'warn' | 'urgent' | undefined): string {
+  if (tone === 'ok') return 'dv2-kpi-value--ok';
+  if (tone === 'warn') return 'dv2-kpi-value--warn';
+  if (tone === 'urgent') return 'dv2-kpi-value--urgent';
   return '';
 }
 
@@ -48,8 +55,68 @@ function Stat({
   );
 }
 
+function ProgressBar({
+  label,
+  current,
+  total,
+  locale,
+  strong,
+}: {
+  label: string;
+  current: number;
+  total: number;
+  locale: string;
+  strong?: boolean;
+}): React.ReactNode {
+  const percent =
+    total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+  return (
+    <div className="dv2-progress-block">
+      <div className="dv2-progress-head">
+        <span>{label}</span>
+        <span>
+          {formatCount(current, locale)}
+          {total > 0 ? ` / ${formatCount(total, locale)}` : null}
+        </span>
+      </div>
+      <div
+        className="dv2-progress"
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label}
+      >
+        <span
+          className={strong ? 'dv2-progress-fill--strong' : undefined}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Pill({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone?: 'ok' | 'warn' | 'urgent';
+}): React.ReactNode {
+  const toneClassName =
+    tone === 'ok'
+      ? 'dv2-pill--ok'
+      : tone === 'warn'
+        ? 'dv2-pill--warn'
+        : tone === 'urgent'
+          ? 'dv2-pill--urgent'
+          : '';
+  return <span className={`dv2-pill ${toneClassName}`}>{children}</span>;
+}
+
 /**
  * Role-adapted operational statistic cards from GET /dashboard/stats.
+ * Headcount KPIs use the floating-tile strip; detail cards match widget v2.
  */
 export default function OperationalStatsWidgets({
   enabled,
@@ -110,34 +177,91 @@ export default function OperationalStatsWidgets({
         </WidgetCard>
       ) : null}
 
-      {showHrBlocks ? (
-        <WidgetCard
-          title={t(`${STATS}.headcount.title`)}
-          icon={<Users {...ICON} />}
-          span={12}
-          query={query}
-        >
-          {stats?.headcount ? (
-            <div className="dv2-stat-row">
-              <Stat
-                label={t(`${STATS}.headcount.total`)}
-                value={stats.headcount.total}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.headcount.onLeaveToday`)}
-                value={stats.headcount.onLeaveToday}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.headcount.newThisMonth`)}
-                value={stats.headcount.newThisMonth}
-                tone={stats.headcount.newThisMonth > 0 ? 'ok' : undefined}
-                locale={locale}
-              />
-            </div>
-          ) : null}
-        </WidgetCard>
+      {showHrBlocks && stats?.headcount ? (
+        <div className="dv2-span-12">
+          <ul className="dv2-kpi-strip" aria-label={t(`${STATS}.headcount.title`)}>
+            <li>
+              <div className="dv2-kpi">
+                <div className="dv2-kpi-head">
+                  <span className="dv2-kpi-icon" aria-hidden>
+                    <Users {...KPI_ICON} />
+                  </span>
+                </div>
+                <p className="dv2-kpi-label">{t(`${STATS}.headcount.total`)}</p>
+                <p className="dv2-kpi-value">
+                  {formatCount(stats.headcount.total, locale)}
+                </p>
+              </div>
+            </li>
+            <li>
+              <div className="dv2-kpi">
+                <div className="dv2-kpi-head">
+                  <span className="dv2-kpi-icon" aria-hidden>
+                    <CalendarDays {...KPI_ICON} />
+                  </span>
+                </div>
+                <p className="dv2-kpi-label">
+                  {t(`${STATS}.headcount.onLeaveToday`)}
+                </p>
+                <p className="dv2-kpi-value">
+                  {formatCount(stats.headcount.onLeaveToday, locale)}
+                </p>
+              </div>
+            </li>
+            <li>
+              <div className="dv2-kpi">
+                <div className="dv2-kpi-head">
+                  <span className="dv2-kpi-icon" aria-hidden>
+                    <UserCheck {...KPI_ICON} />
+                  </span>
+                </div>
+                <p className="dv2-kpi-label">
+                  {t(`${STATS}.headcount.newThisMonth`)}
+                </p>
+                <p
+                  className={`dv2-kpi-value ${kpiToneClass(
+                    stats.headcount.newThisMonth > 0 ? 'ok' : undefined,
+                  )}`}
+                >
+                  {formatCount(stats.headcount.newThisMonth, locale)}
+                </p>
+              </div>
+            </li>
+            {stats.contractsExpiring ? (
+              <li>
+                <Link href="/hr/employee-contract" className="dv2-kpi">
+                  <div className="dv2-kpi-head">
+                    <span
+                      className={`dv2-kpi-icon${
+                        stats.contractsExpiring.within30 > 0
+                          ? ' dv2-kpi-icon--urgent'
+                          : ''
+                      }`}
+                      aria-hidden
+                    >
+                      <FileSignature {...KPI_ICON} />
+                    </span>
+                  </div>
+                  <p className="dv2-kpi-label">
+                    {t(`${STATS}.contracts.within30`)}
+                  </p>
+                  <p
+                    className={`dv2-kpi-value ${kpiToneClass(
+                      stats.contractsExpiring.within30 > 0
+                        ? 'urgent'
+                        : undefined,
+                    )}`}
+                  >
+                    {formatCount(stats.contractsExpiring.within30, locale)}
+                  </p>
+                  <p className="dv2-kpi-hint">
+                    {t(`${STATS}.contracts.title`)}
+                  </p>
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        </div>
       ) : null}
 
       {showHrBlocks ? (
@@ -152,74 +276,46 @@ export default function OperationalStatsWidgets({
             <>
               <div className="dv2-stat-row dv2-stat-row--align">
                 <p className="dv2-label m-0">{stats.attendance.month}</p>
-                <Tag
-                  color={
-                    stats.attendance.importStatus === 'imported'
-                      ? 'green'
-                      : 'default'
-                  }
-                >
-                  {t(
-                    `${STATS}.attendance.import.${stats.attendance.importStatus}`,
-                  )}
-                </Tag>
-                <Tag
-                  color={
-                    stats.attendance.approvalStatus === 'approved'
-                      ? 'green'
-                      : stats.attendance.approvalStatus === 'in_progress'
-                        ? 'orange'
-                        : 'default'
-                  }
-                >
-                  {t(
-                    `${STATS}.attendance.approval.${stats.attendance.approvalStatus}`,
-                  )}
-                </Tag>
-              </div>
-              <div className="dv2-progress-block">
-                <div className="dv2-progress-head">
-                  <span>{t(`${STATS}.attendance.submitted`)}</span>
-                  <span>
-                    {formatCount(stats.attendance.submittedCount, locale)} /{' '}
-                    {formatCount(stats.attendance.totalEmployees, locale)}
-                  </span>
+                <div className="dv2-pills">
+                  <Pill
+                    tone={
+                      stats.attendance.importStatus === 'imported'
+                        ? 'ok'
+                        : undefined
+                    }
+                  >
+                    {t(
+                      `${STATS}.attendance.import.${stats.attendance.importStatus}`,
+                    )}
+                  </Pill>
+                  <Pill
+                    tone={
+                      stats.attendance.approvalStatus === 'approved'
+                        ? 'ok'
+                        : stats.attendance.approvalStatus === 'in_progress'
+                          ? 'warn'
+                          : undefined
+                    }
+                  >
+                    {t(
+                      `${STATS}.attendance.approval.${stats.attendance.approvalStatus}`,
+                    )}
+                  </Pill>
                 </div>
-                <Progress
-                  percent={
-                    stats.attendance.totalEmployees > 0
-                      ? Math.round(
-                          (stats.attendance.submittedCount /
-                            stats.attendance.totalEmployees) *
-                            100,
-                        )
-                      : 0
-                  }
-                  showInfo={false}
-                  strokeColor="#1D9E75"
-                />
               </div>
-              <div className="dv2-progress-block">
-                <div className="dv2-progress-head">
-                  <span>{t(`${STATS}.attendance.approved`)}</span>
-                  <span>
-                    {formatCount(stats.attendance.approvedCount, locale)}
-                  </span>
-                </div>
-                <Progress
-                  percent={
-                    stats.attendance.totalEmployees > 0
-                      ? Math.round(
-                          (stats.attendance.approvedCount /
-                            stats.attendance.totalEmployees) *
-                            100,
-                        )
-                      : 0
-                  }
-                  showInfo={false}
-                  strokeColor="#0F6E56"
-                />
-              </div>
+              <ProgressBar
+                label={t(`${STATS}.attendance.submitted`)}
+                current={stats.attendance.submittedCount}
+                total={stats.attendance.totalEmployees}
+                locale={locale}
+              />
+              <ProgressBar
+                label={t(`${STATS}.attendance.approved`)}
+                current={stats.attendance.approvedCount}
+                total={stats.attendance.totalEmployees}
+                locale={locale}
+                strong
+              />
               {canViewHr &&
               stats.attendance.importStatus === 'not_imported' ? (
                 <Link href="/hr/attendance" className="dv2-inline-link">

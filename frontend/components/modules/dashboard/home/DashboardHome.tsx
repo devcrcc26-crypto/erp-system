@@ -123,9 +123,10 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
   const greeting = t(`pages.dashboard.hr.greeting.${greetingPeriod(addisParts(now).hour)}`);
 
   return (
-    <div className="erp-dashboard-v2">
+    <div className="erp-pro-list-page erp-dashboard-v2">
       <div className="dv2-top">
         <div className="dv2-greeting">
+          <p className="dv2-greeting-eyebrow">{t('nav.dashboard')}</p>
           <h1 className="dv2-greeting-title">{`${greeting}, ${firstName}`}</h1>
           <p className="dv2-greeting-date">{formatAddisDate(now, locale)}</p>
         </div>
