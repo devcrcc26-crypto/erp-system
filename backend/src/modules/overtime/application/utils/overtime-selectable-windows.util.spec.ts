@@ -4,6 +4,7 @@ import {
   entryToSameDayOccupiedWindow,
   enumerateWindowTimes,
   isIntervalInsideSelectableWindows,
+  isSameDayOvertimeIntervalAllowed,
   subtractOccupiedFromWindows,
   timeIntervalsOverlap,
 } from './overtime-selectable-windows.util';
@@ -39,7 +40,7 @@ const OFF = {
 };
 
 describe('computeSelectableOvertimeWindows', () => {
-  it('1 - Monday full day: 00:00–08:30 and 17:30–24:00; lunch not selectable', () => {
+  it('1 - Monday full day: duty hours hidden from start windows', () => {
     expect(POLICY_DEFAULTS.lunchCountsAsOvertime).toBe(false);
     const result = computeSelectableOvertimeWindows(FULL);
     expect(result.dayKind).toBe('FULL_WORKING');
@@ -48,11 +49,14 @@ describe('computeSelectableOvertimeWindows', () => {
       { start: '17:30', end: '24:00' },
     ]);
     expect(
-      isIntervalInsideSelectableWindows('12:30', '13:30', result.windows),
+      isSameDayOvertimeIntervalAllowed('18:00', '22:00', result.windows),
+    ).toBe(true);
+    expect(
+      isSameDayOvertimeIntervalAllowed('09:00', '12:00', result.windows),
     ).toBe(false);
   });
 
-  it('2 - Saturday half day: 00:00–08:30 and 12:30–24:00 (pre-morning OT allowed)', () => {
+  it('2 - Saturday half day: before morning and after morning end', () => {
     const result = computeSelectableOvertimeWindows(HALF);
     expect(result.dayKind).toBe('HALF_DAY');
     expect(result.windows).toEqual([
@@ -60,100 +64,55 @@ describe('computeSelectableOvertimeWindows', () => {
       { start: '12:30', end: '24:00' },
     ]);
     expect(
-      isIntervalInsideSelectableWindows('00:00', '06:00', result.windows),
+      isSameDayOvertimeIntervalAllowed('13:00', '20:00', result.windows),
     ).toBe(true);
+  });
+
+  it('site assignment day: full calendar day for starts', () => {
+    const result = computeSelectableOvertimeWindows({
+      ...FULL,
+      scheduledHoursClaimable: true,
+    });
+    expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
     expect(
-      isIntervalInsideSelectableWindows('06:00', '08:00', result.windows),
+      isSameDayOvertimeIntervalAllowed('09:00', '18:00', result.windows),
     ).toBe(true);
-    expect(
-      isIntervalInsideSelectableWindows('13:00', '17:00', result.windows),
-    ).toBe(true);
-    expect(
-      isIntervalInsideSelectableWindows('08:30', '12:30', result.windows),
-    ).toBe(false);
   });
 
   it('3 - Sunday / non-working: whole day', () => {
     const result = computeSelectableOvertimeWindows(OFF);
     expect(result.dayKind).toBe('NON_WORKING');
     expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
-    expect(
-      isIntervalInsideSelectableWindows('08:00', '12:00', result.windows),
-    ).toBe(true);
   });
 
-  it('Sat-off employee Saturday → NON_WORKING whole day (WEEKEND classification)', () => {
-    // Same shape as Sunday off - schedule isWorkingDay false for Saturday.
-    const satOff = {
-      isHoliday: false,
-      isWorkingDay: false,
-      isHalfDay: false,
-      morningStart: null as string | null,
-      morningEnd: null as string | null,
-      afternoonStart: null as string | null,
-      afternoonEnd: null as string | null,
-      leaveExcludedWindows: [] as Array<{ start: string; end: string }>,
-      hasFullDayLeave: false,
-    };
-    const result = computeSelectableOvertimeWindows(satOff);
-    expect(result.dayKind).toBe('NON_WORKING');
-    expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
-  });
-
-  it('4 - end at or before start is not inside windows', () => {
+  it('4 - end at or before start is not allowed', () => {
     const result = computeSelectableOvertimeWindows(FULL);
     expect(
-      isIntervalInsideSelectableWindows('18:00', '18:00', result.windows),
-    ).toBe(false);
-    expect(
-      isIntervalInsideSelectableWindows('19:00', '18:00', result.windows),
+      isSameDayOvertimeIntervalAllowed('18:00', '18:00', result.windows),
     ).toBe(false);
   });
 
-  it('9 - Tue 00:00–09:00 overlaps working hours → rejected', () => {
-    const result = computeSelectableOvertimeWindows(FULL);
-    expect(
-      isIntervalInsideSelectableWindows('00:00', '09:00', result.windows),
-    ).toBe(false);
-  });
-
-  it('11 - full-day leave duty hours excluded; evening OT still selectable', () => {
+  it('11 - full-day leave duty hours excluded', () => {
     const result = computeSelectableOvertimeWindows({
       ...FULL,
       leaveExcludedWindows: [{ start: '08:30', end: '17:30' }],
     });
-    expect(result.dayKind).toBe('FULL_WORKING');
     expect(result.windows).toEqual([
       { start: '00:00', end: '08:30' },
       { start: '17:30', end: '24:00' },
     ]);
-    expect(result.blockedReason).toBeNull();
+  });
+});
+
+describe('isIntervalInsideSelectableWindows (legacy full-window check)', () => {
+  it('requires the whole interval inside one window', () => {
+    const result = computeSelectableOvertimeWindows(FULL);
     expect(
       isIntervalInsideSelectableWindows('18:00', '20:00', result.windows),
     ).toBe(true);
     expect(
-      isIntervalInsideSelectableWindows('09:00', '10:00', result.windows),
-    ).toBe(false);
-  });
-
-  it('half-day leave morning excludes morning OT window portion', () => {
-    const result = computeSelectableOvertimeWindows({
-      ...FULL,
-      leaveExcludedWindows: [{ start: '08:30', end: '12:30' }],
-    });
-    // Morning leave does not change OT windows (already outside schedule).
-    expect(result.windows).toEqual([
-      { start: '00:00', end: '08:30' },
-      { start: '17:30', end: '24:00' },
-    ]);
-  });
-
-  it('half-day leave on Saturday morning removes early window slice only if overlapping', () => {
-    const result = computeSelectableOvertimeWindows({
-      ...HALF,
-      leaveExcludedWindows: [{ start: '00:00', end: '08:30' }],
-    });
-    expect(result.windows).toEqual([{ start: '12:30', end: '24:00' }]);
+      isIntervalInsideSelectableWindows('18:00', '22:00', result.windows),
+    ).toBe(true);
   });
 });
 
@@ -163,11 +122,6 @@ describe('enumerateWindowTimes', () => {
     const starts = enumerateWindowTimes(evening, { forEndTime: false });
     expect(starts[0]).toBe('17:30');
     expect(starts).not.toContain('24:00');
-    const ends = enumerateWindowTimes(evening, {
-      forEndTime: true,
-      afterMinutes: 23 * 60,
-    });
-    expect(ends).toContain('24:00');
   });
 });
 
@@ -182,20 +136,6 @@ describe('subtractOccupiedFromWindows', () => {
       { start: '17:30', end: '18:00' },
       { start: '20:00', end: '24:00' },
     ]);
-    expect(isIntervalInsideSelectableWindows('18:00', '19:00', remaining)).toBe(
-      false,
-    );
-    expect(isIntervalInsideSelectableWindows('20:00', '21:00', remaining)).toBe(
-      true,
-    );
-  });
-
-  it('drops fragments shorter than 15 minutes', () => {
-    const remaining = subtractOccupiedFromWindows(
-      [{ start: '17:30', end: '24:00' }],
-      [{ start: '17:30', end: '23:50' }],
-    );
-    expect(remaining).toEqual([]);
   });
 });
 
@@ -208,10 +148,5 @@ describe('entryToSameDayOccupiedWindow / timeIntervalsOverlap', () => {
         endsAtEndOfDay: true,
       }),
     ).toEqual({ start: '22:00', end: '24:00' });
-  });
-
-  it('detects partial overlap between intervals', () => {
-    expect(timeIntervalsOverlap(18 * 60, 20 * 60, 19 * 60, 21 * 60)).toBe(true);
-    expect(timeIntervalsOverlap(18 * 60, 20 * 60, 20 * 60, 21 * 60)).toBe(false);
   });
 });

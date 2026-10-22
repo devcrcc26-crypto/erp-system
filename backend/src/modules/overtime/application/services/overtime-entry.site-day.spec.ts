@@ -156,7 +156,7 @@ describe('OvertimeEntryService – site assignment days', () => {
     extra?: { isOvernight?: boolean; enforceSelectableWindows?: boolean },
   ) => service.classifyEntry(EMPLOYEE_ID, COMPANY_ID, d(date), start, end, extra);
 
-  it('office day 09:00–12:00 → not claimable (as today)', async () => {
+  it('office day 09:00–12:00 → rejected (start falls in scheduled duty)', async () => {
     await expect(classify('2026-09-14', '09:00', '12:00')).rejects.toBeInstanceOf(
       BadRequestException,
     );
@@ -207,18 +207,14 @@ describe('OvertimeEntryService – site assignment days', () => {
   });
 
   it('site day lunch 12:30–13:30 stays under lunchCountsAsOvertime (off → not claimable)', async () => {
-    await expect(classify('2026-09-09', '12:30', '13:30')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    const priced = await classify('2026-09-09', '12:30', '13:30');
+    expect(priced.totalHours).toBe(0);
     const windows = await service.getSelectableWindows(
       { employeeId: EMPLOYEE_ID, date: '2026-09-09' } as never,
       COMPANY_ID,
       EMPLOYEE_ID,
     );
-    expect(windows.windows).toEqual([
-      { start: '00:00', end: '12:30' },
-      { start: '13:30', end: '24:00' },
-    ]);
+    expect(windows.windows).toEqual([{ start: '00:00', end: '24:00' }]);
   });
 
   it('site day lunch with lunchCountsAsOvertime on → normal OT, not in the site subtotal', async () => {
@@ -248,7 +244,7 @@ describe('OvertimeEntryService – site assignment days', () => {
     });
   });
 
-  it('office Saturday 08:30–12:30 → not claimable (as today)', async () => {
+  it('office Saturday 08:30–12:30 → start in duty window is rejected', async () => {
     await expect(classify('2026-09-12', '08:30', '12:30')).rejects.toBeInstanceOf(
       BadRequestException,
     );

@@ -19,7 +19,7 @@ export const OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE =
   'Overnight entries that cross midnight require the next calendar day schedule context.';
 
 export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
-  'Overtime times must fall inside the selectable windows for this day (outside scheduled hours and lunch).';
+  'Overtime times must fall on the same calendar day and cannot overlap approved leave or another entry on this sheet.';
 
 /**
  * Schedule-aware overtime hour splitter (15-minute steps; last block may be shorter).

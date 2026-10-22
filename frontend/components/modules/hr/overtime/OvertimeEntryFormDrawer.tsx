@@ -119,26 +119,17 @@ export default function OvertimeEntryFormDrawer({
           setWindows(result);
           const start = form.getFieldValue('startTime') as string | undefined;
           const end = form.getFieldValue('endTime') as string | undefined;
-          if (start && !result.windows.some((w) => {
-            const toMin = (v: string): number =>
-              v === '24:00' ? 1440 : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
-            const s = toMin(start);
-            return s >= toMin(w.start) && s < toMin(w.end);
-          })) {
-            form.setFieldsValue({ startTime: undefined, endTime: undefined });
-          } else if (
-            end &&
-            start &&
-            !result.windows.some((w) => {
-              const toMin = (v: string): number =>
-                v === '24:00'
-                  ? 1440
-                  : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+          const toMin = (v: string): number =>
+            v === '24:00' ? 1440 : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+          const startValid =
+            !start ||
+            result.windows.some((w) => {
               const s = toMin(start);
-              const e = toMin(end);
-              return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
-            })
-          ) {
+              return s >= toMin(w.start) && s < toMin(w.end);
+            });
+          if (start && !startValid) {
+            form.setFieldsValue({ startTime: undefined, endTime: undefined });
+          } else if (end && start && toMin(end) <= toMin(start)) {
             form.setFieldValue('endTime', undefined);
           }
         })

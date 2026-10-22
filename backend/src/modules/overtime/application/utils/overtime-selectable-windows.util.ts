@@ -42,10 +42,7 @@ export interface SelectableWindowsInput {
   hasFullDayLeave?: boolean;
   /** Policy lunchCountsAsOvertime as of the date; when false the lunch gap is not selectable. */
   lunchCountsAsOvertime?: boolean;
-  /**
-   * Approved site-assignment day: scheduled duty hours are selectable and
-   * count as OT (lunch and leave rules unchanged).
-   */
+  /** Site-assignment day: full calendar day (duty hours are not hidden). */
   scheduledHoursClaimable?: boolean;
 }
 
@@ -199,53 +196,33 @@ export function computeSelectableOvertimeWindows(
     end: parseHhMmToMinutesStrict(w.end),
   }));
 
-  if (input.isHoliday || !input.isWorkingDay) {
-    const windows = subtractWindows(
-      [{ start: 0, end: END_OF_DAY_MINUTES }],
-      leaveExcluded,
-    );
-    return {
-      dayKind: input.isHoliday ? 'HOLIDAY' : 'NON_WORKING',
-      windows: windows.map((w) => ({
-        start: minutesToHhMm(w.start),
-        end: minutesToHhMm(w.end),
-      })),
-      blockedReason: null,
-      message: null,
-    };
+  let dayKind: OvertimeDayKind;
+  if (input.isHoliday) {
+    dayKind = 'HOLIDAY';
+  } else if (!input.isWorkingDay) {
+    dayKind = 'NON_WORKING';
+  } else if (input.isHalfDay) {
+    dayKind = 'HALF_DAY';
+  } else {
+    dayKind = 'FULL_WORKING';
   }
-
-  const morningStart = input.morningStart
-    ? parseHhMmToMinutesStrict(input.morningStart)
-    : null;
-  const morningEnd = input.morningEnd
-    ? parseHhMmToMinutesStrict(input.morningEnd)
-    : null;
-  const afternoonStart = input.afternoonStart
-    ? parseHhMmToMinutesStrict(input.afternoonStart)
-    : null;
-  const afternoonEnd = input.afternoonEnd
-    ? parseHhMmToMinutesStrict(input.afternoonEnd)
-    : null;
 
   let base: Array<{ start: number; end: number }> = [];
   const lunchCounts =
     input.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime;
 
   if (input.scheduledHoursClaimable) {
-    // Site day: the whole calendar day, minus lunch when it does not count.
+    // Site assignment: any time on the calendar day (leave still carved out).
     base = [{ start: 0, end: END_OF_DAY_MINUTES }];
-    if (
-      !input.isHalfDay &&
-      !lunchCounts &&
-      morningEnd != null &&
-      afternoonStart != null
-    ) {
-      base = subtractWindows(base, [{ start: morningEnd, end: afternoonStart }]);
-    }
+  } else if (input.isHoliday || !input.isWorkingDay) {
+    base = [{ start: 0, end: END_OF_DAY_MINUTES }];
   } else if (input.isHalfDay) {
-    // Half day: OT before morning (Night/Regular classification) + after morning
-    // end through 24:00 (Weekend). Morning itself is not selectable.
+    const morningStart = input.morningStart
+      ? parseHhMmToMinutesStrict(input.morningStart)
+      : null;
+    const morningEnd = input.morningEnd
+      ? parseHhMmToMinutesStrict(input.morningEnd)
+      : null;
     if (morningStart != null && morningStart > 0) {
       base.push({ start: 0, end: morningStart });
     }
@@ -256,11 +233,20 @@ export function computeSelectableOvertimeWindows(
       base = [{ start: 0, end: END_OF_DAY_MINUTES }];
     }
   } else {
-    // Full working day: before morning + after afternoon end.
-    // Lunch is selectable only when the lunchCountsAsOvertime policy is on.
-    // Single-shift days (SCAN_ONLY schedules, e.g. 07:00–08:30) have no
-    // afternoon: the duty window ends at morningEnd.
-    const dutyEnd = afternoonEnd ?? (afternoonStart == null ? morningEnd : null);
+    const morningStart = input.morningStart
+      ? parseHhMmToMinutesStrict(input.morningStart)
+      : null;
+    const morningEnd = input.morningEnd
+      ? parseHhMmToMinutesStrict(input.morningEnd)
+      : null;
+    const afternoonStart = input.afternoonStart
+      ? parseHhMmToMinutesStrict(input.afternoonStart)
+      : null;
+    const afternoonEnd = input.afternoonEnd
+      ? parseHhMmToMinutesStrict(input.afternoonEnd)
+      : null;
+    const dutyEnd =
+      afternoonEnd ?? (afternoonStart == null ? morningEnd : null);
     if (morningStart != null && morningStart > 0) {
       base.push({ start: 0, end: morningStart });
     }
@@ -276,8 +262,9 @@ export function computeSelectableOvertimeWindows(
   }
 
   const windows = subtractWindows(base, leaveExcluded);
+
   return {
-    dayKind: input.isHalfDay ? 'HALF_DAY' : 'FULL_WORKING',
+    dayKind,
     windows: windows.map((w) => ({
       start: minutesToHhMm(w.start),
       end: minutesToHhMm(w.end),
@@ -305,6 +292,27 @@ export function isIntervalInsideSelectableWindows(
     const ws = parseHhMmToMinutesStrict(w.start);
     const we = parseHhMmToMinutesStrict(w.end);
     return start >= ws && end <= we;
+  });
+}
+
+/**
+ * Same-day OT: start must fall in a selectable window (scheduled duty hidden
+ * for non-site days); end may run through 24:00 as long as end > start.
+ */
+export function isSameDayOvertimeIntervalAllowed(
+  startHhMm: string,
+  endHhMm: string,
+  windows: TimeWindowHhMm[],
+): boolean {
+  const start = parseHhMmToMinutesStrict(startHhMm);
+  const end = parseHhMmToMinutesStrict(endHhMm);
+  if (end <= start || end > END_OF_DAY_MINUTES) {
+    return false;
+  }
+  return windows.some((w) => {
+    const ws = parseHhMmToMinutesStrict(w.start);
+    const we = parseHhMmToMinutesStrict(w.end);
+    return start >= ws && start < we;
   });
 }
 

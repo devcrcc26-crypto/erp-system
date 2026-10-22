@@ -24,7 +24,6 @@ import {
   SelectableOvertimeWindowsQueryDto,
 } from '../dtos/overtime.dtos';
 import {
-  buildOvertimeScheduleNote,
   calculateOvertimeHoursDetailed,
   OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
   overtimeEntrySpanMinutes,
@@ -44,7 +43,7 @@ import {
 import {
   computeSelectableOvertimeWindows,
   entryToSameDayOccupiedWindow,
-  isIntervalInsideSelectableWindows,
+  isSameDayOvertimeIntervalAllowed,
   minutesToHhMm,
   subtractOccupiedFromWindows,
   type SelectableWindowsResult,
@@ -168,7 +167,7 @@ export class OvertimeEntryService {
         scheduledHoursClaimable: siteDay.scheduledHoursClaimable,
       });
       if (
-        !isIntervalInsideSelectableWindows(
+        !isSameDayOvertimeIntervalAllowed(
           startTime,
           endTime,
           selectable.windows,
@@ -243,7 +242,7 @@ export class OvertimeEntryService {
       isOvernight,
     );
 
-    let scheduleNote = buildOvertimeScheduleNote(onDate, context);
+    let scheduleNote: string | null = null;
     if (siteDay.siteAssignmentId) {
       scheduleNote = siteDay.siteName
         ? `${SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE} (${siteDay.siteName})`

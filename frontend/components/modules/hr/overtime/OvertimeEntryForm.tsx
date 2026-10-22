@@ -32,6 +32,12 @@ export interface OvertimeEntryFormValues {
 
 const END_OF_DAY = '24:00';
 
+/** Ant Design virtual list mis-scrolls on ~90+ time options; lists are small enough to render flat. */
+const TIME_SELECT_PROPS = {
+  virtual: false,
+  listHeight: 280,
+} as const;
+
 function parseHhMmToMinutes(value: string): number {
   if (value === END_OF_DAY) {
     return 24 * 60;
@@ -40,23 +46,11 @@ function parseHhMmToMinutes(value: string): number {
   return h * 60 + m;
 }
 
-/** End times strictly after start, within the same selectable window, 15-min steps. */
-export function enumerateEndTimes(
-  startTime: string,
-  windows: Array<{ start: string; end: string }>,
-): string[] {
+/** End times strictly after start through end of the same calendar day (15-min steps). */
+export function enumerateEndTimes(startTime: string): string[] {
   const start = parseHhMmToMinutes(startTime);
-  const window = windows.find((w) => {
-    const ws = parseHhMmToMinutes(w.start);
-    const we = parseHhMmToMinutes(w.end);
-    return start >= ws && start < we;
-  });
-  if (!window) {
-    return [];
-  }
-  const we = parseHhMmToMinutes(window.end);
   const times: string[] = [];
-  for (let m = start + 15; m <= we; m += 15) {
+  for (let m = start + 15; m <= 24 * 60; m += 15) {
     times.push(
       m >= 24 * 60
         ? END_OF_DAY
@@ -214,11 +208,11 @@ export default function OvertimeEntryForm({
     if (!watchedStart || !windows?.windows?.length) {
       return [];
     }
-    return enumerateEndTimes(watchedStart, windows.windows).map((value) => ({
+    return enumerateEndTimes(watchedStart).map((value) => ({
       value,
       label: value,
     }));
-  }, [watchedStart, windows]);
+  }, [watchedStart]);
 
   const blockedLeave = windows?.blockedReason === 'FULL_DAY_LEAVE';
   const timesDisabled =
@@ -323,8 +317,10 @@ export default function OvertimeEntryForm({
               ]}
             >
               <Select
+                {...TIME_SELECT_PROPS}
                 className="w-full"
                 showSearch
+                optionFilterProp="label"
                 options={startOptions}
                 disabled={timesDisabled}
                 placeholder={t('hr.placeholder.selectStartTime')}
@@ -362,8 +358,11 @@ export default function OvertimeEntryForm({
               ]}
             >
               <Select
+                {...TIME_SELECT_PROPS}
+                key={watchedStart ?? 'end-time'}
                 className="w-full"
                 showSearch
+                optionFilterProp="label"
                 options={endOptions}
                 disabled={timesDisabled || !watchedStart}
                 placeholder={t('hr.placeholder.selectEndTime')}
