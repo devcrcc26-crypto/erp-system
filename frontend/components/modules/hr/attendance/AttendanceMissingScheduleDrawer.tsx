@@ -95,12 +95,14 @@ export default function AttendanceMissingScheduleDrawer({
   async function handleSiteSubmit(): Promise<void> {
     const values = await siteForm.validateFields();
     try {
+      const reason = values.reason.trim();
       await submitSite.mutateAsync({
         onBehalfOfEmployeeId: employeeId,
         siteName: values.siteName.trim(),
         startDate: monthStart.format('YYYY-MM-DD'),
         endDate: monthEnd.format('YYYY-MM-DD'),
-        reason: values.reason.trim(),
+        reason,
+        lateReason: reason,
         createdFromAttendanceImport: true,
       });
       messageApi.success(t('pages.hr.attendance.importModal.siteSubmitted'));

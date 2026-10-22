@@ -325,6 +325,26 @@ describe('SiteAssignmentService', () => {
       jest.spyOn(service, 'getDetail').mockImplementation(async (id: string) => ({ id }));
     });
 
+    it('uses reason as lateReason fallback for backdating validation', async () => {
+      await service.submitRequest(
+        {
+          ...base,
+          onBehalfOfEmployeeId: EMPLOYEE_ID,
+          startDate: '2026-08-01',
+          endDate: '2026-08-02',
+          reason: 'Backfilled from attendance',
+        } as never,
+        COMPANY_ID,
+        HR_ID,
+      );
+
+      expect(backdatingPolicy.validateSubmissionDates).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lateReason: 'Backfilled from attendance',
+        }),
+      );
+    });
+
     it('supervisor files for a direct report: chain starts above the supervisor, initiatedAs recorded', async () => {
       await service.submitRequest(
         { ...base, onBehalfOfEmployeeId: REPORT_A } as never,
@@ -431,7 +451,7 @@ describe('SiteAssignmentService', () => {
           COMPANY_ID,
           SUPERVISOR_ID,
         ),
-      ).rejects.toThrow('db down');
+      ).rejects.toThrow('Could not save this site assignment');
 
       expect(prisma.siteAssignment.update).toHaveBeenCalledWith(
         expect.objectContaining({

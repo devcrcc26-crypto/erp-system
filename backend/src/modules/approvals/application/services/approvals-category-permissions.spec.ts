@@ -32,6 +32,9 @@ function makeService(input: {
   categories?: typeof CATEGORIES;
   roleNames?: string[];
   canCreateModules?: string[];
+  /** When set, permission checks for userId `filer` use these modules. */
+  filerCanCreateModules?: string[];
+  filerRoleNames?: string[];
   paidAdvanceCount?: number;
 }): ApprovalsService {
   const categories = input.categories ?? CATEGORIES;
@@ -55,7 +58,15 @@ function makeService(input: {
   };
 
   const permissionService = {
-    getUserRoleNames: async (): Promise<string[]> => roleNames,
+    getUserRoleNames: async (userId: string): Promise<string[]> => {
+      if (userId === 'filer' && input.filerRoleNames) {
+        return input.filerRoleNames;
+      }
+      if (userId === 'filer' && input.filerCanCreateModules) {
+        return input.filerRoleNames ?? ['HR Manager'];
+      }
+      return roleNames;
+    },
     getUserModulePermissionsMap: async (
       _userId: string,
       _companyId: string,
@@ -68,11 +79,19 @@ function makeService(input: {
       return map;
     },
     hasPermission: async (
-      _userId: string,
+      userId: string,
       _companyId: string,
       module: string,
       action: string,
-    ): Promise<boolean> => action === 'create' && canCreate.has(module),
+    ): Promise<boolean> => {
+      if (action !== 'create') {
+        return false;
+      }
+      if (userId === 'filer' && input.filerCanCreateModules) {
+        return input.filerCanCreateModules.includes(module);
+      }
+      return canCreate.has(module);
+    },
   };
 
   return new ApprovalsService(
@@ -166,6 +185,28 @@ describe('ApprovalsService - category create permissions', () => {
         },
         'c1',
         'u1',
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('checks create permission on the filer for on-behalf submits', async () => {
+    // Subject has create; filer does not → must 403 (permission follows the filer).
+    const service = makeService({
+      roleNames: ['Employee'],
+      canCreateModules: ['vehicle-refueling'],
+      filerRoleNames: ['Employee'],
+      filerCanCreateModules: ['leave'],
+    });
+    await expect(
+      service.submitRequest(
+        {
+          categoryCode: 'VEHICLE_REFUELING',
+          title: 'Fuel',
+          formData: {},
+        },
+        'c1',
+        'subject',
+        { createdByUserId: 'filer' },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });

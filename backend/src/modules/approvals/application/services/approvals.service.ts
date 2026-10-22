@@ -339,15 +339,18 @@ export class ApprovalsService {
       );
     }
 
+    // On-behalf filings pass the subject as `userId` (requestedBy) and the
+    // filer as `createdByUserId`. Create permission belongs to the filer.
+    const actorUserId = options?.createdByUserId ?? userId;
     const permissionModule = resolveCategoryPermissionModule(category.code);
     if (permissionModule) {
       const roleNames = await this.permissionService.getUserRoleNames(
-        userId,
+        actorUserId,
         companyId,
       );
       if (!isTrueSystemAdministrator(roleNames)) {
         const canCreate = await this.permissionService.hasPermission(
-          userId,
+          actorUserId,
           companyId,
           permissionModule,
           'create',

@@ -24,6 +24,7 @@ import { useSubmitSiteAssignment } from '@/lib/query/site-assignment';
 import { useProjects } from '@/lib/query/projects';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { isBeforeCurrentMonthUtc } from '@/lib/utils/backdating-date.util';
 import { formatUserName } from '@/lib/utils/user-display';
 
 interface SiteAssignmentFormValues {
@@ -179,7 +180,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const anyPeriodBeforeCurrentMonth = useMemo(
     () =>
       filledPeriods(periods).some((row) =>
-        row.range[0].isBefore(dayjs().startOf('month'), 'day'),
+        isBeforeCurrentMonthUtc(row.range[0].format('YYYY-MM-DD')),
       ),
     [periods],
   );
@@ -288,7 +289,8 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
           startDate: period.startDate,
           endDate: period.endDate,
           reason: values.reason || undefined,
-          lateReason: values.lateReason?.trim() || undefined,
+          lateReason:
+            values.lateReason?.trim() || values.reason?.trim() || undefined,
           ...(isCrew ? { crewEmployeeIds: crewIds } : onBehalf.payload),
         });
         if ('assignments' in result) {

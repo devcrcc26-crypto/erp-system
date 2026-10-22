@@ -267,12 +267,14 @@ export class SiteAssignmentService
       );
     }
 
+    const lateReasonText =
+      dto.lateReason?.trim() || dto.reason?.trim() || undefined;
     const backdating = await this.backdatingPolicy.validateSubmissionDates({
       companyId,
       actorUserId: userId,
       targetEmployeeId: employeeId,
       dates: eachDay(startDate, endDate).map((day) => day.date),
-      lateReason: dto.lateReason,
+      lateReason: lateReasonText,
     });
 
     if (dto.projectId) {
@@ -408,7 +410,18 @@ export class SiteAssignmentService
           completedAt: now,
         },
       });
-      throw error;
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      // Never surface raw Prisma / driver errors — the UI maps those to
+      // "Something went wrong" and the approval row is already cancelled.
+      throw new BadRequestException(
+        'Could not save this site assignment after opening the approval. Try again, or pick different dates if one already covers this period.',
+      );
     }
 
     await this.onBehalfService.recordOnBehalfCreate({
