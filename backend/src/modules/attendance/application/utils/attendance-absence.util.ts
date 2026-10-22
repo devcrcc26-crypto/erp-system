@@ -1,8 +1,9 @@
 /**
  * Import-time attendance day counts, before the month is recomputed with
  * summarizeMonthAbsence (which then sets scheduled / present / absent / paid).
- * Every working day counts 1, Saturday included - a half-day schedule never
- * makes a day 0.5. Payroll paid/absent days come from summarizeMonthAbsence.
+ * This helper still counts each duty day as 1 for scheduled/present tallies;
+ * payroll absence weights (Saturday full miss = 1) come from summarizeMonthAbsence /
+ * dayDeduction.
  */
 
 export interface AttendanceAbsenceLog {

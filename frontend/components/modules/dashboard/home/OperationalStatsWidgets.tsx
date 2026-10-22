@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { Button, Skeleton } from 'antd';
+import type { LucideIcon } from 'lucide-react';
 import {
   CalendarDays,
+  FileClock,
   FileSignature,
   MapPin,
   Timer,
@@ -27,7 +30,7 @@ function toneClass(tone: 'ok' | 'warn' | 'urgent' | undefined): string {
   return '';
 }
 
-function kpiToneClass(tone: 'ok' | 'warn' | 'urgent' | undefined): string {
+function kpiToneClass(tone: Tone | undefined): string {
   if (tone === 'ok') return 'dv2-kpi-value--ok';
   if (tone === 'warn') return 'dv2-kpi-value--warn';
   if (tone === 'urgent') return 'dv2-kpi-value--urgent';
@@ -114,9 +117,162 @@ function Pill({
   return <span className={`dv2-pill ${toneClassName}`}>{children}</span>;
 }
 
+type Tone = 'ok' | 'warn' | 'urgent';
+
+function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  tone,
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: Tone;
+  href?: string;
+}): React.ReactNode {
+  const iconTone = tone === 'urgent' || tone === 'warn' ? ` dv2-kpi-icon--${tone}` : '';
+  const content = (
+    <>
+      <div className="dv2-kpi-head">
+        <p className="dv2-kpi-label">{label}</p>
+        <span className={`dv2-kpi-icon${iconTone}`} aria-hidden>
+          <Icon {...KPI_ICON} />
+        </span>
+      </div>
+      <p className={`dv2-kpi-value ${kpiToneClass(tone)}`}>{value}</p>
+      {hint ? <p className="dv2-kpi-hint">{hint}</p> : null}
+    </>
+  );
+  return (
+    <li>
+      {href ? (
+        <Link href={href} className="dv2-kpi">
+          {content}
+        </Link>
+      ) : (
+        <div className="dv2-kpi">{content}</div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Top-of-page stat strip: company headcount for HR (or anyone the API grants
+ * headcount), otherwise the viewer's own leave / overtime / request figures.
+ */
+export function DashboardKpiStrip({ enabled }: { enabled: boolean }): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const canViewHr = useCanViewHr();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+  const showHeadcount = canViewHr || stats?.visibility?.headcount === true;
+  const label = t('pages.dashboard.home.sections.summary');
+
+  if (query.isLoading) {
+    return (
+      <ul className="dv2-kpi-strip" aria-label={label} aria-busy="true">
+        {[0, 1, 2, 3].map((key) => (
+          <li key={key}>
+            <div className="dv2-kpi">
+              <Skeleton active title={false} paragraph={{ rows: 2 }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (query.isError) {
+    return (
+      <div className="dv2-error" role="alert">
+        <p className="m-0">{t('pages.dashboard.home.loadFailed')}</p>
+        <Button size="small" onClick={() => void query.refetch()}>
+          {t('pages.dashboard.home.retry')}
+        </Button>
+      </div>
+    );
+  }
+
+  if (showHeadcount && stats?.headcount) {
+    const within30 = stats.contractsExpiring?.within30 ?? 0;
+    return (
+      <ul className="dv2-kpi-strip" aria-label={t(`${STATS}.headcount.title`)}>
+        <KpiTile
+          icon={Users}
+          label={t(`${STATS}.headcount.total`)}
+          value={formatCount(stats.headcount.total, locale)}
+        />
+        <KpiTile
+          icon={CalendarDays}
+          label={t(`${STATS}.headcount.onLeaveToday`)}
+          value={formatCount(stats.headcount.onLeaveToday, locale)}
+        />
+        <KpiTile
+          icon={UserCheck}
+          label={t(`${STATS}.headcount.newThisMonth`)}
+          value={formatCount(stats.headcount.newThisMonth, locale)}
+          tone={stats.headcount.newThisMonth > 0 ? 'ok' : undefined}
+        />
+        {stats.contractsExpiring ? (
+          <KpiTile
+            icon={FileSignature}
+            label={t(`${STATS}.contracts.within30`)}
+            value={formatCount(within30, locale)}
+            hint={t(`${STATS}.contracts.title`)}
+            tone={within30 > 0 ? 'urgent' : undefined}
+            href="/hr/employee-contract"
+          />
+        ) : null}
+      </ul>
+    );
+  }
+
+  const personal = stats?.personal;
+  if (!personal) {
+    return null;
+  }
+  const site = personal.upcomingSiteAssignment;
+  return (
+    <ul className="dv2-kpi-strip" aria-label={t(`${STATS}.personal.title`)}>
+      <KpiTile
+        icon={CalendarDays}
+        label={t(`${STATS}.personal.leaveBalance`)}
+        value={
+          personal.myLeaveBalanceDays == null
+            ? '—'
+            : formatCount(personal.myLeaveBalanceDays, locale)
+        }
+        href="/hr/leave-requests"
+      />
+      <KpiTile
+        icon={Timer}
+        label={t(`${STATS}.personal.otHours`)}
+        value={formatCount(personal.myOtHoursThisMonth, locale)}
+      />
+      <KpiTile
+        icon={FileClock}
+        label={t(`${STATS}.personal.pendingRequests`)}
+        value={formatCount(personal.myPendingRequestCount, locale)}
+        tone={personal.myPendingRequestCount > 0 ? 'warn' : undefined}
+        href="/approvals"
+      />
+      <KpiTile
+        icon={MapPin}
+        label={t(`${STATS}.personal.upcomingSite`)}
+        value={site ? site.siteName : t(`${STATS}.personal.noSite`)}
+        hint={site ? `${site.startDate} → ${site.endDate}` : undefined}
+      />
+    </ul>
+  );
+}
+
 /**
  * Role-adapted operational statistic cards from GET /dashboard/stats.
- * Headcount KPIs use the floating-tile strip; detail cards match widget v2.
+ * Spans are chosen so each 12-column row is full whichever cards are visible.
  */
 export default function OperationalStatsWidgets({
   enabled,
@@ -130,140 +286,9 @@ export default function OperationalStatsWidgets({
   const visibility = stats?.visibility;
   const showHrBlocks = canViewHr || visibility?.headcount === true;
   const showSite = canViewHr || visibility?.siteAssignments === true;
-  const showPersonal = !canViewHr;
 
   return (
     <>
-      {showPersonal ? (
-        <WidgetCard
-          title={t(`${STATS}.personal.title`)}
-          icon={<Users {...ICON} />}
-          span={12}
-          query={query}
-        >
-          {stats?.personal ? (
-            <div className="dv2-stat-row">
-              <Stat
-                label={t(`${STATS}.personal.leaveBalance`)}
-                value={
-                  stats.personal.myLeaveBalanceDays == null
-                    ? '—'
-                    : stats.personal.myLeaveBalanceDays
-                }
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.personal.otHours`)}
-                value={stats.personal.myOtHoursThisMonth}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.personal.pendingRequests`)}
-                value={stats.personal.myPendingRequestCount}
-                locale={locale}
-              />
-              <div className="dv2-figure">
-                <p className="dv2-hint m-0">
-                  {t(`${STATS}.personal.upcomingSite`)}
-                </p>
-                <p className="dv2-strong m-0">
-                  {stats.personal.upcomingSiteAssignment
-                    ? `${stats.personal.upcomingSiteAssignment.siteName} (${stats.personal.upcomingSiteAssignment.startDate} → ${stats.personal.upcomingSiteAssignment.endDate})`
-                    : t(`${STATS}.personal.noSite`)}
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </WidgetCard>
-      ) : null}
-
-      {showHrBlocks && stats?.headcount ? (
-        <div className="dv2-span-12">
-          <ul className="dv2-kpi-strip" aria-label={t(`${STATS}.headcount.title`)}>
-            <li>
-              <div className="dv2-kpi">
-                <div className="dv2-kpi-head">
-                  <span className="dv2-kpi-icon" aria-hidden>
-                    <Users {...KPI_ICON} />
-                  </span>
-                </div>
-                <p className="dv2-kpi-label">{t(`${STATS}.headcount.total`)}</p>
-                <p className="dv2-kpi-value">
-                  {formatCount(stats.headcount.total, locale)}
-                </p>
-              </div>
-            </li>
-            <li>
-              <div className="dv2-kpi">
-                <div className="dv2-kpi-head">
-                  <span className="dv2-kpi-icon" aria-hidden>
-                    <CalendarDays {...KPI_ICON} />
-                  </span>
-                </div>
-                <p className="dv2-kpi-label">
-                  {t(`${STATS}.headcount.onLeaveToday`)}
-                </p>
-                <p className="dv2-kpi-value">
-                  {formatCount(stats.headcount.onLeaveToday, locale)}
-                </p>
-              </div>
-            </li>
-            <li>
-              <div className="dv2-kpi">
-                <div className="dv2-kpi-head">
-                  <span className="dv2-kpi-icon" aria-hidden>
-                    <UserCheck {...KPI_ICON} />
-                  </span>
-                </div>
-                <p className="dv2-kpi-label">
-                  {t(`${STATS}.headcount.newThisMonth`)}
-                </p>
-                <p
-                  className={`dv2-kpi-value ${kpiToneClass(
-                    stats.headcount.newThisMonth > 0 ? 'ok' : undefined,
-                  )}`}
-                >
-                  {formatCount(stats.headcount.newThisMonth, locale)}
-                </p>
-              </div>
-            </li>
-            {stats.contractsExpiring ? (
-              <li>
-                <Link href="/hr/employee-contract" className="dv2-kpi">
-                  <div className="dv2-kpi-head">
-                    <span
-                      className={`dv2-kpi-icon${
-                        stats.contractsExpiring.within30 > 0
-                          ? ' dv2-kpi-icon--urgent'
-                          : ''
-                      }`}
-                      aria-hidden
-                    >
-                      <FileSignature {...KPI_ICON} />
-                    </span>
-                  </div>
-                  <p className="dv2-kpi-label">
-                    {t(`${STATS}.contracts.within30`)}
-                  </p>
-                  <p
-                    className={`dv2-kpi-value ${kpiToneClass(
-                      stats.contractsExpiring.within30 > 0
-                        ? 'urgent'
-                        : undefined,
-                    )}`}
-                  >
-                    {formatCount(stats.contractsExpiring.within30, locale)}
-                  </p>
-                  <p className="dv2-kpi-hint">
-                    {t(`${STATS}.contracts.title`)}
-                  </p>
-                </Link>
-              </li>
-            ) : null}
-          </ul>
-        </div>
-      ) : null}
-
       {showHrBlocks ? (
         <WidgetCard
           title={t(`${STATS}.attendance.title`)}
@@ -432,7 +457,7 @@ export default function OperationalStatsWidgets({
       <WidgetCard
         title={t(`${STATS}.perDiem.title`)}
         icon={<Wallet {...ICON} />}
-        span={6}
+        span={showSite ? 6 : 12}
         viewAllHref="/hr/per-diem"
         query={query}
       >
@@ -467,7 +492,7 @@ export default function OperationalStatsWidgets({
         <WidgetCard
           title={t(`${STATS}.contracts.title`)}
           icon={<FileSignature {...ICON} />}
-          span={12}
+          span={canViewHr ? 6 : 12}
           viewAllHref="/hr/employee-contract"
           query={query}
         >

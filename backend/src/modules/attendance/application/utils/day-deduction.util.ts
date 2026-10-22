@@ -230,7 +230,7 @@ export function dayDeduction(
     return scanOnlyDayDeduction(date, day, scanOnly, null, context);
   }
 
-  // Full absence on any WORKING / HALF_DAY duty day (HALF_DAY still deducts 1).
+  // Full absence on any WORKING / HALF_DAY duty day (Saturday = 1, same as weekday).
   if (!hasClockIn && !hasClockOut) {
     if (context.isEnrolmentGrace?.(date)) {
       return { deduction: 0, status: 'ENROLMENT_GRACE' };
@@ -385,9 +385,8 @@ export interface MonthAbsenceSummary {
   paidDays: number;
   leaveDays: number;
   /**
-   * True when every WORKING / HALF_DAY day in the employment window has
-   * deduction 1 (full absence). Paid days are then forced to 0.
-   * Half-day early-departure deductions never trigger this rule.
+   * True when no Mon–Sat duty day was worked/covered (full absence or unpaid).
+   * Paid days are forced to 0 so Sundays are not left as paid rest.
    */
   fullyAbsentWorkingDays: boolean;
   /** Days with an early-departure flag (FLAG / OVER_1H / pending / covered). */
@@ -404,13 +403,45 @@ export const FULLY_ABSENT_NO_PAY_NOTE =
 
 /**
  * Duty day for absence pay / fully-absent / COVERED: WORKING or HALF_DAY.
- * HALF_DAY still counts as a full absence day (deduction 1), never 0.5.
+ * HALF_DAY (CRCC Saturday) still counts as a full absence day (deduction 1).
  */
 export function isAbsenceWorkingDay(
   date: Date,
   context: Pick<DayDeductionContext, 'dayKind' | 'isSunday' | 'isPublicHoliday'>,
 ): boolean {
   return isDutyDayKind(resolveContextDayKind(date, context));
+}
+
+/** Sundays in the employed calendar window (paid rest when any duty day was worked). */
+export function countSundaysInDates(dates: ReadonlyArray<Date>): number {
+  return dates.filter((date) => date.getUTCDay() === 0).length;
+}
+
+/**
+ * True when the employee worked or had paid coverage on at least one Mon–Sat
+ * duty day (not a full ABSENT / UNPAID_LEAVE / unpaid INACTIVE miss).
+ */
+export function workedAnyDutyDay(
+  workingDates: ReadonlyArray<Date>,
+  byDate: ReadonlyMap<string, DayDeductionResult>,
+): boolean {
+  return workingDates.some((date) => {
+    const result = byDate.get(dateToYyyyMmDd(date));
+    if (!result) {
+      return false;
+    }
+    if (
+      result.status === 'UNPAID_LEAVE' ||
+      result.status === 'INACTIVE'
+    ) {
+      return false;
+    }
+    // Full unauthorized absence — does not count as worked.
+    if (result.status === 'ABSENT' && result.deduction >= 1) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function eachDateInWindow(
@@ -577,20 +608,19 @@ export function summarizeMonthAbsence(
     const hasScan = Boolean(day?.clockIn || day?.clockOut);
     return hasScan || status === 'PRESENT';
   }).length;
+  // Sundays are paid rest only when at least one Mon–Sat duty day was worked.
+  // Full-month absence / unpaid leave → exclude Sundays (paidDays = 0).
+  // Use duty-day presence (not employed−absent−Sundays): the 30-day employed
+  // base can disagree with calendar Sunday counts on short months.
+  const anyDutyDayWorked = workedAnyDutyDay(workingDates, byDate);
   const fullyAbsentWorkingDays =
-    workingDates.length > 0 &&
-    workingDates.every((date) => {
-      const result = byDate.get(dateToYyyyMmDd(date));
-      return result != null && result.deduction === 1;
-    });
+    workingDates.length > 0 && !anyDutyDayWorked;
 
-  // Normal: paid = employed − absent − unpaid. Fully absent on all duty days → 0
-  // (do not leave day-off / holiday remainder as paid days).
-  // Early-departure 0.5 days are included in absentRounded when ENFORCED /
-  // pending, and never alone force the fully-absent zero-pay rule.
-  const paidDays = fullyAbsentWorkingDays
+  const paidDays = !anyDutyDayWorked
     ? 0
-    : roundDays(Math.max(0, employedDays - absentRounded - unpaidRounded));
+    : roundDays(
+        Math.max(0, employedDays - absentRounded - unpaidRounded),
+      );
 
   return {
     employedDays,
@@ -619,13 +649,13 @@ export interface StoredDayDeduction {
    * calendar Sunday only (legacy).
    */
   isWeekend?: boolean;
+  /** CRCC Saturday (half-day schedule). Full miss still deducts 1. */
+  isHalfDay?: boolean;
 }
 
 /**
- * Fully-absent check on stored daily logs (payroll run), using the same rule
- * as summarizeMonthAbsence: paid days are 0 and every duty day (not holiday,
- * not schedule day off) inside the employed windows has deduction 1.
- * With no windows (no contract) every stored log counts.
+ * Fully-absent check on stored daily logs (payroll run): paid days are 0 and
+ * every Mon–Sat duty day is a full miss (deduction ≥ 1). Sundays excluded.
  */
 export function isFullyAbsentFromStoredLogs(
   paidDays: number,
@@ -651,7 +681,8 @@ export function isFullyAbsentFromStoredLogs(
     return !isOff;
   });
   return (
-    working.length > 0 && working.every((log) => log.dayDeduction === 1)
+    working.length > 0 &&
+    working.every((log) => log.dayDeduction >= 1)
   );
 }
 

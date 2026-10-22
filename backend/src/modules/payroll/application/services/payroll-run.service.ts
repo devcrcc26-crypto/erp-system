@@ -73,6 +73,10 @@ import {
   type DatedOvertimeEntry,
   type OvertimeWeekdaySlice,
 } from '../utils/payroll-overtime.util';
+import {
+  unpaidLeaveDateKeysInRange,
+  unpaidLeaveDaysStillToDeduct,
+} from '../utils/payroll-unpaid-leave.util';
 
 /** Documented overnight assignment rule for payroll (see payroll-overtime.util). */
 export { OVERNIGHT_OT_DATE_ASSIGNMENT };
@@ -159,6 +163,7 @@ interface AttendanceSnapshot {
     dayDeduction: Decimal;
     isHoliday: boolean;
     isWeekend: boolean;
+    isHalfDay?: boolean;
     dayStatus?: string | null;
   }>;
 }
@@ -1285,6 +1290,7 @@ export class PayrollRunService {
       missingAttendanceRows,
       latestContracts,
       inactiveSpansByEmployee,
+      unpaidLeaveRows,
     ] = await Promise.all([
       this.prisma.employeeContract.findMany({
         where: {
@@ -1323,8 +1329,6 @@ export class PayrollRunService {
           month,
           year,
         },
-        // unpaidLeaveDays omitted until prisma generate (derive from dayStatus).
-        // earlyDepartureWouldDeductDays from 20261009160000 - cast until client regen
         select: {
           id: true,
           employeeId: true,
@@ -1332,6 +1336,7 @@ export class PayrollRunService {
           presentDays: true,
           absentDays: true,
           paidDays: true,
+          unpaidLeaveDays: true,
           matchMethod: true,
           earlyDepartureWouldDeductDays: true,
           dailyLogs: {
@@ -1340,6 +1345,7 @@ export class PayrollRunService {
               dayDeduction: true,
               isHoliday: true,
               isWeekend: true,
+              isHalfDay: true,
               dayStatus: true,
             },
           },
@@ -1419,7 +1425,40 @@ export class PayrollRunService {
         distinct: ['employeeId'],
       }),
       loadInactiveSpansForMonth(this.prisma, employeeIds, month, year),
+      this.prisma.leaveRequest.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          deletedAt: null,
+          status: 'APPROVED',
+          leaveType: 'UNPAID',
+          periods: {
+            some: {
+              startDate: { lte: monthEnd },
+              endDate: { gte: monthStart },
+            },
+          },
+        },
+        select: {
+          employeeId: true,
+          periods: {
+            select: { startDate: true, endDate: true },
+          },
+        },
+      }),
     ]);
+
+    const unpaidLeavePeriodsByEmployee = new Map<
+      string,
+      Array<{ startDate: Date; endDate: Date }>
+    >();
+    for (const row of unpaidLeaveRows) {
+      const list = unpaidLeavePeriodsByEmployee.get(row.employeeId) ?? [];
+      for (const period of row.periods) {
+        list.push({ startDate: period.startDate, endDate: period.endDate });
+      }
+      unpaidLeavePeriodsByEmployee.set(row.employeeId, list);
+    }
 
     const latestContractByEmployee = new Map(
       latestContracts.map((c) => [c.employeeId, c]),
@@ -1535,6 +1574,7 @@ export class PayrollRunService {
           contractEndedOn: contractEndedOnByEmployee.get(employee.id) ?? null,
           inactiveSpans: inactiveSpansByEmployee.get(employee.id) ?? [],
           attendance,
+          unpaidLeavePeriods: unpaidLeavePeriodsByEmployee.get(employee.id) ?? [],
           overtime: overtimeByEmployee.get(employee.id),
           siteAssignments: siteByEmployee.get(employee.id) ?? [],
           missingAttendanceResolution:
@@ -1763,6 +1803,8 @@ export class PayrollRunService {
     /** Inactive periods overlapping the month. */
     inactiveSpans?: InactiveSpan[];
     attendance: AttendanceSnapshot | undefined;
+    /** Approved UNPAID leave periods overlapping the payroll month. */
+    unpaidLeavePeriods?: Array<{ startDate: Date; endDate: Date }>;
     overtime: OvertimeSnapshot | undefined;
     siteAssignments: Array<{
       siteName: string;
@@ -1966,10 +2008,44 @@ export class PayrollRunService {
       absentInWindow = this.round(absentInWindow + inactive.unpaidDays);
     }
 
-    const fullyAbsentWorkingDays = this.isFullyAbsentWorkingMonth(
-      attendance,
-      windows,
-    );
+    // Approved UNPAID leave: reduce payrollDays when attendance is missing or
+    // unpaid leave was not reflected in paidDays (e.g. still marked LEAVE).
+    const unpaidPeriods = input.unpaidLeavePeriods ?? [];
+    const employedRangeStart = employmentStart
+      ? new Date(
+          Math.max(employmentStart.getTime(), monthStart.getTime()),
+        )
+      : monthStart;
+    const employedRangeEnd = employmentEnd
+      ? new Date(Math.min(employmentEnd.getTime(), monthEnd.getTime()))
+      : monthEnd;
+    const unpaidDateKeys =
+      unpaidPeriods.length > 0 &&
+      employedRangeStart.getTime() <= employedRangeEnd.getTime()
+        ? unpaidLeaveDateKeysInRange(
+            unpaidPeriods,
+            employedRangeStart,
+            employedRangeEnd,
+          )
+        : [];
+    const unpaidStillToDeduct = unpaidLeaveDaysStillToDeduct({
+      unpaidDateKeys,
+      dailyLogs: attendance
+        ? attendance.dailyLogs.map((log) => ({
+            date: log.date,
+            dayDeduction: this.toNumber(log.dayDeduction),
+            dayStatus: log.dayStatus,
+          }))
+        : null,
+    });
+    if (unpaidStillToDeduct > 0) {
+      payrollDays = Math.max(0, this.round(payrollDays - unpaidStillToDeduct));
+      absentInWindow = this.round(absentInWindow + unpaidStillToDeduct);
+      noteParts.push(`Unpaid leave: ${unpaidStillToDeduct} days`);
+    }
+
+    const fullyAbsentWorkingDays =
+      this.isFullyAbsentWorkingMonth(attendance, windows) || payrollDays === 0;
 
     for (const assignment of siteAssignments) {
       const rangeStart = new Date(
@@ -1999,8 +2075,8 @@ export class PayrollRunService {
     const monthEndContract =
       sorted.length > 0 ? sorted[sorted.length - 1] : undefined;
     const monthEndBasic = this.toNumber(monthEndContract?.basicSalary);
-    // Fully absent Mon–Sat month: no transport, bonuses, net bonuses, or pension.
-    // Approved overtime is still paid.
+    // Fully absent / zero paid days: no transport, bonuses, net bonuses, or pension.
+    // OT is also zeroed when payrollDays === 0 (full unpaid month).
 
     // Prorate transport and monthly bonus using the same contract-period split as
     // earned salary.  For a single full-month contract this equals the contract
@@ -2028,6 +2104,9 @@ export class PayrollRunService {
     let effectiveNetTopUp = netTopUp;
     let pensionApplicable = monthEndContract?.pensionApplicable ?? true;
     const taxApplicable = monthEndContract?.taxApplicable ?? true;
+    // Full month unpaid / zero paid days: no transport, bonuses, pension, or OT.
+    // TODO(HR): confirm whether any fixed contractual allowances should still pay.
+    let zeroOtForUnpaidMonth = false;
     if (fullyAbsentWorkingDays) {
       transport = 0;
       monthlyBonus = 0;
@@ -2035,6 +2114,7 @@ export class PayrollRunService {
       effectiveBonusTopUp = 0;
       effectiveNetTopUp = 0;
       pensionApplicable = false;
+      zeroOtForUnpaidMonth = payrollDays === 0;
       noteParts.push(FULLY_ABSENT_NO_PAY_NOTE);
     } else if (periodDetails.length > 1) {
       // Show per-contract allowance breakdown when contracts split mid-month.
@@ -2127,12 +2207,19 @@ export class PayrollRunService {
       noteParts.push(OT_FALLBACK_MONTH_END_NOTE);
     }
 
-    const overtimeHours: OvertimeHours = {
-      normalHours: assignedOt.totals.normalHours,
-      eveningHours: assignedOt.totals.eveningHours,
-      sundayHours: assignedOt.totals.sundayHours,
-      holidayHours: assignedOt.totals.holidayHours,
-    };
+    const overtimeHours: OvertimeHours = zeroOtForUnpaidMonth
+      ? {
+          normalHours: 0,
+          eveningHours: 0,
+          sundayHours: 0,
+          holidayHours: 0,
+        }
+      : {
+          normalHours: assignedOt.totals.normalHours,
+          eveningHours: assignedOt.totals.eveningHours,
+          sundayHours: assignedOt.totals.sundayHours,
+          holidayHours: assignedOt.totals.holidayHours,
+        };
 
     const result = this.calc.calculate({
       basicSalary: monthEndBasic,
@@ -2144,12 +2231,19 @@ export class PayrollRunService {
       payrollDays,
       earnedSalary: sumEarned,
       overtimeHours,
-      overtimePay: {
-        normalOtPay: assignedOt.totals.normalOtPay,
-        eveningOtPay: assignedOt.totals.eveningOtPay,
-        sundayOtPay: assignedOt.totals.sundayOtPay,
-        holidayOtPay: assignedOt.totals.holidayOtPay,
-      },
+      overtimePay: zeroOtForUnpaidMonth
+        ? {
+            normalOtPay: 0,
+            eveningOtPay: 0,
+            sundayOtPay: 0,
+            holidayOtPay: 0,
+          }
+        : {
+            normalOtPay: assignedOt.totals.normalOtPay,
+            eveningOtPay: assignedOt.totals.eveningOtPay,
+            sundayOtPay: assignedOt.totals.sundayOtPay,
+            holidayOtPay: assignedOt.totals.holidayOtPay,
+          },
       taxableThreshold,
       pensionApplicable,
       taxApplicable,
@@ -2486,6 +2580,7 @@ export class PayrollRunService {
         dayDeduction: this.toNumber(log.dayDeduction),
         isHoliday: log.isHoliday,
         isWeekend: log.isWeekend,
+        isHalfDay: log.isHalfDay,
       })),
       windows,
     );

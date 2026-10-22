@@ -205,7 +205,7 @@ describe('SCAN_ONLY work schedule - dayDeduction', () => {
     ).toMatchObject({ status: 'ABSENT', deduction: 1 });
   });
 
-  it('Saturday follows the same rule (scan → present, late scan flagged, none → absent 1)', () => {
+  it('Saturday: scan → present; late scan flagged; none → absent 1 (same as weekday)', () => {
     expect(
       dayDeduction(SATURDAY, scans(SATURDAY, '07:00', null), scanOnlyContext()),
     ).toMatchObject({ status: 'PRESENT', deduction: 0, scanAfterDeadlineTime: null });

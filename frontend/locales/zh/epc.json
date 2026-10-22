@@ -2223,6 +2223,12 @@
     "dashboard": {
       "home": {
         "quickActions": "快捷操作",
+        "sections": {
+          "summary": "概览",
+          "work": "我的工作",
+          "personal": "个人",
+          "operations": "运营"
+        },
         "actions": {
           "newLeave": "申请休假",
           "newOvertime": "申请加班",

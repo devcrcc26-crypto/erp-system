@@ -33,24 +33,20 @@
   outline-offset: 2px;
 }
 
-/* ── Hero: greeting + quick actions ── */
+/* ── Page header: greeting + quick actions (toolbar card, like list pages) ── */
 
-.erp-dashboard-v2 .dv2-top {
+.erp-dashboard-v2 .dv2-header.erp-pro-card {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px 28px;
-  padding: 28px 28px 24px;
+  gap: 16px 24px;
+  padding: 20px 24px;
+  border: 0;
   border-radius: var(--dv2-radius);
-  background:
-    linear-gradient(
-      135deg,
-      rgba(29, 158, 117, 0.08) 0%,
-      rgba(255, 255, 255, 0) 48%
-    ),
-    var(--dv2-surface);
+  background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
+  overflow: visible;
 }
 
 .erp-dashboard-v2 .dv2-greeting {
@@ -58,7 +54,7 @@
 }
 
 .erp-dashboard-v2 .dv2-greeting-eyebrow {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   color: var(--dv2-primary-strong);
   font-size: 12px;
   font-weight: 600;
@@ -69,29 +65,27 @@
 .erp-dashboard-v2 .dv2-greeting-title {
   margin: 0;
   color: var(--dv2-text-strong);
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.25;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .erp-dashboard-v2 .dv2-greeting-date {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--dv2-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .erp-dashboard-v2 .dv2-actions {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .erp-dashboard-v2 .dv2-action-list {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -102,41 +96,93 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 6px 14px 6px 6px;
-  border-radius: 999px;
-  background: var(--dv2-subtle);
+  min-height: 36px;
+  padding: 0 14px 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: var(--dv2-surface);
   color: var(--dv2-text);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   transition:
     background-color 120ms ease,
-    color 120ms ease,
-    box-shadow 120ms ease;
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .erp-dashboard-v2 .dv2-action:hover {
+  border-color: rgba(29, 158, 117, 0.35);
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
-  box-shadow: 0 1px 2px rgba(15, 110, 86, 0.08);
 }
 
 .erp-dashboard-v2 .dv2-action-icon {
   display: inline-flex;
-  width: 28px;
-  height: 28px;
   flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--dv2-surface);
   color: var(--dv2-primary-strong);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
 .erp-dashboard-v2 .dv2-action-label {
   white-space: nowrap;
+}
+
+/* ── Main + sidebar columns ── */
+
+.erp-dashboard-v2 .dv2-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.erp-dashboard-v2 .dv2-main,
+.erp-dashboard-v2 .dv2-side {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-content: start;
+}
+
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .erp-dashboard-v2 .dv2-main,
+  .erp-dashboard-v2 .dv2-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-dashboard-v2 .dv2-side > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1280px) {
+  .erp-dashboard-v2 .dv2-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+    gap: 20px;
+  }
+
+  .erp-dashboard-v2 .dv2-main,
+  .erp-dashboard-v2 .dv2-side {
+    gap: 20px;
+  }
+}
+
+/* ── Section heading ── */
+
+.erp-dashboard-v2 .dv2-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-dashboard-v2 .dv2-section-title {
+  margin: 8px 0 0;
+  color: var(--dv2-text-strong);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 /* ── KPI strip (floating tiles) ── */
@@ -181,9 +227,14 @@ a.erp-dashboard-v2 .dv2-kpi,
 
 .erp-dashboard-v2 .dv2-kpi-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.erp-dashboard-v2 .dv2-kpi-head .dv2-kpi-label {
+  min-width: 0;
+  padding-top: 2px;
 }
 
 .erp-dashboard-v2 .dv2-kpi-icon {
@@ -261,7 +312,7 @@ a.erp-dashboard-v2 .dv2-kpi,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .erp-dashboard-v2 .dv2-span-12 {
+  .erp-dashboard-v2 .dv2-grid > .dv2-span-12 {
     grid-column: span 2;
   }
 }
@@ -272,15 +323,15 @@ a.erp-dashboard-v2 .dv2-kpi,
     gap: 20px;
   }
 
-  .erp-dashboard-v2 .dv2-span-4 {
+  .erp-dashboard-v2 .dv2-grid > .dv2-span-4 {
     grid-column: span 4;
   }
 
-  .erp-dashboard-v2 .dv2-span-6 {
+  .erp-dashboard-v2 .dv2-grid > .dv2-span-6 {
     grid-column: span 6;
   }
 
-  .erp-dashboard-v2 .dv2-span-12 {
+  .erp-dashboard-v2 .dv2-grid > .dv2-span-12 {
     grid-column: span 12;
   }
 }
@@ -637,12 +688,16 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 @media (max-width: 640px) {
-  .erp-dashboard-v2 .dv2-top {
-    padding: 20px;
+  .erp-dashboard-v2 .dv2-header.erp-pro-card {
+    padding: 16px;
+  }
+
+  .erp-dashboard-v2 .dv2-action-list {
+    justify-content: flex-start;
   }
 
   .erp-dashboard-v2 .dv2-greeting-title {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .erp-dashboard-v2 .dv2-kpi-value {

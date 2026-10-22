@@ -109,7 +109,7 @@ export function leavePortionWeight(
 
 /**
  * Payroll absence weight for a daily log.
- * Fully missed scheduled day = 1 (including Saturday). Partly attended = 0.5.
+ * Fully missed duty day (WORKING or HALF_DAY Saturday) = 1.
  */
 export function payrollAbsenceWeightForLog(
   log: LeaveCoverageDailyLog,

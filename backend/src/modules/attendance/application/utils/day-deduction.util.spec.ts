@@ -124,9 +124,9 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
         dailyLogsByDate: daily,
         context: emptyContext(),
       });
+      // Mon 1 + Wed 1 + Sat 1 = 3 against the 30-day base (Sundays still paid)
       expect(result.absentDays).toBe(3);
       expect(result.paidDays).toBe(27);
-      // Saturday absence is 1, not 0.5
       const satKey = dateToYyyyMmDd(absencesByMonth[month]![2]!);
       expect(result.byDate.get(satKey)?.deduction).toBe(1);
     }
@@ -150,6 +150,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       dailyLogsByDate: daily,
       context: emptyContext(),
     });
+    // Mon 1 + Sat 1 = 2 against the 30-day base (Sundays still paid)
     expect(result.paidDays).toBe(28);
     expect(result.absentDays).toBe(2);
   });
@@ -703,6 +704,88 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.byDate.get('2026-08-02')?.status).toBe('DAY_OFF'); // Sunday
   });
 
+  describe('Sunday paid-rest exclusion (zero duty days worked)', () => {
+    it('absent Mon–Sat every week all month → paidDays 0 (Sundays excluded)', () => {
+      const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      // Without exclusion, residual would be Sunday rest days (~5); must be 0.
+      expect(result.absentDays).toBe(26);
+      expect(result.byDate.get('2026-08-02')?.deduction).toBe(0); // Sunday
+      expect(result.byDate.get('2026-08-02')?.status).toBe('DAY_OFF');
+      expect(result.paidDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+    });
+
+    it('full-month UNPAID leave → paidDays 0 (Sundays excluded)', () => {
+      const daily = logsForMonth(9, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month: 9,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext({ isOnUnpaidLeave: () => true }),
+      });
+      expect(result.paidDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+      expect(result.byDate.get('2026-09-06')?.status).toBe('DAY_OFF'); // Sunday
+    });
+
+    it('absent all weekdays but present one Saturday → paidDays > 0, Sundays included', () => {
+      const presentSat = '2026-08-08';
+      const daily = logsForMonth(8, 2026, fullContractStart, null, (date, key) => {
+        if (key === presentSat) {
+          return dayInput(date);
+        }
+        return dayInput(date, { clockIn: null, clockOut: null });
+      });
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      // 25 Mon–Sat absences; one Saturday present → Sundays remain paid rest.
+      expect(result.absentDays).toBe(25);
+      expect(result.byDate.get(presentSat)?.status).toBe('PRESENT');
+      expect(result.fullyAbsentWorkingDays).toBe(false);
+      expect(result.paidDays).toBe(5); // 30 − 25
+      expect(result.paidDays).toBeGreaterThan(0);
+    });
+
+    it('normal employee with some absences → Sundays still counted (no regression)', () => {
+      const absentKeys = new Set(['2026-08-03', '2026-08-04']); // Mon Tue
+      const daily = logsForMonth(8, 2026, fullContractStart, null, (date, key) => {
+        if (absentKeys.has(key)) {
+          return dayInput(date, { clockIn: null, clockOut: null });
+        }
+        return dayInput(date);
+      });
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.absentDays).toBe(2);
+      expect(result.fullyAbsentWorkingDays).toBe(false);
+      // 30 − 2 = 28 includes Sunday paid rest (not stripped).
+      expect(result.paidDays).toBe(28);
+      expect(result.byDate.get('2026-08-02')?.deduction).toBe(0);
+    });
+  });
+
   it('unpaid leave Mon–Fri → absent 0, unpaid 5, paid 25 (never double-counted)', () => {
     // Mon 3 Aug … Fri 7 Aug 2026
     const unpaidKeys = new Set([
@@ -1044,7 +1127,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(outDept.paidDays).toBe(29);
   });
 
-  it('example month → absent 2.5, paid 27.5', () => {
+  it('example month → absent 2.5, paid 27.5 (Sat full miss = 1)', () => {
     const mon = d(2026, 8, 3);
     const half = d(2026, 8, 4);
     const sat = d(2026, 8, 8);
@@ -1067,6 +1150,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       dailyLogsByDate: daily,
       context: emptyContext(),
     });
+    // Mon ABSENT 1 + Tue HALF_ABSENT 0.5 + Sat ABSENT 1 = 2.5
     expect(result.absentDays).toBe(2.5);
     expect(result.paidDays).toBe(27.5);
   });
@@ -1296,7 +1380,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.presentDays).toBe(13);
   });
 
-  it('Saturday no-scan absence is 1 (not 0.5)', () => {
+  it('Saturday no-scan absence is 1 (same as weekday)', () => {
     const sat = d(2026, 8, 8);
     const r = dayDeduction(
       sat,
@@ -1425,7 +1509,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       expect(r.deduction).toBe(0);
     });
 
-    it('default schedule Saturday no scan → deduction 1 (unchanged)', () => {
+    it('default schedule Saturday no scan → deduction 1 (same as weekday)', () => {
       const sat = d(2026, 10, 10);
       const r = dayDeduction(
         sat,
@@ -1497,14 +1581,23 @@ function storedLogsFromSummary(
   year: number,
   byDate: Map<string, { deduction: number }>,
   isHoliday: (date: Date) => boolean = () => false,
-): Array<{ date: Date; dayDeduction: number; isHoliday: boolean }> {
+): Array<{
+  date: Date;
+  dayDeduction: number;
+  isHoliday: boolean;
+  isWeekend: boolean;
+  isHalfDay: boolean;
+}> {
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return Array.from({ length: lastDay }, (_, index) => {
     const date = d(year, month, index + 1);
+    const dow = date.getUTCDay();
     return {
       date,
       dayDeduction: byDate.get(dateToYyyyMmDd(date))?.deduction ?? 0,
       isHoliday: isHoliday(date),
+      isWeekend: dow === 0,
+      isHalfDay: dow === 6,
     };
   });
 }

@@ -2228,6 +2228,12 @@
     "dashboard": {
       "home": {
         "quickActions": "Quick actions",
+        "sections": {
+          "summary": "Summary",
+          "work": "My work",
+          "personal": "For you",
+          "operations": "Operations"
+        },
         "actions": {
           "newLeave": "New leave",
           "newOvertime": "New overtime",

@@ -41,8 +41,7 @@ import {
   useLeadEvaluations,
 } from './RoleWidgets';
 import AnnouncementsWidget from './AnnouncementsWidget';
-import OperationalStatsWidgets from './OperationalStatsWidgets';
-import { rowSpans } from './layout';
+import OperationalStatsWidgets, { DashboardKpiStrip } from './OperationalStatsWidgets';
 
 const HOME = 'pages.dashboard.home';
 
@@ -116,7 +115,6 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
     { key: 'evaluation', Widget: MyEvaluationWidget, visible: true },
     { key: 'evaluationInbox', Widget: EvaluationInboxWidget, visible: isLead },
   ].filter((widget) => widget.visible);
-  const smallSpans = rowSpans(smallWidgets.length);
 
   const now = new Date();
   const firstName = user?.firstName || t('pages.dashboard.hr.greeting.fallbackName');
@@ -124,7 +122,7 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
 
   return (
     <div className="erp-pro-list-page erp-dashboard-v2">
-      <div className="dv2-top">
+      <header className="erp-pro-card dv2-header">
         <div className="dv2-greeting">
           <p className="dv2-greeting-eyebrow">{t('nav.dashboard')}</p>
           <h1 className="dv2-greeting-title">{`${greeting}, ${firstName}`}</h1>
@@ -132,9 +130,6 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
         </div>
 
         <nav aria-label={t(`${HOME}.quickActions`)} className="dv2-actions">
-          <p className="dv2-label m-0" aria-hidden>
-            {t(`${HOME}.quickActions`)}
-          </p>
           <ul className="dv2-action-list">
             {quickActions
               .filter((action) => action.visible)
@@ -155,18 +150,32 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
               })}
           </ul>
         </nav>
+      </header>
+
+      <DashboardKpiStrip enabled={enabled} />
+
+      <div className="dv2-layout">
+        <section className="dv2-main" aria-label={t(`${HOME}.sections.work`)}>
+          <PendingApprovalsWidget enabled={enabled} />
+          <MyRequestsWidget enabled={enabled} />
+        </section>
+        <aside className="dv2-side" aria-label={t(`${HOME}.sections.personal`)}>
+          <AnnouncementsWidget enabled={enabled} />
+          {smallWidgets.map(({ key, Widget }) => (
+            <Widget key={key} enabled={enabled} span={12} />
+          ))}
+        </aside>
       </div>
 
-      <div className="dv2-grid">
-        <AnnouncementsWidget enabled={enabled} />
-        <PendingApprovalsWidget enabled={enabled} />
-        <MyRequestsWidget enabled={enabled} />
-        {smallWidgets.map(({ key, Widget }, index) => (
-          <Widget key={key} enabled={enabled} span={smallSpans[index]} />
-        ))}
-        <OperationalStatsWidgets enabled={enabled} />
-        {canViewHr ? <ContractsExpiringWidget enabled={enabled} /> : null}
-      </div>
+      <section className="dv2-section" aria-labelledby="dv2-operations-heading">
+        <h2 id="dv2-operations-heading" className="dv2-section-title">
+          {t(`${HOME}.sections.operations`)}
+        </h2>
+        <div className="dv2-grid">
+          <OperationalStatsWidgets enabled={enabled} />
+          {canViewHr ? <ContractsExpiringWidget enabled={enabled} /> : null}
+        </div>
+      </section>
     </div>
   );
 }
