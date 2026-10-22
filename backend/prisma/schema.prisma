@@ -4031,6 +4031,7 @@ model SiteAssignment {
   requestNumber     String               @map("request_number")
   employeeId        String               @map("employee_id")
   siteName          String               @map("site_name")
+  projectName       String?              @map("project_name")
   projectId         String?              @map("project_id")
   startDate         DateTime             @map("start_date") @db.Date
   endDate           DateTime             @map("end_date") @db.Date

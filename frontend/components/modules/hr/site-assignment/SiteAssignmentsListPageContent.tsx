@@ -40,7 +40,10 @@ import type {
 import { useSiteAssignments } from '@/lib/query/site-assignment';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { siteAssignmentStatusVariant } from '@/lib/utils/site-assignment-display';
+import {
+  formatSiteAssignmentProject,
+  siteAssignmentStatusVariant,
+} from '@/lib/utils/site-assignment-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
@@ -115,9 +118,8 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
       const employee = formatUserName(row.employee).toLowerCase();
       const site = row.siteName.toLowerCase();
       const request = row.requestNumber.toLowerCase();
-      const project = row.project
-        ? `${row.project.projectCode} ${row.project.name}`.toLowerCase()
-        : '';
+      const project =
+        formatSiteAssignmentProject(row)?.toLowerCase() ?? '';
       return (
         employee.includes(query) ||
         site.includes(query) ||
@@ -201,14 +203,11 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
         title: t('pages.hr.siteAssignments.columns.project'),
         key: 'project',
         responsive: ['md'],
-        render: (_: unknown, row) =>
-          row.project ? (
-            <span className="erp-users-cell-sub">
-              {row.project.projectCode} - {row.project.name}
-            </span>
-          ) : (
-            <span className="erp-users-cell-sub">-</span>
-          ),
+        render: (_: unknown, row) => (
+          <span className="erp-users-cell-sub">
+            {formatSiteAssignmentProject(row) ?? '-'}
+          </span>
+        ),
       },
       {
         title: t('pages.hr.siteAssignments.columns.start'),

@@ -41,9 +41,30 @@ export function firstDayOfPreviousMonth(today: Date): Date {
   return firstDayOfMonthUtc(monthIndex, year);
 }
 
-/** 1st day of the calendar month containing `today` (UTC). */
+/** Company operating timezone (Ethiopia — EAT, UTC+3). */
+export const OPERATING_TIME_ZONE = 'Africa/Nairobi';
+
+function calendarPartsInOperatingZone(instant: Date): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: OPERATING_TIME_ZONE,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(instant);
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+  return { year, month, day };
+}
+
+/** 1st day of the calendar month containing `today` in EAT (stored as UTC midnight). */
 export function firstDayOfCurrentMonth(today: Date): Date {
-  return firstDayOfMonthUtc(today.getUTCMonth() + 1, today.getUTCFullYear());
+  const { year, month } = calendarPartsInOperatingZone(today);
+  return firstDayOfMonthUtc(month, year);
 }
 
 function compareMonth(a: PayrollMonthKey, b: PayrollMonthKey): number {
@@ -111,7 +132,7 @@ export function getEarliestAllowedDate(params: {
   return firstDayOfCurrentMonth(today);
 }
 
-/** True when any calendar day falls before the 1st of the current month (UTC). */
+/** True when the date falls before the 1st of the current month in EAT. */
 export function isLateSubmissionDate(date: Date, today: Date = new Date()): boolean {
   return date.getTime() < firstDayOfCurrentMonth(today).getTime();
 }

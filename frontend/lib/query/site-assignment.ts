@@ -5,9 +5,9 @@ import { apiGet, apiGetPaginated, apiPost } from '@/lib/api/client';
 import type {
   ListSiteAssignmentsParams,
   SiteAssignmentDetail,
-  SiteAssignmentCrewResult,
   SiteAssignmentListItem,
-  SubmitSiteAssignmentPayload,
+  SiteAssignmentPickerEmployee,
+  CreateSiteAssignmentPayload,
 } from '@/lib/api/site-assignment.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { overtimeKeys } from '@/lib/query/overtime';
@@ -26,7 +26,40 @@ export const siteAssignmentKeys = {
     [...siteAssignmentKeys.all, 'employee', employeeId] as const,
   overtimeImpact: (id: string, endDate: string | null) =>
     [...siteAssignmentKeys.all, 'overtime-impact', id, endDate] as const,
+  employees: (reportsTo: string | 'supervisors') =>
+    [...siteAssignmentKeys.all, 'employees', reportsTo] as const,
 };
+
+const HR_EMPLOYEES_PATH = '/hr/employees';
+
+export function useSiteAssignmentEmployees(
+  reportsToUserId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: siteAssignmentKeys.employees(reportsToUserId ?? ''),
+    queryFn: () =>
+      apiGet<SiteAssignmentPickerEmployee[]>(
+        `${HR_EMPLOYEES_PATH}?${new URLSearchParams({
+          reportsTo: reportsToUserId ?? '',
+        }).toString()}`,
+      ),
+    enabled: enabled && Boolean(reportsToUserId),
+    staleTime: 60_000,
+  });
+}
+
+export function useSiteAssignmentSupervisors(enabled = true) {
+  return useQuery({
+    queryKey: siteAssignmentKeys.employees('supervisors'),
+    queryFn: () =>
+      apiGet<SiteAssignmentPickerEmployee[]>(
+        `${HR_EMPLOYEES_PATH}?siteAssignmentSupervisors=true`,
+      ),
+    enabled,
+    staleTime: 60_000,
+  });
+}
 
 /** Overtime entries a cancel (endDate null) or shorten would affect. */
 export interface SiteAssignmentOvertimeImpact {
@@ -70,8 +103,8 @@ export function useEmployeeSiteAssignments(
 export function useSubmitSiteAssignment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: SubmitSiteAssignmentPayload) =>
-      apiPost<SiteAssignmentDetail | SiteAssignmentCrewResult>(PATH, payload),
+    mutationFn: (payload: CreateSiteAssignmentPayload) =>
+      apiPost<SiteAssignmentDetail>(PATH, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: siteAssignmentKeys.all });
     },

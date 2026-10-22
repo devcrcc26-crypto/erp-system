@@ -693,7 +693,7 @@
           "siteName": "现场名称",
           "siteNamePlaceholder": "例如：德雷达瓦",
           "project": "项目（可选）",
-          "projectPlaceholder": "关联项目",
+          "projectPlaceholder": "项目名称（选填）",
           "dateRange": "日期范围",
           "periods": "时段",
           "periodsHint": "每个时段为包含起止日的日期范围。不连续的日期请再添加一个时段--每个时段会生成单独的申请。",

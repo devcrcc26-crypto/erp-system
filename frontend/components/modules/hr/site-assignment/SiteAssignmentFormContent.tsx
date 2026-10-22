@@ -11,27 +11,35 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
-import {
-  formatOnBehalfEmployeeName,
-  OnBehalfSection,
-  useOnBehalf,
-  useOnBehalfEmployees,
-} from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useEarliestAllowedDate } from '@/lib/query/backdating';
-import { useSubmitSiteAssignment } from '@/lib/query/site-assignment';
-import { useProjects } from '@/lib/query/projects';
+import {
+  useSiteAssignmentEmployees,
+  useSiteAssignmentSupervisors,
+  useSubmitSiteAssignment,
+} from '@/lib/query/site-assignment';
+import { useCurrentUser } from '@/lib/query/profile';
+import type { SiteAssignmentPickerEmployee } from '@/lib/api/site-assignment.types';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { isBeforeCurrentMonthUtc } from '@/lib/utils/backdating-date.util';
+import { isBeforeCurrentMonthEat } from '@/lib/utils/backdating-date.util';
 import { formatUserName } from '@/lib/utils/user-display';
 
 interface SiteAssignmentFormValues {
   siteName?: string;
-  projectId?: string;
+  projectName?: string;
   reason?: string;
   lateReason?: string;
+}
+
+function formatPickerEmployee(employee: SiteAssignmentPickerEmployee): string {
+  const name = [employee.firstName, employee.middleName, employee.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  return employee.employeeId ? `${name} · ${employee.employeeId}` : name;
 }
 
 interface SitePeriodRow {
@@ -113,33 +121,39 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SiteAssignmentFormValues>();
-  // On-behalf: approver-only accounts only (filed for by supervisor / HR).
-  const onBehalf = useOnBehalf('SITE_ASSIGNMENT', { approverOnlyTargets: true });
-  // Crew: normal HR-process employees in initiator scope (never the submitter).
-  const crewCandidates = useOnBehalfEmployees('SITE_ASSIGNMENT');
-  const [crewIds, setCrewIds] = useState<string[]>([]);
+  const currentUser = useCurrentUser();
+  const isHrSubmitter = useCanViewHr();
+  const [supervisorId, setSupervisorId] = useState<string | undefined>();
+  const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [targetError, setTargetError] = useState<string | null>(null);
-  const isCrew = crewIds.length > 0;
-  const earliestQuery = useEarliestAllowedDate(onBehalf.effectiveEmployeeId);
+  const reportsToId = isHrSubmitter
+    ? supervisorId
+    : currentUser.data?.id;
+  const employeesQuery = useSiteAssignmentEmployees(
+    reportsToId,
+    Boolean(reportsToId),
+  );
+  const supervisorsQuery = useSiteAssignmentSupervisors(isHrSubmitter);
+  const earliestQuery = useEarliestAllowedDate(employeeId);
   const submitMutation = useSubmitSiteAssignment();
   const earliestDay = earliestQuery.data?.earliestDate
     ? dayjs(earliestQuery.data.earliestDate)
     : null;
   const requiresLateReason =
     earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true;
-  const projectsQuery = useProjects({ page: 1, limit: 200 });
   const [periods, setPeriods] = useState<SitePeriodRow[]>([
     { id: newPeriodId(), range: null },
   ]);
   const [periodError, setPeriodError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<{
     siteName: string;
-    projectId?: string;
+    projectName: string;
     reason: string;
     lateReason: string;
     periods: SitePeriodSnapshot[];
   }>({
     siteName: '',
+    projectName: '',
     reason: '',
     lateReason: '',
     periods: [],
@@ -180,35 +194,16 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const anyPeriodBeforeCurrentMonth = useMemo(
     () =>
       filledPeriods(periods).some((row) =>
-        isBeforeCurrentMonthUtc(row.range[0].format('YYYY-MM-DD')),
+        isBeforeCurrentMonthEat(row.range[0].format('YYYY-MM-DD')),
       ),
     [periods],
   );
-
-  const projectOptions = useMemo(
-    () =>
-      (projectsQuery.data?.data ?? []).map((p) => ({
-        value: p.id,
-        label: `${p.projectCode} - ${p.name}`,
-      })),
-    [projectsQuery.data?.data],
-  );
-
-  const projectLabel = useMemo(() => {
-    if (!snapshot.projectId) {
-      return '-';
-    }
-    return (
-      projectOptions.find((option) => option.value === snapshot.projectId)
-        ?.label ?? '-'
-    );
-  }, [projectOptions, snapshot.projectId]);
 
   function captureSnapshot(): typeof snapshot {
     const values = form.getFieldsValue(true) as SiteAssignmentFormValues;
     const next = {
       siteName: values.siteName?.trim() ?? '',
-      projectId: values.projectId,
+      projectName: values.projectName?.trim() ?? '',
       reason: values.reason?.trim() ?? '',
       lateReason: values.lateReason?.trim() ?? '',
       periods: filledPeriods(periods).map((row) => ({
@@ -227,12 +222,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     setPeriodError(null);
     setSnapshot({
       siteName: '',
+      projectName: '',
       reason: '',
       lateReason: '',
       periods: [],
     });
-    onBehalf.reset();
-    setCrewIds([]);
+    setSupervisorId(undefined);
+    setEmployeeId(undefined);
     setTargetError(null);
   }
 
@@ -251,8 +247,12 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   }
 
   async function validateDetailsStep(): Promise<boolean> {
-    if (!isCrew && onBehalf.targetRequired) {
+    if (!employeeId) {
       setTargetError(t('pages.hr.siteAssignments.form.targetRequired'));
+      return false;
+    }
+    if (isHrSubmitter && !supervisorId) {
+      setTargetError(t('pages.hr.siteAssignments.form.supervisorRequired'));
       return false;
     }
     setTargetError(null);
@@ -284,20 +284,19 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       const created: Array<{ id: string }> = [];
       for (const period of values.periods) {
         const result = await submitMutation.mutateAsync({
+          employeeId: employeeId ?? '',
+          ...(isHrSubmitter && supervisorId
+            ? { onBehalfOfSupervisorId: supervisorId }
+            : {}),
           siteName: values.siteName,
-          projectId: values.projectId,
+          projectName: values.projectName || undefined,
           startDate: period.startDate,
           endDate: period.endDate,
           reason: values.reason || undefined,
           lateReason:
             values.lateReason?.trim() || values.reason?.trim() || undefined,
-          ...(isCrew ? { crewEmployeeIds: crewIds } : onBehalf.payload),
         });
-        if ('assignments' in result) {
-          created.push(...result.assignments);
-        } else {
-          created.push(result);
-        }
+        created.push(result);
       }
       messageApi.success(
         created.length === 1
@@ -321,19 +320,38 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     }
   }
 
-  const crewOptions = useMemo(
+  const employeeOptions = useMemo(
     () =>
-      crewCandidates.employees.map((employee) => ({
+      (employeesQuery.data ?? []).map((employee) => ({
         value: employee.id,
-        label: formatOnBehalfEmployeeName(employee),
+        label: formatPickerEmployee(employee),
       })),
-    [crewCandidates.employees],
+    [employeesQuery.data],
   );
-  const onBehalfLabel = isCrew
-    ? t('pages.hr.siteAssignments.form.crewSummary', { count: crewIds.length })
-    : onBehalf.employee
-      ? formatUserName(onBehalf.employee)
-      : t('hr.onBehalf.forYourself');
+  const supervisorOptions = useMemo(
+    () =>
+      (supervisorsQuery.data ?? []).map((employee) => ({
+        value: employee.id,
+        label: formatPickerEmployee(employee),
+      })),
+    [supervisorsQuery.data],
+  );
+  const selectedEmployee = (employeesQuery.data ?? []).find(
+    (row) => row.id === employeeId,
+  );
+  const selectedSupervisor = (supervisorsQuery.data ?? []).find(
+    (row) => row.id === supervisorId,
+  );
+  const subjectLabel = selectedEmployee
+    ? formatUserName(selectedEmployee)
+    : '-';
+  const supervisorLabel = isHrSubmitter
+    ? selectedSupervisor
+      ? formatUserName(selectedSupervisor)
+      : '-'
+    : currentUser.data
+      ? formatUserName(currentUser.data)
+      : '-';
 
   const periodsReviewValue =
     snapshot.periods.length === 0
@@ -356,31 +374,48 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
             title={t('pages.hr.siteAssignments.form.steps.details')}
             description={t('pages.hr.siteAssignments.form.detailsStepDescription')}
           >
-            {isCrew ? null : <OnBehalfSection state={onBehalf} />}
-            {crewOptions.length > 1 ? (
+            {isHrSubmitter ? (
               <Form.Item
-                label={t('pages.hr.siteAssignments.form.crew')}
-                extra={t('pages.hr.siteAssignments.form.crewHint')}
+                label={t('pages.hr.siteAssignments.form.supervisor')}
+                required
               >
                 <Select
-                  mode="multiple"
                   allowClear
                   showSearch
                   optionFilterProp="label"
-                  value={crewIds}
-                  onChange={(next: string[]) => {
-                    setCrewIds(next);
+                  value={supervisorId}
+                  loading={supervisorsQuery.isLoading}
+                  onChange={(next) => {
+                    setSupervisorId(next);
+                    setEmployeeId(undefined);
                     setTargetError(null);
-                    if (next.length > 0) {
-                      onBehalf.setEmployeeId(undefined);
-                    }
                   }}
-                  options={crewOptions}
-                  placeholder={t('pages.hr.siteAssignments.form.crewPlaceholder')}
-                  aria-label={t('pages.hr.siteAssignments.form.crew')}
+                  options={supervisorOptions}
+                  placeholder={t(
+                    'pages.hr.siteAssignments.form.supervisorPlaceholder',
+                  )}
                 />
               </Form.Item>
             ) : null}
+            <Form.Item
+              label={t('pages.hr.siteAssignments.form.employee')}
+              required
+            >
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                value={employeeId}
+                loading={employeesQuery.isLoading}
+                disabled={isHrSubmitter && !supervisorId}
+                onChange={(next) => {
+                  setEmployeeId(next);
+                  setTargetError(null);
+                }}
+                options={employeeOptions}
+                placeholder={t('pages.hr.siteAssignments.form.employeePlaceholder')}
+              />
+            </Form.Item>
             {targetError ? (
               <p className="m-0 mb-3 text-sm text-[#B42318]" role="alert">
                 {targetError}
@@ -400,15 +435,11 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                 />
               </Form.Item>
               <Form.Item
-                name="projectId"
+                name="projectName"
                 label={t('pages.hr.siteAssignments.form.project')}
               >
-                <Select
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  options={projectOptions}
-                  loading={projectsQuery.isLoading}
+                <Input
+                  maxLength={200}
                   placeholder={t(
                     'pages.hr.siteAssignments.form.projectPlaceholder',
                   )}
@@ -495,7 +526,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                 ) : null}
                 <DayCoverageNotice
                   className="mt-3"
-                  employeeId={onBehalf.effectiveEmployeeId}
+                  employeeId={employeeId}
                   from={coverageSpan?.from ?? null}
                   to={coverageSpan?.to ?? null}
                   focus="SITE_ASSIGNMENT"
@@ -542,9 +573,15 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
             description={t('pages.hr.siteAssignments.form.reviewStepDescription')}
           >
             <div className="erp-sa-review-grid">
+              {isHrSubmitter ? (
+                <ReviewItem
+                  label={t('pages.hr.siteAssignments.form.supervisor')}
+                  value={supervisorLabel}
+                />
+              ) : null}
               <ReviewItem
-                label={t('hr.onBehalf.employee')}
-                value={onBehalfLabel}
+                label={t('pages.hr.siteAssignments.form.employee')}
+                value={subjectLabel}
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.siteName')}
@@ -552,7 +589,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.project')}
-                value={projectLabel}
+                value={snapshot.projectName || '-'}
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.columns.days')}
@@ -584,22 +621,24 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     ],
     [
       t,
-      onBehalf,
-      onBehalfLabel,
-      projectOptions,
-      projectsQuery.isLoading,
+      isHrSubmitter,
+      employeeId,
+      supervisorId,
+      employeeOptions,
+      supervisorOptions,
+      employeesQuery.isLoading,
+      supervisorsQuery.isLoading,
+      subjectLabel,
+      supervisorLabel,
       periods,
       dayCount,
       periodError,
       snapshot,
-      projectLabel,
       periodsReviewValue,
       earliestDay,
       requiresLateReason,
       anyPeriodBeforeCurrentMonth,
-      isCrew,
-      crewIds,
-      crewOptions,
+      coverageSpan,
       targetError,
     ],
   );

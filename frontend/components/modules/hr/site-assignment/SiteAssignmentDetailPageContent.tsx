@@ -30,7 +30,10 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { siteAssignmentStatusVariant } from '@/lib/utils/site-assignment-display';
+import {
+  formatSiteAssignmentProject,
+  siteAssignmentStatusVariant,
+} from '@/lib/utils/site-assignment-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const LIST_PATH = '/hr/site-assignments';
@@ -276,9 +279,7 @@ export default function SiteAssignmentDetailPageContent({
               {t('pages.hr.siteAssignments.columns.project')}
             </p>
             <p className="erp-sa-field-value">
-              {row.project
-                ? `${row.project.projectCode} - ${row.project.name}`
-                : '-'}
+              {formatSiteAssignmentProject(row) ?? '-'}
             </p>
           </div>
           <div className="erp-sa-field">

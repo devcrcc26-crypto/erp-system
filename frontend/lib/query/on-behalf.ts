@@ -22,6 +22,7 @@ export const onBehalfKeys = {
     userId: string | undefined,
     moduleCode: InitiatorModuleCode,
     approverOnly: boolean,
+    crewSupervisorId?: string,
   ) =>
     [
       ...onBehalfKeys.all,
@@ -29,6 +30,7 @@ export const onBehalfKeys = {
       moduleCode,
       userId ?? '',
       approverOnly ? 'approver-only' : 'hr-process',
+      crewSupervisorId ?? '',
     ] as const,
 };
 
@@ -40,19 +42,24 @@ export const onBehalfKeys = {
 export function useInitiableEmployees(
   userId: string | undefined,
   moduleCode: InitiatorModuleCode | null,
-  options?: { approverOnly?: boolean },
+  options?: { approverOnly?: boolean; crewSupervisorId?: string },
 ) {
   const approverOnly = options?.approverOnly === true;
+  const crewSupervisorId = options?.crewSupervisorId;
   return useQuery({
     queryKey: onBehalfKeys.initiable(
       userId,
       moduleCode ?? 'SITE_ASSIGNMENT',
       approverOnly,
+      crewSupervisorId,
     ),
     queryFn: () => {
       const params = new URLSearchParams({ module: moduleCode ?? '' });
       if (approverOnly) {
         params.set('approverOnly', 'true');
+      }
+      if (crewSupervisorId) {
+        params.set('crewSupervisorId', crewSupervisorId);
       }
       return apiGet<InitiableEmployees>(
         `${ON_BEHALF_PATH}/initiable-employees?${params.toString()}`,

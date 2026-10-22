@@ -7,13 +7,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  ApprovalRequestStatus,
-  Prisma,
-  RequestInitiatorType,
-  SiteAssignmentStatus,
-} from '@prisma/client';
-import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
+import { ApprovalRequestStatus, Prisma, SiteAssignmentStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { getRequestContext } from '../../../../shared/context/request-context';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -31,22 +25,23 @@ import {
   OvertimeSiteSyncService,
 } from '../../../overtime/application/services/overtime-site-sync.service';
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
-import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import type {
   ApprovalDecisionListener,
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
-import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
-import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { BackdatingPolicyService } from '../../../hr-shared/application/services/backdating-policy.service';
+import type { BackdatingActorKind } from '../../../hr-shared/application/utils/earliest-allowed-date.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
 import { eachDay } from '../../../hr-shared/application/utils/day-coverage.util';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
+  CreateSiteAssignmentDto,
+  ListHrEmployeesForSiteAssignmentDto,
   ListSiteAssignmentsDto,
   ShortenSiteAssignmentDto,
-  SubmitSiteAssignmentDto,
 } from '../dtos/site-assignment.dtos';
 import {
   calendarDaysInclusive,
@@ -99,14 +94,20 @@ const DETAIL_INCLUDE = {
   },
 } as const;
 
-/** One validated subject of a site-assignment submission (nothing written yet). */
+const SITE_ASSIGNMENT_ACTIVE_EVENT = 'SITE_ASSIGNMENT_ACTIVE';
+
+interface SubmitAuthorization {
+  actorUserId: string;
+  attributedSupervisorId: string;
+  isHrSubmitter: boolean;
+}
+
+/** Validated create payload (nothing persisted yet). */
 interface SubmissionPlan {
   employeeId: string;
-  initiatedAs: RequestInitiatorType;
   startDate: Date;
   endDate: Date;
   backdating: { isLateSubmission: boolean; lateReason: string | null };
-  resolvedTiers: ResolvedApprovalTier[];
 }
 
 const TERMINAL_OVERLAP_STATUSES: SiteAssignmentStatus[] = [
@@ -127,11 +128,9 @@ export class SiteAssignmentService
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly approvalsService: ApprovalsService,
-    private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
-    private readonly onBehalfService: OnBehalfService,
     private readonly permissionService: PermissionService,
+    private readonly notificationService: NotificationService,
     private readonly attendanceService: AttendanceService,
     private readonly dayCoverage: DayCoverageService,
     private readonly backdatingPolicy: BackdatingPolicyService,
@@ -148,115 +147,194 @@ export class SiteAssignmentService
   }
 
   /**
-   * Submits a site assignment. With `crewEmployeeIds`, one assignment (and
-   * approval request) per crew member, all validated before any is created.
-   * Who may file for whom follows allowedInitiators.SITE_ASSIGNMENT.
+   * Creates a site assignment for an employee. Authorized supervisors and HR
+   * only; the record is immediately APPROVED (no approval workflow).
    */
   async submitRequest(
-    dto: SubmitSiteAssignmentDto,
+    dto: CreateSiteAssignmentDto,
     companyId: string,
-    userId: string,
+    actorUserId: string,
   ): Promise<unknown> {
-    if (dto.autoApproveTier === true) {
-      throw new BadRequestException(
-        'Auto-approve is not available for site assignments; every tier is decided by its approver.',
-      );
-    }
-
-    if (dto.crewEmployeeIds && dto.crewEmployeeIds.length > 0) {
-      return this.submitCrew(dto, dto.crewEmployeeIds, companyId, userId);
-    }
-
-    const plan = await this.planSubmission(
+    const auth = await this.resolveSubmitAuthorization(dto, companyId, actorUserId);
+    const plan = await this.buildSubmissionPlan(dto, auth, companyId);
+    const recordId = await this.createApprovedAssignment(
+      plan,
       dto,
-      dto.onBehalfOfEmployeeId,
       companyId,
-      userId,
+      auth,
     );
-    const recordId = await this.createFromPlan(plan, dto, companyId, userId, null);
-    return this.getDetail(recordId, companyId, userId);
+    return this.getDetail(recordId, companyId, actorUserId);
   }
 
   /**
-   * Crew: every member must be a direct report of the submitter or inside the
-   * submitter's delegate scope (never the submitter). All-or-nothing: every
-   * member is validated first; if a create fails midway, the ones already
-   * created are cancelled.
+   * Pickers for the site assignment form: direct reports or supervisor list.
    */
-  private async submitCrew(
-    dto: SubmitSiteAssignmentDto,
-    crewEmployeeIds: string[],
+  async listEmployeesForSiteAssignment(
     companyId: string,
-    userId: string,
-  ): Promise<{ crewId: string; assignments: unknown[] }> {
-    const memberIds = [...new Set(crewEmployeeIds)];
-    if (memberIds.length !== crewEmployeeIds.length) {
-      throw new BadRequestException('A crew member is listed more than once');
-    }
-    if (memberIds.includes(userId)) {
-      throw new BadRequestException(
-        'A crew request is filed for your direct reports or delegated employees, not for yourself',
-      );
-    }
-    if (dto.onBehalfOfEmployeeId) {
-      throw new BadRequestException(
-        'Use either crewEmployeeIds or onBehalfOfEmployeeId, not both',
-      );
-    }
+    query: ListHrEmployeesForSiteAssignmentDto,
+  ): Promise<unknown[]> {
+    const supervisorsOnly =
+      query.siteAssignmentSupervisors === 'true' ||
+      query.siteAssignmentSupervisors === '1';
 
-    const plans: SubmissionPlan[] = [];
-    const errors: string[] = [];
-    for (const memberId of memberIds) {
-      try {
-        plans.push(await this.planSubmission(dto, memberId, companyId, userId));
-      } catch (error: unknown) {
-        errors.push(
-          `${await this.employeeLabel(memberId, companyId)}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      throw new BadRequestException({
-        message: `No site assignments were created. ${errors.join(' · ')}`,
-        details: { errors },
+    const base: Prisma.UserWhereInput = activeOnly({
+      companyId,
+      isActive: true,
+    });
+
+    if (supervisorsOnly) {
+      const rows = await this.prisma.user.findMany({
+        where: {
+          AND: [
+            base,
+            {
+              OR: [
+                { excludedFromHrProcesses: true },
+                {
+                  directReports: {
+                    some: activeOnly({ companyId, isActive: true }),
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          employeeId: true,
+          department: { select: { name: true } },
+        },
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
       });
+      return rows;
     }
 
-    const crewId = randomUUID();
-    const created: string[] = [];
-    try {
-      for (const plan of plans) {
-        created.push(await this.createFromPlan(plan, dto, companyId, userId, crewId));
-      }
-    } catch (error: unknown) {
-      await this.cancelCreatedCrew(created, companyId, userId);
-      throw error;
+    if (!query.reportsTo) {
+      throw new BadRequestException('reportsTo is required');
     }
 
-    const assignments: unknown[] = [];
-    for (const id of created) {
-      assignments.push(await this.getDetail(id, companyId, userId));
-    }
-    return { crewId, assignments };
+    const rows = await this.prisma.user.findMany({
+      where: {
+        AND: [
+          base,
+          hrProcessEmployeeWhere({}),
+          { reportsToUserId: query.reportsTo },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        employeeId: true,
+        department: { select: { name: true } },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+    return rows;
   }
 
-  /** Validates one subject and resolves their approval chain; writes nothing. */
-  private async planSubmission(
-    dto: SubmitSiteAssignmentDto,
-    targetEmployeeId: string | null | undefined,
+  private async resolveSubmitAuthorization(
+    dto: CreateSiteAssignmentDto,
     companyId: string,
-    userId: string,
-  ): Promise<SubmissionPlan> {
-    const { employeeId, initiatedAs } = await this.onBehalfService.resolveInitiation(
-      userId,
+    actorUserId: string,
+  ): Promise<SubmitAuthorization> {
+    const employeeId = dto.employeeId;
+    if (employeeId === actorUserId) {
+      throw new ForbiddenException(
+        'You cannot submit a site assignment for yourself',
+      );
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId, isActive: true }),
+      select: { id: true, reportsToUserId: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const isHrSubmitter = await this.isHrSiteAssignmentSubmitter(
+      actorUserId,
       companyId,
-      'SITE_ASSIGNMENT',
-      targetEmployeeId,
-      { hrProcess: true },
     );
 
+    if (isHrSubmitter) {
+      const supervisorId =
+        dto.onBehalfOfSupervisorId?.trim() || employee.reportsToUserId || null;
+      if (!supervisorId) {
+        throw new ForbiddenException(
+          'Select the supervisor this assignment is submitted on behalf of',
+        );
+      }
+      if (employee.reportsToUserId !== supervisorId) {
+        throw new ForbiddenException(
+          'The employee must directly report to the selected supervisor',
+        );
+      }
+      const supervisor = await this.prisma.user.findFirst({
+        where: activeOnly({ id: supervisorId, companyId, isActive: true }),
+        select: { id: true },
+      });
+      if (!supervisor) {
+        throw new NotFoundException('Supervisor not found');
+      }
+      return {
+        actorUserId,
+        attributedSupervisorId: supervisorId,
+        isHrSubmitter: true,
+      };
+    }
+
+    if (dto.onBehalfOfSupervisorId) {
+      throw new ForbiddenException(
+        'Only HR may submit on behalf of a supervisor',
+      );
+    }
+    if (employee.reportsToUserId !== actorUserId) {
+      throw new ForbiddenException(
+        'You may only submit site assignments for your direct reports',
+      );
+    }
+
+    return {
+      actorUserId,
+      attributedSupervisorId: actorUserId,
+      isHrSubmitter: false,
+    };
+  }
+
+  private async isHrSiteAssignmentSubmitter(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    if (
+      await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'site-assignment',
+        'manage',
+      )
+    ) {
+      return true;
+    }
+    return this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+  }
+
+  private async buildSubmissionPlan(
+    dto: CreateSiteAssignmentDto,
+    auth: SubmitAuthorization,
+    companyId: string,
+  ): Promise<SubmissionPlan> {
+    const employeeId = dto.employeeId;
     const startDate = parseUtcDateOnly(dto.startDate);
     const endDate = parseUtcDateOnly(dto.endDate);
     try {
@@ -269,27 +347,19 @@ export class SiteAssignmentService
 
     const lateReasonText =
       dto.lateReason?.trim() || dto.reason?.trim() || undefined;
+    const actorKind: BackdatingActorKind = auth.isHrSubmitter
+      ? 'HR_ON_BEHALF'
+      : 'EMPLOYEE_SELF';
     const backdating = await this.backdatingPolicy.validateSubmissionDates({
       companyId,
-      actorUserId: userId,
+      actorUserId: auth.actorUserId,
       targetEmployeeId: employeeId,
       dates: eachDay(startDate, endDate).map((day) => day.date),
       lateReason: lateReasonText,
+      actorKind,
     });
 
-    if (dto.projectId) {
-      const project = await this.prisma.project.findFirst({
-        where: activeOnly({ id: dto.projectId, companyId }),
-        select: { id: true },
-      });
-      if (!project) {
-        throw new NotFoundException('Project not found');
-      }
-    }
-
     await this.assertNoOverlap(employeeId, companyId, startDate, endDate);
-    // Not over days already covered by leave, work from home or a field
-    // movement (approved or requested). HQ scans on site days stay allowed.
     await this.dayCoverage.assertUncovered(
       companyId,
       employeeId,
@@ -297,190 +367,141 @@ export class SiteAssignmentService
       ['LEAVE', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
 
-    let resolvedTiers =
-      await this.hrApprovalChain.buildSiteAssignmentApprovalChain(
-        employeeId,
-        companyId,
-      );
-    // Supervisor and HR/delegate filings: the submitter must never approve
-    // their own request (e.g. HR Manager filing for someone with no Reports to,
-    // where the fallback tier would otherwise be themselves).
-    if (
-      initiatedAs === RequestInitiatorType.SUPERVISOR ||
-      initiatedAs === RequestInitiatorType.DELEGATE
-    ) {
-      resolvedTiers = await this.hrApprovalChain.startChainAboveSubmitter(
-        resolvedTiers,
-        userId,
-        companyId,
-      );
-    }
-
-    // Site assignments unlock scheduled hours as OT, so they are never
-    // auto-approved; the chain always has at least an HR tier.
-    if (resolvedTiers.length === 0) {
-      throw new BadRequestException(
-        'No approver is available for this site assignment - ask HR to assign an HR Manager.',
-      );
-    }
-
-    return { employeeId, initiatedAs, startDate, endDate, backdating, resolvedTiers };
+    return { employeeId, startDate, endDate, backdating };
   }
 
-  /** Opens the approval request and creates the assignment; returns its id. */
-  private async createFromPlan(
+  private async createApprovedAssignment(
     plan: SubmissionPlan,
-    dto: SubmitSiteAssignmentDto,
+    dto: CreateSiteAssignmentDto,
     companyId: string,
-    userId: string,
-    crewId: string | null,
+    auth: SubmitAuthorization,
   ): Promise<string> {
-    const { employeeId, initiatedAs, startDate, endDate, backdating, resolvedTiers } = plan;
-    const title = `Site assignment - ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
+    const { employeeId, startDate, endDate, backdating } = plan;
     const now = new Date();
     const recordId = randomUUID();
+    const requestNumber = await this.nextSiteAssignmentNumber();
 
-    const approval = (await this.approvalsService.submitRequest(
-      {
-        categoryCode: 'SITE_ASSIGNMENT',
-        title,
-        formData: {
-          siteName: dto.siteName.trim(),
-          projectId: dto.projectId ?? null,
-          startDate: dto.startDate,
-          endDate: dto.endDate,
-          calendarDays: calendarDaysInclusive(startDate, endDate),
-          reason: dto.reason ?? null,
-          ...(crewId ? { crewId } : {}),
-        },
+    const row = await this.prisma.siteAssignment.create({
+      data: {
+        id: recordId,
+        companyId,
+        requestNumber,
+        employeeId,
+        siteName: dto.siteName.trim(),
+        projectName: dto.projectName?.trim() || null,
+        projectId: null,
+        startDate,
+        endDate,
+        reason: dto.reason?.trim() || null,
+        isLateSubmission: backdating.isLateSubmission,
+        lateReason: backdating.lateReason,
+        status: SiteAssignmentStatus.APPROVED,
+        approvalRequestId: null,
+        submittedAt: now,
+        completedAt: now,
+        createdFromAttendanceImport: dto.createdFromAttendanceImport === true,
+        crewId: null,
+        createdBy: auth.attributedSupervisorId,
+        updatedBy: auth.actorUserId,
       },
+    });
+
+    await this.applyApprovedSideEffects(row);
+
+    const supervisorName = await this.formatUserDisplayName(
+      auth.attributedSupervisorId,
       companyId,
-      employeeId,
+    );
+    const startLabel = formatDateOnly(startDate);
+    const endLabel = formatDateOnly(endDate);
+    await this.notificationService.send(
+      { companyId, userId: auth.actorUserId },
       {
-        resolvedTiers: {
-          ruleName:
-            initiatedAs === RequestInitiatorType.SUPERVISOR
-              ? 'Site assignment - above the submitting supervisor'
-              : 'Site assignment - Reports to',
-          tiers: resolvedTiers,
-        },
-        createdByUserId: userId,
-        initiatedAs,
-        lateSubmission: {
-          isLateSubmission: backdating.isLateSubmission,
-          lateReason: backdating.lateReason,
-        },
+        recipientId: employeeId,
+        eventType: SITE_ASSIGNMENT_ACTIVE_EVENT,
+        subject: 'Site assignment active',
+        body: `A site assignment has been submitted for you by ${supervisorName} and is now active from ${startLabel} to ${endLabel}`,
+        link: `/hr/site-assignments/${recordId}`,
       },
-    )) as { id: string; requestNumber: string };
+    );
 
-    try {
-      await this.prisma.siteAssignment.create({
-        data: {
-          id: recordId,
-          companyId,
-          requestNumber: approval.requestNumber,
-          employeeId,
-          siteName: dto.siteName.trim(),
-          projectId: dto.projectId ?? null,
-          startDate,
-          endDate,
-          reason: dto.reason?.trim() || null,
-          isLateSubmission: backdating.isLateSubmission,
-          lateReason: backdating.lateReason,
-          status: SiteAssignmentStatus.SUBMITTED,
-          approvalRequestId: approval.id,
-          submittedAt: now,
-          createdFromAttendanceImport:
-            dto.createdFromAttendanceImport === true,
-          crewId,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-    } catch (error: unknown) {
-      this.logger.error(
-        `Site assignment create failed after approval ${approval.id}`,
-        error instanceof Error ? error.message : String(error),
-      );
-      await this.prisma.approvalRequest.update({
-        where: { id: approval.id },
-        data: {
-          status: ApprovalRequestStatus.CANCELLED,
-          updatedBy: userId,
-          completedAt: now,
-        },
-      });
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ForbiddenException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-      // Never surface raw Prisma / driver errors — the UI maps those to
-      // "Something went wrong" and the approval row is already cancelled.
-      throw new BadRequestException(
-        'Could not save this site assignment after opening the approval. Try again, or pick different dates if one already covers this period.',
-      );
-    }
-
-    await this.onBehalfService.recordOnBehalfCreate({
-      moduleCode: 'SITE_ASSIGNMENT',
+    await this.writeAudit(
       companyId,
-      actorUserId: userId,
-      employeeId,
+      auth.actorUserId,
+      'approve',
       recordId,
-      recordReference: approval.requestNumber,
-      autoApproveTier: false,
-    });
-    await this.writeAudit(companyId, userId, 'create', recordId, approval.requestNumber, null, {
-      employeeId,
-      initiatedBy: userId,
-      initiatedAs,
-      crewId,
-      siteName: dto.siteName.trim(),
-      projectId: dto.projectId ?? null,
-      startDate: formatDateOnly(startDate),
-      endDate: formatDateOnly(endDate),
-      status: SiteAssignmentStatus.SUBMITTED,
-      approvalRequestId: approval.id,
-      approvers: resolvedTiers.map((tier) => tier.label),
-    });
-    // No delegate auto-approve: rejected above and blocked in OnBehalfService.
+      requestNumber,
+      null,
+      {
+        employeeId,
+        attributedSupervisorId: auth.attributedSupervisorId,
+        siteName: dto.siteName.trim(),
+        projectName: dto.projectName?.trim() || null,
+        startDate: startLabel,
+        endDate: endLabel,
+        status: SiteAssignmentStatus.APPROVED,
+        autoApproved: true,
+      },
+    );
+
     return recordId;
   }
 
-  /** Rolls back a partly created crew (assignments and approvals cancelled). */
-  private async cancelCreatedCrew(
-    ids: string[],
-    companyId: string,
-    userId: string,
-  ): Promise<void> {
-    const now = new Date();
-    for (const id of ids) {
-      const row = await this.prisma.siteAssignment.update({
-        where: { id },
-        data: {
-          status: SiteAssignmentStatus.CANCELLED,
-          completedAt: now,
-          reason: '[Crew submission rolled back]',
-          updatedBy: userId,
-        },
-      });
-      if (row.approvalRequestId) {
-        await this.prisma.approvalRequest.update({
-          where: { id: row.approvalRequestId },
-          data: {
-            status: ApprovalRequestStatus.CANCELLED,
-            completedAt: now,
-            updatedBy: userId,
-          },
-        });
+  private async applyApprovedSideEffects(row: {
+    id: string;
+    companyId: string;
+    employeeId: string;
+    startDate: Date;
+    endDate: Date;
+    isLateSubmission: boolean;
+  }): Promise<void> {
+    await this.recalculateForRange(
+      row.companyId,
+      row.employeeId,
+      row.startDate,
+      row.endDate,
+    );
+    await this.overtimeSiteSync.syncAfterApproval(row);
+    if (row.isLateSubmission) {
+      for (const period of monthsTouchedByRange(row.startDate, row.endDate)) {
+        await markPayrollAttendanceSnapshotStale(
+          this.prisma,
+          row.companyId,
+          period.month,
+          period.year,
+        );
       }
-      await this.writeAudit(companyId, userId, 'cancel', row.id, row.requestNumber, {
-        status: SiteAssignmentStatus.SUBMITTED,
-      }, { status: SiteAssignmentStatus.CANCELLED, by: 'CREW_ROLLBACK' });
     }
+  }
+
+  private async nextSiteAssignmentNumber(): Promise<string> {
+    const category = await this.prisma.approvalCategory.findFirst({
+      where: { code: 'SITE_ASSIGNMENT', deletedAt: null },
+      select: { numberPrefix: true },
+    });
+    const prefix = category?.numberPrefix ?? 'SA';
+    const result = await this.prisma.$queryRawUnsafe<
+      Array<{ nextval: bigint | number }>
+    >(`SELECT nextval('approval_request_number_seq') as nextval`);
+    const next = Number(result[0]?.nextval ?? 1);
+    return `${prefix}-${String(next).padStart(4, '0')}`;
+  }
+
+  private async formatUserDisplayName(
+    userId: string,
+    companyId: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId }),
+      select: { firstName: true, middleName: true, lastName: true },
+    });
+    if (!user) {
+      return 'Your supervisor';
+    }
+    return [user.firstName, user.middleName, user.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
   }
 
   private async employeeLabel(employeeId: string, companyId: string): Promise<string> {

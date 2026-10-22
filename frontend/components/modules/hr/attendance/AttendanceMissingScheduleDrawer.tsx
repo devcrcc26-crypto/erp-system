@@ -97,7 +97,7 @@ export default function AttendanceMissingScheduleDrawer({
     try {
       const reason = values.reason.trim();
       await submitSite.mutateAsync({
-        onBehalfOfEmployeeId: employeeId,
+        employeeId,
         siteName: values.siteName.trim(),
         startDate: monthStart.format('YYYY-MM-DD'),
         endDate: monthEnd.format('YYYY-MM-DD'),

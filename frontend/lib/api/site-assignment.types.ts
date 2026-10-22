@@ -1,5 +1,4 @@
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 import type { PaginationMeta } from '@/lib/api/types';
 
 export type SiteAssignmentStatus =
@@ -31,6 +30,7 @@ export interface SiteAssignmentListItem {
   requestNumber: string;
   employeeId: string;
   siteName: string;
+  projectName: string | null;
   projectId: string | null;
   startDate: string;
   endDate: string;
@@ -70,11 +70,20 @@ export interface SiteAssignmentDetail extends SiteAssignmentListItem {
   } | null;
 }
 
-export interface SubmitSiteAssignmentPayload extends OnBehalfPayload {
-  /** Crew: one assignment (and approval) per listed employee. */
-  crewEmployeeIds?: string[];
+export interface SiteAssignmentPickerEmployee {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  employeeId: string | null;
+  department?: { name: string } | null;
+}
+
+export interface CreateSiteAssignmentPayload {
+  employeeId: string;
+  onBehalfOfSupervisorId?: string;
   siteName: string;
-  projectId?: string;
+  projectName?: string;
   startDate: string;
   endDate: string;
   reason?: string;
@@ -82,11 +91,8 @@ export interface SubmitSiteAssignmentPayload extends OnBehalfPayload {
   createdFromAttendanceImport?: boolean;
 }
 
-/** POST /hr/site-assignments with crewEmployeeIds. */
-export interface SiteAssignmentCrewResult {
-  crewId: string;
-  assignments: SiteAssignmentDetail[];
-}
+/** @deprecated Use CreateSiteAssignmentPayload */
+export type SubmitSiteAssignmentPayload = CreateSiteAssignmentPayload;
 
 export interface ListSiteAssignmentsParams {
   page?: number;

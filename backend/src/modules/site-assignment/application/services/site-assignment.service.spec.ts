@@ -32,7 +32,6 @@ describe('SiteAssignmentService', () => {
     approvalRequest: { update: AsyncMock };
     user: { findFirst: AsyncMock };
   };
-  let approvalsService: { submitRequest: AsyncMock };
   let attendanceService: { recalculateCompanyAttendanceMonth: AsyncMock };
   let audit: { create: AsyncMock; buildFromRequestContext: jest.Mock };
   let overtimeSiteSync: {
@@ -41,15 +40,7 @@ describe('SiteAssignmentService', () => {
     countAffected: AsyncMock;
   };
   let permissionService: { hasPermission: AsyncMock };
-  let onBehalfService: {
-    resolveHrProcessSubjectId: AsyncMock;
-    resolveInitiation: AsyncMock;
-    recordOnBehalfCreate: AsyncMock;
-  };
-  let hrApprovalChain: {
-    buildSiteAssignmentApprovalChain: AsyncMock;
-    startChainAboveSubmitter: AsyncMock;
-  };
+  let notificationService: { send: AsyncMock };
   let backdatingPolicy: { validateSubmissionDates: AsyncMock };
   let dayCoverage: { assertUncovered: AsyncMock };
 
@@ -71,19 +62,38 @@ describe('SiteAssignmentService', () => {
         findFirst: asyncMock(),
         findMany: asyncMock([]),
         update: asyncMock({}),
-        create: asyncMock({}),
+        create: jest
+          .fn<(...args: unknown[]) => Promise<unknown>>()
+          .mockImplementation(async (args: { data: Record<string, unknown> }) => ({
+            id: ASSIGNMENT_ID,
+            ...args.data,
+          })),
       },
       approvalRequest: { update: asyncMock({}) },
-      user: { findFirst: asyncMock({ firstName: 'Crew', lastName: 'Member', employeeId: null }) },
-    };
-    let approvalSeq = 0;
-    approvalsService = {
-      submitRequest: jest
-        .fn<(...args: unknown[]) => Promise<unknown>>()
-        .mockImplementation(async () => {
-          approvalSeq += 1;
-          return { id: `approval-${approvalSeq}`, requestNumber: `SA-${approvalSeq}` };
-        }),
+      approvalCategory: {
+        findFirst: asyncMock({ numberPrefix: 'SA' }),
+      },
+      user: {
+        findFirst: jest
+          .fn<(...args: unknown[]) => Promise<unknown>>()
+          .mockImplementation(async (args: { where: { id?: string } }) => {
+            const id = args.where.id;
+            if (id === EMPLOYEE_ID) {
+              return { id, reportsToUserId: SUPERVISOR_ID };
+            }
+            if (id === SUPERVISOR_ID) {
+              return { id, firstName: 'Sup', middleName: null, lastName: 'One' };
+            }
+            if (id === REPORT_A) {
+              return { id, reportsToUserId: SUPERVISOR_ID };
+            }
+            if (id === OUTSIDER_ID) {
+              return { id, reportsToUserId: null };
+            }
+            return null;
+          }),
+      },
+      $queryRawUnsafe: asyncMock([{ nextval: 42 }]),
     };
     attendanceService = {
       recalculateCompanyAttendanceMonth: asyncMock({ updated: 1 }),
@@ -97,46 +107,21 @@ describe('SiteAssignmentService', () => {
       syncAfterRemoval: asyncMock({ unsubmitted: 1, submitted: 2 }),
       countAffected: asyncMock({ unsubmitted: 1, submitted: 2 }),
     };
-    permissionService = { hasPermission: asyncMock(true) };
-    onBehalfService = {
-      resolveHrProcessSubjectId: asyncMock(EMPLOYEE_ID),
-      // Direct reports of SUPERVISOR_ID file as SUPERVISOR; OUTSIDER_ID is out of scope.
-      resolveInitiation: jest
+    permissionService = {
+      hasPermission: jest
         .fn<(...args: unknown[]) => Promise<unknown>>()
         .mockImplementation(async (...args: unknown[]) => {
-          const [actor, , , target] = args as [string, string, string, string | null];
-          if (!target || target === actor) {
-            throw new ForbiddenException("You can't file a site assignment for yourself.");
+          const [userId, , module, action] = args as [string, string, string, string];
+          if (userId !== HR_ID) {
+            return false;
           }
-          if (target === OUTSIDER_ID) {
-            throw new ForbiddenException("You can't file a site assignment for this employee.");
-          }
-          return {
-            employeeId: target,
-            initiatedAs: actor === SUPERVISOR_ID ? 'SUPERVISOR' : 'DELEGATE',
-          };
-        }),
-      recordOnBehalfCreate: asyncMock(undefined),
-    };
-    hrApprovalChain = {
-      buildSiteAssignmentApprovalChain: asyncMock([]),
-      startChainAboveSubmitter: jest
-        .fn<(...args: unknown[]) => Promise<unknown>>()
-        .mockImplementation(async (...args: unknown[]) => {
-          const tiers = args[0] as unknown[];
-          if (!Array.isArray(tiers) || tiers.length === 0) {
-            return [];
-          }
-          return [
-            {
-              tierOrder: 1,
-              label: "Submitter's Reports to",
-              approverId: ABOVE_ID,
-              resolver: 'SUBMITTER_REPORTS_TO',
-            },
-          ];
+          return (
+            (module === 'site-assignment' && action === 'manage') ||
+            (module === 'hr' && action === 'view')
+          );
         }),
     };
+    notificationService = { send: asyncMock({ inAppId: 'n-1', emailQueued: false }) };
     backdatingPolicy = {
       validateSubmissionDates: asyncMock({
         isLateSubmission: false,
@@ -147,11 +132,9 @@ describe('SiteAssignmentService', () => {
 
     service = new SiteAssignmentService(
       prisma as unknown as PrismaService,
-      approvalsService as never,
-      hrApprovalChain as never,
       {} as never,
-      onBehalfService as never,
       permissionService as never,
+      notificationService as never,
       attendanceService as unknown as AttendanceService,
       dayCoverage as never,
       backdatingPolicy as never,
@@ -205,37 +188,48 @@ describe('SiteAssignmentService', () => {
     );
   });
 
-  it('Empty approval chain → rejected, never auto-approved', async () => {
+  it('rejects self-submission', async () => {
     await expect(
       service.submitRequest(
         {
+          employeeId: SUPERVISOR_ID,
           siteName: 'Dam site',
           startDate: '2026-11-02',
           endDate: '2026-11-06',
-          onBehalfOfEmployeeId: EMPLOYEE_ID,
-        } as never,
+        },
         COMPANY_ID,
-        HR_ID,
+        SUPERVISOR_ID,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(approvalsService.submitRequest).not.toHaveBeenCalled();
+    ).rejects.toThrow('You cannot submit a site assignment for yourself');
   });
 
-  it('Delegate auto-approve tier is rejected for site assignments', async () => {
-    await expect(
-      service.submitRequest(
-        {
-          siteName: 'Dam site',
-          startDate: '2026-11-02',
-          endDate: '2026-11-06',
-          onBehalfOfEmployeeId: EMPLOYEE_ID,
-          autoApproveTier: true,
-        } as never,
-        COMPANY_ID,
-        HR_ID,
-      ),
-    ).rejects.toThrow('Auto-approve is not available for site assignments');
-    expect(onBehalfService.resolveHrProcessSubjectId).not.toHaveBeenCalled();
+  it('supervisor creates an immediately approved assignment for a direct report', async () => {
+    prisma.siteAssignment.findMany.mockResolvedValue([]);
+    jest.spyOn(service, 'getDetail').mockResolvedValue({ id: ASSIGNMENT_ID });
+
+    await service.submitRequest(
+      {
+        employeeId: REPORT_A,
+        siteName: 'Dam site',
+        startDate: '2026-11-02',
+        endDate: '2026-11-06',
+      },
+      COMPANY_ID,
+      SUPERVISOR_ID,
+    );
+
+    expect(prisma.siteAssignment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          employeeId: REPORT_A,
+          status: SiteAssignmentStatus.APPROVED,
+          createdBy: SUPERVISOR_ID,
+          approvalRequestId: null,
+        }),
+      }),
+    );
+    expect(notificationService.send).toHaveBeenCalled();
+    expect(overtimeSiteSync.syncAfterApproval).toHaveBeenCalled();
   });
 
   it('HR cancel → OT synced from the start date and audited with counts', async () => {
@@ -310,156 +304,41 @@ describe('SiteAssignmentService', () => {
     ).rejects.toThrow('HR access required');
   });
 
-  describe('initiators and crews', () => {
-    const base = {
-      siteName: 'Dam site',
-      startDate: '2026-11-02',
-      endDate: '2026-11-06',
-    };
-    const reportsToTier = [
-      { tierOrder: 1, label: 'Reports to', approverId: SUPERVISOR_ID, resolver: 'REPORTS_TO' },
-    ];
+  it('uses reason as lateReason fallback for backdating validation', async () => {
+    prisma.siteAssignment.findMany.mockResolvedValue([]);
+    jest.spyOn(service, 'getDetail').mockResolvedValue({ id: ASSIGNMENT_ID });
 
-    beforeEach(() => {
-      hrApprovalChain.buildSiteAssignmentApprovalChain.mockResolvedValue(reportsToTier);
-      jest.spyOn(service, 'getDetail').mockImplementation(async (id: string) => ({ id }));
-    });
+    await service.submitRequest(
+      {
+        employeeId: REPORT_A,
+        siteName: 'Dam site',
+        startDate: '2026-08-01',
+        endDate: '2026-08-02',
+        reason: 'Backfilled from attendance',
+      },
+      COMPANY_ID,
+      SUPERVISOR_ID,
+    );
 
-    it('uses reason as lateReason fallback for backdating validation', async () => {
-      await service.submitRequest(
+    expect(backdatingPolicy.validateSubmissionDates).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lateReason: 'Backfilled from attendance',
+      }),
+    );
+  });
+
+  it('supervisor cannot assign an employee outside their team', async () => {
+    await expect(
+      service.submitRequest(
         {
-          ...base,
-          onBehalfOfEmployeeId: EMPLOYEE_ID,
-          startDate: '2026-08-01',
-          endDate: '2026-08-02',
-          reason: 'Backfilled from attendance',
-        } as never,
-        COMPANY_ID,
-        HR_ID,
-      );
-
-      expect(backdatingPolicy.validateSubmissionDates).toHaveBeenCalledWith(
-        expect.objectContaining({
-          lateReason: 'Backfilled from attendance',
-        }),
-      );
-    });
-
-    it('supervisor files for a direct report: chain starts above the supervisor, initiatedAs recorded', async () => {
-      await service.submitRequest(
-        { ...base, onBehalfOfEmployeeId: REPORT_A } as never,
+          employeeId: OUTSIDER_ID,
+          siteName: 'Dam site',
+          startDate: '2026-11-02',
+          endDate: '2026-11-06',
+        },
         COMPANY_ID,
         SUPERVISOR_ID,
-      );
-
-      expect(hrApprovalChain.startChainAboveSubmitter).toHaveBeenCalledWith(
-        reportsToTier,
-        SUPERVISOR_ID,
-        COMPANY_ID,
-      );
-      const [, , subject, options] = approvalsService.submitRequest.mock.calls[0] as [
-        unknown,
-        string,
-        string,
-        { initiatedAs: string; createdByUserId: string; resolvedTiers: { tiers: Array<{ approverId: string }> } },
-      ];
-      expect(subject).toBe(REPORT_A);
-      expect(options.initiatedAs).toBe('SUPERVISOR');
-      expect(options.createdByUserId).toBe(SUPERVISOR_ID);
-      expect(options.resolvedTiers.tiers.map((t) => t.approverId)).toEqual([ABOVE_ID]);
-    });
-
-    it('delegate filing also lifts the chain above the submitter', async () => {
-      await service.submitRequest(
-        { ...base, onBehalfOfEmployeeId: REPORT_A } as never,
-        COMPANY_ID,
-        HR_ID,
-      );
-      expect(hrApprovalChain.startChainAboveSubmitter).toHaveBeenCalledWith(
-        reportsToTier,
-        HR_ID,
-        COMPANY_ID,
-      );
-      const options = approvalsService.submitRequest.mock.calls[0]?.[3] as {
-        initiatedAs: string;
-      };
-      expect(options.initiatedAs).toBe('DELEGATE');
-    });
-
-    it('self filing is refused for site assignments', async () => {
-      await expect(
-        service.submitRequest(base as never, COMPANY_ID, REPORT_A),
-      ).rejects.toThrow("You can't file a site assignment for yourself.");
-      expect(approvalsService.submitRequest).not.toHaveBeenCalled();
-    });
-
-    it('crew: one assignment and one approval request per member, sharing a crewId', async () => {
-      const result = (await service.submitRequest(
-        { ...base, crewEmployeeIds: [REPORT_A, REPORT_B] } as never,
-        COMPANY_ID,
-        SUPERVISOR_ID,
-      )) as { crewId: string; assignments: unknown[] };
-
-      expect(approvalsService.submitRequest).toHaveBeenCalledTimes(2);
-      expect(prisma.siteAssignment.create).toHaveBeenCalledTimes(2);
-      const crewIds = prisma.siteAssignment.create.mock.calls.map(
-        (call) => (call[0] as { data: { crewId: string; employeeId: string } }).data,
-      );
-      expect(crewIds.map((d) => d.employeeId)).toEqual([REPORT_A, REPORT_B]);
-      expect(new Set(crewIds.map((d) => d.crewId))).toEqual(new Set([result.crewId]));
-      expect(result.assignments).toHaveLength(2);
-      // Each member's chain starts above the submitting supervisor.
-      expect(hrApprovalChain.startChainAboveSubmitter).toHaveBeenCalledTimes(2);
-    });
-
-    it('crew: all-or-nothing - one invalid member and nothing is created', async () => {
-      await expect(
-        service.submitRequest(
-          { ...base, crewEmployeeIds: [REPORT_A, OUTSIDER_ID, REPORT_B] } as never,
-          COMPANY_ID,
-          SUPERVISOR_ID,
-        ),
-      ).rejects.toThrow(/No site assignments were created\..*can't file a site assignment/);
-      expect(approvalsService.submitRequest).not.toHaveBeenCalled();
-      expect(prisma.siteAssignment.create).not.toHaveBeenCalled();
-    });
-
-    it('crew: the submitter cannot be a crew member', async () => {
-      await expect(
-        service.submitRequest(
-          { ...base, crewEmployeeIds: [REPORT_A, SUPERVISOR_ID] } as never,
-          COMPANY_ID,
-          SUPERVISOR_ID,
-        ),
-      ).rejects.toThrow('not for yourself');
-      expect(approvalsService.submitRequest).not.toHaveBeenCalled();
-    });
-
-    it('crew: a failure while creating cancels the members already created', async () => {
-      prisma.siteAssignment.create
-        .mockResolvedValueOnce({})
-        .mockRejectedValueOnce(new Error('db down'));
-      prisma.siteAssignment.update.mockResolvedValue({
-        id: 'created-1',
-        requestNumber: 'SA-1',
-        approvalRequestId: 'approval-1',
-      });
-
-      await expect(
-        service.submitRequest(
-          { ...base, crewEmployeeIds: [REPORT_A, REPORT_B] } as never,
-          COMPANY_ID,
-          SUPERVISOR_ID,
-        ),
-      ).rejects.toThrow('Could not save this site assignment');
-
-      expect(prisma.siteAssignment.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ status: SiteAssignmentStatus.CANCELLED }),
-        }),
-      );
-      // The failed member's approval and the rolled-back member's approval are cancelled.
-      expect(prisma.approvalRequest.update).toHaveBeenCalledTimes(2);
-    });
+      ),
+    ).rejects.toThrow('You may only submit site assignments for your direct reports');
   });
 });

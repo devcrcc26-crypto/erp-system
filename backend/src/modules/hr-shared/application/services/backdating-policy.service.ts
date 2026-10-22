@@ -21,6 +21,8 @@ export type ValidateBackdatingInput = {
   dates: Date[];
   lateReason?: string | null;
   today?: Date;
+  /** When set, skips resolveActorKind (site assignment supervisor vs HR). */
+  actorKind?: BackdatingActorKind;
 };
 
 export type ValidateBackdatingResult = {
@@ -109,11 +111,13 @@ export class BackdatingPolicyService {
     input: ValidateBackdatingInput,
   ): Promise<ValidateBackdatingResult> {
     const today = input.today ?? new Date();
-    const actorKind = await this.resolveActorKind(
-      input.actorUserId,
-      input.companyId,
-      input.targetEmployeeId,
-    );
+    const actorKind =
+      input.actorKind ??
+      (await this.resolveActorKind(
+        input.actorUserId,
+        input.companyId,
+        input.targetEmployeeId,
+      ));
     const lockedMonths = await this.loadLockedMonthKeys(input.companyId);
     const earliest = getEarliestAllowedDate({
       today,

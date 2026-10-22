@@ -23,7 +23,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   ListSiteAssignmentsDto,
   ShortenSiteAssignmentDto,
-  SubmitSiteAssignmentDto,
+  CreateSiteAssignmentDto,
 } from '../../application/dtos/site-assignment.dtos';
 import { SiteAssignmentService } from '../../application/services/site-assignment.service';
 
@@ -38,9 +38,9 @@ export class SiteAssignmentController {
 
   @Post()
   @RequireAnyPermission({ module: 'site-assignment', action: 'create' })
-  @ApiOperation({ summary: 'Submit a site assignment request' })
+  @ApiOperation({ summary: 'Create a site assignment (immediately active)' })
   async submit(
-    @Body() dto: SubmitSiteAssignmentDto,
+    @Body() dto: CreateSiteAssignmentDto,
     @CurrentCompany() companyId: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {

@@ -8,9 +8,12 @@ const REPORT = 'report-1';
 const GRAND_REPORT = 'grand-report-1';
 const DEPT_MEMBER = 'dept-member-1';
 const HR_MANAGER = 'hr-manager-1';
+const HR_OFFICER = 'hr-officer-1';
 const DEPT_LEAD = 'dept-lead-1';
 const PLAIN = 'plain-1';
 const APPROVER_ONLY_REPORT = 'approver-only-report';
+const HR_APPROVER_ONLY = 'hr-approver-only';
+const TEAM_UNDER_HR_SUP = 'team-under-hr-sup';
 
 type User = {
   id: string;
@@ -30,6 +33,18 @@ const USERS: User[] = [
   },
   { id: GRAND_REPORT, reportsToUserId: REPORT, departmentId: 'dept-b', excludedFromHrProcesses: false },
   { id: DEPT_MEMBER, reportsToUserId: HR_MANAGER, departmentId: 'dept-a', excludedFromHrProcesses: false },
+  {
+    id: HR_APPROVER_ONLY,
+    reportsToUserId: HR_MANAGER,
+    departmentId: 'dept-b',
+    excludedFromHrProcesses: true,
+  },
+  {
+    id: TEAM_UNDER_HR_SUP,
+    reportsToUserId: HR_APPROVER_ONLY,
+    departmentId: 'dept-b',
+    excludedFromHrProcesses: false,
+  },
   { id: HR_MANAGER, reportsToUserId: null, departmentId: null, excludedFromHrProcesses: false },
   { id: DEPT_LEAD, reportsToUserId: null, departmentId: 'dept-a', excludedFromHrProcesses: false },
   { id: PLAIN, reportsToUserId: null, departmentId: 'dept-c', excludedFromHrProcesses: false },
@@ -64,6 +79,7 @@ function buildService(options?: {
   policyRows?: Array<{ key: string; value: unknown }>;
   fullAccess?: string[];
   hrViewers?: string[];
+  primaryRoles?: Record<string, string | null>;
 }) {
   const prisma = {
     policySetting: {
@@ -99,10 +115,22 @@ function buildService(options?: {
   };
   const fullAccess = new Set(options?.fullAccess ?? [HR_MANAGER]);
   const hrViewers = new Set(options?.hrViewers ?? [HR_MANAGER]);
+  const primaryRoles = options?.primaryRoles ?? {};
   const service = new OnBehalfService(
     prisma as never,
     { hasPermission: jest.fn(async (userId: string) => hrViewers.has(userId)) } as never,
-    { isHrOrFullAccessActor: jest.fn(async (userId: string) => fullAccess.has(userId)) } as never,
+    {
+      isHrOrFullAccessActor: jest.fn(async (userId: string) => fullAccess.has(userId)),
+      getPrimaryRoleName: jest.fn(async (userId: string) => {
+        if (userId in primaryRoles) {
+          return primaryRoles[userId] ?? null;
+        }
+        if (fullAccess.has(userId)) {
+          return 'HR Manager';
+        }
+        return null;
+      }),
+    } as never,
     {} as never,
     { create: jest.fn(async () => undefined) } as never,
   );
@@ -186,7 +214,42 @@ describe('OnBehalfService.resolveInitiation', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('full-access role: DELEGATE for anyone, even when the setting allows only SELF', async () => {
+  it('HR Officer: site assignment may still target any employee (delegate)', async () => {
+    const service = buildService({
+      fullAccess: [HR_OFFICER],
+      hrViewers: [HR_OFFICER],
+      primaryRoles: { [HR_OFFICER]: 'HR Officer' },
+    });
+    await expect(
+      service.resolveInitiation(HR_OFFICER, COMPANY, 'SITE_ASSIGNMENT', PLAIN),
+    ).resolves.toEqual({ employeeId: PLAIN, initiatedAs: 'DELEGATE' });
+  });
+
+  it('HR Officer: site assignment for employees under an on-behalf supervisor', async () => {
+    const service = buildService({
+      fullAccess: [HR_OFFICER],
+      hrViewers: [HR_OFFICER],
+      primaryRoles: { [HR_OFFICER]: 'HR Officer' },
+    });
+    await expect(
+      service.resolveInitiation(
+        HR_OFFICER,
+        COMPANY,
+        'SITE_ASSIGNMENT',
+        HR_APPROVER_ONLY,
+      ),
+    ).resolves.toEqual({ employeeId: HR_APPROVER_ONLY, initiatedAs: 'DELEGATE' });
+    await expect(
+      service.resolveInitiation(
+        HR_OFFICER,
+        COMPANY,
+        'SITE_ASSIGNMENT',
+        TEAM_UNDER_HR_SUP,
+      ),
+    ).resolves.toEqual({ employeeId: TEAM_UNDER_HR_SUP, initiatedAs: 'DELEGATE' });
+  });
+
+  it('full-access role: DELEGATE for anyone except site assignment (direct reports only)', async () => {
     const service = buildService({
       policyRows: [
         {
@@ -200,8 +263,10 @@ describe('OnBehalfService.resolveInitiation', () => {
         },
       ],
     });
+    await expect(
+      service.resolveInitiation(HR_MANAGER, COMPANY, 'SITE_ASSIGNMENT', PLAIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     for (const type of [
-      'SITE_ASSIGNMENT',
       'WORK_FROM_HOME',
       'FLIGHT_APPLICATION',
       'BUSINESS_TRIP',
@@ -210,6 +275,28 @@ describe('OnBehalfService.resolveInitiation', () => {
         service.resolveInitiation(HR_MANAGER, COMPANY, type, PLAIN),
       ).resolves.toEqual({ employeeId: PLAIN, initiatedAs: 'DELEGATE' });
     }
+  });
+
+  it('full-access role: site assignment refused for employees outside direct reports', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(HR_MANAGER, COMPANY, 'SITE_ASSIGNMENT', PLAIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.resolveInitiation(HR_MANAGER, COMPANY, 'SITE_ASSIGNMENT', REPORT),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('full-access role: site assignment for a direct report of an on-behalf supervisor', async () => {
+    const service = buildService();
+    await expect(
+      service.resolveInitiation(
+        HR_MANAGER,
+        COMPANY,
+        'SITE_ASSIGNMENT',
+        TEAM_UNDER_HR_SUP,
+      ),
+    ).resolves.toEqual({ employeeId: TEAM_UNDER_HR_SUP, initiatedAs: 'DELEGATE' });
   });
 
   it('a full-access direct supervisor files as SUPERVISOR (chain starts above them)', async () => {
@@ -257,6 +344,30 @@ describe('OnBehalfService initiable employees and passengers', () => {
     expect(list.map((e) => [e.id, e.initiatedAs])).toEqual([
       [APPROVER_ONLY_REPORT, 'SUPERVISOR'],
     ]);
+  });
+
+  it('HR manager site-assignment lists only direct reports, not the whole company', async () => {
+    const service = buildService();
+    const onBehalf = await service.getInitiableEmployees(
+      HR_MANAGER,
+      COMPANY,
+      'SITE_ASSIGNMENT',
+      { approverOnly: true },
+    );
+    expect(onBehalf.map((e) => e.id)).toEqual([HR_APPROVER_ONLY]);
+    const crew = await service.getInitiableEmployees(
+      HR_MANAGER,
+      COMPANY,
+      'SITE_ASSIGNMENT',
+    );
+    expect(crew.map((e) => e.id)).toEqual([DEPT_MEMBER]);
+    const crewForSupervisor = await service.getInitiableEmployees(
+      HR_MANAGER,
+      COMPANY,
+      'SITE_ASSIGNMENT',
+      { crewSupervisorId: HR_APPROVER_ONLY },
+    );
+    expect(crewForSupervisor.map((e) => e.id)).toEqual([TEAM_UNDER_HR_SUP]);
   });
 
   it('flight passengers: self + delegate scope, no direct reports (SELF+DELEGATE)', async () => {

@@ -1,9 +1,6 @@
 import { SiteAssignmentStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
   IsDateString,
   IsIn,
   IsInt,
@@ -14,29 +11,24 @@ import {
   Min,
 } from 'class-validator';
 
-export class SubmitSiteAssignmentDto {
+/** POST /hr/site-assignments — create an immediately active site assignment. */
+export class CreateSiteAssignmentDto {
+  @IsUUID()
+  employeeId!: string;
+
+  /** Required when the submitter is HR; assignment is attributed to this supervisor. */
   @IsOptional()
   @IsUUID()
-  onBehalfOfEmployeeId?: string;
-
-  /**
-   * Crew request: one assignment per listed employee (direct reports or the
-   * submitter's delegate scope). Mutually exclusive with onBehalfOfEmployeeId.
-   */
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(50)
-  @IsUUID('all', { each: true })
-  crewEmployeeIds?: string[];
+  onBehalfOfSupervisorId?: string;
 
   @IsString()
   @MaxLength(200)
   siteName!: string;
 
   @IsOptional()
-  @IsUUID()
-  projectId?: string;
+  @IsString()
+  @MaxLength(200)
+  projectName?: string;
 
   @IsDateString()
   startDate!: string;
@@ -54,13 +46,13 @@ export class SubmitSiteAssignmentDto {
   @MaxLength(2000)
   lateReason?: string;
 
-  @IsOptional()
-  autoApproveTier?: boolean;
-
   /** Set when HR submits from the not-in-attendance-file flow. */
   @IsOptional()
   createdFromAttendanceImport?: boolean;
 }
+
+/** @deprecated Use CreateSiteAssignmentDto */
+export class SubmitSiteAssignmentDto extends CreateSiteAssignmentDto {}
 
 export class ListSiteAssignmentsDto {
   @IsOptional()
@@ -106,6 +98,20 @@ export class ListSiteAssignmentsDto {
   @IsOptional()
   @IsUUID()
   employeeId?: string;
+}
+
+export class ListHrEmployeesForSiteAssignmentDto {
+  /** Direct reports of this user (supervisor id). */
+  @IsOptional()
+  @IsUUID()
+  reportsTo?: string;
+
+  /** When true, list supervisors HR may pick (approver-only or has direct reports). */
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === true || value === 'true' || value === '1' ? 'true' : value,
+  )
+  siteAssignmentSupervisors?: string;
 }
 
 export class ShortenSiteAssignmentDto {

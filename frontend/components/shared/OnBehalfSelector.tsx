@@ -47,6 +47,8 @@ type PickableEmployee = Pick<
 export type OnBehalfEmployeesOptions = {
   /** Site-assignment on-behalf: only approver-only accounts. */
   approverOnlyTargets?: boolean;
+  /** Site-assignment crew: direct reports of this on-behalf supervisor. */
+  crewSupervisorId?: string;
 };
 
 /**
@@ -71,6 +73,7 @@ export function useOnBehalfEmployees(
   );
   const initiableQuery = useInitiableEmployees(currentUser.data?.id, governed, {
     approverOnly: options?.approverOnlyTargets === true,
+    crewSupervisorId: options?.crewSupervisorId,
   });
   if (governed) {
     return {

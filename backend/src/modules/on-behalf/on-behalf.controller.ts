@@ -54,6 +54,14 @@ export class InitiableEmployeesQueryDto {
   @IsOptional()
   @IsBoolean()
   approverOnly?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Site assignment only: list HR-process employees who report to this supervisor (on-behalf target).',
+  })
+  @IsOptional()
+  @IsUUID()
+  crewSupervisorId?: string;
 }
 
 export class OnBehalfChainQueryDto {
@@ -104,6 +112,7 @@ export class OnBehalfController {
       this.onBehalfService.allowedInitiators(companyId, query.module),
       this.onBehalfService.getInitiableEmployees(user.userId, companyId, query.module, {
         approverOnly: query.approverOnly === true,
+        crewSupervisorId: query.crewSupervisorId,
       }),
     ]);
     return { allowed, selfAllowed: allowed.includes('SELF'), employees };

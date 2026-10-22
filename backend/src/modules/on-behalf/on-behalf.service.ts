@@ -86,6 +86,12 @@ export function isOnBehalfAutoApproveAllowed(
 }
 const AUTO_APPROVE_ACTION = 'ON_BEHALF_AUTO_APPROVE';
 
+/** Site assignment on-behalf: only direct reports (and their crew), not company-wide HR. */
+const SITE_ASSIGNMENT_DIRECT_REPORTS_ONLY_ROLES: readonly string[] = [
+  'HR Manager',
+  'Local HR Manager',
+];
+
 /** Audit module name and record type per on-behalf module. */
 const MODULE_AUDIT: Record<
   HrOnBehalfModuleCode,
@@ -299,7 +305,8 @@ export class OnBehalfService {
    * what capacity the actor files it:
    * - SELF: no target (or own id), if the request type allows SELF.
    * - SUPERVISOR: target.reportsToUserId = actor (direct reports only), if allowed.
-   * - DELEGATE: full-access role (any active employee, whatever the setting),
+   * - DELEGATE: full-access role (any active employee except site assignment),
+   *   direct reports of a supervisor the actor may file for (site assignment only),
    *   or the on-behalf scope (HR / department head / discipline lead) if allowed.
    * SUPERVISOR wins over DELEGATE so the approval chain starts above the supervisor.
    * `hrProcess`: the subject must take part in HR processes (site, WFH).
@@ -347,6 +354,7 @@ export class OnBehalfService {
       employee,
       companyId,
       allowed,
+      requestType,
     );
     if (!initiatedAs) {
       throw new ForbiddenException(
@@ -373,13 +381,50 @@ export class OnBehalfService {
       includeSelf?: boolean;
       includeApproverOnly?: boolean;
       approverOnly?: boolean;
+      /** Site assignment crew: direct reports of this supervisor (actor must file for them). */
+      crewSupervisorId?: string;
     },
   ): Promise<InitiableEmployee[]> {
     const allowed = await this.allowedInitiators(companyId, requestType);
-    const fullAccess = await this.hrApprovalChain.isHrOrFullAccessActor(
+    const limitedSiteAssignment = await this.siteAssignmentLimitedToDirectReports(
       actorUserId,
       companyId,
+      requestType,
     );
+    const fullAccess =
+      !limitedSiteAssignment &&
+      (await this.hrApprovalChain.isHrOrFullAccessActor(actorUserId, companyId));
+
+    if (options?.crewSupervisorId) {
+      if (requestType !== 'SITE_ASSIGNMENT') {
+        throw new BadRequestException(
+          'crewSupervisorId is only supported for site assignment',
+        );
+      }
+      const supervisor = await this.prisma.user.findFirst({
+        where: activeOnly({
+          id: options.crewSupervisorId,
+          companyId,
+          isActive: true,
+        }),
+        select: { id: true, reportsToUserId: true },
+      });
+      if (!supervisor) {
+        throw new NotFoundException('Supervisor not found');
+      }
+      const mayFileForSupervisor = await this.initiatorFor(
+        actorUserId,
+        supervisor,
+        companyId,
+        allowed,
+        requestType,
+      );
+      if (!mayFileForSupervisor) {
+        throw new ForbiddenException(
+          'You cannot list crew for this on-behalf employee',
+        );
+      }
+    }
     const exclusionFilter = options?.approverOnly
       ? { excludedFromHrProcesses: true as const }
       : options?.includeApproverOnly
@@ -392,19 +437,23 @@ export class OnBehalfService {
     });
 
     const scopes: Prisma.UserWhereInput[] = [];
-    if (options?.includeSelf && allowed.includes('SELF')) {
-      scopes.push({ id: actorUserId });
-    }
-    if (fullAccess) {
-      scopes.push({ id: { not: actorUserId } });
+    if (options?.crewSupervisorId) {
+      scopes.push({ reportsToUserId: options.crewSupervisorId });
     } else {
-      if (allowed.includes('SUPERVISOR')) {
-        scopes.push({ reportsToUserId: actorUserId });
+      if (options?.includeSelf && allowed.includes('SELF')) {
+        scopes.push({ id: actorUserId });
       }
-      if (allowed.includes('DELEGATE')) {
-        const delegate = await this.delegateScopeWhere(actorUserId, companyId);
-        if (delegate) {
-          scopes.push({ AND: [{ id: { not: actorUserId } }, delegate] });
+      if (fullAccess) {
+        scopes.push({ id: { not: actorUserId } });
+      } else {
+        if (allowed.includes('SUPERVISOR')) {
+          scopes.push({ reportsToUserId: actorUserId });
+        }
+        if (allowed.includes('DELEGATE') && !limitedSiteAssignment) {
+          const delegate = await this.delegateScopeWhere(actorUserId, companyId);
+          if (delegate) {
+            scopes.push({ AND: [{ id: { not: actorUserId } }, delegate] });
+          }
         }
       }
     }
@@ -478,19 +527,76 @@ export class OnBehalfService {
     }));
   }
 
+  private async siteAssignmentLimitedToDirectReports(
+    actorUserId: string,
+    companyId: string,
+    requestType: InitiatorRequestType,
+  ): Promise<boolean> {
+    if (requestType !== 'SITE_ASSIGNMENT') {
+      return false;
+    }
+    const role = await this.hrApprovalChain.getPrimaryRoleName(actorUserId, companyId);
+    return (
+      role !== null &&
+      SITE_ASSIGNMENT_DIRECT_REPORTS_ONLY_ROLES.includes(role)
+    );
+  }
+
   private async initiatorFor(
     actorUserId: string,
     employee: { id: string; reportsToUserId: string | null },
     companyId: string,
     allowed: readonly RequestInitiator[],
+    requestType: InitiatorRequestType,
   ): Promise<RequestInitiatorType | null> {
+    const limitedSiteAssignment = await this.siteAssignmentLimitedToDirectReports(
+      actorUserId,
+      companyId,
+      requestType,
+    );
     if (employee.reportsToUserId === actorUserId && allowed.includes('SUPERVISOR')) {
       return RequestInitiatorType.SUPERVISOR;
     }
-    if (await this.hrApprovalChain.isHrOrFullAccessActor(actorUserId, companyId)) {
+    if (
+      requestType === 'SITE_ASSIGNMENT' &&
+      employee.reportsToUserId &&
+      employee.reportsToUserId !== actorUserId
+    ) {
+      const supervisor = await this.prisma.user.findFirst({
+        where: activeOnly({
+          id: employee.reportsToUserId,
+          companyId,
+          isActive: true,
+        }),
+        select: {
+          id: true,
+          reportsToUserId: true,
+          excludedFromHrProcesses: true,
+        },
+      });
+      if (supervisor && isExcludedFromHrProcesses(supervisor)) {
+        const forSupervisor = await this.initiatorFor(
+          actorUserId,
+          supervisor,
+          companyId,
+          allowed,
+          requestType,
+        );
+        if (
+          forSupervisor === RequestInitiatorType.SUPERVISOR ||
+          forSupervisor === RequestInitiatorType.DELEGATE
+        ) {
+          return RequestInitiatorType.DELEGATE;
+        }
+      }
+    }
+    if (
+      !limitedSiteAssignment &&
+      (await this.hrApprovalChain.isHrOrFullAccessActor(actorUserId, companyId))
+    ) {
       return RequestInitiatorType.DELEGATE;
     }
-    if (allowed.includes('DELEGATE')) {
+    if (allowed.includes('DELEGATE') && !limitedSiteAssignment) {
       const delegate = await this.delegateScopeWhere(actorUserId, companyId);
       if (delegate) {
         const match = await this.prisma.user.findFirst({
