@@ -346,6 +346,50 @@
   font-weight: 600;
 }
 
+.erp-dashboard-v2 .dv2-number--ok {
+  color: var(--dv2-primary-strong);
+}
+
+.erp-dashboard-v2 .dv2-number--warn {
+  color: #b54708;
+}
+
+.erp-dashboard-v2 .dv2-number--urgent {
+  color: var(--dv2-urgent);
+}
+
+.erp-dashboard-v2 .dv2-stat-row--align {
+  align-items: center;
+}
+
+.erp-dashboard-v2 .dv2-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erp-dashboard-v2 .dv2-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--dv2-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-dashboard-v2 .dv2-inline-link {
+  align-self: flex-start;
+  color: var(--dv2-primary-strong);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.erp-dashboard-v2 .dv2-inline-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Progress, callouts, buttons, states ── */
 
 .erp-dashboard-v2 .dv2-progress {

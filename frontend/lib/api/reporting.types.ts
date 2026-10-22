@@ -87,6 +87,73 @@ export interface HrDashboardDepartmentRow {
   count: number;
 }
 
+/** Role-adapted operational stats from GET /dashboard/stats. */
+export interface DashboardOperationalStats {
+  visibility: {
+    headcount: boolean;
+    attendance: boolean;
+    contracts: boolean;
+    siteAssignments: boolean;
+    perDiem: boolean;
+    overtime: boolean;
+    leave: boolean;
+    personal: boolean;
+  };
+  headcount: {
+    total: number;
+    onLeaveToday: number;
+    newThisMonth: number;
+  } | null;
+  attendance: {
+    month: string;
+    importStatus: 'not_imported' | 'imported';
+    approvalStatus: 'not_started' | 'in_progress' | 'approved';
+    submittedCount: number;
+    approvedCount: number;
+    totalEmployees: number;
+  } | null;
+  overtime: {
+    totalHours: number;
+    pendingApprovalCount: number;
+    approvedCount: number;
+    employeesWithOT: number;
+  };
+  leave: {
+    pendingApprovalCount: number;
+    currentlyOnLeave: number;
+    thisMonthRequests: number;
+  };
+  contractsExpiring: {
+    within30: number;
+    within60: number;
+    within90: number;
+    expiredUnrenewed: number;
+  } | null;
+  siteAssignments: {
+    currentlyAssigned: number;
+    expiringIn7Days: number;
+    expiringIn30Days: number;
+  } | null;
+  perDiem: {
+    pendingSettlement: number;
+    pendingApproval: number;
+  } | null;
+  myPendingApprovals: {
+    total: number;
+    byType: Array<{ type: string; count: number }>;
+  };
+  personal: {
+    myOtHoursThisMonth: number;
+    myLeaveBalanceDays: number | null;
+    myPendingRequestCount: number;
+    upcomingSiteAssignment: {
+      siteName: string;
+      startDate: string;
+      endDate: string;
+    } | null;
+  } | null;
+}
+
 /** HR aggregates from GET /dashboard/hr. */
 export interface HrDashboardStats {
   totalEmployees: number;

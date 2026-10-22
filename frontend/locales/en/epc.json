@@ -2314,6 +2314,69 @@
           "approval": "Approval",
           "noApproval": "Not started",
           "open": "Open review"
+        },
+        "stats": {
+          "loadFailed": "Could not load statistics",
+          "personal": {
+            "title": "My snapshot",
+            "leaveBalance": "Leave balance",
+            "otHours": "OT this month",
+            "pendingRequests": "My pending requests",
+            "upcomingSite": "Upcoming site assignment",
+            "noSite": "None scheduled"
+          },
+          "headcount": {
+            "title": "Headcount",
+            "total": "Total employees",
+            "onLeaveToday": "On leave today",
+            "newThisMonth": "New this month"
+          },
+          "attendance": {
+            "title": "Attendance this month",
+            "submitted": "Submitted",
+            "approved": "Approved",
+            "importAction": "Import attendance",
+            "import": {
+              "imported": "Imported",
+              "not_imported": "Not imported"
+            },
+            "approval": {
+              "not_started": "Not started",
+              "in_progress": "In progress",
+              "approved": "Approved"
+            }
+          },
+          "overtime": {
+            "title": "Overtime this month",
+            "totalHours": "Total hours",
+            "pending": "Pending approval",
+            "approved": "Approved sheets",
+            "employees": "Employees with OT"
+          },
+          "leave": {
+            "title": "Leave",
+            "pending": "Pending approvals",
+            "onLeave": "Currently on leave",
+            "thisMonth": "Requests this month"
+          },
+          "siteAssignments": {
+            "title": "Site assignments",
+            "current": "Currently assigned",
+            "expiring7": "Expiring in 7 days",
+            "expiring30": "Expiring in 30 days"
+          },
+          "perDiem": {
+            "title": "Per diem",
+            "pendingSettlement": "Pending settlement",
+            "pendingApproval": "Pending approval"
+          },
+          "contracts": {
+            "title": "Contracts expiring",
+            "within30": "Within 30 days",
+            "within60": "Within 60 days",
+            "within90": "Within 90 days",
+            "expired": "Expired / unrenewed"
+          }
         }
       },
       "gm": {

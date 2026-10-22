@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DashboardOperationalStatsService } from './application/services/dashboard-operational-stats.service';
 import { DashboardService } from './application/services/dashboard.service';
 import { HrReportService } from './application/services/hr-report.service';
 import { ReportExecutorService } from './application/services/report-executor.service';
@@ -14,6 +15,7 @@ import { ReportsController } from './presentation/controllers/reports.controller
     ReportingService,
     ReportExecutorService,
     DashboardService,
+    DashboardOperationalStatsService,
     HrReportService,
     SystemReportPdfService,
   ],

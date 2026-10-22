@@ -36,12 +36,12 @@ import {
   PendingApprovalsWidget,
 } from './PersonalWidgets';
 import {
-  AttendanceReviewWidget,
   ContractsExpiringWidget,
   EvaluationInboxWidget,
   useLeadEvaluations,
 } from './RoleWidgets';
 import AnnouncementsWidget from './AnnouncementsWidget';
+import OperationalStatsWidgets from './OperationalStatsWidgets';
 import { rowSpans } from './layout';
 
 const HOME = 'pages.dashboard.home';
@@ -163,8 +163,8 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
         {smallWidgets.map(({ key, Widget }, index) => (
           <Widget key={key} enabled={enabled} span={smallSpans[index]} />
         ))}
+        <OperationalStatsWidgets enabled={enabled} />
         {canViewHr ? <ContractsExpiringWidget enabled={enabled} /> : null}
-        {canViewHr ? <AttendanceReviewWidget enabled={enabled} /> : null}
       </div>
     </div>
   );

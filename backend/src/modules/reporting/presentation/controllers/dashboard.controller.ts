@@ -24,16 +24,35 @@ import {
   MyDashboardStats,
   PortfolioDashboardStats,
 } from '../../application/services/dashboard.service';
+import {
+  DashboardOperationalStats,
+  DashboardOperationalStatsService,
+} from '../../application/services/dashboard-operational-stats.service';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly operationalStatsService: DashboardOperationalStatsService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('stats')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Role-adapted operational dashboard aggregates (cached 60s, Addis Ababa calendar)',
+  })
+  operationalStats(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<DashboardOperationalStats> {
+    return this.operationalStatsService.getStats(this.ctx(user));
   }
 
   @Get('portfolio')

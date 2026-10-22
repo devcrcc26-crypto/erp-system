@@ -2309,6 +2309,69 @@
           "approval": "审批",
           "noApproval": "未开始",
           "open": "打开审核"
+        },
+        "stats": {
+          "loadFailed": "无法加载统计数据",
+          "personal": {
+            "title": "我的概览",
+            "leaveBalance": "假期余额",
+            "otHours": "本月加班",
+            "pendingRequests": "我的待处理申请",
+            "upcomingSite": "即将到来的驻场",
+            "noSite": "暂无安排"
+          },
+          "headcount": {
+            "title": "人员编制",
+            "total": "在职员工",
+            "onLeaveToday": "今日请假",
+            "newThisMonth": "本月入职"
+          },
+          "attendance": {
+            "title": "本月考勤",
+            "submitted": "已提交",
+            "approved": "已批准",
+            "importAction": "导入考勤",
+            "import": {
+              "imported": "已导入",
+              "not_imported": "未导入"
+            },
+            "approval": {
+              "not_started": "未开始",
+              "in_progress": "进行中",
+              "approved": "已批准"
+            }
+          },
+          "overtime": {
+            "title": "本月加班",
+            "totalHours": "总小时",
+            "pending": "待审批",
+            "approved": "已批准表单",
+            "employees": "有加班的员工"
+          },
+          "leave": {
+            "title": "请假",
+            "pending": "待审批",
+            "onLeave": "当前在假",
+            "thisMonth": "本月申请"
+          },
+          "siteAssignments": {
+            "title": "驻场安排",
+            "current": "当前驻场",
+            "expiring7": "7 天内到期",
+            "expiring30": "30 天内到期"
+          },
+          "perDiem": {
+            "title": "差旅津贴",
+            "pendingSettlement": "待结算",
+            "pendingApproval": "待审批"
+          },
+          "contracts": {
+            "title": "合同到期",
+            "within30": "30 天内",
+            "within60": "60 天内",
+            "within90": "90 天内",
+            "expired": "已到期未续签"
+          }
         }
       },
       "gm": {
