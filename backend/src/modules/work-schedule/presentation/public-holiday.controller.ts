@@ -14,7 +14,6 @@ import { CurrentCompany } from '../../../shared/decorators/current-company.decor
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
-import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import { CreatePublicHolidayDto } from '../application/dtos/create-public-holiday.dto';
 import {
@@ -26,6 +25,18 @@ import {
 import { UpdatePublicHolidayDto } from '../application/dtos/update-public-holiday.dto';
 import { PublicHolidayService } from '../application/services/public-holiday.service';
 
+/** HR roles use `hr.view`; others use `public-holiday.view`. */
+const VIEW_PUBLIC_HOLIDAY = RequireAnyPermission(
+  { module: 'public-holiday', action: 'view' },
+  { module: 'hr', action: 'view' },
+);
+
+/** HR managers may edit via `hr.edit` when module grants are missing in older DBs. */
+const MANAGE_PUBLIC_HOLIDAY = RequireAnyPermission(
+  { module: 'public-holiday', action: 'manage' },
+  { module: 'hr', action: 'edit' },
+);
+
 @ApiTags('HR Public Holidays')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
@@ -34,7 +45,7 @@ export class PublicHolidayController {
   constructor(private readonly publicHolidayService: PublicHolidayService) {}
 
   @Get()
-  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
+  @VIEW_PUBLIC_HOLIDAY
   @ApiOperation({ summary: 'List public holidays' })
   list(
     @CurrentCompany() companyId: string,
@@ -44,7 +55,7 @@ export class PublicHolidayController {
   }
 
   @Get('my/upcoming')
-  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
+  @VIEW_PUBLIC_HOLIDAY
   @ApiOperation({
     summary:
       'Upcoming active holidays that apply to the current user (filtered by own nationality)',
@@ -62,7 +73,7 @@ export class PublicHolidayController {
   }
 
   @Post('bulk-status')
-  @RequirePermission('public-holiday', 'manage')
+  @MANAGE_PUBLIC_HOLIDAY
   @ApiOperation({ summary: 'Activate or deactivate multiple holidays' })
   bulkStatus(
     @CurrentUser() user: AuthenticatedUser,
@@ -73,7 +84,7 @@ export class PublicHolidayController {
   }
 
   @Post('duplicate-year')
-  @RequirePermission('public-holiday', 'manage')
+  @MANAGE_PUBLIC_HOLIDAY
   @ApiOperation({
     summary: 'Copy a year of holidays into another year (skips conflicts)',
   })
@@ -86,7 +97,7 @@ export class PublicHolidayController {
   }
 
   @Get(':id')
-  @RequireAnyPermission({ module: 'public-holiday', action: 'view' })
+  @VIEW_PUBLIC_HOLIDAY
   @ApiOperation({ summary: 'Get a public holiday' })
   get(
     @CurrentCompany() companyId: string,
@@ -96,7 +107,7 @@ export class PublicHolidayController {
   }
 
   @Post()
-  @RequirePermission('public-holiday', 'manage')
+  @MANAGE_PUBLIC_HOLIDAY
   @ApiOperation({ summary: 'Create a public holiday' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -107,7 +118,7 @@ export class PublicHolidayController {
   }
 
   @Patch(':id')
-  @RequirePermission('public-holiday', 'manage')
+  @MANAGE_PUBLIC_HOLIDAY
   @ApiOperation({ summary: 'Update a public holiday' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -119,7 +130,7 @@ export class PublicHolidayController {
   }
 
   @Delete(':id')
-  @RequirePermission('public-holiday', 'manage')
+  @MANAGE_PUBLIC_HOLIDAY
   @ApiOperation({
     summary:
       'Delete a public holiday (to keep it on record instead, PATCH isActive:false)',

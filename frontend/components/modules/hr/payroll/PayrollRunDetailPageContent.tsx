@@ -216,6 +216,57 @@ function SplitCell({
   );
 }
 
+/** OT buckets with pay — matches policy defaults (÷192 / ÷196 × multipliers). */
+type OtBreakdownLine = {
+  key: 'normal' | 'evening' | 'sunday' | 'holiday';
+  hours: number;
+  pay: number;
+  labelKey:
+    | 'hr.payroll.entry.otNormalLine'
+    | 'hr.payroll.entry.otEveningLine'
+    | 'hr.payroll.entry.otSundayLine'
+    | 'hr.payroll.entry.otHolidayLine';
+};
+
+function buildOtBreakdownLines(source: {
+  normalOtHours: PayrollEntryDetail['normalOtHours'];
+  eveningOtHours: PayrollEntryDetail['eveningOtHours'];
+  sundayOtHours: PayrollEntryDetail['sundayOtHours'];
+  holidayOtHours: PayrollEntryDetail['holidayOtHours'];
+  normalOtPay: PayrollEntryDetail['normalOtPay'];
+  eveningOtPay: PayrollEntryDetail['eveningOtPay'];
+  sundayOtPay: PayrollEntryDetail['sundayOtPay'];
+  holidayOtPay: PayrollEntryDetail['holidayOtPay'];
+}): OtBreakdownLine[] {
+  const rows: OtBreakdownLine[] = [
+    {
+      key: 'normal',
+      hours: parsePayrollMoney(source.normalOtHours),
+      pay: parsePayrollMoney(source.normalOtPay),
+      labelKey: 'hr.payroll.entry.otNormalLine',
+    },
+    {
+      key: 'evening',
+      hours: parsePayrollMoney(source.eveningOtHours),
+      pay: parsePayrollMoney(source.eveningOtPay),
+      labelKey: 'hr.payroll.entry.otEveningLine',
+    },
+    {
+      key: 'sunday',
+      hours: parsePayrollMoney(source.sundayOtHours),
+      pay: parsePayrollMoney(source.sundayOtPay),
+      labelKey: 'hr.payroll.entry.otSundayLine',
+    },
+    {
+      key: 'holiday',
+      hours: parsePayrollMoney(source.holidayOtHours),
+      pay: parsePayrollMoney(source.holidayOtPay),
+      labelKey: 'hr.payroll.entry.otHolidayLine',
+    },
+  ];
+  return rows.filter((row) => row.hours > 0 || row.pay > 0);
+}
+
 const MOBILE_PAGE_SIZE = 20;
 
 function resolveUserLabel(
@@ -856,27 +907,26 @@ export default function PayrollRunDetailPageContent({
             width: 108,
             render: (v, row) => {
               const lines = contractLinesById.get(row.id);
+              const otLines = buildOtBreakdownLines(row);
+              const otBasic = formatPayrollMoney(row.basicSalary, {
+                emptyZero: false,
+              });
               const total = (
                 <Tooltip
                   title={
-                    <div className="text-xs">
-                      <div>
-                        {t('hr.payroll.entry.otNormal')}: {formatPayrollMoney(row.normalOtPay)} (
-                        {parsePayrollMoney(row.normalOtHours)}h)
+                    otLines.length > 0 ? (
+                      <div className="text-xs">
+                        {otLines.map((line) => (
+                          <div key={line.key}>
+                            {t(line.labelKey, {
+                              hours: line.hours,
+                              basic: otBasic,
+                            })}
+                            : {formatPayrollMoney(line.pay, { emptyZero: false })}
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        {t('hr.payroll.entry.otEvening')}: {formatPayrollMoney(row.eveningOtPay)} (
-                        {parsePayrollMoney(row.eveningOtHours)}h)
-                      </div>
-                      <div>
-                        {t('hr.payroll.entry.otSunday')}: {formatPayrollMoney(row.sundayOtPay)} (
-                        {parsePayrollMoney(row.sundayOtHours)}h)
-                      </div>
-                      <div>
-                        {t('hr.payroll.entry.otHoliday')}: {formatPayrollMoney(row.holidayOtPay)} (
-                        {parsePayrollMoney(row.holidayOtHours)}h)
-                      </div>
-                    </div>
+                    ) : undefined
                   }
                 >
                   <span
@@ -1237,7 +1287,7 @@ export default function PayrollRunDetailPageContent({
                       {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
                       {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
                       {periodOt > 0
-                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })} (${parsePayrollMoney(period.normalOtHours)}N/${parsePayrollMoney(period.eveningOtHours)}E/${parsePayrollMoney(period.sundayOtHours)}W/${parsePayrollMoney(period.holidayOtHours)}H)`
+                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })}`
                         : null}
                     </span>
                     <span>
@@ -1248,6 +1298,105 @@ export default function PayrollRunDetailPageContent({
               })}
             </ul>
           )}
+          {(() => {
+            const periodsWithOt = row.salaryPeriods.filter(
+              (period) => parsePayrollMoney(period.totalOtPay) > 0,
+            );
+            // Prefer per-period basics when OT was priced across contract changes.
+            if (periodsWithOt.length > 1) {
+              return (
+                <div className="erp-payroll-ot-breakdown">
+                  <p className="erp-payroll-fact-label">
+                    {t('hr.payroll.entry.otBreakdown')}
+                  </p>
+                  {periodsWithOt.map((period) => {
+                    const periodLines = buildOtBreakdownLines({
+                      normalOtHours: period.normalOtHours ?? 0,
+                      eveningOtHours: period.eveningOtHours ?? 0,
+                      sundayOtHours: period.sundayOtHours ?? 0,
+                      holidayOtHours: period.holidayOtHours ?? 0,
+                      normalOtPay: period.normalOtPay ?? 0,
+                      eveningOtPay: period.eveningOtPay ?? 0,
+                      sundayOtPay: period.sundayOtPay ?? 0,
+                      holidayOtPay: period.holidayOtPay ?? 0,
+                    });
+                    if (periodLines.length === 0) return null;
+                    const basic = formatPayrollMoney(period.basicSalary, {
+                      emptyZero: false,
+                    });
+                    return (
+                      <div key={period.id} className="erp-payroll-ot-period">
+                        <p className="erp-payroll-ot-period-label">
+                          {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
+                          {dayjs(period.periodEnd).format('YYYY-MM-DD')}
+                        </p>
+                        <ul className="erp-payroll-ot-lines">
+                          {periodLines.map((line) => (
+                            <li key={line.key}>
+                              <span>
+                                {t(line.labelKey, {
+                                  hours: line.hours,
+                                  basic,
+                                })}
+                              </span>
+                              <span>
+                                {formatPayrollMoney(line.pay, {
+                                  emptyZero: false,
+                                })}{' '}
+                                ETB
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                  <ul className="erp-payroll-ot-lines">
+                    <li className="erp-payroll-ot-total">
+                      <span>{t('hr.payroll.entry.otTotal')}</span>
+                      <span>
+                        {formatPayrollMoney(row.totalOtPay, {
+                          emptyZero: false,
+                        })}{' '}
+                        ETB
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              );
+            }
+
+            const otLines = buildOtBreakdownLines(row);
+            if (otLines.length === 0) return null;
+            const basicSource =
+              periodsWithOt[0]?.basicSalary ?? row.basicSalary;
+            const basic = formatPayrollMoney(basicSource, { emptyZero: false });
+            return (
+              <div className="erp-payroll-ot-breakdown">
+                <p className="erp-payroll-fact-label">
+                  {t('hr.payroll.entry.otBreakdown')}
+                </p>
+                <ul className="erp-payroll-ot-lines">
+                  {otLines.map((line) => (
+                    <li key={line.key}>
+                      <span>
+                        {t(line.labelKey, { hours: line.hours, basic })}
+                      </span>
+                      <span>
+                        {formatPayrollMoney(line.pay, { emptyZero: false })} ETB
+                      </span>
+                    </li>
+                  ))}
+                  <li className="erp-payroll-ot-total">
+                    <span>{t('hr.payroll.entry.otTotal')}</span>
+                    <span>
+                      {formatPayrollMoney(row.totalOtPay, { emptyZero: false })} ETB
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            );
+          })()}
           {hasLinks ? (
             <div className="erp-payroll-entry-links">
               {row.contractId ? (

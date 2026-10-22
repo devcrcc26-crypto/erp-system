@@ -1376,6 +1376,8 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'field-movement', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'site-assignment', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'wfh', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'public-holiday', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'work-schedule', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
@@ -1403,6 +1405,16 @@ async function main(): Promise<void> {
       flags: localHrManagerFlags(),
     },
     { roleName: 'Local HR Manager', module: 'wfh', flags: localHrManagerFlags() },
+    {
+      roleName: 'Local HR Manager',
+      module: 'public-holiday',
+      flags: localHrManagerFlags(),
+    },
+    {
+      roleName: 'Local HR Manager',
+      module: 'work-schedule',
+      flags: localHrManagerFlags(),
+    },
     { roleName: 'Local HR Manager', module: 'exit-permit', flags: localHrManagerFlags() },
     {
       roleName: 'Local HR Manager',
