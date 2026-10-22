@@ -25,6 +25,7 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatLeaveType,
+  leaveTypeAffectsBalance,
   resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -103,7 +104,7 @@ export default function LeaveRequestFormDrawer({
   }, [currentUser.data?.gender, t]);
 
   const selectedBalance = useMemo(() => {
-    if (!leaveType) {
+    if (!leaveType || !leaveTypeAffectsBalance(leaveType)) {
       return undefined;
     }
     const balanceLeaveType = resolveBalanceLeaveType(leaveType);
@@ -244,6 +245,10 @@ export default function LeaveRequestFormDrawer({
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
               Loading balance…
             </Typography.Paragraph>
+          ) : leaveType && !leaveTypeAffectsBalance(leaveType) ? (
+            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+              {t('hr.messages.unpaidLeaveNoBalance')}
+            </Typography.Paragraph>
           ) : leaveType && selectedBalance ? (
             <Space
               orientation="vertical"
@@ -269,7 +274,7 @@ export default function LeaveRequestFormDrawer({
             </Space>
           ) : (
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              Select a leave type to view your balance.
+              {t('hr.messages.selectLeaveTypeForBalance')}
             </Typography.Paragraph>
           )}
         </DrawerSection>

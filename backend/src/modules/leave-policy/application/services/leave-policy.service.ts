@@ -19,11 +19,16 @@ import { LeaveLedgerService } from './leave-ledger.service';
 import {
   entitlementFromPolicyRule,
   getBalanceLeaveType,
+  leaveTypeAffectsBalance,
   POLICY_BALANCE_LEAVE_TYPES,
   type PolicyRuleRow,
 } from '../utils/leave-entitlement.util';
 
-export { getBalanceLeaveType, POLICY_BALANCE_LEAVE_TYPES };
+export {
+  getBalanceLeaveType,
+  leaveTypeAffectsBalance,
+  POLICY_BALANCE_LEAVE_TYPES,
+};
 
 @Injectable()
 export class LeavePolicyService {

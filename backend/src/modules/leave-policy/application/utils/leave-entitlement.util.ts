@@ -8,14 +8,24 @@ export const POLICY_BALANCE_LEAVE_TYPES: LeaveType[] = [
 ];
 
 /**
+ * Unpaid leave never touches a leave-balance bucket (no entitlement check,
+ * no pending reserve, no USED ledger entry). Payroll treats those days like
+ * absence instead.
+ */
+export function leaveTypeAffectsBalance(leaveType: LeaveType): boolean {
+  return leaveType !== LeaveType.UNPAID;
+}
+
+/**
  * Maps a leave request type to the balance row that should be adjusted.
+ * Unpaid leave has no balance row — callers must gate with
+ * {@link leaveTypeAffectsBalance} first.
  */
 export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
   switch (leaveType) {
     case LeaveType.ANNUAL:
     case LeaveType.STUDY:
     case LeaveType.EXAM:
-    case LeaveType.UNPAID:
     case LeaveType.EMERGENCY:
     case LeaveType.PATERNITY:
     case LeaveType.COMPASSIONATE:
@@ -24,6 +34,9 @@ export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
       return LeaveType.MATERNITY;
     case LeaveType.SICK:
       return LeaveType.SICK;
+    case LeaveType.UNPAID:
+      // No balance bucket; kept for exhaustiveness / legacy callers.
+      return LeaveType.ANNUAL;
     default:
       return LeaveType.ANNUAL;
   }

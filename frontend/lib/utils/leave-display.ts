@@ -11,7 +11,6 @@ type TFn = (key: string, vars?: Record<string, string | number>) => string;
 export const DEDUCTS_FROM_ANNUAL: LeaveType[] = [
   'STUDY',
   'EXAM',
-  'UNPAID',
   'EMERGENCY',
   'PATERNITY',
   'COMPASSIONATE',
@@ -23,12 +22,16 @@ export const OWN_BALANCE_LEAVE_TYPES: LeaveType[] = [
   'SICK',
 ];
 
+/** Unpaid leave never consumes a leave-balance bucket. */
+export function leaveTypeAffectsBalance(leaveType: LeaveType): boolean {
+  return leaveType !== 'UNPAID';
+}
+
 export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
   switch (leaveType) {
     case 'ANNUAL':
     case 'STUDY':
     case 'EXAM':
-    case 'UNPAID':
     case 'EMERGENCY':
     case 'PATERNITY':
     case 'COMPASSIONATE':
@@ -37,6 +40,8 @@ export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
       return 'MATERNITY';
     case 'SICK':
       return 'SICK';
+    case 'UNPAID':
+      return 'ANNUAL';
     default:
       return 'ANNUAL';
   }

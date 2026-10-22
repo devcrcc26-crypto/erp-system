@@ -23,6 +23,7 @@ import {
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { ListLeaveBalancesDto } from '../dtos/leave.dtos';
 import {
+  leaveTypeAffectsBalance,
   OWN_BALANCE_LEAVE_TYPES,
   resolveBalanceLeaveType,
 } from './leave-balance-rules';
@@ -289,6 +290,9 @@ export class LeaveBalanceService {
     amount: number,
     companyId: string,
   ): Promise<unknown> {
+    if (!leaveTypeAffectsBalance(leaveType)) {
+      return null;
+    }
     const balanceLeaveType = resolveBalanceLeaveType(leaveType);
     await this.ensureBalance(employeeId, year, companyId);
 
@@ -512,6 +516,9 @@ export class LeaveBalanceService {
     leaveType: LeaveType,
     charges: LeaveYearCharge[],
   ): Promise<void> {
+    if (!leaveTypeAffectsBalance(leaveType)) {
+      return;
+    }
     for (const charge of charges) {
       await this.assertSufficientBalanceForYear(
         employeeId,

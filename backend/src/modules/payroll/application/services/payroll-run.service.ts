@@ -1917,7 +1917,7 @@ export class PayrollRunService {
     );
 
     if (attendance) {
-      absentInWindow = this.toNumber(attendance.absentDays);
+      const plainAbsent = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
       // Prefer stored counter when Prisma client knows the field; else sum logs.
       const unpaidFromRecord = this.toNumber(attendance.unpaidLeaveDays);
@@ -1933,12 +1933,22 @@ export class PayrollRunService {
           log.dayStatus === 'INACTIVE' ? sum + this.toNumber(log.dayDeduction) : sum,
         0,
       );
-      const unpaidLeave =
+      const unpaidTotal =
         unpaidFromRecord > 0
-          ? Math.max(0, unpaidFromRecord - inactiveUnpaidFromLogs)
-          : unpaidFromLogs;
-      if (unpaidLeave > 0) {
-        noteParts.push(`Unpaid leave: ${unpaidLeave} days`);
+          ? unpaidFromRecord
+          : unpaidFromLogs + inactiveUnpaidFromLogs;
+      const unpaidLeaveOnly = Math.max(
+        0,
+        unpaidTotal - inactiveUnpaidFromLogs,
+      );
+      // Unpaid leave (and unpaid inactive) reduce paid days like absence —
+      // fold into absentDays so payroll UI / exports treat them the same.
+      absentInWindow = this.round(plainAbsent + unpaidTotal);
+      if (unpaidLeaveOnly > 0) {
+        noteParts.push(`Unpaid leave: ${unpaidLeaveOnly} days`);
+      }
+      if (inactiveUnpaidFromLogs > 0) {
+        noteParts.push(`Unpaid inactive: ${inactiveUnpaidFromLogs} days`);
       }
       const wouldDeduct = this.toNumber(
         attendance.earlyDepartureWouldDeductDays,
@@ -1953,6 +1963,7 @@ export class PayrollRunService {
     if (!attendance && inactive.unpaidDays > 0) {
       // No attendance record to carry the deduction: apply it here.
       payrollDays = Math.max(0, payrollDays - inactive.unpaidDays);
+      absentInWindow = this.round(absentInWindow + inactive.unpaidDays);
     }
 
     const fullyAbsentWorkingDays = this.isFullyAbsentWorkingMonth(

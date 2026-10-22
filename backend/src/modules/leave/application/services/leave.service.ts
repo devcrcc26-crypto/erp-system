@@ -58,9 +58,16 @@ import {
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
-import { resolveBalanceLeaveType } from './leave-balance-rules';
+import {
+  leaveTypeAffectsBalance,
+  resolveBalanceLeaveType,
+} from './leave-balance-rules';
 
-export { DEDUCTS_FROM_ANNUAL, resolveBalanceLeaveType } from './leave-balance-rules';
+export {
+  DEDUCTS_FROM_ANNUAL,
+  leaveTypeAffectsBalance,
+  resolveBalanceLeaveType,
+} from './leave-balance-rules';
 
 type UploadedFile = {
   originalname: string;
@@ -277,22 +284,22 @@ export class LeaveService
       false,
     );
 
-    // Step 2 - initialize balance for each leave year touched (outside transaction)
-    for (const charge of yearCharges) {
-      await this.leaveBalanceService.ensureBalance(
+    // Step 2–3 - balance ensure + check (skipped for unpaid leave)
+    if (leaveTypeAffectsBalance(dto.leaveType)) {
+      for (const charge of yearCharges) {
+        await this.leaveBalanceService.ensureBalance(
+          employeeId,
+          charge.year.label,
+          companyId,
+        );
+      }
+      await this.leaveBalanceService.assertSufficientBalanceForCharges(
         employeeId,
-        charge.year.label,
         companyId,
+        dto.leaveType,
+        yearCharges,
       );
     }
-
-    // Step 3 - check balance per leave year (outside transaction)
-    await this.leaveBalanceService.assertSufficientBalanceForCharges(
-      employeeId,
-      companyId,
-      dto.leaveType,
-      yearCharges,
-    );
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave - ${formatDateOnly(startDate)} to ${formatDateOnly(endDate)}`;
     const now = new Date();

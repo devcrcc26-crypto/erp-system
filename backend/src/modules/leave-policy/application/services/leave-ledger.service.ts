@@ -33,6 +33,7 @@ import {
 import {
   entitlementFromPolicyRule,
   getBalanceLeaveType,
+  leaveTypeAffectsBalance,
   POLICY_BALANCE_LEAVE_TYPES,
   type PolicyRuleRow,
 } from '../utils/leave-entitlement.util';
@@ -419,6 +420,10 @@ export class LeaveLedgerService {
       },
     });
     if (!leave?.startDate) {
+      return;
+    }
+    // Unpaid leave is absence for payroll — never consume annual (or other) balance.
+    if (!leaveTypeAffectsBalance(leave.leaveType)) {
       return;
     }
     const employee = await this.loadEmployee(leave.employeeId, leave.companyId);

@@ -42,6 +42,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import {
   formatLeaveType,
+  leaveTypeAffectsBalance,
   resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -240,7 +241,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }, [leaveOwnerGender, t]);
 
   const selectedBalance = useMemo(() => {
-    if (!leaveType || !balancesQuery.data) {
+    if (!leaveType || !balancesQuery.data || !leaveTypeAffectsBalance(leaveType)) {
       return undefined;
     }
     const balanceLeaveType = resolveBalanceLeaveType(leaveType);
@@ -471,6 +472,14 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       return (
         <p className="erp-users-cell-sub m-0">
           {t('hr.messages.selectLeaveTypeForBalance')}
+        </p>
+      );
+    }
+
+    if (!leaveTypeAffectsBalance(leaveType)) {
+      return (
+        <p className="erp-users-cell-sub m-0">
+          {t('hr.messages.unpaidLeaveNoBalance')}
         </p>
       );
     }
