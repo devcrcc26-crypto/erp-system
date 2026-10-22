@@ -310,7 +310,7 @@ describe('OvertimeEntryService – site assignment days', () => {
     expect(afternoon.siteWithinScheduleHours).toBe(1);
   });
 
-  it('policy off → scheduled hours not claimable, but the entry is still labelled', async () => {
+  it('site day scheduled hours are claimable regardless of siteDayScheduledHoursClaimable policy', async () => {
     service = buildService({
       assignments: [SITE_A],
       policyRows: [
@@ -321,14 +321,11 @@ describe('OvertimeEntryService – site assignment days', () => {
         },
       ],
     });
-    await expect(classify('2026-09-09', '09:00', '12:00')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    const evening = await classify('2026-09-09', '18:00', '19:00');
-    expect(evening).toMatchObject({
-      regularHours: 1,
+    const morning = await classify('2026-09-09', '09:00', '12:00');
+    expect(morning).toMatchObject({
+      regularHours: 3,
       siteAssignmentId: 'sa-a',
-      siteWithinScheduleHours: 0,
+      siteWithinScheduleHours: 3,
     });
   });
 

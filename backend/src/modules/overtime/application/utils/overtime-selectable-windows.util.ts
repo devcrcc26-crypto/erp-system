@@ -43,8 +43,8 @@ export interface SelectableWindowsInput {
   /** Policy lunchCountsAsOvertime as of the date; when false the lunch gap is not selectable. */
   lunchCountsAsOvertime?: boolean;
   /**
-   * Site-assignment day with siteDayScheduledHoursClaimable on: scheduled hours
-   * are selectable too (lunch and leave rules unchanged).
+   * Approved site-assignment day: scheduled duty hours are selectable and
+   * count as OT (lunch and leave rules unchanged).
    */
   scheduledHoursClaimable?: boolean;
 }
@@ -55,6 +55,9 @@ export interface SelectableWindowsResult {
   /** Always null — full-day leave no longer blocks the whole calendar day. */
   blockedReason: 'FULL_DAY_LEAVE' | null;
   message: string | null;
+  /** True when an approved site assignment covers this calendar day. */
+  siteAssignmentDay?: boolean;
+  siteName?: string | null;
 }
 
 export function parseHhMmToMinutesStrict(value: string): number {

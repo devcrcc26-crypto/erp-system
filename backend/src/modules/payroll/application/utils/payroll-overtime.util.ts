@@ -180,8 +180,8 @@ export function overtimeEndTimeLabel(
 
 /**
  * Build day context for OT classification from a schedule weekday + holiday flag.
- * `scheduledHoursClaimable`: the entry was priced as a site-assignment day
- * (stored siteWithinScheduleHours > 0), so payroll reproduces those hours.
+ * `scheduledHoursClaimable`: the calendar day is under an approved site
+ * assignment, so scheduled duty hours count as OT when reproducing buckets.
  */
 export function buildOvertimeDayContext(
   weekday: OvertimeWeekdaySlice | undefined,

@@ -29,6 +29,7 @@ import {
   OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
   overtimeEntrySpanMinutes,
   totalOvertimeHours,
+  SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE,
   WITHIN_SCHEDULE_MESSAGE,
   type OvertimeDayContext,
   type OvertimeHoursBuckets,
@@ -243,7 +244,11 @@ export class OvertimeEntryService {
     );
 
     let scheduleNote = buildOvertimeScheduleNote(onDate, context);
-    if (totalHours === 0 && spanMinutes > 0) {
+    if (siteDay.siteAssignmentId) {
+      scheduleNote = siteDay.siteName
+        ? `${SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE} (${siteDay.siteName})`
+        : SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE;
+    } else if (totalHours === 0 && spanMinutes > 0) {
       scheduleNote = WITHIN_SCHEDULE_MESSAGE;
     }
 
@@ -265,7 +270,7 @@ export class OvertimeEntryService {
 
   /**
    * Approved (not deleted) site assignment whose inclusive date range covers
-   * `onDate`, and whether the siteDayScheduledHoursClaimable policy is on then.
+   * `onDate`. Scheduled office hours are claimable as OT on that day.
    */
   async resolveSiteDay(
     employeeId: string,
@@ -292,16 +297,10 @@ export class OvertimeEntryService {
         scheduledHoursClaimable: false,
       };
     }
-    const claimable = await getPolicy(
-      this.prisma,
-      companyId,
-      'siteDayScheduledHoursClaimable',
-      day,
-    );
     return {
       siteAssignmentId: assignment.id,
       siteName: assignment.siteName,
-      scheduledHoursClaimable: claimable,
+      scheduledHoursClaimable: true,
     };
   }
 
@@ -362,18 +361,21 @@ export class OvertimeEntryService {
       siteDay.scheduledHoursClaimable,
     );
 
-    const base = computeSelectableOvertimeWindows({
-      isHoliday: calendar.isHoliday,
-      isWorkingDay: context.isWorkingDay,
-      isHalfDay: context.isHalfDay,
-      morningStart: context.morningStart,
-      morningEnd: context.morningEnd,
-      afternoonStart: context.afternoonStart,
-      afternoonEnd: context.afternoonEnd,
-      leaveExcludedWindows: leaveResolved.excludedWindows,
-      lunchCountsAsOvertime,
-      scheduledHoursClaimable: siteDay.scheduledHoursClaimable,
-    });
+    const base = this.attachSiteDayToWindows(
+      computeSelectableOvertimeWindows({
+        isHoliday: calendar.isHoliday,
+        isWorkingDay: context.isWorkingDay,
+        isHalfDay: context.isHalfDay,
+        morningStart: context.morningStart,
+        morningEnd: context.morningEnd,
+        afternoonStart: context.afternoonStart,
+        afternoonEnd: context.afternoonEnd,
+        leaveExcludedWindows: leaveResolved.excludedWindows,
+        lunchCountsAsOvertime,
+        scheduledHoursClaimable: siteDay.scheduledHoursClaimable,
+      }),
+      siteDay,
+    );
 
     if (!dto.sheetId || base.windows.length === 0) {
       return base;
@@ -390,13 +392,27 @@ export class OvertimeEntryService {
     }
 
     const windows = subtractOccupiedFromWindows(base.windows, occupied);
+    return this.attachSiteDayToWindows(
+      {
+        ...base,
+        windows,
+        message:
+          windows.length === 0 && !base.blockedReason
+            ? 'All selectable times on this day are already used by other entries.'
+            : base.message,
+      },
+      siteDay,
+    );
+  }
+
+  private attachSiteDayToWindows(
+    result: SelectableWindowsResult,
+    siteDay: SiteDayContext,
+  ): SelectableWindowsResult {
     return {
-      ...base,
-      windows,
-      message:
-        windows.length === 0 && !base.blockedReason
-          ? 'All selectable times on this day are already used by other entries.'
-          : base.message,
+      ...result,
+      siteAssignmentDay: Boolean(siteDay.siteAssignmentId),
+      siteName: siteDay.siteName,
     };
   }
 

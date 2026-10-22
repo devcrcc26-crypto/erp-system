@@ -11,6 +11,10 @@ export const SAME_DAY_END_BEFORE_START_MESSAGE =
 export const WITHIN_SCHEDULE_MESSAGE =
   'These hours are within your normal working hours.';
 
+/** Shown on preview when the date is inside an approved site assignment. */
+export const SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE =
+  'On site assignment — full day OT eligible (regular schedule does not apply).';
+
 export const OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE =
   'Overnight entries that cross midnight require the next calendar day schedule context.';
 
@@ -56,7 +60,7 @@ export interface OvertimeDayContext {
   lunchCountsAsOvertime?: boolean;
   /**
    * Date is inside an approved site assignment and the
-   * siteDayScheduledHoursClaimable policy is on: scheduled hours are claimable.
+   * Approved site assignment on this date: scheduled hours are claimable.
    */
   scheduledHoursClaimable?: boolean;
 }

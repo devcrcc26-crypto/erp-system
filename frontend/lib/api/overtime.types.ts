@@ -168,4 +168,6 @@ export interface SelectableOvertimeWindowsResult {
   windows: Array<{ start: string; end: string }>;
   blockedReason: 'FULL_DAY_LEAVE' | null;
   message: string | null;
+  siteAssignmentDay?: boolean;
+  siteName?: string | null;
 }

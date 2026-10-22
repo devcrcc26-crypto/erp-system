@@ -282,6 +282,22 @@ export default function OvertimeEntryForm({
               />
             ) : null}
 
+            {!windowsLoading && windows?.siteAssignmentDay ? (
+              <Alert
+                type="info"
+                showIcon
+                className="md:col-span-2"
+                title={t('hr.labels.siteAssignmentFullDayOt')}
+                description={
+                  windows.siteName
+                    ? t('pages.hr.overtime.siteAssignmentAt', {
+                        site: windows.siteName,
+                      })
+                    : undefined
+                }
+              />
+            ) : null}
+
             {!windowsLoading &&
             windows &&
             !blockedLeave &&
@@ -477,7 +493,11 @@ export default function OvertimeEntryForm({
                   title={preview.attendanceWarning}
                 />
               ) : null}
-              {preview.scheduleNote ? (
+              {preview.siteName ? (
+                <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">
+                  {t('hr.labels.siteAssignmentFullDayOt')}
+                </p>
+              ) : preview.scheduleNote ? (
                 <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">
                   {preview.scheduleNote}
                 </p>

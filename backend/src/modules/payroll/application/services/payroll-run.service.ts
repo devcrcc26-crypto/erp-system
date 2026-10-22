@@ -1624,6 +1624,12 @@ export class PayrollRunService {
       };
     };
 
+    const siteDayKeys = await this.siteAssignmentDateKeysForEmployee(
+      companyId,
+      employee.id,
+      rows.map((entry) => entry.date),
+    );
+
     const dated: DatedOvertimeEntry[] = [];
     for (const entry of rows) {
       const onDate = new Date(
@@ -1636,9 +1642,7 @@ export class PayrollRunService {
       const schedule = await loadSchedule(onDate);
       const isHoliday =
         entry.isHoliday || (await loadHoliday(onDate));
-      // Site-day entries keep the hours they were approved with, even if the
-      // assignment or policy changed later.
-      const siteClaimable = Number(entry.siteWithinScheduleHours ?? 0) > 0;
+      const siteClaimable = siteDayKeys.has(dateKey(onDate));
       const context = buildOvertimeDayContext(
         weekdaySlice(schedule, onDate),
         isHoliday,
@@ -1656,7 +1660,7 @@ export class PayrollRunService {
           weekdaySlice(nextSchedule, nextDate),
           nextHoliday,
           await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', nextDate),
-          siteClaimable,
+          siteDayKeys.has(dateKey(nextDate)),
         );
       }
 
@@ -1676,6 +1680,74 @@ export class PayrollRunService {
       );
     }
     return dated;
+  }
+
+  /** UTC date keys (YYYY-MM-DD) covered by approved site assignments for OT repricing. */
+  private async siteAssignmentDateKeysForEmployee(
+    companyId: string,
+    employeeId: string,
+    entryDates: Date[],
+  ): Promise<Set<string>> {
+    if (entryDates.length === 0) {
+      return new Set();
+    }
+    let min = entryDates[0];
+    let max = entryDates[0];
+    for (const d of entryDates) {
+      if (d < min) {
+        min = d;
+      }
+      if (d > max) {
+        max = d;
+      }
+    }
+    const maxInclusive = new Date(
+      Date.UTC(max.getUTCFullYear(), max.getUTCMonth(), max.getUTCDate() + 1),
+    );
+    const minDay = new Date(
+      Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate()),
+    );
+
+    const assignments = await this.prisma.siteAssignment.findMany({
+      where: {
+        companyId,
+        employeeId,
+        status: 'APPROVED',
+        deletedAt: null,
+        startDate: { lte: maxInclusive },
+        endDate: { gte: minDay },
+      },
+      select: { startDate: true, endDate: true },
+    });
+
+    const keys = new Set<string>();
+    for (const assignment of assignments) {
+      let cursor = new Date(
+        Date.UTC(
+          assignment.startDate.getUTCFullYear(),
+          assignment.startDate.getUTCMonth(),
+          assignment.startDate.getUTCDate(),
+        ),
+      );
+      const end = new Date(
+        Date.UTC(
+          assignment.endDate.getUTCFullYear(),
+          assignment.endDate.getUTCMonth(),
+          assignment.endDate.getUTCDate(),
+        ),
+      );
+      while (cursor.getTime() <= end.getTime()) {
+        keys.add(cursor.toISOString().slice(0, 10));
+        cursor = new Date(
+          Date.UTC(
+            cursor.getUTCFullYear(),
+            cursor.getUTCMonth(),
+            cursor.getUTCDate() + 1,
+          ),
+        );
+      }
+    }
+    return keys;
   }
 
   private async computeEntryDraft(input: {

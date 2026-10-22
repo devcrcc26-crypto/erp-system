@@ -5197,6 +5197,7 @@
       "selectableWindowsLoading": "Loading selectable overtime times…",
       "approvedLeaveNoOvertime": "You're on approved leave this day.",
       "noSelectableWindows": "No overtime times are available for this day.",
+      "siteAssignmentFullDayOt": "On site assignment — full day OT eligible (regular schedule does not apply).",
       "workedPastMidnight": "Worked past midnight? Add the rest on {{date}}.",
       "etbPreviewEmpty": "Enter an amount and currency to preview the ETB equivalent.",
       "vendor": "Vendor",
