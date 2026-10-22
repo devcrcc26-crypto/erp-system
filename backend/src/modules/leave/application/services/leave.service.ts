@@ -871,9 +871,12 @@ export class LeaveService
       year,
       companyId,
     )) as Array<Record<string, unknown>>;
-    const balanceLeaveType = resolveBalanceLeaveType(leave.leaveType);
-    const balance =
-      balances.find((row) => row.leaveType === balanceLeaveType) ?? null;
+    const balance = leaveTypeAffectsBalance(leave.leaveType)
+      ? (balances.find(
+          (row) =>
+            row.leaveType === resolveBalanceLeaveType(leave.leaveType),
+        ) ?? null)
+      : null;
 
     const periodRows = Array.isArray(leave.periods)
       ? (leave.periods as Array<{ startDate: Date; endDate: Date }>)

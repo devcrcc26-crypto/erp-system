@@ -387,6 +387,35 @@ describe('LeaveLedgerService - HR entries and used days', () => {
     expect(await t.service.balance('e1', COMPANY, LeaveType.ANNUAL, label)).toBe(0);
   });
 
+  it('unpaid leave does not write USED entries against annual balance', async () => {
+    const leave = {
+      id: 'lv-unpaid',
+      companyId: COMPANY,
+      employeeId: 'e1',
+      leaveType: LeaveType.UNPAID,
+      startDate: new Date(),
+      days: 5,
+      requestNumber: 'LR-U',
+    };
+    const t = build({ users: [employee()], leaves: [leave] });
+    await t.service.setOpeningBalance({
+      employeeId: 'e1',
+      companyId: COMPANY,
+      leaveType: LeaveType.ANNUAL,
+      days: 20,
+      reason: 'Go-live balance',
+      actorUserId: 'hr',
+    });
+    await t.service.recordLeaveUsed('lv-unpaid');
+    const label = leaveYearFor(d('2020-08-01'), new Date()).label;
+    expect(await t.service.balance('e1', COMPANY, LeaveType.ANNUAL, label)).toBe(
+      20,
+    );
+    expect(t.entries.filter((e) => e.sourceLeaveRequestId === 'lv-unpaid')).toHaveLength(
+      0,
+    );
+  });
+
   it('adjustments must be non-zero 0.5 steps with a reason', async () => {
     const t = build({ users: [employee()] });
     const base = { employeeId: 'e1', companyId: COMPANY, leaveType: LeaveType.ANNUAL, actorUserId: 'hr' };
