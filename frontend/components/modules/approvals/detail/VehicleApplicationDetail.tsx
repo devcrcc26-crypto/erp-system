@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { Alert, Skeleton } from 'antd';
 import {
   MetaItem,
@@ -28,8 +29,10 @@ export default function VehicleApplicationDetail({
 
   if (detailQuery.isLoading && !application) {
     return (
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
-        <Skeleton active paragraph={{ rows: 8 }} />
+      <div className="erp-hr-travel-v2">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
       </div>
     );
   }
@@ -49,7 +52,7 @@ export default function VehicleApplicationDetail({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="erp-hr-travel-v2 flex flex-col gap-3">
       <SummaryStrip
         items={[
           {

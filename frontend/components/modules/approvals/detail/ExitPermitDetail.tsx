@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { Alert, Skeleton, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -38,8 +39,10 @@ export default function ExitPermitDetail({
 
   if (detailQuery.isLoading && !permit) {
     return (
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
-        <Skeleton active paragraph={{ rows: 8 }} />
+      <div className="erp-hr-travel-v2">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
       </div>
     );
   }
@@ -106,7 +109,7 @@ export default function ExitPermitDetail({
     },
   ];
   return (
-    <div className="flex flex-col gap-3">
+    <div className="erp-hr-travel-v2 flex flex-col gap-3">
       <SummaryStrip
         items={[
           {
