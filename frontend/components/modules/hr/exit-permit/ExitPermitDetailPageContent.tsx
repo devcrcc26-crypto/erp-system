@@ -19,7 +19,7 @@ import {
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MoreOutlined, StopOutlined } from '@ant-design/icons';
-import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Inbox, Pencil, Printer, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -49,7 +49,10 @@ import {
   useUpdateExitPermitItem,
 } from '@/lib/query/exit-permit';
 import { exitPermitItemImages } from '@/lib/utils/exit-permit-item-images';
-import { openExitPermitDetailPdf } from '@/lib/query/exit-permit';
+import {
+  openExitPermitDetailPdf,
+  openExitPermitGatePassPdf,
+} from '@/lib/query/exit-permit';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   exitPermitStatusVariant,
@@ -119,6 +122,7 @@ export default function ExitPermitDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [openingGatePass, setOpeningGatePass] = useState(false);
   const [itemForm] = Form.useForm<UpdateExitPermitItemPayload>();
 
   useSetHeaderExtra(null);
@@ -433,6 +437,18 @@ export default function ExitPermitDetailPageContent({
     }
   }
 
+  async function handleGatePass(): Promise<void> {
+    if (openingGatePass) return;
+    setOpeningGatePass(true);
+    try {
+      await openExitPermitGatePassPdf(permitId);
+    } catch (err) {
+      notifyApiError(err, t('hr.buttons.gatePassFailed'), messageApi, t);
+    } finally {
+      setOpeningGatePass(false);
+    }
+  }
+
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
@@ -448,6 +464,16 @@ export default function ExitPermitDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {permit.status === 'APPROVED' ? (
+              <Button
+                type="primary"
+                icon={<Printer size={16} />}
+                onClick={() => void handleGatePass()}
+                loading={openingGatePass}
+              >
+                {t('hr.buttons.gatePass')}
+              </Button>
+            ) : null}
             <Button
               onClick={() => void handleExportPdf()}
               loading={exportingPdf}

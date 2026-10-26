@@ -5922,6 +5922,8 @@
       "conditionallyApprove": "Conditionally Approve",
       "resubmit": "Resubmit",
       "viewInApprovals": "View in Approvals",
+      "gatePass": "Gate pass",
+      "gatePassFailed": "Could not open the gate pass",
       "issueSeal": "Issue Seal",
       "chooseDocumentOptional": "Choose document (optional)",
       "backToList": "Back",

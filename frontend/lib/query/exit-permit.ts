@@ -311,8 +311,17 @@ export async function fetchExitPermitDetails(
   return results;
 }
 
-export async function openExitPermitDetailPdf(id: string): Promise<void> {
-  const response = await apiClient.get(`${EXIT_PERMIT_PATH}/${id}/pdf`, { responseType: 'blob' });
+export function openExitPermitDetailPdf(id: string): Promise<void> {
+  return openPdfInNewTab(`${EXIT_PERMIT_PATH}/${id}/pdf`);
+}
+
+/** A5 gate pass for an approved permit, printed and stamped at the gate. */
+export function openExitPermitGatePassPdf(id: string): Promise<void> {
+  return openPdfInNewTab(`${EXIT_PERMIT_PATH}/${id}/gate-pass`);
+}
+
+async function openPdfInNewTab(url: string): Promise<void> {
+  const response = await apiClient.get(url, { responseType: 'blob' });
   const contentType = response.headers['content-type'];
   const blob = new Blob([response.data as BlobPart], {
     type: typeof contentType === 'string' && contentType.includes('pdf') ? contentType : 'application/pdf',

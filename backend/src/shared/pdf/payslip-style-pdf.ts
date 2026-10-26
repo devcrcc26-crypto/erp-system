@@ -21,7 +21,7 @@ const ROW_NOTE = 13;
 const ROW_GAP = 4;
 const COL_GAP = 12;
 
-export type PayslipTextAlign = 'left' | 'right';
+export type PayslipTextAlign = 'left' | 'center' | 'right';
 
 /**
  * Resolves Noto Sans SC under backend/assets/fonts (same as payroll).
@@ -394,10 +394,13 @@ export interface RenderPayslipPdfOptions {
   title: string;
   author?: string;
   layout?: 'portrait' | 'landscape';
+  size?: 'A4' | 'A5';
+  margin?: number;
 }
 
 /**
- * Creates an A4 PDF, registers Noto Sans SC, runs `draw`, returns the buffer.
+ * Creates a PDF (A4 unless `size` says otherwise), registers Noto Sans SC,
+ * runs `draw`, returns the buffer.
  */
 export function renderPayslipPdf(
   options: RenderPayslipPdfOptions,
@@ -405,9 +408,9 @@ export function renderPayslipPdf(
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-      size: 'A4',
+      size: options.size ?? 'A4',
       layout: options.layout ?? 'portrait',
-      margin: 40,
+      margin: options.margin ?? 40,
       bufferPages: true,
       info: {
         Title: options.title,

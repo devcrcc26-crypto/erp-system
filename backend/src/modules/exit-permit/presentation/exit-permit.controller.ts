@@ -4,6 +4,7 @@ import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { ExitPermitGateRegisterPdfService } from "../application/services/exit-permit-gate-register-pdf.service";
 import { ExitPermitPdfService } from "../application/services/exit-permit-pdf.service";
+import { ExitPermitGatePassPdfService } from "../application/services/exit-permit-gate-pass-pdf.service";
 import { ExitPermitService } from "../application/services/exit-permit.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
@@ -51,6 +52,7 @@ export class ExitPermitController {
         private readonly exitPermitService: ExitPermitService,
         private readonly exitPermitGateRegisterPdfService: ExitPermitGateRegisterPdfService,
         private readonly exitPermitPdfService: ExitPermitPdfService,
+        private readonly exitPermitGatePassPdfService: ExitPermitGatePassPdfService,
     ){}
 
     @Post()
@@ -104,7 +106,24 @@ export class ExitPermitController {
         @CurrentCompany() companyId: string,
         @Param('id') id: string,
     ): Promise<StreamableFile> {
+        // Same visibility rule as GET :id (owner, HR, or permit managers).
+        await this.exitPermitService.getRequest(id, companyId, user.userId);
         const file = await this.exitPermitPdfService.getPdf(id, companyId);
+        return new StreamableFile(file.buffer, {
+            type: file.mimeType,
+            disposition: contentDisposition('inline', file.filename),
+        });
+    }
+
+    @Get(':id/gate-pass')
+    @ApiOperation({ summary: 'Download the printable A5 gate pass for an approved exit permit' })
+    @ApiProduces('application/pdf')
+    async downloadGatePass(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+    ): Promise<StreamableFile> {
+        const file = await this.exitPermitGatePassPdfService.getPdf(id, companyId, user.userId);
         return new StreamableFile(file.buffer, {
             type: file.mimeType,
             disposition: contentDisposition('inline', file.filename),

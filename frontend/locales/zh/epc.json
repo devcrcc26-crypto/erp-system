@@ -5921,6 +5921,8 @@
       "conditionallyApprove": "有条件批准",
       "resubmit": "重新提交",
       "viewInApprovals": "在审批中查看",
+      "gatePass": "出入门证",
+      "gatePassFailed": "无法打开出入门证",
       "issueSeal": "用印",
       "chooseDocumentOptional": "选择文件（可选）",
       "backToList": "返回列表",
