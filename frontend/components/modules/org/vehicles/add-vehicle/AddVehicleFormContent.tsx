@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useRouter } from 'next/navigation';
 import AddVehicleForm from '@/components/modules/org/vehicles/add-vehicle/AddVehicleForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -17,14 +19,16 @@ export default function AddVehicleFormContent(): React.ReactNode {
   }
 
   return (
-    <HrFormPageShell
-      title={t('pages.organization.vehicles.new')}
-      description={t('vehicles.form.addDescription')}
-      cancelLabel={t('common.cancel')}
-      cancelHref="/organization/vehicles"
-      backLabel={t('vehicles.backToList')}
-    >
-      <AddVehicleForm onSuccess={handleSuccess} />
-    </HrFormPageShell>
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-company-vehicle-form-page flex flex-col gap-4">
+      <HrFormPageShell
+        title={t('pages.organization.vehicles.new')}
+        description={t('vehicles.form.addDescription')}
+        cancelLabel={t('common.cancel')}
+        cancelHref="/organization/vehicles"
+        backLabel={t('vehicles.backToList')}
+      >
+        <AddVehicleForm onSuccess={handleSuccess} />
+      </HrFormPageShell>
+    </div>
   );
 }

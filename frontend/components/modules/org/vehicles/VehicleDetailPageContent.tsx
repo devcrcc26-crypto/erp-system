@@ -1,21 +1,22 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useState } from 'react';
-import { Alert, Button, Skeleton, Space } from 'antd';
-import { ArrowLeft, CarFront, Pencil } from 'lucide-react';
+import { Button, Grid, Skeleton } from 'antd';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   MetaItem,
   SectionCard,
-  SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import VehicleChangeStatusDialog from '@/components/modules/org/vehicles/VehicleChangeStatusDialog';
 import VehiclePhoto from '@/components/modules/org/vehicles/VehiclePhoto';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { VehicleStatus } from '@/lib/api/company-vehicle.types';
 import {
   useCompanyVehicle,
@@ -31,10 +32,13 @@ import {
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { tokens } from '@/lib/theme/tokens';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-vehicle-detail-page ${DETAIL_PAGE_V2}`;
+
 export default function VehicleDetailPageContent({
   vehicleId,
 }: {
@@ -43,6 +47,9 @@ export default function VehicleDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const detailQuery = useCompanyVehicle(vehicleId);
   const deleteMutation = useDeleteCompanyVehicle();
   const statusMutation = useUpdateCompanyVehicleStatus(vehicleId);
@@ -81,8 +88,8 @@ export default function VehicleDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
-        <div className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
+      <div className={DETAIL_ROOT}>
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -91,19 +98,18 @@ export default function VehicleDetailPageContent({
 
   if (detailQuery.isError || !vehicle) {
     return (
-      <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('vehicles.notFound')
-          }
+      <div
+        className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}
+      >
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('vehicles.notFound'),
+            t,
+          )}
           action={
-            <Button
-              onClick={() => router.push('/organization/vehicles')}
-            >
+            <Button onClick={() => router.push('/organization/vehicles')}>
               {t('vehicles.backToList')}
             </Button>
           }
@@ -112,8 +118,12 @@ export default function VehicleDetailPageContent({
     );
   }
 
+  const backHref = '/organization/vehicles';
+  const heroTitle = `${vehicle.make} ${vehicle.model}`.trim();
+  const heroSubtitle = `${formatVehicleType(vehicle.vehicleType, t)} · ${formatFuelType(vehicle.fuelType, t)} · ${vehicle.year}`;
+
   return (
-    <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
+    <div className={DETAIL_ROOT}>
       <VehicleChangeStatusDialog
         open={statusModalOpen}
         plateNumber={vehicle.plateNumber}
@@ -129,6 +139,7 @@ export default function VehicleDetailPageContent({
       />
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={deleteOpen}
         title={t('vehicles.deleteTitle')}
         description={t('vehicles.deleteDescription', {
@@ -141,60 +152,61 @@ export default function VehicleDetailPageContent({
         onCancel={() => setDeleteOpen(false)}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/organization/vehicles')}
-        >
-          {t('vehicles.backToList')}
-        </Button>
-        <Space wrap size={8} className="ml-auto">
-          <Button
-            onClick={() => {
-              setNewStatus(initialVehicleStatusChangeSelection(vehicle.status));
-              setStatusModalOpen(true);
-            }}
-          >
-            {t('vehicles.changeStatus')}
-          </Button>
-          <Button
-            danger
-            onClick={() => setDeleteOpen(true)}
-          >
-            {t('common.delete')}
-          </Button>
-          <Button
-            type="primary"
-            icon={<Pencil size={14} />}
-            onClick={() =>
-              router.push(`/organization/vehicles/${vehicle.id}/edit`)
-            }
-          >
-            {t('common.update')}
-          </Button>
-        </Space>
-      </div>
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(backHref)}
+              aria-label={t('vehicles.backToList')}
+            >
+              {isNarrow ? undefined : t('vehicles.backToList')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <Button
+              onClick={() => {
+                setNewStatus(initialVehicleStatusChangeSelection(vehicle.status));
+                setStatusModalOpen(true);
+              }}
+              aria-label={t('vehicles.changeStatus')}
+            >
+              {isCompact ? t('hr.table.status') : t('vehicles.changeStatus')}
+            </Button>
+            <Button
+              danger
+              icon={<Trash2 size={14} />}
+              onClick={() => setDeleteOpen(true)}
+              aria-label={t('common.delete')}
+            >
+              {isCompact ? undefined : t('common.delete')}
+            </Button>
+            <Button
+              type="primary"
+              icon={<Pencil size={14} />}
+              onClick={() =>
+                router.push(`/organization/vehicles/${vehicle.id}/edit`)
+              }
+              aria-label={t('common.update')}
+            >
+              {isCompact ? undefined : t('common.update')}
+            </Button>
+          </div>
+        </div>
 
-      <div
-        className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]"
-      >
-        <div className="flex flex-col gap-4 px-3 py-4 sm:flex-row sm:items-start sm:px-5">
+        <div className="erp-employee-hero erp-contract-hero">
           <VehiclePhoto
             vehicleId={vehicle.id}
             photoDocumentId={vehicle.photoDocumentId}
             plateNumber={vehicle.plateNumber}
             canEdit
             variant="hero"
-            size={88}
+            size={isCompact ? 72 : 88}
           />
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <CarFront size={16} style={{ color: tokens.colorPrimary }} />
-              <span
-                className="font-[family-name:var(--font-mono)] text-base font-semibold"
-                style={{ color: tokens.colorTextPrimary }}
-              >
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip font-[family-name:var(--font-mono)]">
                 {vehicle.plateNumber}
               </span>
               <StatusBadge
@@ -208,37 +220,55 @@ export default function VehicleDetailPageContent({
                 variant={vehicle.isActive ? 'success' : 'default'}
               />
             </div>
-            <p
-              className="m-0 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {vehicle.make} {vehicle.model} · {vehicle.year}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {heroTitle}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {heroSubtitle}
             </p>
           </div>
         </div>
       </div>
 
-      <SummaryStrip
-        items={[
-          {
-            label: t('vehicles.form.vehicleType'),
-            value: formatVehicleType(vehicle.vehicleType, t),
-            emphasize: true,
-          },
-          {
-            label: t('hr.table.fuelType'),
-            value: formatFuelType(vehicle.fuelType, t),
-          },
-          {
-            label: t('hr.table.assignedDriver'),
-            value: formatDriverName(vehicle.assignedDriver),
-          },
-          {
-            label: t('vehicles.detail.registeredAt'),
-            value: formatDisplayDateTime(vehicle.createdAt),
-          },
-        ]}
-      />
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.status')}</p>
+            <p className="erp-employee-meta-value">
+              <StatusBadge
+                label={formatVehicleStatus(vehicle.status, t)}
+                variant={vehicleStatusVariant(vehicle.status)}
+              />
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('vehicles.form.vehicleType')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {formatVehicleType(vehicle.vehicleType, t)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.year')}</p>
+            <p className="erp-employee-meta-value">{vehicle.year}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.assignedDriver')}</p>
+            <p className="erp-employee-meta-value truncate">
+              {formatDriverName(vehicle.assignedDriver)}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <SectionCard title={t('vehicles.steps.specifications')}>
         <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5">
@@ -275,6 +305,9 @@ export default function VehicleDetailPageContent({
           </MetaItem>
           <MetaItem label={t('vehicles.form.activeVehicle')}>
             {vehicle.isActive ? t('common.active') : t('common.inactive')}
+          </MetaItem>
+          <MetaItem label={t('vehicles.detail.registeredAt')}>
+            {formatDisplayDateTime(vehicle.createdAt)}
           </MetaItem>
           <MetaItem label={t('vehicles.form.notes')}>
             {vehicle.notes?.trim() ? (

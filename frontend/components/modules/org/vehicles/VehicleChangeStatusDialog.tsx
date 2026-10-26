@@ -22,6 +22,7 @@ export default function VehicleChangeStatusDialog({
   onPendingStatusChange,
   onConfirm,
   onCancel,
+  className = 'erp-hr-travel-modal',
 }: {
   open: boolean;
   plateNumber: string;
@@ -31,6 +32,7 @@ export default function VehicleChangeStatusDialog({
   onPendingStatusChange: (status: VehicleStatus) => void;
   onConfirm: () => void;
   onCancel: () => void;
+  className?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -44,6 +46,7 @@ export default function VehicleChangeStatusDialog({
 
   return (
     <ConfirmDialog
+      className={className}
       open={open}
       title={t('vehicles.changeStatusTitle')}
       description={t('vehicles.changeStatusDescription', { plate: plateNumber })}

@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddVehicleForm from '@/components/modules/org/vehicles/add-vehicle/AddVehicleForm';
@@ -7,6 +9,9 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCompanyVehicle } from '@/lib/query/company-vehicle';
+
+const FORM_ROOT =
+  'erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-company-vehicle-form-page flex flex-col gap-4';
 
 export default function EditVehicleFormContent({
   vehicleId,
@@ -25,7 +30,13 @@ export default function EditVehicleFormContent({
   }
 
   if (vehicleQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className={FORM_ROOT}>
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   const vehicleSubtitle = vehicleQuery.data
@@ -33,14 +44,16 @@ export default function EditVehicleFormContent({
     : t('vehicles.form.editDescription');
 
   return (
-    <HrFormPageShell
-      title={t('pages.organization.vehicles.edit')}
-      description={vehicleSubtitle}
-      cancelLabel={t('common.cancel')}
-      cancelHref={`/organization/vehicles/${vehicleId}`}
-      backLabel={t('hr.buttons.back')}
-    >
-      <AddVehicleForm vehicleId={vehicleId} onSuccess={handleSuccess} />
-    </HrFormPageShell>
+    <div className={FORM_ROOT}>
+      <HrFormPageShell
+        title={t('pages.organization.vehicles.edit')}
+        description={vehicleSubtitle}
+        cancelLabel={t('common.cancel')}
+        cancelHref={`/organization/vehicles/${vehicleId}`}
+        backLabel={t('hr.buttons.back')}
+      >
+        <AddVehicleForm vehicleId={vehicleId} onSuccess={handleSuccess} />
+      </HrFormPageShell>
+    </div>
   );
 }
