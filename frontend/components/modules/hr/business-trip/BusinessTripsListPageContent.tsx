@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -25,6 +26,7 @@ import { Globe } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -245,16 +247,10 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: BusinessTripListItem) => (
-                <div className="min-w-0">
-                  <p className="erp-users-cell-strong m-0">
-                    {formatBusinessTripSubmitterName(row.submitter)}
-                  </p>
-                  {row.submitter?.email ? (
-                    <p className="erp-users-email m-0 mt-0.5">
-                      {row.submitter.email}
-                    </p>
-                  ) : null}
-                </div>
+                <HrPersonCell
+                  person={row.submitter}
+                  name={formatBusinessTripSubmitterName(row.submitter)}
+                />
               ),
             } satisfies ColumnsType<BusinessTripListItem>[number],
           ]
@@ -375,7 +371,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -383,7 +379,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -393,7 +389,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   return (
     <div
-      className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-business-trips-page${canViewHr ? ' erp-business-trips-page--hr' : ''}`}
+      className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page${canViewHr ? ' erp-business-trips-page--hr' : ''} ${LIST_PAGE_V2}`}
     >
       {importOpen ? (
         <HrImportModal
@@ -466,7 +462,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         ) : null}
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>

@@ -208,7 +208,7 @@
 /* ── Table chrome ── */
 
 .erp-leave-v2 .erp-pro-table-card-body {
-  padding: 0 8px 8px;
+  padding: 0 0 8px;
 }
 
 .erp-leave-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row,

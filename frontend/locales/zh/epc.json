@@ -5373,6 +5373,8 @@
       "approvedLeaveNoOvertime": "您当天已获批准休假。",
       "noSelectableWindows": "当天没有可选的加班时段。",
       "siteAssignmentFullDayOt": "现场派驻日 — 全天工时均可计加班（不适用常规定班）。",
+      "lunchBreakOtExcluded": "注意：工作日 12:30–13:30 午餐时间不计加班",
+      "lunchBreakOtCapTooltip": "午餐休息（12:30–13:30）不计为加班",
       "workedPastMidnight": "工作跨过午夜？请在 {{date}} 补录剩余时段。",
       "etbPreviewEmpty": "输入金额和币种后即可预览比尔（ETB）等值。",
       "vendor": "供应商",

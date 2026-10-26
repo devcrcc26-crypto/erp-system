@@ -1,6 +1,8 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/profile/profile-v2.css';
+import '@/components/modules/users/employee-detail-v2.css';
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, DatePicker, Form, Grid, Input, Modal, Skeleton } from 'antd';
@@ -118,7 +120,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -128,7 +130,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isError || !settlement) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -148,19 +150,19 @@ export default function PerDiemSettlementDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/per-diem')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/hr/per-diem')}
+            aria-label={t('hr.buttons.backToList')}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('hr.buttons.back')}
+          </Button>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             {canRecordCash ? (
               <Button type="primary" onClick={() => setCashOpen(true)}>
                 {t('pages.hr.perDiemSettlement.recordCashReturned')}
@@ -173,9 +175,9 @@ export default function PerDiemSettlementDetailPageContent({
             ) : null}
           </div>
         </div>
-        <div className="erp-employee-hero erp-contract-hero">
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="erp-employee-hero erp-profile-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="erp-users-id-chip">{settlement.requestNumber}</span>
               <StatusBadge
                 label={formatPerDiemStatus(settlement.status, t)}
@@ -183,11 +185,36 @@ export default function PerDiemSettlementDetailPageContent({
               />
               <span className="erp-users-role-tag">{settlement.destinationCategory}</span>
             </div>
-            <h2 className="erp-users-name m-0">{settlement.destination}</h2>
-            <p className="erp-users-email m-0 mt-1">
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {settlement.destination}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
               {formatPerDiemEmployeeName(settlement.employee)}
             </p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {`${formatProjectDate(settlement.actualDepartureDate ?? null)} – ${formatProjectDate(settlement.actualReturnDate)}`}
+            </p>
           </div>
+        </div>
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          {(
+            [
+              [t('hr.form.perDiemDays'), String(settlement.actualDays)],
+              [t('pages.hr.perDiemSettlement.advancesTaken'), formatEtbAmount(advancesTotal)],
+              [t('hr.labels.dailyRate'), formatEtbAmount(settlement.dailyRate)],
+              [directionLabel, formatEtbAmount(balance)],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="erp-users-stat">
+              <div className="min-w-0">
+                <p className="erp-users-stat-label">{label}</p>
+                <p className="erp-employee-meta-value">{value}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -200,7 +227,7 @@ export default function PerDiemSettlementDetailPageContent({
           </div>
           <div className="erp-employee-section-body grid grid-cols-1 gap-4 md:grid-cols-2">
             <MetaItem label={t('hr.form.departureDate')}>
-              {formatProjectDate(settlement.actualDepartureDate)}{' '}
+              {formatProjectDate(settlement.actualDepartureDate ?? null)}{' '}
               {settlement.actualDepartureTime}
             </MetaItem>
             <MetaItem label={t('hr.form.returnDate')}>

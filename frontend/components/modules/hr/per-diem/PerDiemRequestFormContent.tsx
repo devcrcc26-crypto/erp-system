@@ -3,6 +3,7 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import PerDiemRequestForm from '@/components/modules/hr/per-diem/PerDiemRequestForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { PerDiemRequestDetail } from '@/lib/api/per-diem.types';
@@ -24,7 +25,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-per-diem-form-page">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-per-diem-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
         title={t('pages.hr.perDiem.new')}
         description={t('pages.hr.perDiem.formDescription')}

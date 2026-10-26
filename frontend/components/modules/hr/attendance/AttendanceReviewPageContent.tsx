@@ -867,7 +867,7 @@ export default function AttendanceReviewPageContent({
               {pendingMissing.length})
             </h3>
           </div>
-          <div className="erp-pro-table-card-body space-y-4 p-3">
+          <div className="erp-pro-table-card-body space-y-4 py-3">
             {pendingMissing.length > 0 ? (
               <Table<AttendanceImportMissing>
                 size="small"
@@ -1020,7 +1020,7 @@ export default function AttendanceReviewPageContent({
             ) : null}
             {unmatchedRows.length > 0 ? (
               <div>
-                <p className="mb-2 text-sm font-medium">
+                <p className="mb-2 px-3 text-sm font-medium">
                   {t('pages.hr.attendance.importModal.rejectedSection')} (
                   {unmatchedRows.length})
                 </p>

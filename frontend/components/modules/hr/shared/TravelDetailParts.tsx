@@ -2,8 +2,6 @@
 
 import {
   BedDouble,
-  CalendarCheck2,
-  CalendarDays,
   Check,
   IdCard,
   Minus,
@@ -60,64 +58,24 @@ interface RoutePlace {
   country: string;
 }
 
-function RouteEnd({
-  label,
-  place,
-  align,
-}: {
-  label: string;
-  place: RoutePlace;
-  align: 'left' | 'right';
-}): React.ReactNode {
-  const primary = place.city || place.country;
-  const secondary = place.city ? place.country : null;
-  return (
-    <div
-      className={`min-w-0 ${align === 'right' ? 'text-right' : 'text-left'}`}
-    >
-      <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-        {label}
-      </p>
-      <p
-        className="m-0 mt-1 break-words text-lg font-semibold leading-tight text-slate-900 sm:text-2xl"
-        title={primary}
-      >
-        {primary}
-      </p>
-      {secondary ? (
-        <p className="m-0 mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
-          {secondary}
-        </p>
-      ) : null}
-    </div>
-  );
+/** City when known, else the country. */
+function placeName(place: RoutePlace): string {
+  return place.city || place.country;
 }
 
+/** One fact tile - same markup as the employee detail fact strip. */
 function RouteFact({
-  icon,
   label,
   value,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
 }): React.ReactNode {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-        style={{ background: tokens.colorTeal50, color: tokens.colorTeal600 }}
-        aria-hidden
-      >
-        {icon}
-      </span>
+    <div className="erp-users-stat">
       <div className="min-w-0">
-        <p className="m-0 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
-          {label}
-        </p>
-        <p className="m-0 truncate text-sm font-semibold text-slate-800">
-          {value}
-        </p>
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-employee-meta-value">{value}</p>
       </div>
     </div>
   );
@@ -143,8 +101,9 @@ export interface TravelRouteHeroProps {
 }
 
 /**
- * Boarding-pass style summary: origin → destination, trip type and length,
- * and the key travel facts in one place.
+ * Travel request hero in the employee detail layout: badges, the route as
+ * the title, requester and trip length, then the fact tiles. Render it inside
+ * the page's identity card (`erp-profile-identity`).
  */
 export function TravelRouteHero({
   referenceNumber,
@@ -171,109 +130,77 @@ export function TravelRouteHero({
         ? t('hr.travel.dayCountOne')
         : t('hr.travel.dayCount', { count: days });
 
-  return (
-    <div className="flex flex-col gap-4 px-4 py-5 sm:px-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {referenceNumber ? (
-            <span className="erp-users-id-chip">{referenceNumber}</span>
-          ) : null}
-          {statusLabel ? (
-            <StatusBadge label={statusLabel} variant={statusVariant} />
-          ) : null}
-          <StatusBadge label={tripTypeLabel} variant={tripTypeVariant} />
-          <span className="erp-users-role-tag">
-            {isInternational
-              ? t('hr.labels.international')
-              : t('hr.labels.domestic')}
-          </span>
-        </div>
-        <p className="m-0 text-sm text-slate-500">
-          {t('hr.travel.requestedBy', { name: requesterName })}
-        </p>
-      </div>
+  const countries = [
+    origin.city ? origin.country : null,
+    destination.city ? destination.country : null,
+  ];
+  const showCountries = countries.some(Boolean);
 
-      <div
-        className="rounded-[14px] border p-4 sm:p-5"
-        style={{
-          borderColor: '#d9efe6',
-          background: `linear-gradient(120deg, ${tokens.colorTeal50} 0%, #ffffff 70%)`,
-        }}
-      >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-6">
-          <RouteEnd label={t('hr.form.origin')} place={origin} align="left" />
-          <div className="flex w-16 flex-col items-center gap-1.5 sm:w-44">
-            <div className="flex w-full items-center gap-1.5" aria-hidden>
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ background: tokens.colorTeal400 }}
-              />
-              <span className="hidden h-px flex-1 border-t-2 border-dashed border-[#9fd8c3] sm:block" />
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-[0_4px_12px_rgba(29,158,117,0.35)]"
-                style={{ background: tokens.colorTeal400 }}
-              >
-                <Plane size={17} strokeWidth={2} className="rotate-45" />
-              </span>
-              <span className="hidden h-px flex-1 border-t-2 border-dashed border-[#9fd8c3] sm:block" />
-              <span
-                className="h-2 w-2 shrink-0 rounded-full border-2 bg-white"
-                style={{ borderColor: tokens.colorTeal400 }}
-              />
-            </div>
-            <span className="hidden text-center text-[11px] font-medium text-slate-500 sm:block">
-              {[tripTypeLabel, lengthLabel].filter(Boolean).join(' · ')}
+  return (
+    <>
+      <div className="erp-employee-hero erp-profile-hero">
+        <div className="erp-employee-hero-copy min-w-0 flex-1">
+          <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            {referenceNumber ? (
+              <span className="erp-users-id-chip">{referenceNumber}</span>
+            ) : null}
+            {statusLabel ? (
+              <StatusBadge label={statusLabel} variant={statusVariant} />
+            ) : null}
+            <StatusBadge label={tripTypeLabel} variant={tripTypeVariant} />
+            <span className="erp-users-role-tag">
+              {isInternational
+                ? t('hr.labels.international')
+                : t('hr.labels.domestic')}
             </span>
           </div>
-          <RouteEnd
-            label={t('hr.form.destination')}
-            place={destination}
-            align="right"
-          />
-        </div>
-        {lengthLabel ? (
-          <p className="m-0 mt-3 text-center text-[11px] font-medium text-slate-500 sm:hidden">
-            {[tripTypeLabel, lengthLabel].join(' · ')}
+          <h2
+            className="erp-users-name erp-employee-hero-name m-0 flex min-w-0 flex-wrap items-center justify-center gap-x-2 break-words sm:justify-start"
+            aria-label={`${t('hr.form.origin')} ${placeName(origin)}, ${t('hr.form.destination')} ${placeName(destination)}`}
+          >
+            <span>{placeName(origin)}</span>
+            <Plane
+              size={18}
+              strokeWidth={2}
+              className="shrink-0 rotate-45 text-[#1d9e75]"
+              aria-hidden
+            />
+            <span>{placeName(destination)}</span>
+          </h2>
+          {showCountries ? (
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {countries.map((country) => country ?? '-').join(' → ')}
+            </p>
+          ) : null}
+          <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+            {t('hr.travel.requestedBy', { name: requesterName })}
           </p>
-        ) : null}
+          {lengthLabel ? (
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {[tripTypeLabel, lengthLabel].join(' · ')}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div
-        className={`grid grid-cols-2 gap-x-4 gap-y-3 ${
-          extraFact ? 'md:grid-cols-5' : 'md:grid-cols-4'
-        }`}
-      >
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
         <RouteFact
-          icon={<CalendarDays size={17} strokeWidth={1.75} />}
           label={t('hr.labels.departure')}
           value={formatProjectDate(departureDate)}
         />
         <RouteFact
-          icon={<CalendarCheck2 size={17} strokeWidth={1.75} />}
           label={t('hr.labels.return')}
           value={returnDate ? formatProjectDate(returnDate) : '-'}
         />
         {ticketClassLabel !== undefined ? (
-          <RouteFact
-            icon={<Ticket size={17} strokeWidth={1.75} />}
-            label={t('hr.labels.ticketClass')}
-            value={ticketClassLabel}
-          />
+          <RouteFact label={t('hr.labels.ticketClass')} value={ticketClassLabel} />
         ) : null}
-        <RouteFact
-          icon={<Users size={17} strokeWidth={1.75} />}
-          label={t('hr.labels.passengers')}
-          value={passengerCount}
-        />
+        <RouteFact label={t('hr.labels.passengers')} value={passengerCount} />
         {extraFact ? (
-          <RouteFact
-            icon={<Wallet size={17} strokeWidth={1.75} />}
-            label={extraFact.label}
-            value={extraFact.value}
-          />
+          <RouteFact label={extraFact.label} value={extraFact.value} />
         ) : null}
       </div>
-    </div>
+    </>
   );
 }
 

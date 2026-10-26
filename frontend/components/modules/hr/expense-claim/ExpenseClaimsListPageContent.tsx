@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -28,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -296,16 +298,10 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
               width: 220,
               responsive: ['md'],
               render: (_: unknown, row: ExpenseClaimListItem) => (
-                <div className="min-w-0">
-                  <p className="erp-users-cell-strong m-0">
-                    {formatExpenseClaimEmployeeName(row.employee)}
-                  </p>
-                  {row.employee?.email ? (
-                    <p className="erp-users-email m-0 mt-0.5">
-                      {row.employee.email}
-                    </p>
-                  ) : null}
-                </div>
+                <HrPersonCell
+                  person={row.employee}
+                  name={formatExpenseClaimEmployeeName(row.employee)}
+                />
               ),
             } satisfies ColumnsType<ExpenseClaimListItem>[number],
           ]
@@ -404,7 +400,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -413,7 +409,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
       <ConfirmDialog
         open={Boolean(deletingClaim)}
         title={t('hr.empty.deleteExpenseClaimTitle')}
@@ -494,7 +490,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>

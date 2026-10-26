@@ -1,11 +1,14 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/profile/profile-v2.css';
+import '@/components/modules/users/employee-detail-v2.css';
 
 import { Alert, Button, Grid, Skeleton } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -43,7 +46,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (!canManagePerDiemRates) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -51,7 +54,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isLoading || rateQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -61,7 +64,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -88,19 +91,18 @@ export default function EmployeePerDiemRatesDetailPageContent({
   const employeeName = formatUserName(employee);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/employee-per-diem-rates')}
-              aria-label={t('hr.buttons.backToList')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
-          </div>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/hr/employee-per-diem-rates')}
+            aria-label={t('hr.buttons.backToList')}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('hr.buttons.back')}
+          </Button>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             <Button
               type="primary"
@@ -117,9 +119,21 @@ export default function EmployeePerDiemRatesDetailPageContent({
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
+        <div className="erp-employee-hero erp-profile-hero">
+          <EmployeeProfilePhoto
+            userId={employee.id}
+            photoDocumentId={employee.photoDocumentId}
+            firstName={employee.firstName}
+            lastName={employee.lastName}
+            canEdit={false}
+            size={isNarrow ? 72 : 88}
+            variant="hero"
+          />
           <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              {employee.employeeId ? (
+                <span className="erp-users-id-chip">{employee.employeeId}</span>
+              ) : null}
               {rate ? (
                 <span className="erp-users-id-chip">ETB</span>
               ) : (
@@ -150,45 +164,45 @@ export default function EmployeePerDiemRatesDetailPageContent({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.form.currency')}</p>
-            <p className="erp-employee-meta-value">{rate ? 'ETB' : '-'}</p>
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.form.currency')}</p>
+              <p className="erp-employee-meta-value">{rate ? 'ETB' : '-'}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.hr.employeePerDiemRates.stats.activeCategories')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {rate
-                ? `${activeCount}/${PER_DIEM_DESTINATION_CATEGORIES.length}`
-                : '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('pages.hr.employeePerDiemRates.stats.activeCategories')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {rate
+                  ? `${activeCount}/${PER_DIEM_DESTINATION_CATEGORIES.length}`
+                  : '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.department')}</p>
-            <p className="erp-employee-meta-value">
-              {employee.department?.name ?? '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('common.department')}</p>
+              <p className="erp-employee-meta-value">
+                {employee.department?.name ?? '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.hr.employeePerDiemRates.statusLabel')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {rate
-                ? t('pages.hr.employeePerDiemRates.stats.configured')
-                : t('pages.hr.employeePerDiemRates.stats.pendingSetup')}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('pages.hr.employeePerDiemRates.statusLabel')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {rate
+                  ? t('pages.hr.employeePerDiemRates.stats.configured')
+                  : t('pages.hr.employeePerDiemRates.stats.pendingSetup')}
+              </p>
+            </div>
           </div>
         </div>
       </div>

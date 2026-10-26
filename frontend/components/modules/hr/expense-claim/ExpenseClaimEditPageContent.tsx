@@ -5,6 +5,7 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useEffect } from 'react';
 import { Alert, Button, Form, Input, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -74,7 +75,7 @@ export default function ExpenseClaimEditPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page ${DETAIL_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Skeleton active paragraph={{ rows: 6 }} />
         </div>
@@ -84,7 +85,7 @@ export default function ExpenseClaimEditPageContent({
 
   if (detailQuery.isError || !claim) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -105,7 +106,7 @@ export default function ExpenseClaimEditPageContent({
 
   if (!canEdit) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="warning"
           showIcon
@@ -123,7 +124,7 @@ export default function ExpenseClaimEditPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
         title={t('pages.hr.expenseClaim.edit')}
         description={t('pages.hr.expenseClaim.editDescription')}

@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -22,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -234,15 +236,11 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         width: 220,
         render: (_: unknown, row: EmployeePerDiemRateListItem) => (
           <div className="min-w-0">
-            <p className="erp-users-cell-strong m-0 truncate">
-              {formatUserName(row.employee)}
-            </p>
-            {row.employee.email ? (
-              <p className="erp-users-email m-0 mt-0.5 truncate">
-                {row.employee.email}
-              </p>
-            ) : null}
-            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+            <HrPersonCell
+              person={row.employee}
+              name={formatUserName(row.employee)}
+            />
+            <p className="erp-users-cell-sub m-0 mt-0.5 pl-[52px] md:hidden">
               {row.employee.department?.name ?? '-'}
             </p>
           </div>
@@ -328,7 +326,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (!canManagePerDiemRates) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -336,7 +334,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -345,7 +343,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={employeePerDiemRateImportSchema}
@@ -401,7 +399,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>

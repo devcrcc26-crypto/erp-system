@@ -1,6 +1,8 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/profile/profile-v2.css';
+import '@/components/modules/users/employee-detail-v2.css';
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
@@ -197,7 +199,7 @@ export default function BusinessTripDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -207,7 +209,7 @@ export default function BusinessTripDetailPageContent({
 
   if (detailQuery.isError || !trip) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -245,7 +247,7 @@ export default function BusinessTripDetailPageContent({
     Boolean(trip.itinerary);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="businessTripPassengers"
@@ -262,18 +264,17 @@ export default function BusinessTripDetailPageContent({
         />
       ) : null}
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/business-trips')}
-              aria-label={t('hr.buttons.backToList')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
-          </div>
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/hr/business-trips')}
+            aria-label={t('hr.buttons.backToList')}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('hr.buttons.back')}
+          </Button>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             <Button
               icon={<FilePdfOutlined />}

@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -25,6 +26,7 @@ import { Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import PerDiemSettlementsList from '@/components/modules/hr/per-diem/PerDiemSettlementsList';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -218,16 +220,10 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: PerDiemRequestListItem) => (
-                <div className="min-w-0">
-                  <p className="erp-users-cell-strong m-0">
-                    {formatPerDiemEmployeeName(row.employee)}
-                  </p>
-                  {row.employee?.email ? (
-                    <p className="erp-users-email m-0 mt-0.5">
-                      {row.employee.email}
-                    </p>
-                  ) : null}
-                </div>
+                <HrPersonCell
+                  person={row.employee}
+                  name={formatPerDiemEmployeeName(row.employee)}
+                />
               ),
             },
           ] satisfies ColumnsType<PerDiemRequestListItem>)
@@ -390,7 +386,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listTab === 'settlements') {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
         <PerDiemSettlementsList />
       </div>
@@ -399,7 +395,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
         <div className="erp-pro-card flex justify-center p-12">
           <Spin />
@@ -409,7 +405,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
       {listTabs}
       {importOpen ? (
         <HrImportModal
@@ -482,7 +478,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>

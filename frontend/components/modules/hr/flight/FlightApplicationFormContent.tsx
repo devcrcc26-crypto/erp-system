@@ -3,6 +3,7 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import FlightApplicationForm from '@/components/modules/hr/flight/FlightApplicationForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
@@ -24,7 +25,7 @@ export default function FlightApplicationFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-flight-form-page">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-flight-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
         title={t('pages.hr.flight.new')}
         description={t('pages.hr.flight.formDescription')}

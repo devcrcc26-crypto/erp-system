@@ -1,6 +1,8 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/profile/profile-v2.css';
+import '@/components/modules/users/employee-detail-v2.css';
 import '@/components/modules/hr/overtime/overtime-entries-v2.css';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -511,7 +513,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -521,7 +523,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isError || !claim) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -546,7 +548,7 @@ export default function ExpenseClaimDetailPageContent({
     claim.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -587,19 +589,18 @@ export default function ExpenseClaimDetailPageContent({
         : 420;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push(backHref)}
-              aria-label={t('hr.buttons.backToList')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
-          </div>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push(backHref)}
+            aria-label={t('hr.buttons.backToList')}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('hr.buttons.back')}
+          </Button>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             {showOverflowMenu ? (
               <Dropdown
@@ -681,9 +682,9 @@ export default function ExpenseClaimDetailPageContent({
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
+        <div className="erp-employee-hero erp-profile-hero erp-contract-hero">
           <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="erp-users-id-chip">{claim.claimNumber}</span>
               <StatusBadge
                 label={formatExpenseClaimStatus(claim.status, t)}
@@ -700,59 +701,59 @@ export default function ExpenseClaimDetailPageContent({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.items')}</p>
-            <p className="erp-employee-meta-value">{claim.items.length}</p>
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.table.items')}</p>
+              <p className="erp-employee-meta-value">{claim.items.length}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.total')}</p>
-            <p className="erp-employee-meta-value erp-expense-claim-total">
-              {formatEtbAmount(claim.totalAmountEtb)}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.table.total')}</p>
+              <p className="erp-employee-meta-value erp-expense-claim-total">
+                {formatEtbAmount(claim.totalAmountEtb)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.form.receipt')}</p>
-            <p className="erp-employee-meta-value">
-              {claim.items.length === 0
-                ? '-'
-                : `${receiptOkCount}/${claim.items.length}`}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.form.receipt')}</p>
+              <p className="erp-employee-meta-value">
+                {claim.items.length === 0
+                  ? '-'
+                  : `${receiptOkCount}/${claim.items.length}`}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {claim.submittedAt
-                ? t('hr.table.submittedDate')
-                : t('hr.table.createdDate')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(claim.submittedAt ?? claim.createdAt)}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {claim.submittedAt
+                  ? t('hr.table.submittedDate')
+                  : t('hr.table.createdDate')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(claim.submittedAt ?? claim.createdAt)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.hr.expenseClaim.paid')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {claim.paidAt ? (
-                formatProjectDate(claim.paidAt)
-              ) : claim.status === 'APPROVED' ? (
-                t('pages.hr.expenseClaim.unpaid')
-              ) : (
-                '-'
-              )}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('pages.hr.expenseClaim.paid')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {claim.paidAt ? (
+                  formatProjectDate(claim.paidAt)
+                ) : claim.status === 'APPROVED' ? (
+                  t('pages.hr.expenseClaim.unpaid')
+                ) : (
+                  '-'
+                )}
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useMemo, useState } from 'react';
 import { Alert, Empty, Select } from 'antd';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -38,14 +39,14 @@ export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page ${DETAIL_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
         title={t('pages.hr.employeePerDiemRates.addRates')}
         description={t('pages.hr.employeePerDiemRates.formDescription')}

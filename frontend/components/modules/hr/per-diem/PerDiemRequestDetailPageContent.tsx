@@ -1,6 +1,8 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/profile/profile-v2.css';
+import '@/components/modules/users/employee-detail-v2.css';
 
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
@@ -276,7 +278,7 @@ export default function PerDiemRequestDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -286,7 +288,7 @@ export default function PerDiemRequestDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -315,19 +317,18 @@ export default function PerDiemRequestDetailPageContent({
       : null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/per-diem')}
-              aria-label={t('hr.buttons.backToList')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
-          </div>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/hr/per-diem')}
+            aria-label={t('hr.buttons.backToList')}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('hr.buttons.back')}
+          </Button>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             {request.approvalRequestId ? (
               <Button
@@ -373,9 +374,9 @@ export default function PerDiemRequestDetailPageContent({
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
+        <div className="erp-employee-hero erp-profile-hero erp-contract-hero">
           <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="erp-users-id-chip">{request.requestNumber}</span>
               <StatusBadge
                 label={formatPerDiemStatus(request.status, t)}
@@ -402,37 +403,37 @@ export default function PerDiemRequestDetailPageContent({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(request.startDate)}
-            </p>
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(request.startDate)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(request.endDate)}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(request.endDate)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.days')}</p>
-            <p className="erp-employee-meta-value">{request.days}</p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.days')}</p>
+              <p className="erp-employee-meta-value">{request.days}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.dailyRate')}</p>
-            <p className="erp-employee-meta-value">
-              {formatEtbAmount(request.dailyRate)}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.dailyRate')}</p>
+              <p className="erp-employee-meta-value">
+                {formatEtbAmount(request.dailyRate)}
+              </p>
+            </div>
           </div>
         </div>
       </div>

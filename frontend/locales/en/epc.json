@@ -5374,6 +5374,8 @@
       "approvedLeaveNoOvertime": "You're on approved leave this day.",
       "noSelectableWindows": "No overtime times are available for this day.",
       "siteAssignmentFullDayOt": "On site assignment — full day OT eligible (regular schedule does not apply).",
+      "lunchBreakOtExcluded": "Note: 12:30–13:30 lunch break is excluded from OT",
+      "lunchBreakOtCapTooltip": "Lunch break (12:30–13:30) is not counted as OT",
       "workedPastMidnight": "Worked past midnight? Add the rest on {{date}}.",
       "etbPreviewEmpty": "Enter an amount and currency to preview the ETB equivalent.",
       "vendor": "Vendor",

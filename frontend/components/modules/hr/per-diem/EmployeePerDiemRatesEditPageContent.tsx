@@ -4,6 +4,7 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { Alert, Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
@@ -30,7 +31,7 @@ export default function EmployeePerDiemRatesEditPageContent({
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page ${DETAIL_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -38,7 +39,7 @@ export default function EmployeePerDiemRatesEditPageContent({
 
   if (userQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 6 }} />
         </div>
@@ -48,7 +49,7 @@ export default function EmployeePerDiemRatesEditPageContent({
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -71,7 +72,7 @@ export default function EmployeePerDiemRatesEditPageContent({
   const detailHref = `${LIST_PATH}/${employeeId}`;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page">
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
         title={t('pages.hr.employeePerDiemRates.editTitle')}
         description={

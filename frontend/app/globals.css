@@ -4291,8 +4291,8 @@ main::-webkit-scrollbar,
     gap: 12px;
   }
 
-  .erp-pro-card-body,
-  .erp-pro-table-card-body {
+  /* Table bodies stay edge to edge; only plain card bodies get side padding. */
+  .erp-pro-card-body {
     padding-left: 12px;
     padding-right: 12px;
   }
