@@ -217,6 +217,12 @@ export function useIsSystemAdmin(): boolean {
   return useAuthStore((state) => state.capabilities.isSystemAdmin ?? false);
 }
 
+/** True when the session holds the HR Manager role. */
+export function useIsHrManager(): boolean {
+  const currentUser = useCurrentUser();
+  return Boolean(currentUser.data?.roles?.some((role) => role.name === 'HR Manager'));
+}
+
 /**
  * True when the session may reassign pending approval tiers
  * (HR Manager or System Administrator; the API enforces the same rule).

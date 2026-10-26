@@ -36,15 +36,16 @@
 /* ── Page header: greeting + quick actions (toolbar card, like list pages) ── */
 
 .erp-dashboard-v2 .dv2-header.erp-pro-card {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px 24px;
-  padding: 20px 24px;
-  border: 0;
+  padding: 22px 24px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: var(--dv2-radius);
-  background: var(--dv2-surface);
+  background: linear-gradient(135deg, #ffffff 0%, #fafdfc 65%, #f2fbf8 100%);
   box-shadow: var(--dv2-shadow);
   overflow: visible;
 }
@@ -96,25 +97,34 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 14px 0 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 14px 0 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
   background: var(--dv2-surface);
-  color: var(--dv2-text);
+  color: var(--dv2-text-strong);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .erp-dashboard-v2 .dv2-action:hover {
-  border-color: rgba(29, 158, 117, 0.35);
+  border-color: rgba(29, 158, 117, 0.45);
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(29, 158, 117, 0.12);
+}
+
+.erp-dashboard-v2 .dv2-action:active {
+  transform: translateY(0);
 }
 
 .erp-dashboard-v2 .dv2-action-icon {
@@ -136,7 +146,10 @@
   gap: 6px;
   max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
   padding: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 14px;
   background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
@@ -148,10 +161,14 @@
 }
 
 .erp-dashboard-v2 .dv2-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
-  min-height: 36px;
+  scroll-snap-align: start;
+  min-height: 40px;
   padding: 0 16px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   color: var(--dv2-muted);
@@ -160,8 +177,16 @@
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    color 120ms ease;
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.erp-dashboard-v2 .dv2-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.78;
 }
 
 .erp-dashboard-v2 .dv2-tab:hover {
@@ -171,8 +196,14 @@
 
 .erp-dashboard-v2 .dv2-tab--active,
 .erp-dashboard-v2 .dv2-tab--active:hover {
+  border-color: rgba(29, 158, 117, 0.25);
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
+  box-shadow: 0 1px 2px rgba(29, 158, 117, 0.08);
+}
+
+.erp-dashboard-v2 .dv2-tab--active .dv2-tab-icon {
+  opacity: 1;
 }
 
 /* ── Tab panel layout: stacked rows with a shared gap ── */
@@ -318,15 +349,23 @@
 }
 
 .erp-dashboard-v2 .dv2-kpi {
+  position: relative;
   display: flex;
   min-width: 0;
+  height: 100%;
   flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
   padding: 18px 20px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: var(--dv2-radius);
   background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
-  transition: background-color 120ms ease;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
 a.erp-dashboard-v2 .dv2-kpi,
@@ -336,7 +375,12 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 .erp-dashboard-v2 a.dv2-kpi:hover {
-  background: #fbfcfd;
+  border-color: rgba(29, 158, 117, 0.35);
+  background: #fbfefd;
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 8px 20px rgba(16, 24, 40, 0.08);
 }
 
 .erp-dashboard-v2 .dv2-kpi-head {
@@ -456,23 +500,28 @@ a.erp-dashboard-v2 .dv2-kpi,
   display: flex;
   min-width: 0;
   flex-direction: column;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: var(--dv2-radius);
   background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
-  transition: box-shadow 140ms ease;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
 }
 
 .erp-dashboard-v2 .dv2-card:hover {
+  border-color: rgba(15, 23, 42, 0.1);
   box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.05),
-    0 8px 24px rgba(16, 24, 40, 0.08);
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 10px 26px rgba(16, 24, 40, 0.08);
 }
 
 .erp-dashboard-v2 .dv2-card-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px 0;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--dv2-divider);
 }
 
 .erp-dashboard-v2 .dv2-card-icon {
@@ -501,17 +550,22 @@ a.erp-dashboard-v2 .dv2-kpi,
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 2px;
-  border-radius: 6px;
+  gap: 3px;
+  min-height: 32px;
+  padding: 0 8px;
+  margin-right: -6px;
+  border-radius: 8px;
   color: var(--dv2-primary-strong);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  transition: background-color 120ms ease;
 }
 
 .erp-dashboard-v2 .dv2-view-all:hover {
-  text-decoration: underline;
+  background: var(--dv2-primary-tint);
+  text-decoration: none;
 }
 
 .erp-dashboard-v2 .dv2-card-body {
@@ -784,8 +838,22 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 .erp-dashboard-v2 .dv2-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #fafbfc;
   color: var(--dv2-muted);
   font-size: 13px;
+  text-align: center;
+}
+
+.erp-dashboard-v2 .dv2-chart--empty .dv2-empty {
+  border: 0;
+  background: transparent;
 }
 
 .erp-dashboard-v2 .dv2-error {
@@ -794,28 +862,92 @@ a.erp-dashboard-v2 .dv2-kpi,
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 35, 24, 0.18);
+  border-radius: 12px;
   background: var(--dv2-urgent-tint);
   color: var(--dv2-urgent);
   font-size: 13px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
+  .erp-dashboard-v2 {
+    gap: 14px;
+  }
+
   .erp-dashboard-v2 .dv2-header.erp-pro-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
     padding: 16px;
   }
 
   .erp-dashboard-v2 .dv2-action-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .erp-dashboard-v2 .dv2-action {
+    width: 100%;
+    min-height: 42px;
     justify-content: flex-start;
+    padding: 0 12px;
+  }
+
+  .erp-dashboard-v2 .dv2-action-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .erp-dashboard-v2 .dv2-greeting-title {
-    font-size: 20px;
+    font-size: 19px;
+  }
+
+  .erp-dashboard-v2 .dv2-kpi {
+    padding: 14px 16px;
+  }
+
+  .erp-dashboard-v2 .dv2-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
   }
 
   .erp-dashboard-v2 .dv2-kpi-value {
     font-size: 22px;
+  }
+
+  .erp-dashboard-v2 .dv2-card-header {
+    padding: 14px 16px 12px;
+  }
+
+  .erp-dashboard-v2 .dv2-card-body {
+    padding: 14px 16px 16px;
+  }
+
+  .erp-dashboard-v2 .dv2-number {
+    font-size: 26px;
+  }
+
+  .erp-dashboard-v2 .dv2-stat-row {
+    gap: 12px 20px;
+  }
+
+  .erp-dashboard-v2 .dv2-stat-row .dv2-number {
+    font-size: 21px;
+  }
+
+  .erp-dashboard-v2 .dv2-list-row {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .erp-dashboard-v2 .dv2-kpi-strip,
+  .erp-dashboard-v2 .dv2-action-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

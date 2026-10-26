@@ -46,6 +46,46 @@ export interface HrReportNamedAmount {
   amount: number;
 }
 
+/** `month` is a `YYYY-MM` key; the client formats the label. */
+export interface HrReportMonthCount {
+  month: string;
+  count: number;
+}
+
+export interface HrReportExpiringContractRow {
+  contractId: string;
+  contractNumber: string;
+  employeeId: string;
+  employeeName: string;
+  department: string | null;
+  endDate: string;
+  /** `YYYY-MM` of endDate, matching `contractsByMonth[].month`. */
+  month: string;
+}
+
+export interface HrReportPayroll {
+  /** Runs in the period; money totals exclude cancelled runs. */
+  runs: number;
+  totalGross: number;
+  /** Employee pension + income tax. */
+  totalDeductions: number;
+  totalNet: number;
+  byDepartment: Array<{ department: string; totalNet: number }>;
+  byStatus: Array<{ status: string; count: number }>;
+}
+
+export interface HrReportAttendance {
+  /** Monthly attendance records imported for the period. */
+  records: number;
+  /** Sum over the period's months of each month's scheduled working days. */
+  totalWorkingDays: number;
+  /** Present days / scheduled days across all records, as a percentage. */
+  averageAttendanceRate: number;
+  totalAbsentDays: number;
+  totalUnpaidLeaveDays: number;
+  byDepartment: Array<{ department: string; attendanceRate: number }>;
+}
+
 export interface HrReport {
   generatedAt: string;
   range: HrReportRange;
@@ -61,6 +101,8 @@ export interface HrReport {
     withoutDepartment: number;
     withoutLeavePolicy: number;
   };
+  /** Employed headcount for the six months ending with the report's end month. */
+  headcountTrend: HrReportMonthCount[];
   leave: {
     requests: number;
     approvedRequests: number;
@@ -95,6 +137,11 @@ export interface HrReport {
     expiringInRange: number;
     endedInRange: number;
   };
+  /** Active contracts ending in each of the next three calendar months (from today). */
+  contractsByMonth: HrReportMonthCount[];
+  expiringContracts: HrReportExpiringContractRow[];
+  payroll: HrReportPayroll;
+  attendance: HrReportAttendance;
   siteAssignments: {
     requests: number;
     approvedRequests: number;
@@ -119,6 +166,10 @@ export interface HrReport {
 }
 
 const APPROVED = 'APPROVED';
+/** Bucket for employees with no value set (gender, nationality, employee type). */
+const NOT_SPECIFIED = 'NOT_SPECIFIED';
+const HEADCOUNT_TREND_MONTHS = 6;
+const CONTRACT_TIMELINE_MONTHS = 3;
 
 function startOfDayUtc(date: Date): Date {
   return new Date(
@@ -168,6 +219,15 @@ function round(value: number): number {
 /** Sortable month key so `month`/`year` sheets can be filtered by a date range. */
 function monthKey(year: number, month: number): number {
   return year * 12 + month;
+}
+
+/** `YYYY-MM` for a 1-based month. */
+function monthLabel(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function percent(part: number, whole: number): number {
+  return whole > 0 ? round((part / whole) * 100) : 0;
 }
 
 /**
@@ -225,6 +285,10 @@ export class HrReportService {
       workFromHomeDays,
       expenseClaims,
       evaluationRows,
+      payrollRuns,
+      attendanceRecords,
+      trendEmployees,
+      expiringContractRows,
     ] = await Promise.all([
       this.prisma.user.count({
         where: { ...userScopeWhere, isActive: true },
@@ -252,19 +316,20 @@ export class HrReportService {
         },
         _count: { id: true },
       }),
+      // Null groups are kept and reported as "Not specified".
       this.prisma.user.groupBy({
         by: ['employeeType'],
-        where: { ...userScopeWhere, isActive: true, employeeType: { not: null } },
+        where: { ...userScopeWhere, isActive: true },
         _count: { id: true },
       }),
       this.prisma.user.groupBy({
         by: ['nationality'],
-        where: { ...userScopeWhere, isActive: true, nationality: { not: null } },
+        where: { ...userScopeWhere, isActive: true },
         _count: { id: true },
       }),
       this.prisma.user.groupBy({
         by: ['gender'],
-        where: { ...userScopeWhere, isActive: true, gender: { not: null } },
+        where: { ...userScopeWhere, isActive: true },
         _count: { id: true },
       }),
       this.prisma.leaveRequest.findMany({
@@ -410,14 +475,110 @@ export class HrReportService {
           adjustedScore: true,
         },
       }),
+      this.prisma.payrollRun.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          year: { gte: from.getUTCFullYear(), lte: to.getUTCFullYear() },
+        },
+        select: {
+          month: true,
+          year: true,
+          status: true,
+          entries: {
+            where: employeeFilter,
+            select: {
+              grossIncome: true,
+              pensionEmployee: true,
+              incomeTax: true,
+              netPay: true,
+              employee: { select: { departmentId: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.attendanceRecord.findMany({
+        where: {
+          companyId,
+          ...employeeFilter,
+          employee: hrProcessEmployeeWhere({ deletedAt: null }),
+          year: { gte: from.getUTCFullYear(), lte: to.getUTCFullYear() },
+        },
+        select: {
+          month: true,
+          year: true,
+          scheduledDays: true,
+          presentDays: true,
+          absentDays: true,
+          unpaidLeaveDays: true,
+          employee: { select: { departmentId: true } },
+        },
+      }),
+      this.prisma.user.findMany({
+        where: userScopeWhere,
+        select: {
+          isActive: true,
+          employmentDate: true,
+          employmentPeriods: { select: { startDate: true, endDate: true } },
+        },
+      }),
+      this.prisma.employeeContract.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          endDate: {
+            gte: new Date(
+              Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+            ),
+            lte: endOfDayUtc(
+              new Date(
+                Date.UTC(
+                  now.getUTCFullYear(),
+                  now.getUTCMonth() + 1 + CONTRACT_TIMELINE_MONTHS,
+                  0,
+                ),
+              ),
+            ),
+          },
+          ...employeeFilter,
+        },
+        orderBy: { endDate: 'asc' },
+        select: {
+          id: true,
+          contractNumber: true,
+          employeeId: true,
+          endDate: true,
+          employee: {
+            select: {
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              chineseName: true,
+              departmentId: true,
+            },
+          },
+        },
+      }),
     ]);
 
-    const departmentNameById = await this.loadDepartmentNames(
-      companyId,
-      headcountGroups
-        .map((row) => row.departmentId)
-        .filter((id): id is string => Boolean(id)),
-    );
+    const fromMonthKey = monthKey(from.getUTCFullYear(), from.getUTCMonth() + 1);
+    const toMonthKey = monthKey(to.getUTCFullYear(), to.getUTCMonth() + 1);
+    const inRangeMonth = (row: { year: number; month: number }): boolean => {
+      const key = monthKey(row.year, row.month);
+      return key >= fromMonthKey && key <= toMonthKey;
+    };
+    const periodPayrollRuns = payrollRuns.filter(inRangeMonth);
+    const periodAttendance = attendanceRecords.filter(inRangeMonth);
+
+    const departmentNameById = await this.loadDepartmentNames(companyId, [
+      ...headcountGroups.map((row) => row.departmentId),
+      ...periodPayrollRuns.flatMap((run) =>
+        run.entries.map((entry) => entry.employee.departmentId),
+      ),
+      ...periodAttendance.map((row) => row.employee.departmentId),
+      ...expiringContractRows.map((row) => row.employee.departmentId),
+    ].filter((id): id is string => Boolean(id)));
 
     const byDepartment: HrReportNamedCount[] = headcountGroups
       .filter((row) => row.departmentId)
@@ -430,18 +591,50 @@ export class HrReportService {
 
     const leave = this.summariseLeave(leaveRequests, departmentNameById);
     const overtime = this.summariseOvertime(
-      overtimeSheets.filter((sheet) => {
-        const key = monthKey(sheet.year, sheet.month);
-        return (
-          key >= monthKey(from.getUTCFullYear(), from.getUTCMonth() + 1) &&
-          key <= monthKey(to.getUTCFullYear(), to.getUTCMonth() + 1)
-        );
-      }),
+      overtimeSheets.filter(inRangeMonth),
       departmentNameById,
     );
     const siteAssignments = this.summariseStatusCounts(siteAssignmentRows);
     const expenses = this.summariseExpenses(expenseClaims);
     const evaluations = this.summariseEvaluations(evaluationRows);
+    const payroll = this.summarisePayroll(periodPayrollRuns, departmentNameById);
+    const attendance = this.summariseAttendance(
+      periodAttendance,
+      departmentNameById,
+    );
+    // Trend ends at the report's end month, never later than today.
+    const headcountTrend = this.buildHeadcountTrend(
+      trendEmployees,
+      to.getTime() < now.getTime() ? to : now,
+    );
+    const expiringContracts: HrReportExpiringContractRow[] =
+      expiringContractRows.map((row) => {
+        const endDate = row.endDate as Date;
+        return {
+          contractId: row.id,
+          contractNumber: row.contractNumber,
+          employeeId: row.employeeId,
+          employeeName: formatUserDisplayName(row.employee),
+          department: row.employee.departmentId
+            ? (departmentNameById.get(row.employee.departmentId) ?? null)
+            : null,
+          endDate: formatDateOnly(endDate),
+          month: monthLabel(endDate.getUTCFullYear(), endDate.getUTCMonth() + 1),
+        };
+      });
+    const contractsByMonth: HrReportMonthCount[] = Array.from(
+      { length: CONTRACT_TIMELINE_MONTHS },
+      (_, offset) => {
+        const date = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1 + offset, 1),
+        );
+        const month = monthLabel(date.getUTCFullYear(), date.getUTCMonth() + 1);
+        return {
+          month,
+          count: expiringContracts.filter((row) => row.month === month).length,
+        };
+      },
+    );
 
     return {
       generatedAt: new Date().toISOString(),
@@ -458,6 +651,7 @@ export class HrReportService {
         withoutDepartment: departmentId ? 0 : withoutDepartment,
         withoutLeavePolicy,
       },
+      headcountTrend,
       leave,
       overtime,
       travel: { flights, businessTrips },
@@ -466,6 +660,10 @@ export class HrReportService {
         expiringInRange,
         endedInRange,
       },
+      contractsByMonth,
+      expiringContracts,
+      payroll,
+      attendance,
       siteAssignments: {
         requests: siteAssignments.total,
         approvedRequests: siteAssignments.approved,
@@ -671,12 +869,175 @@ export class HrReportService {
     key: K,
   ): HrReportNamedCount[] {
     return rows
-      .filter((row) => row[key] != null)
       .map((row) => ({
-        name: String(row[key]),
+        name: row[key] == null ? NOT_SPECIFIED : String(row[key]),
         count: row._count.id,
       }))
+      .filter((row) => row.count > 0)
       .sort((a, b) => b.count - a.count);
+  }
+
+  private summarisePayroll(
+    runs: Array<{
+      status: string;
+      entries: Array<{
+        grossIncome: Prisma.Decimal;
+        pensionEmployee: Prisma.Decimal;
+        incomeTax: Prisma.Decimal;
+        netPay: Prisma.Decimal;
+        employee: { departmentId: string | null };
+      }>;
+    }>,
+    departmentNameById: Map<string, string>,
+  ): HrReportPayroll {
+    const statusCounts = new Map<string, number>();
+    const departmentNet = new Map<string, number>();
+    let totalGross = 0;
+    let totalDeductions = 0;
+    let totalNet = 0;
+
+    for (const run of runs) {
+      statusCounts.set(run.status, (statusCounts.get(run.status) ?? 0) + 1);
+      if (run.status === 'CANCELLED') {
+        continue;
+      }
+      for (const entry of run.entries) {
+        const net = toNumber(entry.netPay);
+        totalGross += toNumber(entry.grossIncome);
+        totalDeductions +=
+          toNumber(entry.pensionEmployee) + toNumber(entry.incomeTax);
+        totalNet += net;
+        const department = entry.employee.departmentId
+          ? (departmentNameById.get(entry.employee.departmentId) ?? 'Unassigned')
+          : 'Unassigned';
+        departmentNet.set(department, (departmentNet.get(department) ?? 0) + net);
+      }
+    }
+
+    // Money is rounded to cents, not the 0.1 used for days and hours.
+    const cents = (value: number): number => Math.round(value * 100) / 100;
+
+    return {
+      runs: runs.length,
+      totalGross: cents(totalGross),
+      totalDeductions: cents(totalDeductions),
+      totalNet: cents(totalNet),
+      byDepartment: [...departmentNet.entries()]
+        .map(([department, net]) => ({ department, totalNet: cents(net) }))
+        .sort((a, b) => b.totalNet - a.totalNet),
+      byStatus: [...statusCounts.entries()].map(([status, count]) => ({
+        status,
+        count,
+      })),
+    };
+  }
+
+  private summariseAttendance(
+    rows: Array<{
+      month: number;
+      year: number;
+      scheduledDays: Prisma.Decimal;
+      presentDays: Prisma.Decimal;
+      absentDays: Prisma.Decimal;
+      unpaidLeaveDays: Prisma.Decimal;
+      employee: { departmentId: string | null };
+    }>,
+    departmentNameById: Map<string, string>,
+  ): HrReportAttendance {
+    // A month's working days = the full schedule; mid-month joiners have fewer.
+    const workingDaysByMonth = new Map<number, number>();
+    const departmentTotals = new Map<
+      string,
+      { scheduled: number; present: number }
+    >();
+    let scheduled = 0;
+    let present = 0;
+    let absent = 0;
+    let unpaidLeave = 0;
+
+    for (const row of rows) {
+      const rowScheduled = toNumber(row.scheduledDays);
+      const rowPresent = toNumber(row.presentDays);
+      const key = monthKey(row.year, row.month);
+      workingDaysByMonth.set(
+        key,
+        Math.max(workingDaysByMonth.get(key) ?? 0, rowScheduled),
+      );
+      scheduled += rowScheduled;
+      present += rowPresent;
+      absent += toNumber(row.absentDays);
+      unpaidLeave += toNumber(row.unpaidLeaveDays);
+
+      const department = row.employee.departmentId
+        ? (departmentNameById.get(row.employee.departmentId) ?? 'Unassigned')
+        : 'Unassigned';
+      const totals = departmentTotals.get(department) ?? {
+        scheduled: 0,
+        present: 0,
+      };
+      totals.scheduled += rowScheduled;
+      totals.present += rowPresent;
+      departmentTotals.set(department, totals);
+    }
+
+    return {
+      records: rows.length,
+      totalWorkingDays: round(
+        [...workingDaysByMonth.values()].reduce((sum, days) => sum + days, 0),
+      ),
+      averageAttendanceRate: percent(present, scheduled),
+      totalAbsentDays: round(absent),
+      totalUnpaidLeaveDays: round(unpaidLeave),
+      byDepartment: [...departmentTotals.entries()]
+        .filter(([, totals]) => totals.scheduled > 0)
+        .map(([department, totals]) => ({
+          department,
+          attendanceRate: percent(totals.present, totals.scheduled),
+        }))
+        .sort((a, b) => b.attendanceRate - a.attendanceRate),
+    };
+  }
+
+  /**
+   * Employed headcount at each month end (the current month counts at `anchor`).
+   * Uses EmploymentPeriod rows; users without any fall back to an active login
+   * plus employmentDate, matching `employedInMonthWhere`.
+   */
+  private buildHeadcountTrend(
+    employees: Array<{
+      isActive: boolean;
+      employmentDate: Date | null;
+      employmentPeriods: Array<{ startDate: Date; endDate: Date | null }>;
+    }>,
+    anchor: Date,
+  ): HrReportMonthCount[] {
+    return Array.from({ length: HEADCOUNT_TREND_MONTHS }, (_, index) => {
+      const offset = HEADCOUNT_TREND_MONTHS - 1 - index;
+      const year = anchor.getUTCFullYear();
+      const month = anchor.getUTCMonth() - offset;
+      const monthEnd = new Date(Date.UTC(year, month + 1, 0));
+      const time = (offset === 0 ? startOfDayUtc(anchor) : monthEnd).getTime();
+
+      const count = employees.filter((employee) => {
+        if (employee.employmentPeriods.length === 0) {
+          return (
+            employee.isActive &&
+            (employee.employmentDate == null ||
+              employee.employmentDate.getTime() <= time)
+          );
+        }
+        return employee.employmentPeriods.some(
+          (period) =>
+            period.startDate.getTime() <= time &&
+            (period.endDate == null || period.endDate.getTime() >= time),
+        );
+      }).length;
+
+      return {
+        month: monthLabel(monthEnd.getUTCFullYear(), monthEnd.getUTCMonth() + 1),
+        count,
+      };
+    });
   }
 
   private summariseStatusCounts(

@@ -84,6 +84,7 @@ function ChartFrame({
   emptyLabel,
   height,
   ariaLabel,
+  srRows,
   children,
 }: {
   loading: boolean;
@@ -91,11 +92,12 @@ function ChartFrame({
   emptyLabel: string;
   height: number;
   ariaLabel?: string;
+  srRows?: readonly { label: string; value: string | number }[];
   children: React.ReactNode;
 }): React.ReactNode {
   if (loading) {
     return (
-      <div className="dv2-chart" style={{ minHeight: height }}>
+      <div className="dv2-chart" style={{ minHeight: height }} role="status" aria-busy="true">
         <Skeleton active title={false} paragraph={{ rows: 4 }} />
       </div>
     );
@@ -114,10 +116,23 @@ function ChartFrame({
     <div
       className="dv2-chart"
       style={{ minHeight: height }}
-      role="img"
+      role="region"
       aria-label={ariaLabel}
     >
-      {children}
+      <div aria-hidden="true">{children}</div>
+      {srRows && srRows.length > 0 ? (
+        <table className="sr-only">
+          <caption>{ariaLabel}</caption>
+          <tbody>
+            {srRows.map((r) => (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                <td>{r.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
     </div>
   );
 }
@@ -145,6 +160,7 @@ export function DashboardBarChart({
       emptyLabel={emptyLabel}
       height={height}
       ariaLabel={ariaLabel ?? summarize(rows)}
+      srRows={rows}
     >
       <Bar
         data={rows}
@@ -227,6 +243,10 @@ export function DashboardStackedBarChart({
       emptyLabel={emptyLabel}
       height={resolvedHeight}
       ariaLabel={ariaLabel ?? summary}
+      srRows={data.map((row) => ({
+        label: row.name,
+        value: `${seriesLabels.normal}: ${row.normal}, ${seriesLabels.evening}: ${row.evening}, ${seriesLabels.sunday}: ${row.sunday}, ${seriesLabels.holiday}: ${row.holiday}`,
+      }))}
     >
       <Bar
         data={rows}
@@ -286,6 +306,7 @@ export function DashboardDonutChart({
       emptyLabel={emptyLabel}
       height={height}
       ariaLabel={ariaLabel ?? summarize(rows)}
+      srRows={rows}
     >
       <Pie
         data={rows}

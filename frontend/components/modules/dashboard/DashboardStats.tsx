@@ -51,9 +51,12 @@ export function StatCard({
   color = 'default',
   icon,
   href,
+  suffix,
 }: {
   label: string;
   value: number;
+  /** Unit shown after the value, e.g. "%". */
+  suffix?: string;
   sub?: string;
   color?: StatColor;
   icon?: ReactNode;
@@ -81,6 +84,7 @@ export function StatCard({
           style={{ color: color === 'default' ? undefined : tint.fg }}
         >
           {value.toLocaleString()}
+          {suffix}
         </p>
         {sub ? <p className="erp-users-cell-sub m-0 mt-0.5 truncate">{sub}</p> : null}
       </div>

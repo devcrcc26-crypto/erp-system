@@ -7,11 +7,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from 'antd';
 import type { LucideIcon } from 'lucide-react';
 import {
+  BarChart3,
+  Briefcase,
   CalendarPlus,
   CircleUserRound,
   Inbox,
+  LayoutDashboard,
   Plane,
   Timer,
+  Users,
   Wallet,
 } from 'lucide-react';
 import {
@@ -58,6 +62,14 @@ const TAB_LABEL_KEYS: Record<DashboardTabId, string> = {
   operations: 'operations',
   'my-team': 'myTeam',
   'my-work': 'myWork',
+};
+
+const TAB_ICONS: Record<DashboardTabId, LucideIcon> = {
+  overview: LayoutDashboard,
+  'payroll-ot': BarChart3,
+  operations: Briefcase,
+  'my-team': Users,
+  'my-work': CircleUserRound,
 };
 
 function tabDomId(id: DashboardTabId): string {
@@ -183,7 +195,9 @@ function DashboardHomeInner({ enabled }: { enabled: boolean }): React.ReactNode 
     event.preventDefault();
     const nextTab = tabs[nextIndex];
     selectTab(nextTab);
-    tabRefs.current[nextTab]?.focus();
+    const btn = tabRefs.current[nextTab];
+    btn?.focus();
+    btn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   };
 
   // A request shortcut needs its category to exist; until the list loads,
@@ -259,41 +273,55 @@ function DashboardHomeInner({ enabled }: { enabled: boolean }): React.ReactNode 
         </nav>
       </header>
 
-      <div
-        className="dv2-tabs"
-        role="tablist"
-        aria-label={t(`${HOME}.tabs.label`)}
-      >
-        {tabs.map((id, index) => {
-          const selected = id === activeTab;
-          return (
-            <button
-              key={id}
-              ref={(node) => {
-                tabRefs.current[id] = node;
-              }}
-              type="button"
-              role="tab"
-              id={tabDomId(id)}
-              aria-selected={selected}
-              aria-controls={panelDomId(id)}
-              tabIndex={selected ? 0 : -1}
-              className={`dv2-tab${selected ? ' dv2-tab--active' : ''}`}
-              onClick={() => selectTab(id)}
-              onKeyDown={(event) => onTabKeyDown(event, index)}
-            >
-              {t(`${HOME}.tabs.${TAB_LABEL_KEYS[id]}`)}
-            </button>
-          );
-        })}
-      </div>
+      {tabs.length > 1 ? (
+        <div
+          className="dv2-tabs"
+          role="tablist"
+          aria-label={t(`${HOME}.tabs.label`)}
+        >
+          {tabs.map((id, index) => {
+            const selected = id === activeTab;
+            const TabIcon = TAB_ICONS[id];
+            return (
+              <button
+                key={id}
+                ref={(node) => {
+                  tabRefs.current[id] = node;
+                }}
+                type="button"
+                role="tab"
+                id={tabDomId(id)}
+                aria-selected={selected}
+                aria-controls={panelDomId(id)}
+                tabIndex={selected ? 0 : -1}
+                className={`dv2-tab${selected ? ' dv2-tab--active' : ''}`}
+                onClick={(e) => {
+                  selectTab(id);
+                  e.currentTarget.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest',
+                  });
+                }}
+                onKeyDown={(event) => onTabKeyDown(event, index)}
+              >
+                <span className="dv2-tab-icon" aria-hidden>
+                  <TabIcon size={16} strokeWidth={2} />
+                </span>
+                <span>{t(`${HOME}.tabs.${TAB_LABEL_KEYS[id]}`)}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div
         key={activeTab}
-        role="tabpanel"
+        role={tabs.length > 1 ? 'tabpanel' : 'region'}
         id={panelDomId(activeTab)}
-        aria-labelledby={tabDomId(activeTab)}
-        tabIndex={0}
+        aria-labelledby={tabs.length > 1 ? tabDomId(activeTab) : undefined}
+        aria-label={tabs.length <= 1 ? t(`${HOME}.tabs.${TAB_LABEL_KEYS[activeTab]}`) : undefined}
+        tabIndex={tabs.length > 1 ? 0 : undefined}
         className="dv2-tab-panel"
       >
         <TabPanelContent tab={activeTab} enabled={enabled} />

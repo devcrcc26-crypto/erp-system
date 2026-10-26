@@ -264,6 +264,43 @@ export interface HrReportNamedAmount {
   amount: number;
 }
 
+/** `month` is a `YYYY-MM` key. */
+export interface HrReportMonthCount {
+  month: string;
+  count: number;
+}
+
+export interface HrReportExpiringContractRow {
+  contractId: string;
+  contractNumber: string;
+  employeeId: string;
+  employeeName: string;
+  department: string | null;
+  endDate: string;
+  /** `YYYY-MM` of endDate, matching `contractsByMonth[].month`. */
+  month: string;
+}
+
+export interface HrReportPayroll {
+  runs: number;
+  totalGross: number;
+  /** Employee pension + income tax. */
+  totalDeductions: number;
+  totalNet: number;
+  byDepartment: Array<{ department: string; totalNet: number }>;
+  byStatus: Array<{ status: string; count: number }>;
+}
+
+export interface HrReportAttendance {
+  records: number;
+  totalWorkingDays: number;
+  /** Percentage, 0-100. */
+  averageAttendanceRate: number;
+  totalAbsentDays: number;
+  totalUnpaidLeaveDays: number;
+  byDepartment: Array<{ department: string; attendanceRate: number }>;
+}
+
 /** Period HR report from GET /hr/reports. */
 export interface HrReport {
   generatedAt: string;
@@ -274,12 +311,20 @@ export interface HrReport {
     inactiveEmployees: number;
     newHiresInRange: number;
     byDepartment: HrReportNamedCount[];
+    /** Unset values come back as `NOT_SPECIFIED`. */
     byEmployeeType: HrReportNamedCount[];
     byNationality: HrReportNamedCount[];
     byGender: HrReportNamedCount[];
     withoutDepartment: number;
     withoutLeavePolicy: number;
   };
+  /** Six months ending with the report's end month. */
+  headcountTrend: HrReportMonthCount[];
+  /** Next three calendar months from today. */
+  contractsByMonth: HrReportMonthCount[];
+  expiringContracts: HrReportExpiringContractRow[];
+  payroll: HrReportPayroll;
+  attendance: HrReportAttendance;
   leave: {
     requests: number;
     approvedRequests: number;

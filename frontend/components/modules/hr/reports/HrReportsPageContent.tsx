@@ -1,15 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, DatePicker, Grid, Select, Skeleton, Tooltip } from 'antd';
 import {
+  Button,
+  DatePicker,
+  Grid,
+  Segmented,
+  Select,
+  Skeleton,
+  Tooltip,
+} from 'antd';
+import {
+  BankOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   FieldTimeOutlined,
   FileOutlined,
   HomeOutlined,
+  LineChartOutlined,
   ReloadOutlined,
+  ScheduleOutlined,
   SendOutlined,
   SolutionOutlined,
   TeamOutlined,
@@ -24,22 +35,26 @@ import {
 import {
   HrDonutChart,
   HrHorizontalBarChart,
+  HrLineChart,
   HrPieChart,
   HrVerticalBarChart,
   toChartData,
+  type HrChartDatum,
 } from '@/components/modules/hr/reports/HrReportCharts';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useIsHrManager } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   HrReportEmployeeLeaveRow,
   HrReportEmployeeOvertimeRow,
+  HrReportExpiringContractRow,
   HrReportLeaveTypeRow,
   HrReportNamedAmount,
   HrReportNamedCount,
 } from '@/lib/api/reporting.types';
+import { tokens } from '@/lib/theme/tokens';
 import { useDepartments } from '@/lib/query/org';
 import { useHrReport } from '@/lib/query/hr-report';
 import { buildHrReportExportSheets } from '@/lib/utils/hr-report-export';
@@ -58,6 +73,37 @@ function humanizeStatus(value: string): string {
     .join(' ');
 }
 
+const NOT_SPECIFIED = 'NOT_SPECIFIED';
+
+/** Next month red, then orange, then yellow. */
+const CONTRACT_MONTH_COLORS = [
+  tokens.colorRed400,
+  tokens.colorCoral400,
+  tokens.colorAmber400,
+] as const;
+
+function attendanceRateColor(rate: number): string {
+  if (rate >= 90) return tokens.colorGreen400;
+  if (rate >= 75) return tokens.colorCoral400;
+  return tokens.colorRed400;
+}
+
+const compactNumber = new Intl.NumberFormat(undefined, {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+function formatEtbCompact(value: number): string {
+  return `${compactNumber.format(value)} ETB`;
+}
+
+function formatPercent(value: number): string {
+  return `${value}%`;
+}
+
+/** Bottom detail tables that can be collapsed (charts above summarise them). */
+type DetailTableKey = 'leaveByEmployee' | 'overtimeByEmployee' | 'expenseCategories';
+
 /**
  * HR reports - workforce, leave, overtime, travel, contracts, expenses and
  * evaluations for a chosen period, with charts and exportable tables.
@@ -67,6 +113,12 @@ export default function HrReportsPageContent(): React.ReactNode {
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const canViewHr = useCanViewHr();
+  const isHrManager = useIsHrManager();
+  // Unset = role default: expanded for HR Manager, collapsed for everyone else.
+  const [tableOpen, setTableOpen] = useState<
+    Partial<Record<DetailTableKey, boolean>>
+  >({});
+  const [contractMonth, setContractMonth] = useState<string | null>(null);
 
   const [range, setRange] = useState<[Dayjs, Dayjs]>(() => [
     dayjs().startOf('year'),
@@ -98,21 +150,19 @@ export default function HrReportsPageContent(): React.ReactNode {
     [departmentsQuery.data],
   );
 
-  const labelEmployeeType = (value: string): string => {
-    const key = `hr.employeeType.${value}`;
+  const labelEnum = (namespace: string, value: string): string => {
+    if (value === NOT_SPECIFIED) {
+      return t(`${PAGE}.notSpecified`);
+    }
+    const key = `hr.${namespace}.${value}`;
     const label = t(key);
     return label === key ? humanizeStatus(value) : label;
   };
-  const labelNationality = (value: string): string => {
-    const key = `hr.nationality.${value}`;
-    const label = t(key);
-    return label === key ? humanizeStatus(value) : label;
-  };
-  const labelGender = (value: string): string => {
-    const key = `hr.gender.${value}`;
-    const label = t(key);
-    return label === key ? humanizeStatus(value) : label;
-  };
+  const labelEmployeeType = (value: string): string =>
+    labelEnum('employeeType', value);
+  const labelNationality = (value: string): string =>
+    labelEnum('nationality', value);
+  const labelGender = (value: string): string => labelEnum('gender', value);
 
   const headcountChart = useMemo(
     () =>
@@ -266,6 +316,94 @@ export default function HrReportsPageContent(): React.ReactNode {
     [report, t],
   );
 
+  const headcountTrendChart = useMemo<HrChartDatum[]>(
+    () =>
+      (report?.headcountTrend ?? []).map((row) => ({
+        name: dayjs(`${row.month}-01`).format('MMM'),
+        value: row.count,
+      })),
+    [report],
+  );
+
+  const contractMonthLabel = (month: string): string =>
+    dayjs(`${month}-01`).format('MMM YYYY');
+
+  // Built by hand (not toChartData) so months with no expiries still show.
+  const contractTimelineChart = useMemo<HrChartDatum[]>(
+    () =>
+      (report?.contractsByMonth ?? []).map((row, index) => ({
+        name: contractMonthLabel(row.month),
+        value: row.count,
+        color:
+          CONTRACT_MONTH_COLORS[index] ??
+          CONTRACT_MONTH_COLORS[CONTRACT_MONTH_COLORS.length - 1],
+      })),
+    [report],
+  );
+
+  const filteredExpiringContracts = useMemo(
+    () =>
+      (report?.expiringContracts ?? []).filter(
+        (row) => !contractMonth || row.month === contractMonth,
+      ),
+    [report, contractMonth],
+  );
+
+  const toggleContractMonth = (month: string): void =>
+    setContractMonth((current) => (current === month ? null : month));
+
+  const payrollDepartmentChart = useMemo(
+    () =>
+      toChartData(
+        (report?.payroll.byDepartment ?? []).map((row) => ({
+          name: row.department,
+          value: row.totalNet,
+        })),
+      ),
+    [report],
+  );
+
+  const payrollStatusChart = useMemo(
+    () =>
+      toChartData(
+        (report?.payroll.byStatus ?? []).map((row) => ({
+          name: humanizeStatus(row.status),
+          value: row.count,
+        })),
+      ),
+    [report],
+  );
+
+  const attendanceDepartmentChart = useMemo<HrChartDatum[]>(
+    () =>
+      (report?.attendance.byDepartment ?? []).map((row) => ({
+        name: row.department,
+        value: row.attendanceRate,
+        color: attendanceRateColor(row.attendanceRate),
+      })),
+    [report],
+  );
+
+  const isTableOpen = (key: DetailTableKey): boolean =>
+    tableOpen[key] ?? isHrManager;
+
+  const tableToggle = (key: DetailTableKey): React.ReactNode => {
+    const open = isTableOpen(key);
+    return (
+      <Button
+        type="link"
+        size="small"
+        aria-expanded={open}
+        aria-controls={`hr-report-table-${key}`}
+        onClick={() =>
+          setTableOpen((current) => ({ ...current, [key]: !open }))
+        }
+      >
+        {t(open ? `${PAGE}.hideTable` : `${PAGE}.showTable`)}
+      </Button>
+    );
+  };
+
   const departmentColumns: ColumnsType<HrReportNamedCount> = [
     { title: t(`${PAGE}.columns.department`), dataIndex: 'name', key: 'name' },
     {
@@ -375,6 +513,33 @@ export default function HrReportsPageContent(): React.ReactNode {
     },
   ];
 
+  const expiringContractColumns: ColumnsType<HrReportExpiringContractRow> = [
+    {
+      title: t(`${PAGE}.columns.employee`),
+      dataIndex: 'employeeName',
+      key: 'employeeName',
+    },
+    {
+      title: t(`${PAGE}.columns.department`),
+      dataIndex: 'department',
+      key: 'department',
+      render: (value: string | null) => value || '-',
+    },
+    {
+      title: t(`${PAGE}.columns.contractNumber`),
+      dataIndex: 'contractNumber',
+      key: 'contractNumber',
+      width: 120,
+    },
+    {
+      title: t(`${PAGE}.columns.endDate`),
+      dataIndex: 'endDate',
+      key: 'endDate',
+      width: 130,
+      render: (value: string) => formatProjectDate(value),
+    },
+  ];
+
   if (!canViewHr) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employees-v2">
@@ -467,7 +632,7 @@ export default function HrReportsPageContent(): React.ReactNode {
 
       {report ? (
         <>
-          <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
+          <div className="erp-hr-report-kpis">
             <StatCard
               label={t(`${PAGE}.kpi.activeEmployees`)}
               value={report.headcount.activeEmployees}
@@ -492,9 +657,6 @@ export default function HrReportsPageContent(): React.ReactNode {
               color="amber"
               icon={<ClockCircleOutlined />}
             />
-          </div>
-
-          <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
             <StatCard
               label={t(`${PAGE}.kpi.overtimeHours`)}
               value={report.overtime.approvedHours}
@@ -522,18 +684,6 @@ export default function HrReportsPageContent(): React.ReactNode {
               })}
               color={report.contracts.expiringInRange > 0 ? 'red' : 'default'}
               icon={<FileOutlined />}
-            />
-          </div>
-
-          <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
-            <StatCard
-              label={t(`${PAGE}.kpi.siteAssignments`)}
-              value={report.siteAssignments.requests}
-              sub={t(`${PAGE}.kpi.approvedRequests`, {
-                count: report.siteAssignments.approvedRequests,
-              })}
-              color="blue"
-              icon={<EnvironmentOutlined />}
             />
             <StatCard
               label={t(`${PAGE}.kpi.expenses`)}
@@ -620,6 +770,75 @@ export default function HrReportsPageContent(): React.ReactNode {
             </ChartCard>
           </div>
 
+          <ChartCard
+            title={t(`${PAGE}.sections.headcountTrend`)}
+            subtitle={t(`${PAGE}.sections.headcountTrendSubtitle`)}
+            icon={<LineChartOutlined />}
+          >
+            <HrLineChart
+              data={headcountTrendChart}
+              emptyDescription={chartEmpty}
+            />
+          </ChartCard>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.contractTimeline`)}
+              subtitle={t(`${PAGE}.sections.contractTimelineSubtitle`)}
+              icon={<FileOutlined />}
+            >
+              <HrVerticalBarChart
+                data={contractTimelineChart}
+                emptyDescription={t(`${PAGE}.sections.noExpiringContracts`)}
+                selectedName={
+                  contractMonth ? contractMonthLabel(contractMonth) : null
+                }
+                onSelect={(name) => {
+                  const row = report.contractsByMonth.find(
+                    (entry) => contractMonthLabel(entry.month) === name,
+                  );
+                  if (row) toggleContractMonth(row.month);
+                }}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.expiringContracts`)}
+              subtitle={t(`${PAGE}.sections.expiringContractsSubtitle`, {
+                count: filteredExpiringContracts.length,
+              })}
+              icon={<FileOutlined />}
+              action={
+                <Segmented
+                  size="small"
+                  aria-label={t(`${PAGE}.sections.contractMonthFilter`)}
+                  value={contractMonth ?? ''}
+                  onChange={(value) => setContractMonth(value ? String(value) : null)}
+                  options={[
+                    { value: '', label: t(`${PAGE}.allMonths`) },
+                    ...report.contractsByMonth.map((row) => ({
+                      value: row.month,
+                      label: `${dayjs(`${row.month}-01`).format('MMM')} (${row.count})`,
+                    })),
+                  ]}
+                />
+              }
+            >
+              <DataTable<HrReportExpiringContractRow>
+                rowKey="contractId"
+                size="small"
+                columns={expiringContractColumns}
+                dataSource={filteredExpiringContracts}
+                pagination={{
+                  pageSize: 6,
+                  size: 'small',
+                  hideOnSinglePage: true,
+                }}
+                scroll={{ x: isCompact ? 520 : undefined }}
+                locale={{ emptyText: t(`${PAGE}.sections.noExpiringContracts`) }}
+              />
+            </ChartCard>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
             <ChartCard
               title={t(`${PAGE}.sections.leaveByStatus`)}
@@ -689,6 +908,53 @@ export default function HrReportsPageContent(): React.ReactNode {
             </ChartCard>
           </div>
 
+          <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
+            <StatCard
+              label={t(`${PAGE}.kpi.totalGross`)}
+              value={report.payroll.totalGross}
+              sub={t(`${PAGE}.kpi.payrollRuns`, { count: report.payroll.runs })}
+              color="teal"
+              icon={<BankOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.totalDeductions`)}
+              value={report.payroll.totalDeductions}
+              sub={t(`${PAGE}.kpi.deductionsSplit`)}
+              color="amber"
+              icon={<BankOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.totalNet`)}
+              value={report.payroll.totalNet}
+              color="green"
+              icon={<BankOutlined />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.payrollByDepartment`)}
+              subtitle={t(`${PAGE}.sections.payrollByDepartmentSubtitle`)}
+              icon={<BankOutlined />}
+            >
+              <HrHorizontalBarChart
+                data={payrollDepartmentChart}
+                emptyDescription={chartEmpty}
+                valueFormatter={formatEtbCompact}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.payrollStatus`)}
+              subtitle={t(`${PAGE}.sections.payrollStatusSubtitle`)}
+              icon={<BankOutlined />}
+            >
+              <HrPieChart
+                data={payrollStatusChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
             <ChartCard
               title={t(`${PAGE}.sections.expenseStatus`)}
@@ -720,7 +986,8 @@ export default function HrReportsPageContent(): React.ReactNode {
             >
               <HrDonutChart
                 data={evaluationStatusChart}
-                emptyDescription={chartEmpty}
+                emptyDescription={t(`${PAGE}.sections.noEvaluations`)}
+                compactEmpty
               />
             </ChartCard>
             <ChartCard
@@ -732,6 +999,11 @@ export default function HrReportsPageContent(): React.ReactNode {
                 <StatCard
                   label={t(`${PAGE}.kpi.siteAssignments`)}
                   value={report.siteAssignments.requests}
+                  sub={t(`${PAGE}.kpi.approvedRequests`, {
+                    count: report.siteAssignments.approvedRequests,
+                  })}
+                  icon={<EnvironmentOutlined />}
+                  color="blue"
                 />
                 <StatCard
                   label={t(`${PAGE}.kpi.wfhDays`)}
@@ -744,6 +1016,58 @@ export default function HrReportsPageContent(): React.ReactNode {
               </div>
             </ChartCard>
           </div>
+
+          <div className="erp-users-stat-bar erp-dashboard-stat-bar--4">
+            <StatCard
+              label={t(`${PAGE}.kpi.workingDays`)}
+              value={report.attendance.totalWorkingDays}
+              sub={t(`${PAGE}.kpi.attendanceRecords`, {
+                count: report.attendance.records,
+              })}
+              color="blue"
+              icon={<ScheduleOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.attendanceRate`)}
+              value={report.attendance.averageAttendanceRate}
+              suffix="%"
+              color={
+                report.attendance.records === 0
+                  ? 'default'
+                  : report.attendance.averageAttendanceRate >= 90
+                    ? 'green'
+                    : report.attendance.averageAttendanceRate >= 75
+                      ? 'amber'
+                      : 'red'
+              }
+              icon={<ScheduleOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.absentDays`)}
+              value={report.attendance.totalAbsentDays}
+              color={report.attendance.totalAbsentDays > 0 ? 'red' : 'default'}
+              icon={<ScheduleOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.unpaidLeaveDays`)}
+              value={report.attendance.totalUnpaidLeaveDays}
+              color="amber"
+              icon={<ScheduleOutlined />}
+            />
+          </div>
+
+          <ChartCard
+            title={t(`${PAGE}.sections.attendanceByDepartment`)}
+            subtitle={t(`${PAGE}.sections.attendanceByDepartmentSubtitle`)}
+            icon={<ScheduleOutlined />}
+          >
+            <HrHorizontalBarChart
+              data={attendanceDepartmentChart}
+              emptyDescription={chartEmpty}
+              valueFormatter={formatPercent}
+              maxValue={100}
+            />
+          </ChartCard>
 
           <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
             <ChartCard
@@ -784,32 +1108,42 @@ export default function HrReportsPageContent(): React.ReactNode {
               title={t(`${PAGE}.sections.leaveByEmployee`)}
               subtitle={t(`${PAGE}.sections.topTen`)}
               icon={<CalendarOutlined />}
+              action={tableToggle('leaveByEmployee')}
             >
-              <DataTable<HrReportEmployeeLeaveRow>
-                rowKey="employeeId"
-                size="small"
-                columns={leaveEmployeeColumns}
-                dataSource={report.leave.topEmployees}
-                pagination={false}
-                scroll={{ x: isCompact ? 520 : undefined }}
-                locale={{ emptyText }}
-              />
+              <div id="hr-report-table-leaveByEmployee">
+                {isTableOpen('leaveByEmployee') ? (
+                  <DataTable<HrReportEmployeeLeaveRow>
+                    rowKey="employeeId"
+                    size="small"
+                    columns={leaveEmployeeColumns}
+                    dataSource={report.leave.topEmployees}
+                    pagination={false}
+                    scroll={{ x: isCompact ? 520 : undefined }}
+                    locale={{ emptyText }}
+                  />
+                ) : null}
+              </div>
             </ChartCard>
 
             <ChartCard
               title={t(`${PAGE}.sections.overtimeByEmployeeTable`)}
               subtitle={t(`${PAGE}.sections.topTen`)}
               icon={<FieldTimeOutlined />}
+              action={tableToggle('overtimeByEmployee')}
             >
-              <DataTable<HrReportEmployeeOvertimeRow>
-                rowKey="employeeId"
-                size="small"
-                columns={overtimeEmployeeColumns}
-                dataSource={report.overtime.topEmployees}
-                pagination={false}
-                scroll={{ x: isCompact ? 520 : undefined }}
-                locale={{ emptyText }}
-              />
+              <div id="hr-report-table-overtimeByEmployee">
+                {isTableOpen('overtimeByEmployee') ? (
+                  <DataTable<HrReportEmployeeOvertimeRow>
+                    rowKey="employeeId"
+                    size="small"
+                    columns={overtimeEmployeeColumns}
+                    dataSource={report.overtime.topEmployees}
+                    pagination={false}
+                    scroll={{ x: isCompact ? 520 : undefined }}
+                    locale={{ emptyText }}
+                  />
+                ) : null}
+              </div>
             </ChartCard>
           </div>
 
@@ -817,15 +1151,20 @@ export default function HrReportsPageContent(): React.ReactNode {
             title={t(`${PAGE}.sections.expenseCategoriesTable`)}
             subtitle={t(`${PAGE}.sections.expenseCategoriesSubtitle`)}
             icon={<WalletOutlined />}
+            action={tableToggle('expenseCategories')}
           >
-            <DataTable<HrReportNamedAmount>
-              rowKey="name"
-              size="small"
-              columns={expenseCategoryColumns}
-              dataSource={report.expenses.byCategory}
-              pagination={false}
-              locale={{ emptyText }}
-            />
+            <div id="hr-report-table-expenseCategories">
+              {isTableOpen('expenseCategories') ? (
+                <DataTable<HrReportNamedAmount>
+                  rowKey="name"
+                  size="small"
+                  columns={expenseCategoryColumns}
+                  dataSource={report.expenses.byCategory}
+                  pagination={false}
+                  locale={{ emptyText }}
+                />
+              ) : null}
+            </div>
           </ChartCard>
         </>
       ) : null}
