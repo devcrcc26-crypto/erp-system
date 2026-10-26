@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import './org-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -29,6 +31,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -54,7 +57,7 @@ import { useFullUsersDirectory } from '@/lib/query/users';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_CHROME =
-  'erp-pro-list-page erp-users-page erp-org-positions-page erp-org-v2';
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2 ${LIST_PAGE_V2}`;
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -386,7 +389,7 @@ export default function PositionsPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">
@@ -527,6 +530,7 @@ export default function PositionsPageContent(): React.ReactNode {
       />
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(deleting)}
         title={t('pages.positions.deleteTitle')}
         description={

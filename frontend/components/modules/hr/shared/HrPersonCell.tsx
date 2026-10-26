@@ -25,7 +25,11 @@ export default function HrPersonCell({
   /** Second line; defaults to the person's email. */
   sub?: React.ReactNode;
 }): React.ReactNode {
-  const initials = userInitials(person?.firstName, person?.lastName);
+  // Fall back to the display name when only that is known.
+  const nameParts = name.trim().split(/\s+/);
+  const initials =
+    userInitials(person?.firstName, person?.lastName) ||
+    userInitials(nameParts[0], nameParts.length > 1 ? nameParts[nameParts.length - 1] : '');
   const tint = avatarTint(person?.id ?? name);
   const secondLine = sub ?? person?.email ?? null;
 

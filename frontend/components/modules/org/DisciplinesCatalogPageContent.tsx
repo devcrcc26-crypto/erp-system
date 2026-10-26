@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import './org-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -26,6 +28,8 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import DisciplineCatalogFormDrawer from '@/components/modules/org/DisciplineCatalogFormDrawer';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -75,6 +79,8 @@ function filterDisciplines(
     );
   });
 }
+
+const PAGE_CHROME = `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-disciplines-page erp-org-v2 ${LIST_PAGE_V2}`;
 
 export default function DisciplinesCatalogPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -199,11 +205,15 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         title: t('pages.disciplinesCatalog.table.leader'),
         key: 'leader',
         responsive: ['md'],
-        render: (_value, record) => (
-          <span className="erp-users-cell-sub">
-            {record.leader ? formatUserName(record.leader) : '-'}
-          </span>
-        ),
+        render: (_value, record) =>
+          record.leader ? (
+            <HrPersonCell
+              person={record.leader}
+              name={formatUserName(record.leader)}
+            />
+          ) : (
+            <span className="erp-users-cell-sub">-</span>
+          ),
       },
       {
         title: t('pages.disciplinesCatalog.table.people'),
@@ -262,7 +272,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
 
   if (permLoading || (disciplinesQuery.isLoading && !disciplinesQuery.data)) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
+      <div className={PAGE_CHROME}>
         <div className="erp-org-loading">
           <Spin />
         </div>
@@ -272,7 +282,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
 
   if (!canView) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
+      <div className={PAGE_CHROME}>
         <Alert
           type="warning"
           showIcon
@@ -283,7 +293,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
+    <div className={PAGE_CHROME}>
       <div className="erp-users-stat-bar">
         <OrgListStat
           label={t('pages.disciplinesCatalog.stats.total')}
@@ -311,7 +321,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">
@@ -443,6 +453,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
       />
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(deleting)}
         title={t('pages.disciplinesCatalog.deleteTitle')}
         description={

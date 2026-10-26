@@ -436,7 +436,7 @@ export default function EmployeeLeaveProfileSection({
       <LeaveProfileSection
         title={t('hr.leave.historyTitle')}
         action={historyAction}
-        bodyClassName="!p-0"
+        bodyClassName="erp-employee-section-body--flush"
       >
         {historyError ? (
           <div className="p-4">

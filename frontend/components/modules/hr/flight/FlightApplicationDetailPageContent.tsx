@@ -379,7 +379,7 @@ export default function FlightApplicationDetailPageContent({
 
             <DetailSection
               title={t('hr.section.passengerDetails')}
-              bodyClassName="!p-0"
+              bodyClassName="erp-employee-section-body--flush"
               action={
                 <Space size={6} wrap>
                   <Button

@@ -445,7 +445,7 @@ export default function EmployeeOvertimeProfileSection({
       <OvertimeProfileSection
         title={t('hr.overtime.historyTitle')}
         action={historyAction}
-        bodyClassName="!p-0"
+        bodyClassName="erp-employee-section-body--flush"
       >
         {historyError ? (
           <div className="p-4">

@@ -317,7 +317,7 @@ export default function PerDiemRequestDetailPageContent({
       : null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page w-full max-w-none ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card erp-profile-identity">
         <div className="erp-employee-toolbar">
           <Button
@@ -438,9 +438,9 @@ export default function PerDiemRequestDetailPageContent({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
+      <div className="grid w-full min-w-0 grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="erp-pro-card min-w-0 w-full overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body w-full min-w-0">
             <DetailSection title={t('hr.section.requestDetails')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <MetaItem label={t('hr.labels.destinationCategory')}>
@@ -622,88 +622,98 @@ export default function PerDiemRequestDetailPageContent({
 
             <DetailSection
               title={t('hr.labels.budgetEstimate')}
-              bodyClassName="!p-0"
+              className="w-full min-w-0"
+              bodyClassName="erp-employee-section-body--flush"
             >
-              <div className="divide-y divide-[#eef1f4]">
-                <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
-                  <span className="erp-users-cell-sub text-sm">
-                    {t('hr.labels.days')} ×{' '}
-                    {formatEtbAmount(request.dailyRate)}
-                  </span>
-                  <span className="erp-users-cell-strong tabular-nums text-sm">
-                    {formatEtbAmount(request.totalAmount)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
-                  <span className="erp-users-cell-strong text-sm">
-                    {t('hr.table.total')} (ETB)
-                  </span>
-                  <span className="erp-employee-meta-value tabular-nums">
-                    {formatEtbAmount(request.totalAmountEtb)}
-                  </span>
-                </div>
-              </div>
+              <table className="w-full min-w-0 border-collapse">
+                <tbody>
+                  <tr className="border-b border-[#eef1f4]">
+                    <td className="erp-users-cell-sub px-4 py-2.5 text-sm sm:px-5">
+                      {t('hr.labels.days')} ×{' '}
+                      {formatEtbAmount(request.dailyRate)}
+                    </td>
+                    <td className="erp-users-cell-strong px-4 py-2.5 text-right text-sm tabular-nums sm:px-5">
+                      {formatEtbAmount(request.totalAmount)}
+                    </td>
+                  </tr>
+                  <tr className="bg-[var(--color-surface-secondary)]">
+                    <td className="erp-users-cell-strong px-4 py-3 text-sm sm:px-5">
+                      {t('hr.table.total')} (ETB)
+                    </td>
+                    <td className="erp-employee-meta-value px-4 py-3 text-right tabular-nums sm:px-5">
+                      {formatEtbAmount(request.totalAmountEtb)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </DetailSection>
 
             {(request.disbursements?.length ?? 0) > 0 ? (
               <DetailSection
                 title={t('hr.perDiem.disbursements')}
-                bodyClassName="!p-0"
+                className="w-full min-w-0"
+                bodyClassName="erp-employee-section-body--flush"
               >
-                <div className="divide-y divide-[#eef1f4]">
-                  {request.disbursements!.map((d, i) => (
-                    <div key={d.id} className="px-3 py-3 sm:px-4">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="erp-users-cell-sub text-xs">
-                          #{i + 1} · {formatProjectDate(d.coveredDaysFrom)}–{formatProjectDate(d.coveredDaysTo)}
-                        </span>
-                        <span className="erp-users-cell-strong tabular-nums text-sm">
-                          {formatEtbAmount(d.amount)}
-                        </span>
-                      </div>
-                      <div className="erp-users-cell-sub text-xs">
-                        {t('hr.perDiem.disbursedOn')} {formatProjectDate(d.disbursedAt)}
-                        {d.disbursedBy
-                          ? ` · ${formatPerDiemEmployeeName(d.disbursedBy)}`
-                          : ''}
-                      </div>
-                      {d.notes ? (
-                        <p className="erp-users-cell-sub m-0 mt-1 whitespace-pre-wrap text-xs">
-                          {d.notes}
-                        </p>
-                      ) : null}
-                      {(d.attachments?.length ?? 0) > 0 ? (
-                        <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
-                          {d.attachments!.map((attachment) => (
-                            <li key={attachment.id}>
-                              <a
-                                href={attachment.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="erp-users-id-chip"
-                              >
-                                {attachment.fileName}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
-                    <span className="erp-users-cell-strong text-sm">
-                      {t('hr.perDiem.totalDisbursed')}
-                    </span>
-                    <span className="erp-employee-meta-value tabular-nums">
-                      {formatEtbAmount(
-                        request.disbursements!.reduce(
-                          (s, d) => s + Number(d.amount),
-                          0,
-                        ),
-                      )}
-                    </span>
-                  </div>
-                </div>
+                <table className="w-full min-w-0 border-collapse">
+                  <tbody>
+                    {request.disbursements!.map((d, i) => (
+                      <tr key={d.id} className="border-b border-[#eef1f4]">
+                        <td className="px-4 py-3 sm:px-5" colSpan={2}>
+                          <div className="mb-1 flex w-full items-center justify-between gap-2">
+                            <span className="erp-users-cell-sub text-xs">
+                              #{i + 1} · {formatProjectDate(d.coveredDaysFrom)}
+                              –{formatProjectDate(d.coveredDaysTo)}
+                            </span>
+                            <span className="erp-users-cell-strong text-sm tabular-nums">
+                              {formatEtbAmount(d.amount)}
+                            </span>
+                          </div>
+                          <div className="erp-users-cell-sub text-xs">
+                            {t('hr.perDiem.disbursedOn')}{' '}
+                            {formatProjectDate(d.disbursedAt)}
+                            {d.disbursedBy
+                              ? ` · ${formatPerDiemEmployeeName(d.disbursedBy)}`
+                              : ''}
+                          </div>
+                          {d.notes ? (
+                            <p className="erp-users-cell-sub m-0 mt-1 whitespace-pre-wrap text-xs">
+                              {d.notes}
+                            </p>
+                          ) : null}
+                          {(d.attachments?.length ?? 0) > 0 ? (
+                            <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
+                              {d.attachments!.map((attachment) => (
+                                <li key={attachment.id}>
+                                  <a
+                                    href={attachment.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="erp-users-id-chip"
+                                  >
+                                    {attachment.fileName}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-[var(--color-surface-secondary)]">
+                      <td className="erp-users-cell-strong px-4 py-3 text-sm sm:px-5">
+                        {t('hr.perDiem.totalDisbursed')}
+                      </td>
+                      <td className="erp-employee-meta-value px-4 py-3 text-right tabular-nums sm:px-5">
+                        {formatEtbAmount(
+                          request.disbursements!.reduce(
+                            (s, d) => s + Number(d.amount),
+                            0,
+                          ),
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </DetailSection>
             ) : null}
 

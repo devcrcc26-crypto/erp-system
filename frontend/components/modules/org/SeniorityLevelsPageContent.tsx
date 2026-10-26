@@ -1,32 +1,37 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import './org-v2.css';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   Dropdown,
-  Form,
   Grid,
   Input,
-  InputNumber,
-  Modal,
   Spin,
-  Switch,
   type MenuProps,
 } from 'antd';
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   MoreOutlined,
   PlusOutlined,
   RiseOutlined,
+  SearchOutlined,
+  StopOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { OrgListStat } from '@/components/modules/org/OrgListStat';
+import SeniorityLevelFormDrawer from '@/components/modules/org/SeniorityLevelFormDrawer';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -40,23 +45,16 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import {
-  useCreateSeniorityLevel,
   useDeleteSeniorityLevel,
   useSeniorityLevels,
-  useUpdateSeniorityLevel,
   type SeniorityLevel,
 } from '@/lib/query/org';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_CHROME =
-  'erp-pro-list-page erp-users-page erp-org-positions-page erp-org-v2';
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2 ${LIST_PAGE_V2}`;
 
-interface LevelFormValues {
-  name: string;
-  nameZh?: string;
-  sortOrder?: number;
-  isActive: boolean;
-}
+type StatusMode = 'all' | 'active' | 'inactive';
 
 /**
  * Seniority levels (Junior / Middle / Senior …) that HR assigns on the
@@ -70,67 +68,54 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
   const canView = useCanViewDepartmentsNav();
   const canManage = useCanManageDepartments();
   const messageApi = useAppMessage();
-  const [form] = Form.useForm<LevelFormValues>();
   const [editing, setEditing] = useState<SeniorityLevel | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleting, setDeleting] = useState<SeniorityLevel | null>(null);
+  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [search, setSearch] = useState('');
 
   useSetHeaderExtra(null);
 
   const levelsQuery = useSeniorityLevels({}, canView);
-  const createLevel = useCreateSeniorityLevel();
-  const updateLevel = useUpdateSeniorityLevel();
   const deleteLevel = useDeleteSeniorityLevel();
-  const rows = levelsQuery.data ?? [];
-  const saving = createLevel.isPending || updateLevel.isPending;
+  const rows = useMemo(() => levelsQuery.data ?? [], [levelsQuery.data]);
 
-  function openModal(level: SeniorityLevel | null): void {
+  const stats = useMemo(() => {
+    const active = rows.filter((row) => row.isActive).length;
+    return {
+      total: rows.length,
+      active,
+      inactive: rows.length - active,
+      people: rows.reduce((sum, row) => sum + (row._count?.users ?? 0), 0),
+    };
+  }, [rows]);
+
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (statusMode === 'active' && !row.isActive) return false;
+      if (statusMode === 'inactive' && row.isActive) return false;
+      if (!query) return true;
+      return (
+        row.name.toLowerCase().includes(query) ||
+        (row.nameZh?.toLowerCase().includes(query) ?? false)
+      );
+    });
+  }, [rows, search, statusMode]);
+
+  const hasFilters = statusMode !== 'all' || search.trim() !== '';
+  const nextSortOrder = rows.length
+    ? Math.max(...rows.map((row) => row.sortOrder)) + 1
+    : 1;
+
+  function openDrawer(level: SeniorityLevel | null): void {
     setEditing(level);
-    form.setFieldsValue(
-      level
-        ? {
-            name: level.name,
-            nameZh: level.nameZh ?? '',
-            sortOrder: level.sortOrder,
-            isActive: level.isActive,
-          }
-        : {
-            name: '',
-            nameZh: '',
-            sortOrder: rows.length ? Math.max(...rows.map((r) => r.sortOrder)) + 1 : 1,
-            isActive: true,
-          },
-    );
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
-  async function handleSave(): Promise<void> {
-    const values = await form.validateFields();
-    const body = {
-      name: values.name.trim(),
-      nameZh: values.nameZh?.trim() ?? '',
-      sortOrder: values.sortOrder ?? 0,
-      isActive: values.isActive,
-    };
-    try {
-      if (editing) {
-        await updateLevel.mutateAsync({ id: editing.id, body });
-        messageApi.success(t('pages.seniorityLevels.updated'));
-      } else {
-        await createLevel.mutateAsync(body);
-        messageApi.success(t('pages.seniorityLevels.created'));
-      }
-      setModalOpen(false);
-      setEditing(null);
-    } catch (error: unknown) {
-      notifyApiError(
-        error,
-        editing
-          ? t('pages.seniorityLevels.updateFailed')
-          : t('pages.seniorityLevels.createFailed'),
-        messageApi,
-      );
-    }
+  function closeDrawer(): void {
+    setDrawerOpen(false);
+    setEditing(null);
   }
 
   function buildActionMenu(record: SeniorityLevel): MenuProps['items'] {
@@ -139,7 +124,7 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
         key: 'edit',
         icon: canManage ? <EditOutlined /> : <EyeOutlined />,
         label: canManage ? t('common.update') : t('common.view'),
-        onClick: () => openModal(record),
+        onClick: () => openDrawer(record),
       },
     ];
     if (canManage) {
@@ -160,7 +145,7 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
       dataIndex: 'sortOrder',
       key: 'sortOrder',
       width: 80,
-      render: (value: number) => <span className="erp-users-cell-sub">{value}</span>,
+      render: (value: number) => <span className="erp-users-id-chip">{value}</span>,
     },
     {
       title: t('pages.seniorityLevels.table.name'),
@@ -168,7 +153,7 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
       key: 'name',
       render: (value: string, row) => (
         <div className="min-w-0">
-          <p className="erp-users-cell-strong m-0">{value}</p>
+          <p className="erp-users-name m-0">{value}</p>
           {row.nameZh ? (
             <p className="erp-users-cell-sub m-0 truncate">{row.nameZh}</p>
           ) : null}
@@ -255,13 +240,48 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
 
   return (
     <div className={PAGE_CHROME}>
-      <div className="erp-pro-card">
+      <div className="erp-users-stat-bar">
+        <OrgListStat
+          label={t('pages.positions.stats.total')}
+          value={stats.total}
+          accent="blue"
+          icon={<RiseOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => setStatusMode('all')}
+        />
+        <OrgListStat
+          label={t('common.active')}
+          value={stats.active}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'active'}
+          onClick={() => setStatusMode('active')}
+        />
+        <OrgListStat
+          label={t('common.inactive')}
+          value={stats.inactive}
+          accent="slate"
+          icon={<StopOutlined />}
+          active={statusMode === 'inactive'}
+          onClick={() => setStatusMode('inactive')}
+        />
+        <OrgListStat
+          label={t('pages.seniorityLevels.stats.peopleAssigned')}
+          value={stats.people}
+          accent="teal"
+          icon={<TeamOutlined />}
+        />
+      </div>
+
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">
               {t('pages.seniorityLevels.title')}
             </h3>
-            <span className="erp-users-count-pill">{rows.length.toLocaleString()}</span>
+            <span className="erp-users-count-pill">
+              {visibleRows.length.toLocaleString()}
+            </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Link
@@ -275,7 +295,7 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => openModal(null)}
+                onClick={() => openDrawer(null)}
                 aria-label={t('pages.seniorityLevels.add')}
               >
                 {isNarrow ? undefined : t('pages.seniorityLevels.add')}
@@ -284,28 +304,57 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
           </div>
         </div>
 
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.seniorityLevels.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label={t('pages.seniorityLevels.searchPlaceholder')}
+          />
+          {hasFilters ? (
+            <Button
+              type="link"
+              onClick={() => {
+                setSearch('');
+                setStatusMode('all');
+              }}
+              className="!px-1"
+            >
+              {t('common.reset')}
+            </Button>
+          ) : null}
+        </div>
+
         <div className="erp-pro-table-card-body">
           <DataTable<SeniorityLevel>
             rowKey="id"
             className="erp-pro-table erp-users-table"
             size={isNarrow ? 'small' : 'middle'}
             columns={columns}
-            dataSource={rows}
+            dataSource={visibleRows}
             loading={levelsQuery.isFetching && rows.length === 0}
             pagination={false}
             onRow={(record) => ({
-              onClick: () => openModal(record),
+              onClick: () => openDrawer(record),
               className: 'cursor-pointer',
             })}
             locale={{
-              emptyText: (
+              emptyText: hasFilters ? (
+                <TableEmptyState
+                  icon={<SearchOutlined />}
+                  title={t('pages.seniorityLevels.noMatches')}
+                />
+              ) : (
                 <TableEmptyState
                   icon={<RiseOutlined />}
                   title={t('pages.seniorityLevels.empty')}
                   description={t('pages.seniorityLevels.description')}
                   action={
                     canManage
-                      ? { label: t('pages.seniorityLevels.add'), onClick: () => openModal(null) }
+                      ? { label: t('pages.seniorityLevels.add'), onClick: () => openDrawer(null) }
                       : undefined
                   }
                 />
@@ -315,63 +364,16 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
         </div>
       </div>
 
-      <Modal
-        open={modalOpen}
-        title={
-          editing
-            ? canManage
-              ? t('pages.seniorityLevels.edit')
-              : t('pages.seniorityLevels.view')
-            : t('pages.seniorityLevels.add')
-        }
-        okText={t('common.save')}
-        cancelText={t('common.cancel')}
-        onOk={() => void handleSave()}
-        onCancel={() => {
-          setModalOpen(false);
-          setEditing(null);
-        }}
-        confirmLoading={saving}
-        okButtonProps={{ disabled: !canManage }}
-        forceRender
-      >
-        <Form form={form} layout="vertical" disabled={!canManage}>
-          <Form.Item
-            label={t('pages.seniorityLevels.form.name')}
-            name="name"
-            rules={[
-              { required: true, whitespace: true, message: t('pages.seniorityLevels.form.nameRequired') },
-              { max: 100 },
-            ]}
-          >
-            <Input placeholder={t('pages.seniorityLevels.form.namePlaceholder')} />
-          </Form.Item>
-          <Form.Item
-            label={t('pages.seniorityLevels.form.nameZh')}
-            name="nameZh"
-            rules={[{ max: 100 }]}
-          >
-            <Input placeholder={t('pages.seniorityLevels.form.nameZhPlaceholder')} />
-          </Form.Item>
-          <Form.Item
-            label={t('pages.seniorityLevels.form.sortOrder')}
-            name="sortOrder"
-            extra={t('pages.seniorityLevels.form.sortOrderHelp')}
-          >
-            <InputNumber min={0} max={999} precision={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            label={t('common.active')}
-            name="isActive"
-            valuePropName="checked"
-            extra={t('pages.seniorityLevels.form.activeHelp')}
-          >
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <SeniorityLevelFormDrawer
+        open={drawerOpen}
+        editing={editing}
+        readOnly={!canManage}
+        nextSortOrder={nextSortOrder}
+        onClose={closeDrawer}
+      />
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(deleting)}
         title={t('pages.seniorityLevels.deleteTitle')}
         description={

@@ -11,6 +11,16 @@ export const PAYROLL_LOCKED_MESSAGE =
 export const ATTENDANCE_NO_SCANS_MESSAGE =
   'Attendance has no scans for this day.';
 
+/**
+ * Weekday lunch (12:30–13:30 EAT) is never OT-eligible on Mon–Fri.
+ * Saturday has no lunch block; Sunday/holidays/site days skip this rule.
+ */
+export const WEEKDAY_LUNCH_OT_MESSAGE =
+  'OT cannot be submitted during the lunch break (12:30–13:30 on weekdays)';
+
+export const WEEKDAY_LUNCH_START_MINUTES = 12 * 60 + 30;
+export const WEEKDAY_LUNCH_END_MINUTES = 13 * 60 + 30;
+
 export type LeaveHalfDayPortion = 'MORNING' | 'AFTERNOON';
 
 export type LeaveDayPortionInput = 'FULL' | LeaveHalfDayPortion;
@@ -103,6 +113,37 @@ export function collectLeaveExcludedWindows(
     }
   }
   return windows;
+}
+
+/**
+ * Weekday in Africa/Addis_Ababa (EAT, UTC+3). OT dates are stored as UTC
+ * midnight for the EAT civil day, so {@link Date.getUTCDay} matches the
+ * local weekday (same offset as Africa/Nairobi).
+ */
+export function isWeekdayEatDateOnly(date: Date): boolean {
+  const day = date.getUTCDay();
+  return day >= 1 && day <= 5;
+}
+
+/**
+ * True when the same-day OT interval overlaps weekday lunch 12:30–13:30.
+ * Pass `skip: true` for site-assignment days, holidays, or overnight legs.
+ */
+export function overlapsWeekdayLunchBreak(
+  startTime: string,
+  endTime: string,
+  date: Date,
+  options?: { skip?: boolean },
+): boolean {
+  if (options?.skip) {
+    return false;
+  }
+  if (!isWeekdayEatDateOnly(date)) {
+    return false;
+  }
+  const start = hhmmToMinutes(startTime);
+  const end = hhmmToMinutes(endTime);
+  return start < WEEKDAY_LUNCH_END_MINUTES && end > WEEKDAY_LUNCH_START_MINUTES;
 }
 
 /**

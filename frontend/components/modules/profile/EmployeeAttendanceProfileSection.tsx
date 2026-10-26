@@ -515,7 +515,7 @@ export default function EmployeeAttendanceProfileSection({
       {!error && (loading || records.length > 0) ? (
         <AttendanceProfileSection
           title={t('pages.hr.attendance.profileMonthlyTitle')}
-          bodyClassName="!p-0"
+          bodyClassName="erp-employee-section-body--flush"
         >
           {loading ? (
             <div className="flex flex-col gap-2 p-4">

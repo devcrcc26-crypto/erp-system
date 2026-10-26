@@ -616,7 +616,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
             <DetailSection
               title={t('hr.section.items')}
-              bodyClassName="!p-0"
+              bodyClassName="erp-employee-section-body--flush"
               action={
                 <Space.Compact>
                   <Button

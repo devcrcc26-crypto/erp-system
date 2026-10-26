@@ -5,7 +5,10 @@ import {
   buildFullDayLeaveExcludedWindows,
   buildLeaveExcludedWindows,
   collectLeaveExcludedWindows,
+  isWeekdayEatDateOnly,
+  overlapsWeekdayLunchBreak,
   PAYROLL_LOCKED_MESSAGE,
+  WEEKDAY_LUNCH_OT_MESSAGE,
 } from './overtime-entry-guards.util';
 
 const WEEKDAY = {
@@ -98,6 +101,46 @@ describe('overtime-entry-guards.util', () => {
           { startTime: '18:00', endTime: '19:00', isOvernight: false },
         ),
       ).toBeNull();
+    });
+  });
+
+  describe('overlapsWeekdayLunchBreak', () => {
+    const monday = new Date(Date.UTC(2026, 9, 26)); // Mon 2026-10-26
+    const saturday = new Date(Date.UTC(2026, 9, 31)); // Sat
+    const sunday = new Date(Date.UTC(2026, 10, 1)); // Sun
+
+    it('exports lunch rejection message', () => {
+      expect(WEEKDAY_LUNCH_OT_MESSAGE).toContain('lunch break');
+    });
+
+    it('Mon–Fri are weekdays; Sat/Sun are not', () => {
+      expect(isWeekdayEatDateOnly(monday)).toBe(true);
+      expect(isWeekdayEatDateOnly(saturday)).toBe(false);
+      expect(isWeekdayEatDateOnly(sunday)).toBe(false);
+    });
+
+    it('rejects interval that spans lunch on a weekday', () => {
+      expect(overlapsWeekdayLunchBreak('07:00', '14:00', monday)).toBe(true);
+      expect(overlapsWeekdayLunchBreak('12:00', '13:00', monday)).toBe(true);
+      expect(overlapsWeekdayLunchBreak('12:30', '13:30', monday)).toBe(true);
+      expect(overlapsWeekdayLunchBreak('13:00', '18:00', monday)).toBe(true);
+    });
+
+    it('allows intervals that only touch lunch boundaries', () => {
+      expect(overlapsWeekdayLunchBreak('07:00', '12:30', monday)).toBe(false);
+      expect(overlapsWeekdayLunchBreak('13:30', '18:00', monday)).toBe(false);
+      expect(overlapsWeekdayLunchBreak('18:00', '22:00', monday)).toBe(false);
+    });
+
+    it('does not apply on Saturday or Sunday', () => {
+      expect(overlapsWeekdayLunchBreak('12:00', '14:00', saturday)).toBe(false);
+      expect(overlapsWeekdayLunchBreak('12:00', '14:00', sunday)).toBe(false);
+    });
+
+    it('skip option bypasses the check (site / holiday)', () => {
+      expect(
+        overlapsWeekdayLunchBreak('12:00', '14:00', monday, { skip: true }),
+      ).toBe(false);
     });
   });
 });

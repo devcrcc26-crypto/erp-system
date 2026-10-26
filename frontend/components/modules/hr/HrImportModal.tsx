@@ -1,25 +1,27 @@
 'use client';
 
-import '@/components/modules/hr/import-export/hr-import-v2.css';
-
-import { useRef, useState } from 'react';
-import { Alert, Button, Modal, Spin, Upload } from 'antd';
-import {
-  CheckCircle2,
-  Download,
-  FileSpreadsheet,
-  Upload as UploadIcon,
-} from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Button } from 'antd';
 import type { UseMutationResult } from '@tanstack/react-query';
+import {
+  ImportDrawer,
+  ImportErrorAlert,
+  ImportPreviewSummary,
+  ImportResultStep,
+  ImportStatusCell,
+  ImportTableFrame,
+  ImportUploadStep,
+  importRowClassName,
+  matchesImportFilter,
+  type ImportRowFilter,
+  type ImportStep,
+} from '@/components/modules/hr/import-export/ImportDrawerParts';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
-  ImportRowStatus,
 } from '@/lib/api/types';
 
 type ImportMutation<TResult> = Pick<
@@ -27,91 +29,12 @@ type ImportMutation<TResult> = Pick<
   'mutateAsync' | 'isPending'
 >;
 
-type ImportStep = 'upload' | 'preview' | 'result';
-
-type TranslateFn = (
-  key: string,
-  vars?: Record<string, string | number>,
-) => string;
-
-function statusLabel(status: ImportRowStatus, t: TranslateFn): string {
-  switch (status) {
-    case 'ok':
-      return t('hr.import.ready');
-    case 'warning':
-      return t('hr.import.warning');
-    case 'error':
-      return t('hr.import.invalid');
-    case 'duplicate':
-      return t('hr.import.duplicate');
-    case 'duplicate_in_file':
-      return t('hr.import.duplicateInFile');
-    default:
-      return status;
-  }
-}
-
-function statusVariant(status: ImportRowStatus): StatusBadgeVariant {
-  switch (status) {
-    case 'ok':
-      return 'success';
-    case 'warning':
-      return 'warning';
-    case 'error':
-      return 'error';
-    case 'duplicate':
-    case 'duplicate_in_file':
-      return 'warning';
-    default:
-      return 'default';
-  }
-}
-
 function pluralKey(
   count: number,
   singularKey: string,
   pluralKeyName: string,
 ): string {
   return count === 1 ? singularKey : pluralKeyName;
-}
-
-function ImportStepTabs({
-  step,
-  labels,
-}: {
-  step: ImportStep;
-  labels: { upload: string; preview: string; result: string };
-}): React.ReactNode {
-  const steps: ImportStep[] = ['upload', 'preview', 'result'];
-  const activeIndex = steps.indexOf(step);
-
-  return (
-    <ol className="erp-user-import-steps" aria-label="Import steps">
-      {steps.map((key, index) => {
-        const state =
-          index < activeIndex
-            ? 'done'
-            : index === activeIndex
-              ? 'active'
-              : 'todo';
-        return (
-          <li
-            key={key}
-            className={`erp-user-import-step erp-user-import-step--${state}`}
-          >
-            <span className="erp-user-import-step-index" aria-hidden>
-              {index < activeIndex ? (
-                <CheckCircle2 size={14} strokeWidth={2} />
-              ) : (
-                index + 1
-              )}
-            </span>
-            <span className="erp-user-import-step-label">{labels[key]}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
 }
 
 export type HrImportEntityKey =
@@ -134,7 +57,8 @@ export type HrImportEntityKey =
   | 'consumablesRequisitionItems';
 
 /**
- * Shared Excel import modal for HR modules (upload → preview → commit).
+ * Shared Excel import drawer for HR modules (upload → preview → commit),
+ * in the Employees import layout.
  */
 export default function HrImportModal({
   entity,
@@ -161,6 +85,7 @@ export default function HrImportModal({
   const [result, setResult] = useState<HrImportCommitResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [rowFilter, setRowFilter] = useState<ImportRowFilter>('all');
 
   async function handleDownloadTemplate(): Promise<void> {
     setErrorMessage(null);
@@ -183,6 +108,7 @@ export default function HrImportModal({
     setSelectedFile(file);
     setPreview(null);
     setResult(null);
+    setRowFilter('all');
 
     try {
       const previewResult = await previewMutation.mutateAsync(file);
@@ -233,6 +159,7 @@ export default function HrImportModal({
     setPreview(null);
     setResult(null);
     setErrorMessage(null);
+    setRowFilter('all');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -245,320 +172,171 @@ export default function HrImportModal({
     0;
   const validCount = preview?.valid ?? 0;
 
+  const filteredRows = useMemo(
+    () =>
+      (preview?.rows ?? []).filter((row) =>
+        matchesImportFilter(row.status, rowFilter),
+      ),
+    [preview, rowFilter],
+  );
+
   const footer =
-    step === 'result'
-      ? [
+    step === 'result' ? (
+      <Button type="primary" onClick={onClose}>
+        {t('common.done')}
+      </Button>
+    ) : (
+      <>
+        {step === 'preview' ? (
+          <Button onClick={handleReset} disabled={isBusy}>
+            {t('hr.import.chooseAnotherFile')}
+          </Button>
+        ) : null}
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        {step === 'preview' ? (
           <Button
-            key="done"
             type="primary"
-            className="erp-user-import-btn"
-            onClick={onClose}
+            onClick={() => void handleImport()}
+            loading={commitMutation.isPending}
+            disabled={!preview || preview.valid === 0}
           >
-            {t('common.done')}
-          </Button>,
-        ]
-      : [
-          step === 'preview' ? (
-            <Button
-              key="reset"
-              className="erp-user-import-btn"
-              onClick={handleReset}
-              disabled={isBusy}
-            >
-              {t('hr.import.chooseAnotherFile')}
-            </Button>
-          ) : null,
-          <Button
-            key="cancel"
-            className="erp-user-import-btn"
-            onClick={onClose}
-          >
-            {t('common.cancel')}
-          </Button>,
-          step === 'preview' ? (
-            <Button
-              key="import"
-              type="primary"
-              className="erp-user-import-btn"
-              onClick={() => void handleImport()}
-              loading={commitMutation.isPending}
-              disabled={!preview || preview.valid === 0}
-            >
-              {t(
-                pluralKey(
-                  validCount,
-                  `${entityPrefix}.importRows`,
-                  `${entityPrefix}.importRowsPlural`,
-                ),
-                { count: validCount },
-              )}
-            </Button>
-          ) : null,
-        ].filter(Boolean);
+            {t(
+              pluralKey(
+                validCount,
+                `${entityPrefix}.importRows`,
+                `${entityPrefix}.importRowsPlural`,
+              ),
+              { count: validCount },
+            )}
+          </Button>
+        ) : null}
+      </>
+    );
 
   return (
-    <Modal
-      open
-      title={null}
-      onCancel={onClose}
+    <ImportDrawer
+      title={t(`${entityPrefix}.title`)}
+      step={step}
+      fileName={selectedFile?.name}
+      rowCount={preview?.rows.length}
+      busy={isBusy}
       footer={footer}
-      width={840}
-      centered
-      rootClassName="erp-user-import-modal erp-hr-import-v2"
-      className="erp-user-import-modal erp-hr-import-v2"
-      classNames={{
-        content: 'erp-user-import-modal-content',
-        footer: 'erp-user-import-modal-footer',
-        body: 'erp-user-import-modal-body',
-      }}
-      styles={{
-        content: {
-          borderRadius: 14,
-          overflow: 'hidden',
-          padding: 0,
-        },
-      }}
-      destroyOnHidden
-      mask={{ closable: !isBusy }}
-      closable={!isBusy}
+      onClose={onClose}
+      t={t}
     >
-      <div className="erp-user-import">
-        <div className="erp-user-import-header">
-          <div className="erp-user-import-header-icon" aria-hidden>
-            <FileSpreadsheet size={22} strokeWidth={1.75} />
-          </div>
-          <div className="erp-user-import-header-copy">
-            <h3 className="erp-user-import-title">{t(`${entityPrefix}.title`)}</h3>
-            <p className="erp-user-import-desc">
-              {t(`${entityPrefix}.description`)}
-            </p>
-          </div>
-        </div>
-
-        <ImportStepTabs
-          step={step}
-          labels={{
-            upload: t('hr.import.chooseFile'),
-            preview: t('hr.import.ready'),
-            result: t('common.done'),
-          }}
+      {step === 'upload' ? (
+        <ImportUploadStep
+          t={t}
+          busy={isBusy}
+          checking={previewMutation.isPending}
+          downloading={isDownloadingTemplate}
+          onDownloadTemplate={() => void handleDownloadTemplate()}
+          onFile={(file) => void handleFileChange(file)}
+          requiredColumns={t(`${entityPrefix}.requiredColumns`)}
+          note={t(`${entityPrefix}.description`)}
         />
+      ) : null}
 
-        <div className="erp-user-import-panel">
-          {step === 'upload' ? (
-            <div className="erp-user-import-upload">
-              <div className="erp-user-import-actions">
-                <Button
-                  className="erp-user-import-btn"
-                  icon={<Download size={15} />}
-                  onClick={() => void handleDownloadTemplate()}
-                  loading={isDownloadingTemplate}
-                >
-                  {t('hr.import.downloadTemplate')}
-                </Button>
-              </div>
+      {step === 'preview' && preview ? (
+        <div className="flex flex-col gap-4">
+          <ImportPreviewSummary
+            t={t}
+            fileName={selectedFile?.name}
+            filter={rowFilter}
+            onFilter={setRowFilter}
+            counts={{
+              all: preview.rows.length,
+              ok: preview.valid,
+              warning: warningCount,
+              error: preview.invalid,
+              duplicate: preview.duplicate,
+            }}
+          />
 
-              <Upload.Dragger
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                showUploadList={false}
-                beforeUpload={(file: File) => {
-                  void handleFileChange(file);
-                  return false;
-                }}
-                disabled={isBusy}
-                className="erp-user-import-dropzone"
-              >
-                <div className="erp-user-import-dropzone-inner">
-                  <div className="erp-user-import-dropzone-icon" aria-hidden>
-                    {previewMutation.isPending ? (
-                      <Spin />
-                    ) : (
-                      <UploadIcon size={24} strokeWidth={1.75} />
-                    )}
-                  </div>
-                  <p className="erp-user-import-dropzone-title">
-                    {t('hr.import.chooseFile')}
-                  </p>
-                  <p className="erp-user-import-dropzone-hint">
-                    {t(`${entityPrefix}.requiredColumns`)}
-                  </p>
-                </div>
-              </Upload.Dragger>
-            </div>
-          ) : null}
-
-          {step === 'preview' && preview ? (
-            <div className="erp-user-import-preview">
-              {selectedFile ? (
-                <div className="erp-user-import-file-chip">
-                  <FileSpreadsheet size={14} strokeWidth={1.75} />
-                  <span className="truncate">{selectedFile.name}</span>
-                </div>
-              ) : null}
-
-              <div className="erp-user-import-stats">
-                <div className="erp-user-import-stat erp-user-import-stat--ready">
-                  <span className="erp-user-import-stat-value">
-                    {preview.valid}
-                  </span>
-                  <span className="erp-user-import-stat-label">
-                    {t('hr.import.ready')}
-                  </span>
-                </div>
-                {warningCount > 0 ? (
-                  <div className="erp-user-import-stat erp-user-import-stat--warning">
-                    <span className="erp-user-import-stat-value">
-                      {warningCount}
+          <ImportTableFrame>
+            <DataTable
+              rowKey="line"
+              className="erp-pro-table erp-users-table"
+              size="small"
+              dataSource={filteredRows}
+              scroll={{ x: true, y: 'calc(100vh - 420px)' }}
+              pagination={false}
+              locale={{ emptyText: t('hr.import.noRowsFilter') }}
+              rowClassName={(row) => importRowClassName(row.status)}
+              columns={[
+                {
+                  title: t('hr.import.line'),
+                  dataIndex: 'line',
+                  width: 64,
+                  render: (value: number) => (
+                    <span className="erp-users-id-chip">{value}</span>
+                  ),
+                },
+                {
+                  title: t('hr.import.label'),
+                  dataIndex: 'label',
+                  render: (value: string) => (
+                    <span className="erp-users-cell-strong">
+                      {value || '-'}
                     </span>
-                    <span className="erp-user-import-stat-label">
-                      {t('hr.import.warning')}
+                  ),
+                },
+                {
+                  title: t('common.status'),
+                  key: 'status',
+                  width: 130,
+                  render: (_, row) => (
+                    <ImportStatusCell status={row.status} t={t} />
+                  ),
+                },
+                {
+                  title: t('hr.import.message'),
+                  dataIndex: 'message',
+                  ellipsis: true,
+                  render: (value: string | undefined, row) => (
+                    <span
+                      className={
+                        row.status === 'error'
+                          ? 'text-[13px] font-medium text-red-700'
+                          : 'erp-users-cell-sub'
+                      }
+                    >
+                      {value || '-'}
                     </span>
-                  </div>
-                ) : null}
-                <div className="erp-user-import-stat erp-user-import-stat--invalid">
-                  <span className="erp-user-import-stat-value">
-                    {preview.invalid}
-                  </span>
-                  <span className="erp-user-import-stat-label">
-                    {t('hr.import.invalid')}
-                  </span>
-                </div>
-                <div className="erp-user-import-stat erp-user-import-stat--duplicate">
-                  <span className="erp-user-import-stat-value">
-                    {preview.duplicate}
-                  </span>
-                  <span className="erp-user-import-stat-label">
-                    {t('hr.import.duplicate')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="erp-user-import-table-wrap">
-                <DataTable
-                  rowKey="line"
-                  className="erp-pro-table erp-users-table"
-                  size="small"
-                  dataSource={preview.rows}
-                  scroll={{ x: true, y: 280 }}
-                  pagination={false}
-                  rowClassName={(row) =>
-                    row.status === 'warning' ? 'erp-import-row--warning' : ''
-                  }
-                  columns={[
-                    {
-                      title: t('hr.import.line'),
-                      dataIndex: 'line',
-                      width: 70,
-                      render: (value: number) => (
-                        <span className="erp-users-id-chip">{value}</span>
-                      ),
-                    },
-                    {
-                      title: t('hr.import.label'),
-                      dataIndex: 'label',
-                      render: (value: string) => (
-                        <span className="erp-users-cell-strong">
-                          {value || '-'}
-                        </span>
-                      ),
-                    },
-                    {
-                      title: t('common.status'),
-                      key: 'status',
-                      width: 140,
-                      render: (_, row) => (
-                        <StatusBadge
-                          label={statusLabel(row.status, t)}
-                          variant={statusVariant(row.status)}
-                        />
-                      ),
-                    },
-                    {
-                      title: t('hr.import.message'),
-                      dataIndex: 'message',
-                      render: (value: string | undefined) => (
-                        <span className="erp-users-cell-sub">
-                          {value || '-'}
-                        </span>
-                      ),
-                    },
-                  ]}
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {step === 'result' && result ? (
-            <div className="erp-user-import-result">
-              <div className="erp-user-import-result-icon" aria-hidden>
-                <CheckCircle2 size={28} strokeWidth={1.75} />
-              </div>
-              <div className="erp-user-import-result-stats">
-                <div className="erp-user-import-stat erp-user-import-stat--ready">
-                  <span className="erp-user-import-stat-value">
-                    {result.created}
-                  </span>
-                  <span className="erp-user-import-stat-label">
-                    {t(
-                      pluralKey(
-                        result.created,
-                        `${entityPrefix}.created`,
-                        `${entityPrefix}.createdPlural`,
-                      ),
-                      { count: result.created },
-                    )}
-                  </span>
-                </div>
-                <div className="erp-user-import-stat">
-                  <span className="erp-user-import-stat-value">
-                    {result.skipped}
-                  </span>
-                  <span className="erp-user-import-stat-label">
-                    {t(
-                      pluralKey(
-                        result.skipped,
-                        'hr.import.skipped',
-                        'hr.import.skippedPlural',
-                      ),
-                      { count: result.skipped },
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {result.errors.length > 0 ? (
-                <Alert
-                  type="error"
-                  showIcon
-                  title={t('hr.import.errorsTitle')}
-                  description={
-                    <ul className="mt-1 list-disc pl-5">
-                      {result.errors.map((error) => (
-                        <li key={`${error.line}-${error.label ?? 'row'}`}>
-                          {t('hr.import.errorLine', {
-                            line: error.line,
-                            label: error.label ?? '-',
-                            message: error.message,
-                          })}
-                        </li>
-                      ))}
-                    </ul>
-                  }
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          {errorMessage ? (
-            <Alert
-              type="error"
-              showIcon
-              title={errorMessage}
-              className="erp-user-import-error"
+                  ),
+                },
+              ]}
             />
-          ) : null}
+          </ImportTableFrame>
         </div>
-      </div>
-    </Modal>
+      ) : null}
+
+      {step === 'result' && result ? (
+        <ImportResultStep
+          t={t}
+          created={result.created}
+          createdLabel={t(
+            pluralKey(
+              result.created,
+              `${entityPrefix}.created`,
+              `${entityPrefix}.createdPlural`,
+            ),
+            { count: result.created },
+          )}
+          skipped={result.skipped}
+          skippedLabel={t(
+            pluralKey(
+              result.skipped,
+              'hr.import.skipped',
+              'hr.import.skippedPlural',
+            ),
+            { count: result.skipped },
+          )}
+          errors={result.errors}
+        />
+      ) : null}
+
+      <ImportErrorAlert message={errorMessage} />
+    </ImportDrawer>
   );
 }

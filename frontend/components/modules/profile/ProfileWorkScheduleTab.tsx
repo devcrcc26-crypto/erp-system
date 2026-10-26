@@ -235,7 +235,7 @@ export default function ProfileWorkScheduleTab({
         )}
       </ProfileSection>
 
-      <ProfileSection title={t('profile.upcomingHolidays')} bodyClassName="!p-0">
+      <ProfileSection title={t('profile.upcomingHolidays')} bodyClassName="erp-employee-section-body--flush">
         {holidaysQuery.isError ? (
           <div className="p-4">
             <Alert type="error" showIcon title={t('profile.holidaysLoadError')} />

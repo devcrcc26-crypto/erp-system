@@ -89,6 +89,8 @@ export const DETAIL_PAGE_V2 = [
   '[&_.erp-employee-section-title]:!text-[15px] [&_.erp-employee-section-title]:!font-semibold [&_.erp-employee-section-title]:!normal-case',
   '[&_.erp-employee-section-title]:!tracking-normal [&_.erp-employee-section-title]:!text-slate-900',
   '[&_.erp-employee-section-body]:!px-5 [&_.erp-employee-section-body]:!py-4',
+  // Flush bodies (tables / row lists) must beat the padding utilities above.
+  '[&_.erp-employee-section-body.erp-employee-section-body--flush]:!p-0',
   '[&_.erp-pro-card_.erp-employee-tab-panel]:!p-0',
 
   // Chips and tags: soft fills instead of outlines.

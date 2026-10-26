@@ -2488,6 +2488,15 @@ main::-webkit-scrollbar,
   padding: 16px;
 }
 
+/*
+ * Flush body for tables and row lists that should run edge to edge in the
+ * card. Three classes so it beats DETAIL_PAGE_V2's `!px-5 !py-4` on the
+ * section body (two classes) and profile-v2's body padding.
+ */
+.erp-employee-section .erp-employee-section-body.erp-employee-section-body--flush {
+  padding: 0 !important;
+}
+
 .erp-employee-section--docs .erp-employee-section-body {
   padding: 14px;
   background: #f8fafc;

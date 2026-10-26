@@ -3,10 +3,11 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Spin, Tooltip } from 'antd';
+import { Alert, Button, Grid, Input, Spin, Tooltip } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useCanEditHr, useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -35,6 +36,9 @@ export default function PerDiemSettlementsList(): React.ReactNode {
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const canEditHr = useCanEditHr();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const listQuery = usePerDiemSettlementsAll(true);
   const [search, setSearch] = useState('');
@@ -79,19 +83,30 @@ export default function PerDiemSettlementsList(): React.ReactNode {
             {
               title: t('hr.table.employee'),
               key: 'employee',
-              render: (_: unknown, row: PerDiemSettlementListItem) =>
-                formatPerDiemEmployeeName(row.employee),
+              width: 240,
+              render: (_: unknown, row: PerDiemSettlementListItem) => (
+                <HrPersonCell
+                  person={row.employee}
+                  name={formatPerDiemEmployeeName(row.employee)}
+                />
+              ),
             },
           ]
         : []),
+      // No width: takes the spare space so the table spans the card.
       {
         title: t('hr.table.destination'),
         dataIndex: 'destination',
         key: 'destination',
+        ellipsis: true,
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
       },
       {
         title: t('pages.hr.perDiemSettlement.balance'),
         key: 'balance',
+        width: 200,
         align: 'right' as const,
         render: (_: unknown, row: PerDiemSettlementListItem) => (
           <span>
@@ -127,7 +142,7 @@ export default function PerDiemSettlementsList(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-card overflow-hidden">
+    <div className="erp-pro-card erp-employees-list-card overflow-hidden">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -183,23 +198,26 @@ export default function PerDiemSettlementsList(): React.ReactNode {
           aria-label={t('pages.hr.perDiemSettlement.searchPlaceholder')}
         />
       </div>
-      <DataTable
-        className="erp-pro-table erp-users-table"
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        pagination={bindMeta(meta)}
-        onRow={(record) => ({
-          onClick: () => {
-            if (record.settlementKind === 'REQUEST' && record.requestId) {
-              router.push(`/hr/per-diem/${record.requestId}`);
-              return;
-            }
-            router.push(`/hr/per-diem/settlements/${record.id}`);
-          },
-          style: { cursor: 'pointer' },
-        })}
-      />
+      <div className="erp-pro-table-card-body">
+        <DataTable
+          className="erp-pro-table erp-users-table"
+          rowKey="id"
+          columns={columns}
+          dataSource={rows}
+          pagination={bindMeta(meta)}
+          scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 900 }}
+          onRow={(record) => ({
+            onClick: () => {
+              if (record.settlementKind === 'REQUEST' && record.requestId) {
+                router.push(`/hr/per-diem/${record.requestId}`);
+                return;
+              }
+              router.push(`/hr/per-diem/settlements/${record.id}`);
+            },
+            style: { cursor: 'pointer' },
+          })}
+        />
+      </div>
     </div>
   );
 }

@@ -2690,6 +2690,12 @@
       "deleteDescription": "将删除\"{{name}}\"。该职级下员工的职级将被清空。",
       "deleted": "职级已删除",
       "deleteFailed": "删除职级失败",
+      "searchPlaceholder": "搜索职级或中文名称",
+      "noMatches": "没有符合搜索条件的职级。",
+      "stats": {
+        "peopleAssigned": "已分配人数"
+      },
+      "peopleCount": "此职级共 {{count}} 人",
       "table": {
         "name": "职级",
         "order": "顺序",
@@ -4212,6 +4218,21 @@
       }
     },
     "import": {
+      "headerUpload": "第 1 步，共 3 步 · 上传表格",
+      "headerReview": "第 2 步，共 3 步 · {{file}} · 已检查 {{count}} 行",
+      "headerDone": "第 3 步，共 3 步 · 导入完成",
+      "stepUpload": "上传",
+      "stepReview": "审核",
+      "stepDone": "完成",
+      "templateTitle": "从模板开始",
+      "templateHint": "模板包含系统读取的所有列以及示例行。请保留表头行不变。",
+      "dropHint": "拖放 .xlsx 文件到此处，或点击选择",
+      "fileTypes": "仅限 .xlsx",
+      "checking": "正在检查表格…",
+      "filterAll": "全部",
+      "noRowsFilter": "没有符合此筛选条件的行。",
+      "doneTitle": "导入完成",
+      "draftsNote": "导入的记录将创建为草稿。",
       "downloadTemplate": "下载模板",
       "chooseFile": "选择 .xlsx 文件",
       "chooseAnotherFile": "选择其他文件",
@@ -5222,7 +5243,9 @@
       "RETURNED": "已退回",
       "CANCELLED": "已取消",
       "IN_REPAIR": "维修中",
-      "REPAIRED": "已修复"
+      "REPAIRED": "已修复",
+      "ACTIVE": "进行中",
+      "SETTLED": "已结算"
     },
     "approvalDecision": {
       "PENDING": "待处理",

@@ -2690,6 +2690,12 @@
       "deleteDescription": "\"{{name}}\" will be removed. Employees on this level will have their seniority cleared.",
       "deleted": "Seniority level deleted",
       "deleteFailed": "Failed to delete seniority level",
+      "searchPlaceholder": "Search level or Chinese name",
+      "noMatches": "No levels match your search.",
+      "stats": {
+        "peopleAssigned": "People assigned"
+      },
+      "peopleCount": "{{count}} people on this level",
       "table": {
         "name": "Level",
         "order": "Order",
@@ -4212,6 +4218,21 @@
       }
     },
     "import": {
+      "headerUpload": "Step 1 of 3 · Upload a spreadsheet",
+      "headerReview": "Step 2 of 3 · {{file}} · {{count}} rows checked",
+      "headerDone": "Step 3 of 3 · Import finished",
+      "stepUpload": "Upload",
+      "stepReview": "Review",
+      "stepDone": "Done",
+      "templateTitle": "Start from the template",
+      "templateHint": "It has every column the system reads, with example rows. Keep the header row as it is.",
+      "dropHint": "Drop an .xlsx file here or click to browse",
+      "fileTypes": ".xlsx only",
+      "checking": "Checking spreadsheet…",
+      "filterAll": "All",
+      "noRowsFilter": "No rows match this filter.",
+      "doneTitle": "Import complete",
+      "draftsNote": "Imported records are created as drafts.",
       "downloadTemplate": "Download template",
       "chooseFile": "Choose .xlsx file",
       "chooseAnotherFile": "Choose another file",
@@ -5222,7 +5243,9 @@
       "REPAIRED": "Repaired",
       "REJECTED": "Rejected",
       "RETURNED": "Returned",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "ACTIVE": "Active",
+      "SETTLED": "Settled"
     },
     "approvalDecision": {
       "PENDING": "Pending",

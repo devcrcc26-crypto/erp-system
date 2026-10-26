@@ -37,6 +37,8 @@ import {
   buildAttendanceWarning,
   buildFullDayLeaveExcludedWindows,
   buildLeaveExcludedWindows,
+  overlapsWeekdayLunchBreak,
+  WEEKDAY_LUNCH_OT_MESSAGE,
   type LeaveDayPortionInput,
   type WeekdayScheduleSlice,
 } from '../utils/overtime-entry-guards.util';
@@ -176,6 +178,15 @@ export class OvertimeEntryService {
         throw new BadRequestException(
           selectable.message ?? OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
         );
+      }
+      // Weekday lunch 12:30–13:30 is never OT-eligible (after selectable check).
+      // Site assignment / holiday / Sat–Sun skip; Saturday has no lunch block.
+      if (
+        overlapsWeekdayLunchBreak(startTime, endTime, onDate, {
+          skip: siteDay.scheduledHoursClaimable || isHoliday,
+        })
+      ) {
+        throw new BadRequestException(WEEKDAY_LUNCH_OT_MESSAGE);
       }
     }
 

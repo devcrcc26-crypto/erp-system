@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import './org-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -30,6 +32,8 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import DepartmentFormDrawer from '@/components/modules/org/DepartmentFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -58,7 +62,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const LEADER_WARNING_DISMISS_KEY = 'erp-departments-leader-warning-dismissed';
 const PAGE_CHROME =
-  'erp-pro-list-page erp-users-page erp-org-departments-page erp-org-v2';
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-departments-page erp-org-v2 ${LIST_PAGE_V2}`;
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -405,9 +409,10 @@ export default function DepartmentsPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_value, record) =>
           record.leaderUserId ? (
-            <span className="erp-users-cell-strong">
-              {leaderNameById.get(record.leaderUserId) ?? t('common.assigned')}
-            </span>
+            <HrPersonCell
+              person={{ id: record.leaderUserId }}
+              name={leaderNameById.get(record.leaderUserId) ?? t('common.assigned')}
+            />
           ) : (
             <span className="erp-users-cell-sub text-red-600">
               {t('pages.departments.table.noLeader')}
@@ -573,7 +578,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
             />
           </div>
 
-          <div className="erp-pro-card">
+          <div className="erp-pro-card erp-employees-list-card">
             <div className="erp-pro-card-toolbar erp-users-toolbar">
               <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
                 <h3 className="erp-pro-card-toolbar-title">
@@ -724,6 +729,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
       ) : null}
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(deleting)}
         title={t('pages.departments.deleteTitle')}
         description={

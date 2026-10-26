@@ -143,7 +143,7 @@ export default function EmployeeSiteAssignmentsSection({
           </Button>
         ) : null}
       </div>
-      <div className="erp-employee-section-body !p-0">
+      <div className="erp-employee-section-body erp-employee-section-body--flush">
         {query.isError ? (
           <div className="p-4">
             <Alert type="error" showIcon title={errorMessage(query.error)} />

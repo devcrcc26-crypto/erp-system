@@ -7,15 +7,19 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Dropdown,
   Grid,
   Input,
   Spin,
   Tooltip,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   BankOutlined,
   CheckCircleOutlined,
   EditOutlined,
+  EyeOutlined,
+  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
   TeamOutlined,
@@ -227,6 +231,27 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
     [t],
   );
 
+  function buildActionMenu(
+    row: EmployeePerDiemRateListItem,
+  ): MenuProps['items'] {
+    return [
+      {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: t('common.view'),
+        onClick: () =>
+          router.push(`/hr/employee-per-diem-rates/${row.employeeId}`),
+      },
+      {
+        key: 'update',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () =>
+          router.push(`/hr/employee-per-diem-rates/${row.employeeId}/edit`),
+      },
+    ];
+  }
+
   const columns: ColumnsType<EmployeePerDiemRateListItem> = useMemo(
     () => [
       {
@@ -281,25 +306,31 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
       },
       ...categoryColumns,
       {
-        title: t('common.actions'),
+        title: '',
         key: 'actions',
+        width: 52,
+        align: 'right',
         fixed: isNarrow ? undefined : 'right',
-        width: isNarrow ? 72 : 100,
         render: (_: unknown, row: EmployeePerDiemRateListItem) => (
-          <Button
-            type="link"
-            className="!px-0"
-            icon={<EditOutlined />}
-            aria-label={t('common.update')}
-            onClick={(event) => {
-              event.stopPropagation();
-              router.push(
-                `/hr/employee-per-diem-rates/${row.employeeId}/edit`,
-              );
-            }}
+          <div
+            className="erp-table-row-actions flex items-center justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            {isNarrow ? undefined : t('common.update')}
-          </Button>
+            <Dropdown
+              menu={{ items: buildActionMenu(row) }}
+              trigger={['click']}
+              placement="bottomRight"
+              rootClassName="erp-row-actions-menu"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<MoreOutlined />}
+                aria-label={t('common.actions')}
+              />
+            </Dropdown>
+          </div>
         ),
       },
     ],

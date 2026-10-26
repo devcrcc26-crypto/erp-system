@@ -131,7 +131,7 @@ export default function LeaveBalanceLedgerSection({
           ) : null}
         </div>
       </div>
-      <div className="erp-employee-section-body !p-0">
+      <div className="erp-employee-section-body erp-employee-section-body--flush">
         {ledgerQuery.isError ? (
           <div className="p-4">
             <Alert type="error" showIcon title={t(`${KEY}.loadFailed`)} />
