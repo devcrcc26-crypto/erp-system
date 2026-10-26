@@ -686,6 +686,11 @@
           "description": "日期可包含上月1日以来的历史天数及未来计划现场工作。",
           "detailsStepDescription": "填写现场、一个或多个日期时段，以及可选的项目或原因。",
           "reviewStepDescription": "确认派驻详情后提交审批。",
+          "supervisor": "主管",
+          "supervisorPlaceholder": "选择主管",
+          "supervisorRequired": "请选择代其提交此派驻申请的主管。",
+          "employee": "员工",
+          "employeePlaceholder": "选择员工",
           "steps": {
             "details": "详情",
             "review": "确认"
@@ -2223,6 +2228,55 @@
     "dashboard": {
       "home": {
         "quickActions": "快捷操作",
+        "tabs": {
+          "label": "仪表板视图",
+          "overview": "概览",
+          "payrollOt": "薪资与加班",
+          "operations": "运营",
+          "myTeam": "我的团队",
+          "myWork": "我的工作"
+        },
+        "charts": {
+          "normal": "平时",
+          "evening": "夜班",
+          "sunday": "周日",
+          "holiday": "节假日"
+        },
+        "overview": {
+          "pendingApprovals": "待审批",
+          "pendingApprovalsHint": "全公司",
+          "noAttendance": "本月暂无考勤数据。",
+          "leaveByType": "按类型统计请假",
+          "noLeaveByType": "本月暂无请假申请。"
+        },
+        "payrollOt": {
+          "otByEmployee": "员工加班统计",
+          "otByEmployeeEmpty": "本月暂无加班记录。",
+          "payrollStatus": "薪资状态",
+          "noPayroll": "本月暂无薪资批次。",
+          "status": "状态",
+          "employeesInRun": "批次员工数",
+          "flagged": "异常条目",
+          "openPayroll": "打开薪资"
+        },
+        "operations": {
+          "noPerDiem": "暂无差旅津贴数据。"
+        },
+        "myTeam": {
+          "title": "我的团队",
+          "noTeam": "您没有直属下属。",
+          "directReports": "直属下属",
+          "pendingMyApproval": "待我审批",
+          "otHours": "团队本月加班",
+          "otByEmployee": "团队成员加班统计",
+          "otByEmployeeEmpty": "本月团队暂无加班。",
+          "leave": "团队请假",
+          "siteAssignments": "团队驻场安排",
+          "siteExpiringSoon": "即将到期"
+        },
+        "myWork": {
+          "nextSite": "下一个驻场安排"
+        },
         "sections": {
           "summary": "概览",
           "work": "我的工作",

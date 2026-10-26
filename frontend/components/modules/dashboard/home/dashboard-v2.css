@@ -128,6 +128,114 @@
   white-space: nowrap;
 }
 
+/* ── Role tabs (pill tabbar) ── */
+
+.erp-dashboard-v2 .dv2-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--dv2-surface);
+  box-shadow: var(--dv2-shadow);
+  scrollbar-width: none;
+}
+
+.erp-dashboard-v2 .dv2-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.erp-dashboard-v2 .dv2-tab {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dv2-muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.erp-dashboard-v2 .dv2-tab:hover {
+  background: var(--dv2-subtle);
+  color: var(--dv2-text-strong);
+}
+
+.erp-dashboard-v2 .dv2-tab--active,
+.erp-dashboard-v2 .dv2-tab--active:hover {
+  background: var(--dv2-primary-tint);
+  color: var(--dv2-primary-strong);
+}
+
+/* ── Tab panel layout: stacked rows with a shared gap ── */
+
+.erp-dashboard-v2 .dv2-tab-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-dashboard-v2 .dv2-tab-panel:focus-visible {
+  outline: 2px solid var(--dv2-primary);
+  outline-offset: 4px;
+  border-radius: var(--dv2-radius);
+}
+
+/* Two equal columns from tablet-landscape up; a lone child spans the row. */
+.erp-dashboard-v2 .dv2-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.erp-dashboard-v2 .dv2-col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-dashboard-v2 .dv2-chart {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 200px;
+}
+
+.erp-dashboard-v2 .dv2-chart--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--dv2-subtle);
+}
+
+@media (min-width: 1024px) {
+  .erp-dashboard-v2 .dv2-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .erp-dashboard-v2 .dv2-row > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .erp-dashboard-v2 .dv2-tab-panel {
+    gap: 20px;
+  }
+}
+
 /* ── Main + sidebar columns ── */
 
 .erp-dashboard-v2 .dv2-layout {
@@ -200,6 +308,12 @@
   .erp-dashboard-v2 .dv2-kpi-strip {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .erp-dashboard-v2 .dv2-kpi-strip.dv2-kpi-strip--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -706,6 +820,7 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .erp-dashboard-v2 .dv2-tab,
   .erp-dashboard-v2 .dv2-action,
   .erp-dashboard-v2 .dv2-card,
   .erp-dashboard-v2 .dv2-kpi {

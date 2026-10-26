@@ -6,6 +6,8 @@ import {
   LeaveRequestStatus,
   LeaveType,
   OvertimeSheetStatus,
+  PayrollEntryFlag,
+  PayrollRunStatus,
   PerDiemStatus,
   Prisma,
   SiteAssignmentStatus,
@@ -89,6 +91,70 @@ export interface DashboardOperationalStats {
       endDate: string;
     } | null;
   } | null;
+  /** Direct-report rollup. Null unless the caller has direct reports. */
+  myTeam: DashboardMyTeamStats | null;
+  /** Per-employee OT breakdown this month (top 10). HR only. */
+  overtimeByEmployee: DashboardOvertimeByEmployee[] | null;
+  /** This month's leave requests grouped by leave type. HR only. */
+  leaveByType: DashboardLeaveByType[] | null;
+  /** Current month payroll run summary. HR only; null when no run exists. */
+  payroll: DashboardPayrollStats | null;
+  /** Self-scoped personal summary, always present. */
+  myWork: DashboardMyWork;
+  /** Five soonest-ending active contracts. HR only. */
+  contractsExpiringSoonList: DashboardExpiringContract[] | null;
+  /** Open approval requests across the company. HR only. */
+  pendingApprovalsCompanyWide: number | null;
+}
+
+export interface DashboardMyTeamStats {
+  totalDirectReports: number;
+  onLeaveToday: number;
+  pendingMyApproval: number;
+  totalOTHoursThisMonth: number;
+  otByEmployee: Array<{ employeeId: string; name: string; hours: number }>;
+  currentlyOnLeave: number;
+  siteCurrentlyAssigned: number;
+  siteExpiringSoon: number;
+}
+
+export interface DashboardOvertimeByEmployee {
+  employeeId: string;
+  name: string;
+  normal: number;
+  evening: number;
+  sunday: number;
+  holiday: number;
+  total: number;
+}
+
+export interface DashboardLeaveByType {
+  type: string;
+  count: number;
+}
+
+export interface DashboardPayrollStats {
+  status: string;
+  totalEmployees: number;
+  flaggedCount: number;
+}
+
+export interface DashboardMyWork {
+  leaveBalanceDays: number | null;
+  otHoursThisMonth: number;
+  pendingRequestsCount: number;
+  nextSiteAssignment: {
+    location: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+}
+
+export interface DashboardExpiringContract {
+  employeeId: string;
+  employeeName: string;
+  endDate: string;
+  endsToday: boolean;
 }
 
 interface RequestContext {
@@ -116,6 +182,9 @@ const MONTH_NAMES = [
   'November',
   'December',
 ] as const;
+
+const TOP_OT_EMPLOYEES = 10;
+const EXPIRING_CONTRACTS_LIMIT = 5;
 
 const OPEN_APPROVAL_STATUSES: ApprovalRequestStatus[] = [
   ApprovalRequestStatus.PENDING,
@@ -200,7 +269,7 @@ export class DashboardOperationalStatsService {
       perDiem: true,
       overtime: true,
       leave: true,
-      personal: !isHr,
+      personal: true,
     };
 
     const employeeFilter = (ids: string[] | null): Prisma.UserWhereInput =>
@@ -217,6 +286,44 @@ export class DashboardOperationalStatsService {
       scopeEmployeeIds === null
         ? hrProcessEmployeeWhere({})
         : hrProcessEmployeeWhere({ id: { in: scopeEmployeeIds } });
+
+    const myPendingPromise = this.loadMyPendingApprovals(companyId, userId);
+    const extrasPromise = Promise.all([
+      isSupervisor
+        ? this.loadMyTeamStats({
+            companyId,
+            directReportIds,
+            today,
+            in7,
+            month,
+            year,
+            myPendingPromise,
+          })
+        : Promise.resolve(null),
+      isHr
+        ? this.loadOvertimeByEmployee(companyId, month, year)
+        : Promise.resolve(null),
+      isHr
+        ? this.loadLeaveByType(companyId, monthStart, nextMonth)
+        : Promise.resolve(null),
+      isHr
+        ? this.loadPayrollSummary(companyId, month, year)
+        : Promise.resolve(null),
+      isHr
+        ? this.loadContractsExpiringSoonList(companyId, today, todayStr)
+        : Promise.resolve(null),
+      isHr
+        ? this.prisma.approvalRequest.count({
+            where: {
+              companyId,
+              deletedAt: null,
+              status: { in: OPEN_APPROVAL_STATUSES },
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+    // Avoid an unhandled rejection if the main batch fails before extras are awaited.
+    extrasPromise.catch(() => undefined);
 
     const [
       headcountTotal,
@@ -428,56 +535,57 @@ export class DashboardOperationalStatsService {
         },
       }),
 
-      this.loadMyPendingApprovals(companyId, userId),
+      myPendingPromise,
 
-      visibility.personal
-        ? this.prisma.overtimeSheet.aggregate({
-            where: {
-              companyId,
-              deletedAt: null,
-              employeeId: userId,
-              month,
-              year,
-              status: { in: OT_COUNTED_STATUSES },
-            },
-            _sum: { totalHours: true },
-          })
-        : Promise.resolve({ _sum: { totalHours: null } }),
-      visibility.personal
-        ? this.prisma.leaveBalance.findFirst({
-            where: {
-              companyId,
-              employeeId: userId,
-              year,
-              leaveType: LeaveType.ANNUAL,
-            },
-            select: { remaining: true },
-          })
-        : Promise.resolve(null),
-      visibility.personal
-        ? this.prisma.approvalRequest.count({
-            where: {
-              companyId,
-              deletedAt: null,
-              requestedBy: userId,
-              status: { in: OPEN_APPROVAL_STATUSES },
-            },
-          })
-        : Promise.resolve(0),
-      visibility.personal
-        ? this.prisma.siteAssignment.findFirst({
-            where: {
-              companyId,
-              deletedAt: null,
-              employeeId: userId,
-              status: SiteAssignmentStatus.APPROVED,
-              endDate: { gte: today },
-            },
-            orderBy: { startDate: 'asc' },
-            select: { siteName: true, startDate: true, endDate: true },
-          })
-        : Promise.resolve(null),
+      this.prisma.overtimeSheet.aggregate({
+        where: {
+          companyId,
+          deletedAt: null,
+          employeeId: userId,
+          month,
+          year,
+          status: { in: OT_COUNTED_STATUSES },
+        },
+        _sum: { totalHours: true },
+      }),
+      this.prisma.leaveBalance.findFirst({
+        where: {
+          companyId,
+          employeeId: userId,
+          year,
+          leaveType: LeaveType.ANNUAL,
+        },
+        select: { remaining: true },
+      }),
+      this.prisma.approvalRequest.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          requestedBy: userId,
+          status: { in: OPEN_APPROVAL_STATUSES },
+        },
+      }),
+      this.prisma.siteAssignment.findFirst({
+        where: {
+          companyId,
+          deletedAt: null,
+          employeeId: userId,
+          status: SiteAssignmentStatus.APPROVED,
+          endDate: { gte: today },
+        },
+        orderBy: { startDate: 'asc' },
+        select: { siteName: true, startDate: true, endDate: true },
+      }),
     ]);
+
+    const [
+      myTeam,
+      overtimeByEmployee,
+      leaveByType,
+      payroll,
+      contractsExpiringSoonList,
+      pendingApprovalsCompanyWide,
+    ] = await extrasPromise;
 
     const approvalStatus = mapAttendanceApprovalStatus(
       attendanceBatch ? (attendanceApproval?.status ?? null) : null,
@@ -486,6 +594,20 @@ export class DashboardOperationalStatsService {
     const submittedCount = attendanceSubmitted;
     const approvedCount =
       approvalStatus === 'approved' ? submittedCount : 0;
+
+    const myOtHoursThisMonth = Number(personalOt._sum.totalHours ?? 0);
+    const myLeaveBalanceDays =
+      personalLeaveBalance?.remaining != null
+        ? Number(personalLeaveBalance.remaining)
+        : null;
+    const nextSiteAssignment: DashboardMyWork['nextSiteAssignment'] =
+      upcomingSite
+        ? {
+            location: upcomingSite.siteName,
+            startDate: upcomingSite.startDate.toISOString().slice(0, 10),
+            endDate: upcomingSite.endDate.toISOString().slice(0, 10),
+          }
+        : null;
 
     return {
       visibility,
@@ -537,24 +659,282 @@ export class DashboardOperationalStatsService {
         pendingApproval: perDiemPendingApproval,
       },
       myPendingApprovals: myPendingTiers,
-      personal: visibility.personal
-        ? {
-            myOtHoursThisMonth: Number(personalOt._sum.totalHours ?? 0),
-            myLeaveBalanceDays:
-              personalLeaveBalance?.remaining != null
-                ? Number(personalLeaveBalance.remaining)
-                : null,
-            myPendingRequestCount: personalPendingRequests,
-            upcomingSiteAssignment: upcomingSite
-              ? {
-                  siteName: upcomingSite.siteName,
-                  startDate: upcomingSite.startDate.toISOString().slice(0, 10),
-                  endDate: upcomingSite.endDate.toISOString().slice(0, 10),
-                }
-              : null,
-          }
-        : null,
+      personal: {
+        myOtHoursThisMonth,
+        myLeaveBalanceDays,
+        myPendingRequestCount: personalPendingRequests,
+        upcomingSiteAssignment: nextSiteAssignment
+          ? {
+              siteName: nextSiteAssignment.location,
+              startDate: nextSiteAssignment.startDate,
+              endDate: nextSiteAssignment.endDate,
+            }
+          : null,
+      },
+      myTeam,
+      overtimeByEmployee,
+      leaveByType,
+      payroll,
+      myWork: {
+        leaveBalanceDays: myLeaveBalanceDays,
+        otHoursThisMonth: myOtHoursThisMonth,
+        pendingRequestsCount: personalPendingRequests,
+        nextSiteAssignment,
+      },
+      contractsExpiringSoonList,
+      pendingApprovalsCompanyWide,
     };
+  }
+
+  /** Direct-report rollup for supervisors (self excluded from OT figures). */
+  private async loadMyTeamStats(args: {
+    companyId: string;
+    directReportIds: string[];
+    today: Date;
+    in7: Date;
+    month: number;
+    year: number;
+    myPendingPromise: Promise<{ total: number }>;
+  }): Promise<DashboardMyTeamStats> {
+    const { companyId, directReportIds, today, in7, month, year } = args;
+    const [onLeaveToday, myPending, sheets, siteCurrent, siteExpiring] =
+      await Promise.all([
+        this.countOnLeaveToday(companyId, today, directReportIds),
+        args.myPendingPromise,
+        this.prisma.overtimeSheet.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            month,
+            year,
+            status: { in: OT_COUNTED_STATUSES },
+            employeeId: { in: directReportIds },
+          },
+          select: {
+            employeeId: true,
+            totalRegularHours: true,
+            totalNightHours: true,
+            totalWeekendHours: true,
+            totalHolidayHours: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        }),
+        this.prisma.siteAssignment.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: SiteAssignmentStatus.APPROVED,
+            startDate: { lte: today },
+            endDate: { gte: today },
+            employeeId: { in: directReportIds },
+          },
+        }),
+        this.prisma.siteAssignment.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: SiteAssignmentStatus.APPROVED,
+            endDate: { gte: today, lte: in7 },
+            employeeId: { in: directReportIds },
+          },
+        }),
+      ]);
+
+    const otByEmployee = sheets
+      .map((sheet) => ({
+        employeeId: sheet.employeeId,
+        name: formatPersonName(sheet.employee),
+        hours: roundHours(
+          Number(sheet.totalRegularHours) +
+            Number(sheet.totalNightHours) +
+            Number(sheet.totalWeekendHours) +
+            Number(sheet.totalHolidayHours),
+        ),
+      }))
+      .filter((row) => row.hours > 0)
+      .sort((a, b) => b.hours - a.hours || a.name.localeCompare(b.name));
+
+    return {
+      totalDirectReports: directReportIds.length,
+      onLeaveToday,
+      pendingMyApproval: myPending.total,
+      totalOTHoursThisMonth: roundHours(
+        otByEmployee.reduce((sum, row) => sum + row.hours, 0),
+      ),
+      otByEmployee,
+      currentlyOnLeave: onLeaveToday,
+      siteCurrentlyAssigned: siteCurrent,
+      siteExpiringSoon: siteExpiring,
+    };
+  }
+
+  /** Top 10 employees by overtime hours this month, split by bucket (from entries). */
+  private async loadOvertimeByEmployee(
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<DashboardOvertimeByEmployee[]> {
+    const grouped = await this.prisma.overtimeEntry.groupBy({
+      by: ['sheetId'],
+      where: {
+        sheet: {
+          companyId,
+          deletedAt: null,
+          month,
+          year,
+          status: { in: OT_COUNTED_STATUSES },
+          employee: hrProcessEmployeeWhere({}),
+        },
+      },
+      _sum: {
+        regularHours: true,
+        nightHours: true,
+        weekendHours: true,
+        holidayHours: true,
+      },
+    });
+    if (grouped.length === 0) {
+      return [];
+    }
+
+    const rows = grouped
+      .map((row) => {
+        const normal = Number(row._sum.regularHours ?? 0);
+        const evening = Number(row._sum.nightHours ?? 0);
+        const sunday = Number(row._sum.weekendHours ?? 0);
+        const holiday = Number(row._sum.holidayHours ?? 0);
+        return {
+          sheetId: row.sheetId,
+          normal,
+          evening,
+          sunday,
+          holiday,
+          total: normal + evening + sunday + holiday,
+        };
+      })
+      .filter((row) => row.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, TOP_OT_EMPLOYEES);
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const sheets = await this.prisma.overtimeSheet.findMany({
+      where: { companyId, id: { in: rows.map((row) => row.sheetId) } },
+      select: {
+        id: true,
+        employeeId: true,
+        employee: { select: { firstName: true, lastName: true } },
+      },
+    });
+    const sheetById = new Map(sheets.map((sheet) => [sheet.id, sheet]));
+
+    const result: DashboardOvertimeByEmployee[] = [];
+    for (const row of rows) {
+      const sheet = sheetById.get(row.sheetId);
+      if (!sheet) {
+        continue;
+      }
+      result.push({
+        employeeId: sheet.employeeId,
+        name: formatPersonName(sheet.employee),
+        normal: roundHours(row.normal),
+        evening: roundHours(row.evening),
+        sunday: roundHours(row.sunday),
+        holiday: roundHours(row.holiday),
+        total: roundHours(row.total),
+      });
+    }
+    return result;
+  }
+
+  /** Company-wide leave requests created this month, grouped by leave type. */
+  private async loadLeaveByType(
+    companyId: string,
+    monthStart: Date,
+    nextMonth: Date,
+  ): Promise<DashboardLeaveByType[]> {
+    const grouped = await this.prisma.leaveRequest.groupBy({
+      by: ['leaveType'],
+      where: {
+        companyId,
+        deletedAt: null,
+        createdAt: { gte: monthStart, lt: nextMonth },
+        status: {
+          notIn: [LeaveRequestStatus.DRAFT, LeaveRequestStatus.CANCELLED],
+        },
+        employee: hrProcessEmployeeWhere({}),
+      },
+      _count: { _all: true },
+    });
+    return grouped
+      .map((row) => ({ type: row.leaveType as string, count: row._count._all }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+  }
+
+  /** Current month payroll run summary; null when no run exists. */
+  private async loadPayrollSummary(
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<DashboardPayrollStats | null> {
+    const run = await this.prisma.payrollRun.findFirst({
+      where: { companyId, month, year, deletedAt: null },
+      select: { id: true, status: true, totalEmployees: true },
+    });
+    if (!run) {
+      return null;
+    }
+    const flaggedCount = await this.prisma.payrollEntry.count({
+      where: {
+        companyId,
+        runId: run.id,
+        flag: { not: PayrollEntryFlag.NONE },
+      },
+    });
+    return {
+      status: mapPayrollStatus(run.status),
+      totalEmployees: run.totalEmployees,
+      flaggedCount,
+    };
+  }
+
+  /** Five soonest-ending ACTIVE contracts from today onward. */
+  private async loadContractsExpiringSoonList(
+    companyId: string,
+    today: Date,
+    todayStr: string,
+  ): Promise<DashboardExpiringContract[]> {
+    const contracts = await this.prisma.employeeContract.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: EmployeeContractStatus.ACTIVE,
+        endDate: { not: null, gte: today },
+        employee: hrProcessEmployeeWhere({}),
+      },
+      orderBy: { endDate: 'asc' },
+      take: EXPIRING_CONTRACTS_LIMIT,
+      select: {
+        employeeId: true,
+        endDate: true,
+        employee: { select: { firstName: true, lastName: true } },
+      },
+    });
+    const result: DashboardExpiringContract[] = [];
+    for (const contract of contracts) {
+      if (!contract.endDate) {
+        continue;
+      }
+      const endDate = contract.endDate.toISOString().slice(0, 10);
+      result.push({
+        employeeId: contract.employeeId,
+        employeeName: formatPersonName(contract.employee),
+        endDate,
+        endsToday: endDate === todayStr,
+      });
+    }
+    return result;
   }
 
   /** null = company-wide; otherwise explicit employee id list. */
@@ -734,6 +1114,34 @@ export class DashboardOperationalStatsService {
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
     return { total: actionable.length, byType };
+  }
+}
+
+function formatPersonName(person: {
+  firstName: string;
+  lastName: string;
+}): string {
+  return `${person.firstName} ${person.lastName}`.trim();
+}
+
+function roundHours(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function mapPayrollStatus(status: PayrollRunStatus): string {
+  switch (status) {
+    case PayrollRunStatus.DRAFT:
+      return 'Draft';
+    case PayrollRunStatus.REVIEWED:
+    case PayrollRunStatus.SUBMITTED:
+      return 'Submitted';
+    case PayrollRunStatus.APPROVED:
+    case PayrollRunStatus.GM_APPROVED:
+      return 'Approved';
+    case PayrollRunStatus.PAID:
+      return 'Locked';
+    default:
+      return status;
   }
 }
 

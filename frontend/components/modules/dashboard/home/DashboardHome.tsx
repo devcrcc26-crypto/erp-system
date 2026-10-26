@@ -1,7 +1,10 @@
 'use client';
 
 import './dashboard-v2.css';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Skeleton } from 'antd';
 import type { LucideIcon } from 'lucide-react';
 import {
   CalendarPlus,
@@ -12,7 +15,6 @@ import {
   Wallet,
 } from 'lucide-react';
 import {
-  useCanAccessOvertime,
   useCanCreateFlight,
   useCanCreateLeave,
   useCanCreateOvertime,
@@ -25,25 +27,23 @@ import {
   formatAddisDate,
   greetingPeriod,
 } from '@/lib/dashboard/addis-time';
+import {
+  type DashboardTabId,
+  isValidTab,
+  resolveDashboardTabs,
+} from '@/lib/dashboard/dashboard-roles';
 import { useApprovalCategories } from '@/lib/query/approvals';
+import { useDashboardOperationalStats } from '@/lib/query/dashboard';
+import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
-import {
-  AttendanceWidget,
-  LeaveBalanceWidget,
-  MyEvaluationWidget,
-  MyRequestsWidget,
-  OvertimeWidget,
-  PendingApprovalsWidget,
-} from './PersonalWidgets';
-import {
-  ContractsExpiringWidget,
-  EvaluationInboxWidget,
-  useLeadEvaluations,
-} from './RoleWidgets';
-import AnnouncementsWidget from './AnnouncementsWidget';
-import OperationalStatsWidgets, { DashboardKpiStrip } from './OperationalStatsWidgets';
+import MyTeamTab from './tabs/MyTeamTab';
+import MyWorkTab from './tabs/MyWorkTab';
+import OperationsTab from './tabs/OperationsTab';
+import OverviewTab from './tabs/OverviewTab';
+import PayrollOtTab from './tabs/PayrollOtTab';
 
 const HOME = 'pages.dashboard.home';
+const TAB_PARAM = 'tab';
 
 interface QuickAction {
   readonly key: string;
@@ -52,24 +52,139 @@ interface QuickAction {
   readonly visible: boolean;
 }
 
+const TAB_LABEL_KEYS: Record<DashboardTabId, string> = {
+  overview: 'overview',
+  'payroll-ot': 'payrollOt',
+  operations: 'operations',
+  'my-team': 'myTeam',
+  'my-work': 'myWork',
+};
+
+function tabDomId(id: DashboardTabId): string {
+  return `dv2-tab-${id}`;
+}
+
+function panelDomId(id: DashboardTabId): string {
+  return `dv2-panel-${id}`;
+}
+
+function TabPanelContent({
+  tab,
+  enabled,
+}: {
+  tab: DashboardTabId;
+  enabled: boolean;
+}): React.ReactNode {
+  switch (tab) {
+    case 'overview':
+      return <OverviewTab enabled={enabled} />;
+    case 'payroll-ot':
+      return <PayrollOtTab enabled={enabled} />;
+    case 'operations':
+      return <OperationsTab enabled={enabled} />;
+    case 'my-team':
+      return <MyTeamTab enabled={enabled} />;
+    case 'my-work':
+      return <MyWorkTab enabled={enabled} />;
+    default:
+      return null;
+  }
+}
+
 /**
- * Personal widget home (v2). Every widget fetches on its own; widgets for
- * modules the user cannot open are not rendered at all. All styles live
- * under `.erp-dashboard-v2` in `dashboard-v2.css`.
+ * Role-based tabbed home (v2). HR roles get Overview / Payroll & OT /
+ * Operations, supervisors get My Team, everyone gets My Work. The active tab
+ * lives in `?tab=` so it survives reloads and can be linked to; only the
+ * active panel is mounted, so inactive tabs fetch nothing extra. All styles
+ * live under `.erp-dashboard-v2` in `dashboard-v2.css`.
  */
-export default function DashboardHome({ enabled }: { enabled: boolean }): React.ReactNode {
+function DashboardHomeInner({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const canViewHr = useCanViewHr();
-  const canAccessOvertime = useCanAccessOvertime();
   const canCreateLeave = useCanCreateLeave();
   const canCreateOvertime = useCanCreateOvertime();
   const canCreateFlight = useCanCreateFlight();
   const categoriesQuery = useApprovalCategories(enabled);
-  // A lead is anyone with evaluations assigned as Discipline / Team Lead.
-  const { isLead } = useLeadEvaluations(enabled);
+  const profileQuery = useCurrentUser();
+  const statsQuery = useDashboardOperationalStats(enabled);
+  const tabRefs = useRef<Partial<Record<DashboardTabId, HTMLButtonElement | null>>>({});
 
   useSetHeaderExtra(null);
+
+  const roles = profileQuery.data?.roles;
+  const hasTeam = Boolean(statsQuery.data?.myTeam);
+  const tabs = useMemo<DashboardTabId[]>(
+    () =>
+      resolveDashboardTabs({
+        roleNames: (roles ?? []).map((role) => role.name),
+        canViewHr,
+        hasTeam,
+      }),
+    [roles, canViewHr, hasTeam],
+  );
+
+  const rawTab = searchParams.get(TAB_PARAM);
+  const defaultTab = tabs[0];
+  const activeTab: DashboardTabId = isValidTab(rawTab, tabs) ? rawTab : defaultTab;
+
+  // Roles and team data arrive asynchronously, so only judge a `?tab=` value
+  // once both have settled; otherwise a valid deep link to a tab that appears
+  // later (e.g. my-team) would be rewritten away.
+  const settled =
+    (profileQuery.isSuccess || profileQuery.isError) &&
+    (statsQuery.isSuccess || statsQuery.isError);
+
+  const hrefForTab = (id: DashboardTabId): string => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(TAB_PARAM, id);
+    return `${pathname}?${params.toString()}`;
+  };
+
+  useEffect(() => {
+    if (!settled || rawTab === null || isValidTab(rawTab, tabs)) {
+      return;
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(TAB_PARAM, defaultTab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [settled, rawTab, tabs, defaultTab, searchParams, pathname, router]);
+
+  const selectTab = (id: DashboardTabId): void => {
+    if (id !== activeTab) {
+      router.replace(hrefForTab(id), { scroll: false });
+    }
+  };
+
+  const onTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ): void => {
+    let nextIndex: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = (index + 1) % tabs.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (index - 1 + tabs.length) % tabs.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = tabs.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    selectTab(nextTab);
+    tabRefs.current[nextTab]?.focus();
+  };
 
   // A request shortcut needs its category to exist; until the list loads,
   // trust the capability so the row does not flicker.
@@ -108,14 +223,6 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
     { key: 'myProfile', href: '/profile', icon: CircleUserRound, visible: true },
   ];
 
-  const smallWidgets = [
-    { key: 'leave', Widget: LeaveBalanceWidget, visible: true },
-    { key: 'attendance', Widget: AttendanceWidget, visible: true },
-    { key: 'overtime', Widget: OvertimeWidget, visible: canAccessOvertime },
-    { key: 'evaluation', Widget: MyEvaluationWidget, visible: true },
-    { key: 'evaluationInbox', Widget: EvaluationInboxWidget, visible: isLead },
-  ].filter((widget) => widget.visible);
-
   const now = new Date();
   const firstName = user?.firstName || t('pages.dashboard.hr.greeting.fallbackName');
   const greeting = t(`pages.dashboard.hr.greeting.${greetingPeriod(addisParts(now).hour)}`);
@@ -152,30 +259,63 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
         </nav>
       </header>
 
-      <DashboardKpiStrip enabled={enabled} />
-
-      <div className="dv2-layout">
-        <section className="dv2-main" aria-label={t(`${HOME}.sections.work`)}>
-          <PendingApprovalsWidget enabled={enabled} />
-          <MyRequestsWidget enabled={enabled} />
-        </section>
-        <aside className="dv2-side" aria-label={t(`${HOME}.sections.personal`)}>
-          <AnnouncementsWidget enabled={enabled} />
-          {smallWidgets.map(({ key, Widget }) => (
-            <Widget key={key} enabled={enabled} span={12} />
-          ))}
-        </aside>
+      <div
+        className="dv2-tabs"
+        role="tablist"
+        aria-label={t(`${HOME}.tabs.label`)}
+      >
+        {tabs.map((id, index) => {
+          const selected = id === activeTab;
+          return (
+            <button
+              key={id}
+              ref={(node) => {
+                tabRefs.current[id] = node;
+              }}
+              type="button"
+              role="tab"
+              id={tabDomId(id)}
+              aria-selected={selected}
+              aria-controls={panelDomId(id)}
+              tabIndex={selected ? 0 : -1}
+              className={`dv2-tab${selected ? ' dv2-tab--active' : ''}`}
+              onClick={() => selectTab(id)}
+              onKeyDown={(event) => onTabKeyDown(event, index)}
+            >
+              {t(`${HOME}.tabs.${TAB_LABEL_KEYS[id]}`)}
+            </button>
+          );
+        })}
       </div>
 
-      <section className="dv2-section" aria-labelledby="dv2-operations-heading">
-        <h2 id="dv2-operations-heading" className="dv2-section-title">
-          {t(`${HOME}.sections.operations`)}
-        </h2>
-        <div className="dv2-grid">
-          <OperationalStatsWidgets enabled={enabled} />
-          {canViewHr ? <ContractsExpiringWidget enabled={enabled} /> : null}
-        </div>
-      </section>
+      <div
+        key={activeTab}
+        role="tabpanel"
+        id={panelDomId(activeTab)}
+        aria-labelledby={tabDomId(activeTab)}
+        tabIndex={0}
+        className="dv2-tab-panel"
+      >
+        <TabPanelContent tab={activeTab} enabled={enabled} />
+      </div>
     </div>
+  );
+}
+
+/**
+ * `useSearchParams` opts the page out of static rendering unless it sits in a
+ * Suspense boundary, so the tabbed home is wrapped here.
+ */
+export default function DashboardHome({ enabled }: { enabled: boolean }): React.ReactNode {
+  return (
+    <Suspense
+      fallback={
+        <div className="erp-dashboard-v2">
+          <Skeleton active paragraph={{ rows: 6 }} />
+        </div>
+      }
+    >
+      <DashboardHomeInner enabled={enabled} />
+    </Suspense>
   );
 }

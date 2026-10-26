@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { Button, Skeleton } from 'antd';
@@ -16,14 +16,16 @@ import {
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useDashboardOperationalStats } from '@/lib/query/dashboard';
-import WidgetCard, { WidgetFigure } from './WidgetCard';
+import WidgetCard, { WidgetFigure, type WidgetSpan } from './WidgetCard';
 import { formatCount } from './format';
 
-const STATS = 'pages.dashboard.home.stats';
+export const STATS = 'pages.dashboard.home.stats';
 const ICON = { size: 18, strokeWidth: 1.9 } as const;
 const KPI_ICON = { size: 18, strokeWidth: 1.9 } as const;
 
-function toneClass(tone: 'ok' | 'warn' | 'urgent' | undefined): string {
+export type Tone = 'ok' | 'warn' | 'urgent';
+
+function toneClass(tone: Tone | undefined): string {
   if (tone === 'ok') return 'dv2-number--ok';
   if (tone === 'warn') return 'dv2-number--warn';
   if (tone === 'urgent') return 'dv2-number--urgent';
@@ -37,7 +39,8 @@ function kpiToneClass(tone: Tone | undefined): string {
   return '';
 }
 
-function Stat({
+/** Small labelled figure used inside a stat row. */
+export function Stat({
   label,
   value,
   tone,
@@ -45,7 +48,7 @@ function Stat({
 }: {
   label: string;
   value: number | string;
-  tone?: 'ok' | 'warn' | 'urgent';
+  tone?: Tone;
   locale: string;
 }): React.ReactNode {
   const display =
@@ -58,7 +61,8 @@ function Stat({
   );
 }
 
-function ProgressBar({
+/** Labelled progress bar showing `current / total`. */
+export function ProgressBar({
   label,
   current,
   total,
@@ -99,12 +103,13 @@ function ProgressBar({
   );
 }
 
-function Pill({
+/** Rounded status pill. */
+export function Pill({
   children,
   tone,
 }: {
   children: React.ReactNode;
-  tone?: 'ok' | 'warn' | 'urgent';
+  tone?: Tone;
 }): React.ReactNode {
   const toneClassName =
     tone === 'ok'
@@ -117,9 +122,8 @@ function Pill({
   return <span className={`dv2-pill ${toneClassName}`}>{children}</span>;
 }
 
-type Tone = 'ok' | 'warn' | 'urgent';
-
-function KpiTile({
+/** Floating KPI tile; renders as a link when `href` is given. */
+export function KpiTile({
   icon: Icon,
   label,
   value,
@@ -163,6 +167,7 @@ function KpiTile({
 /**
  * Top-of-page stat strip: company headcount for HR (or anyone the API grants
  * headcount), otherwise the viewer's own leave / overtime / request figures.
+ * No longer used by the tabbed dashboard; kept for other consumers.
  */
 export function DashboardKpiStrip({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
@@ -270,14 +275,280 @@ export function DashboardKpiStrip({ enabled }: { enabled: boolean }): React.Reac
   );
 }
 
+/** Attendance import / approval progress for the current month (HR). */
+export function AttendanceStatsCard({
+  enabled,
+  span = 12,
+}: {
+  enabled: boolean;
+  span?: WidgetSpan;
+}): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const canViewHr = useCanViewHr();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+  const visible = canViewHr || stats?.visibility?.headcount === true;
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <WidgetCard
+      title={t(`${STATS}.attendance.title`)}
+      icon={<UserCheck {...ICON} />}
+      span={span}
+      viewAllHref="/hr/attendance"
+      query={query}
+      isEmpty={!stats?.attendance}
+      emptyLabel={t('pages.dashboard.home.overview.noAttendance')}
+    >
+      {stats?.attendance ? (
+        <>
+          <div className="dv2-stat-row dv2-stat-row--align">
+            <p className="dv2-label m-0">{stats.attendance.month}</p>
+            <div className="dv2-pills">
+              <Pill
+                tone={
+                  stats.attendance.importStatus === 'imported' ? 'ok' : undefined
+                }
+              >
+                {t(`${STATS}.attendance.import.${stats.attendance.importStatus}`)}
+              </Pill>
+              <Pill
+                tone={
+                  stats.attendance.approvalStatus === 'approved'
+                    ? 'ok'
+                    : stats.attendance.approvalStatus === 'in_progress'
+                      ? 'warn'
+                      : undefined
+                }
+              >
+                {t(`${STATS}.attendance.approval.${stats.attendance.approvalStatus}`)}
+              </Pill>
+            </div>
+          </div>
+          <ProgressBar
+            label={t(`${STATS}.attendance.submitted`)}
+            current={stats.attendance.submittedCount}
+            total={stats.attendance.totalEmployees}
+            locale={locale}
+          />
+          <ProgressBar
+            label={t(`${STATS}.attendance.approved`)}
+            current={stats.attendance.approvedCount}
+            total={stats.attendance.totalEmployees}
+            locale={locale}
+            strong
+          />
+          {canViewHr && stats.attendance.importStatus === 'not_imported' ? (
+            <Link href="/hr/attendance" className="dv2-inline-link">
+              {t(`${STATS}.attendance.importAction`)}
+            </Link>
+          ) : null}
+        </>
+      ) : null}
+    </WidgetCard>
+  );
+}
+
+/** Company overtime totals for the current month. */
+export function OvertimeStatsCard({
+  enabled,
+  span = 6,
+}: {
+  enabled: boolean;
+  span?: WidgetSpan;
+}): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+
+  return (
+    <WidgetCard
+      title={t(`${STATS}.overtime.title`)}
+      icon={<Timer {...ICON} />}
+      span={span}
+      viewAllHref="/hr/overtime"
+      query={query}
+    >
+      {stats ? (
+        <>
+          <WidgetFigure
+            label={t(`${STATS}.overtime.totalHours`)}
+            value={formatCount(stats.overtime.totalHours, locale)}
+          />
+          <div className="dv2-stat-row">
+            <Stat
+              label={t(`${STATS}.overtime.pending`)}
+              value={stats.overtime.pendingApprovalCount}
+              locale={locale}
+            />
+            <Stat
+              label={t(`${STATS}.overtime.approved`)}
+              value={stats.overtime.approvedCount}
+              locale={locale}
+            />
+            <Stat
+              label={t(`${STATS}.overtime.employees`)}
+              value={stats.overtime.employeesWithOT}
+              locale={locale}
+            />
+          </div>
+        </>
+      ) : null}
+    </WidgetCard>
+  );
+}
+
+/** Pending / current leave figures (counts only; no chart). */
+export function LeaveStatsCard({
+  enabled,
+  span = 6,
+}: {
+  enabled: boolean;
+  span?: WidgetSpan;
+}): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+
+  return (
+    <WidgetCard
+      title={t(`${STATS}.leave.title`)}
+      icon={<CalendarDays {...ICON} />}
+      span={span}
+      viewAllHref="/hr/leave-requests"
+      query={query}
+    >
+      {stats ? (
+        <>
+          <WidgetFigure
+            label={t(`${STATS}.leave.pending`)}
+            value={formatCount(stats.leave.pendingApprovalCount, locale)}
+          />
+          <div className="dv2-stat-row">
+            <Stat
+              label={t(`${STATS}.leave.onLeave`)}
+              value={stats.leave.currentlyOnLeave}
+              locale={locale}
+            />
+            <Stat
+              label={t(`${STATS}.leave.thisMonth`)}
+              value={stats.leave.thisMonthRequests}
+              locale={locale}
+            />
+          </div>
+        </>
+      ) : null}
+    </WidgetCard>
+  );
+}
+
+/** Site assignment counts; null when the viewer cannot see them. */
+export function SiteAssignmentsStatsCard({
+  enabled,
+  span = 6,
+}: {
+  enabled: boolean;
+  span?: WidgetSpan;
+}): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const canViewHr = useCanViewHr();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+  const visible = canViewHr || stats?.visibility?.siteAssignments === true;
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <WidgetCard
+      title={t(`${STATS}.siteAssignments.title`)}
+      icon={<MapPin {...ICON} />}
+      span={span}
+      viewAllHref="/hr/site-assignments"
+      query={query}
+    >
+      {stats?.siteAssignments ? (
+        <>
+          <WidgetFigure
+            label={t(`${STATS}.siteAssignments.current`)}
+            value={formatCount(stats.siteAssignments.currentlyAssigned, locale)}
+          />
+          <div className="dv2-stat-row">
+            <Stat
+              label={t(`${STATS}.siteAssignments.expiring7`)}
+              value={stats.siteAssignments.expiringIn7Days}
+              tone={stats.siteAssignments.expiringIn7Days > 0 ? 'warn' : undefined}
+              locale={locale}
+            />
+            <Stat
+              label={t(`${STATS}.siteAssignments.expiring30`)}
+              value={stats.siteAssignments.expiringIn30Days}
+              locale={locale}
+            />
+          </div>
+        </>
+      ) : null}
+    </WidgetCard>
+  );
+}
+
+/** Per diem settlement / approval backlog. */
+export function PerDiemStatsCard({
+  enabled,
+  span = 6,
+}: {
+  enabled: boolean;
+  span?: WidgetSpan;
+}): React.ReactNode {
+  const { t, locale } = useEpcTranslation();
+  const query = useDashboardOperationalStats(enabled);
+  const stats = query.data;
+
+  return (
+    <WidgetCard
+      title={t(`${STATS}.perDiem.title`)}
+      icon={<Wallet {...ICON} />}
+      span={span}
+      viewAllHref="/hr/per-diem"
+      query={query}
+      isEmpty={!stats?.perDiem}
+      emptyLabel={t('pages.dashboard.home.operations.noPerDiem')}
+    >
+      {stats?.perDiem ? (
+        <>
+          <WidgetFigure
+            label={t(`${STATS}.perDiem.pendingSettlement`)}
+            value={formatCount(stats.perDiem.pendingSettlement, locale)}
+          />
+          <div className="dv2-stat-row">
+            <Stat
+              label={t(`${STATS}.perDiem.pendingApproval`)}
+              value={stats.perDiem.pendingApproval}
+              tone={stats.perDiem.pendingApproval > 0 ? 'warn' : undefined}
+              locale={locale}
+            />
+          </div>
+        </>
+      ) : null}
+    </WidgetCard>
+  );
+}
+
 /**
  * Role-adapted operational statistic cards from GET /dashboard/stats.
- * Spans are chosen so each 12-column row is full whichever cards are visible.
+ *
+ * `variant="operations"` is used on the Operations tab: it omits the contracts
+ * card, because contracts are shown only on the Overview tab. The default
+ * `all` variant keeps the previous behaviour (including contracts).
  */
 export default function OperationalStatsWidgets({
   enabled,
+  variant = 'all',
 }: {
   enabled: boolean;
+  variant?: 'all' | 'operations';
 }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const canViewHr = useCanViewHr();
@@ -286,209 +557,17 @@ export default function OperationalStatsWidgets({
   const visibility = stats?.visibility;
   const showHrBlocks = canViewHr || visibility?.headcount === true;
   const showSite = canViewHr || visibility?.siteAssignments === true;
+  const showContracts = variant === 'all' && showHrBlocks;
 
   return (
     <>
-      {showHrBlocks ? (
-        <WidgetCard
-          title={t(`${STATS}.attendance.title`)}
-          icon={<UserCheck {...ICON} />}
-          span={12}
-          viewAllHref="/hr/attendance"
-          query={query}
-        >
-          {stats?.attendance ? (
-            <>
-              <div className="dv2-stat-row dv2-stat-row--align">
-                <p className="dv2-label m-0">{stats.attendance.month}</p>
-                <div className="dv2-pills">
-                  <Pill
-                    tone={
-                      stats.attendance.importStatus === 'imported'
-                        ? 'ok'
-                        : undefined
-                    }
-                  >
-                    {t(
-                      `${STATS}.attendance.import.${stats.attendance.importStatus}`,
-                    )}
-                  </Pill>
-                  <Pill
-                    tone={
-                      stats.attendance.approvalStatus === 'approved'
-                        ? 'ok'
-                        : stats.attendance.approvalStatus === 'in_progress'
-                          ? 'warn'
-                          : undefined
-                    }
-                  >
-                    {t(
-                      `${STATS}.attendance.approval.${stats.attendance.approvalStatus}`,
-                    )}
-                  </Pill>
-                </div>
-              </div>
-              <ProgressBar
-                label={t(`${STATS}.attendance.submitted`)}
-                current={stats.attendance.submittedCount}
-                total={stats.attendance.totalEmployees}
-                locale={locale}
-              />
-              <ProgressBar
-                label={t(`${STATS}.attendance.approved`)}
-                current={stats.attendance.approvedCount}
-                total={stats.attendance.totalEmployees}
-                locale={locale}
-                strong
-              />
-              {canViewHr &&
-              stats.attendance.importStatus === 'not_imported' ? (
-                <Link href="/hr/attendance" className="dv2-inline-link">
-                  {t(`${STATS}.attendance.importAction`)}
-                </Link>
-              ) : null}
-            </>
-          ) : null}
-        </WidgetCard>
-      ) : null}
+      <AttendanceStatsCard enabled={enabled} span={12} />
+      <OvertimeStatsCard enabled={enabled} span={6} />
+      <LeaveStatsCard enabled={enabled} span={6} />
+      <SiteAssignmentsStatsCard enabled={enabled} span={6} />
+      <PerDiemStatsCard enabled={enabled} span={showSite ? 6 : 12} />
 
-      <WidgetCard
-        title={t(`${STATS}.overtime.title`)}
-        icon={<Timer {...ICON} />}
-        span={6}
-        viewAllHref="/hr/overtime"
-        query={query}
-      >
-        {stats ? (
-          <>
-            <WidgetFigure
-              label={t(`${STATS}.overtime.totalHours`)}
-              value={formatCount(stats.overtime.totalHours, locale)}
-            />
-            <div className="dv2-stat-row">
-              <Stat
-                label={t(`${STATS}.overtime.pending`)}
-                value={stats.overtime.pendingApprovalCount}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.overtime.approved`)}
-                value={stats.overtime.approvedCount}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.overtime.employees`)}
-                value={stats.overtime.employeesWithOT}
-                locale={locale}
-              />
-            </div>
-          </>
-        ) : null}
-      </WidgetCard>
-
-      <WidgetCard
-        title={t(`${STATS}.leave.title`)}
-        icon={<CalendarDays {...ICON} />}
-        span={6}
-        viewAllHref="/approvals"
-        query={query}
-      >
-        {stats ? (
-          <>
-            <WidgetFigure
-              label={t(`${STATS}.leave.pending`)}
-              value={formatCount(stats.leave.pendingApprovalCount, locale)}
-            />
-            <div className="dv2-stat-row">
-              <Stat
-                label={t(`${STATS}.leave.onLeave`)}
-                value={stats.leave.currentlyOnLeave}
-                locale={locale}
-              />
-              <Stat
-                label={t(`${STATS}.leave.thisMonth`)}
-                value={stats.leave.thisMonthRequests}
-                locale={locale}
-              />
-            </div>
-          </>
-        ) : null}
-      </WidgetCard>
-
-      {showSite ? (
-        <WidgetCard
-          title={t(`${STATS}.siteAssignments.title`)}
-          icon={<MapPin {...ICON} />}
-          span={6}
-          viewAllHref="/hr/site-assignments"
-          query={query}
-        >
-          {stats?.siteAssignments ? (
-            <>
-              <WidgetFigure
-                label={t(`${STATS}.siteAssignments.current`)}
-                value={formatCount(
-                  stats.siteAssignments.currentlyAssigned,
-                  locale,
-                )}
-              />
-              <div className="dv2-stat-row">
-                <Stat
-                  label={t(`${STATS}.siteAssignments.expiring7`)}
-                  value={stats.siteAssignments.expiringIn7Days}
-                  tone={
-                    stats.siteAssignments.expiringIn7Days > 0
-                      ? 'warn'
-                      : undefined
-                  }
-                  locale={locale}
-                />
-                <Stat
-                  label={t(`${STATS}.siteAssignments.expiring30`)}
-                  value={stats.siteAssignments.expiringIn30Days}
-                  locale={locale}
-                />
-              </div>
-            </>
-          ) : null}
-        </WidgetCard>
-      ) : null}
-
-      <WidgetCard
-        title={t(`${STATS}.perDiem.title`)}
-        icon={<Wallet {...ICON} />}
-        span={showSite ? 6 : 12}
-        viewAllHref="/hr/per-diem"
-        query={query}
-      >
-        {stats?.perDiem ? (
-          <>
-            <div className="dv2-figure">
-              <p className="dv2-hint m-0">
-                {t(`${STATS}.perDiem.pendingSettlement`)}
-              </p>
-              <p
-                className={`dv2-number m-0 ${
-                  stats.perDiem.pendingSettlement > 0
-                    ? 'dv2-number--urgent'
-                    : ''
-                }`}
-              >
-                {formatCount(stats.perDiem.pendingSettlement, locale)}
-              </p>
-            </div>
-            <div className="dv2-stat-row">
-              <Stat
-                label={t(`${STATS}.perDiem.pendingApproval`)}
-                value={stats.perDiem.pendingApproval}
-                locale={locale}
-              />
-            </div>
-          </>
-        ) : null}
-      </WidgetCard>
-
-      {showHrBlocks ? (
+      {showContracts ? (
         <WidgetCard
           title={t(`${STATS}.contracts.title`)}
           icon={<FileSignature {...ICON} />}
@@ -501,17 +580,13 @@ export default function OperationalStatsWidgets({
               <Stat
                 label={t(`${STATS}.contracts.within30`)}
                 value={stats.contractsExpiring.within30}
-                tone={
-                  stats.contractsExpiring.within30 > 0 ? 'urgent' : undefined
-                }
+                tone={stats.contractsExpiring.within30 > 0 ? 'urgent' : undefined}
                 locale={locale}
               />
               <Stat
                 label={t(`${STATS}.contracts.within60`)}
                 value={stats.contractsExpiring.within60}
-                tone={
-                  stats.contractsExpiring.within60 > 0 ? 'warn' : undefined
-                }
+                tone={stats.contractsExpiring.within60 > 0 ? 'warn' : undefined}
                 locale={locale}
               />
               <Stat
@@ -523,9 +598,7 @@ export default function OperationalStatsWidgets({
                 label={t(`${STATS}.contracts.expired`)}
                 value={stats.contractsExpiring.expiredUnrenewed}
                 tone={
-                  stats.contractsExpiring.expiredUnrenewed > 0
-                    ? 'urgent'
-                    : undefined
+                  stats.contractsExpiring.expiredUnrenewed > 0 ? 'urgent' : undefined
                 }
                 locale={locale}
               />

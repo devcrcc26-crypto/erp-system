@@ -152,6 +152,55 @@ export interface DashboardOperationalStats {
       endDate: string;
     } | null;
   } | null;
+  /** Direct-report rollup; null unless the caller has direct reports. */
+  myTeam: {
+    totalDirectReports: number;
+    onLeaveToday: number;
+    pendingMyApproval: number;
+    totalOTHoursThisMonth: number;
+    otByEmployee: Array<{ employeeId: string; name: string; hours: number }>;
+    currentlyOnLeave: number;
+    siteCurrentlyAssigned: number;
+    siteExpiringSoon: number;
+  } | null;
+  /** Top 10 employees by OT hours this month (HR only). */
+  overtimeByEmployee: Array<{
+    employeeId: string;
+    name: string;
+    normal: number;
+    evening: number;
+    sunday: number;
+    holiday: number;
+    total: number;
+  }> | null;
+  /** This month's leave requests grouped by leave type (HR only). */
+  leaveByType: Array<{ type: string; count: number }> | null;
+  /** Current month payroll run summary (HR only; null when no run). */
+  payroll: {
+    status: string;
+    totalEmployees: number;
+    flaggedCount: number;
+  } | null;
+  /** Self-scoped summary, present for every role. */
+  myWork: {
+    leaveBalanceDays: number | null;
+    otHoursThisMonth: number;
+    pendingRequestsCount: number;
+    nextSiteAssignment: {
+      location: string;
+      startDate: string;
+      endDate: string;
+    } | null;
+  };
+  /** Five soonest-ending active contracts (HR only). */
+  contractsExpiringSoonList: Array<{
+    employeeId: string;
+    employeeName: string;
+    endDate: string;
+    endsToday: boolean;
+  }> | null;
+  /** Open approval requests company-wide (HR only). */
+  pendingApprovalsCompanyWide: number | null;
 }
 
 /** HR aggregates from GET /dashboard/hr. */

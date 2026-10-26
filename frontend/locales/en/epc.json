@@ -2228,6 +2228,55 @@
     "dashboard": {
       "home": {
         "quickActions": "Quick actions",
+        "tabs": {
+          "label": "Dashboard views",
+          "overview": "Overview",
+          "payrollOt": "Payroll & OT",
+          "operations": "Operations",
+          "myTeam": "My Team",
+          "myWork": "My Work"
+        },
+        "charts": {
+          "normal": "Normal",
+          "evening": "Evening",
+          "sunday": "Sunday",
+          "holiday": "Holiday"
+        },
+        "overview": {
+          "pendingApprovals": "Pending approvals",
+          "pendingApprovalsHint": "Company-wide",
+          "noAttendance": "No attendance data for this month.",
+          "leaveByType": "Leave by type",
+          "noLeaveByType": "No leave requests this month."
+        },
+        "payrollOt": {
+          "otByEmployee": "Overtime by employee",
+          "otByEmployeeEmpty": "No overtime recorded this month.",
+          "payrollStatus": "Payroll status",
+          "noPayroll": "No payroll run for this month.",
+          "status": "Status",
+          "employeesInRun": "Employees in run",
+          "flagged": "Flagged entries",
+          "openPayroll": "Open payroll"
+        },
+        "operations": {
+          "noPerDiem": "No per diem activity to show."
+        },
+        "myTeam": {
+          "title": "My team",
+          "noTeam": "You have no direct reports.",
+          "directReports": "Direct reports",
+          "pendingMyApproval": "Pending my approval",
+          "otHours": "Team OT this month",
+          "otByEmployee": "Team overtime by employee",
+          "otByEmployeeEmpty": "No team overtime this month.",
+          "leave": "Team leave",
+          "siteAssignments": "Team site assignments",
+          "siteExpiringSoon": "Expiring soon"
+        },
+        "myWork": {
+          "nextSite": "Next site assignment"
+        },
         "sections": {
           "summary": "Summary",
           "work": "My work",
