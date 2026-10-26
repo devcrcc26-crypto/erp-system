@@ -189,6 +189,7 @@
         "searchPlaceholder": "Search request types",
         "noMatches": "No request types match \"{{query}}\".",
         "allGroups": "All",
+        "recent": "Recently used",
         "filterGroups": "Filter request types by group",
         "groups": {
           "time": "Time & attendance",

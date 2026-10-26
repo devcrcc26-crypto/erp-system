@@ -189,6 +189,7 @@
         "searchPlaceholder": "搜索申请类型",
         "noMatches": "没有与“{{query}}”匹配的申请类型。",
         "allGroups": "全部",
+        "recent": "最近使用",
         "filterGroups": "按类别筛选申请类型",
         "groups": {
           "time": "考勤与工时",

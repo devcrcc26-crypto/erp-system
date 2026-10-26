@@ -44,8 +44,11 @@ import type {
   ExitPermitDetail,
   ExitPermitDirection,
 } from '@/lib/api/exit-permit.types';
+import { useQueryClient } from '@tanstack/react-query';
+import { approvalKeys } from '@/lib/query/approvals';
 import {
   buildExitPermitItemFormData,
+  exitPermitKeys,
   useCreateExitPermit,
 } from '@/lib/query/exit-permit';
 import { useDepartments } from '@/lib/query/org';
@@ -99,6 +102,7 @@ export default function ExitPermitForm({
   const canViewHr = useCanViewHr();
   const lookupUserName = useUserNameLookup();
   const createMutation = useCreateExitPermit();
+  const queryClient = useQueryClient();
 
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
@@ -285,9 +289,16 @@ export default function ExitPermitForm({
         formData,
       );
 
+      // The create mutation cached the permit before its items were added;
+      // replace that copy so the detail and approval pages show the items.
+      queryClient.setQueryData(exitPermitKeys.detail(created.id), finalResult);
+      void queryClient.invalidateQueries({ queryKey: exitPermitKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+
       messageApi.success(t('hr.messages.exitPermitSubmitted'));
       onSuccess(finalResult);
     } catch (error: unknown) {
+      void queryClient.invalidateQueries({ queryKey: exitPermitKeys.all });
       const message = t('hr.messages.exitPermitSubmitFailed');
       notifyApiError(error, message, messageApi);
       setFormError(message);

@@ -15,6 +15,7 @@ import {
   Clock3,
   FileText,
   Fuel,
+  History,
   Home,
   MapPin,
   Package,
@@ -32,6 +33,7 @@ import {
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalCategorySummary } from '@/lib/api/approvals.types';
+import { useApprovalRequests } from '@/lib/query/approvals';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatApprovalCategoryDescription,
@@ -131,6 +133,64 @@ interface PickerCard {
   description: string;
 }
 
+const RECENT_LIMIT = 4;
+// Enough of my latest requests to usually find RECENT_LIMIT distinct types.
+const RECENT_LOOKBACK = 20;
+
+function groupFor(code: string): RequestGroup {
+  return REQUEST_GROUPS.find((g) => g.codes.includes(code)) ?? OTHER_GROUP;
+}
+
+function RequestCard({
+  card,
+  group,
+  onSelect,
+}: {
+  card: PickerCard;
+  group: RequestGroup;
+  onSelect: (category: ApprovalCategorySummary) => void;
+}): React.ReactNode {
+  const Icon = CATEGORY_ICONS[card.category.code] ?? FileText;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(card.category)}
+        className="erp-request-card"
+        style={
+          {
+            '--req-accent': group.accent,
+            '--req-tint': group.tint,
+          } as CSSProperties
+        }
+      >
+        <span aria-hidden className="erp-request-card-icon">
+          <Icon size={20} strokeWidth={1.75} />
+        </span>
+        <span className="erp-request-card-body">
+          <span
+            className="erp-request-card-name"
+            style={{ color: tokens.colorTextPrimary }}
+          >
+            {card.name}
+          </span>
+          <span
+            className="erp-request-card-description"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {card.description}
+          </span>
+        </span>
+        <ChevronRight
+          aria-hidden
+          size={18}
+          className="erp-request-card-arrow"
+        />
+      </button>
+    </li>
+  );
+}
+
 interface Props {
   categories: ApprovalCategorySummary[];
   onSelect: (category: ApprovalCategorySummary) => void;
@@ -148,28 +208,56 @@ export default function NewRequestCategoryPicker({
   const { t } = useEpcTranslation();
   const [query, setQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState<string>('all');
+  const recentQuery = useApprovalRequests({
+    page: 1,
+    limit: RECENT_LOOKBACK,
+    inbox: 'MY_REQUESTS',
+  });
+
+  const allCards = useMemo<PickerCard[]>(
+    () =>
+      categories.map((category) => ({
+        category,
+        name: formatApprovalCategoryName(category.code, t, category.name),
+        description:
+          formatApprovalCategoryDescription(
+            category.code,
+            t,
+            category.description,
+          ) || category.code,
+      })),
+    [categories, t],
+  );
+
+  // Distinct types from my latest requests, newest first, limited to types I can still file.
+  const recentCards = useMemo(() => {
+    const byCode = new Map(allCards.map((card) => [card.category.code, card]));
+    const picked: PickerCard[] = [];
+    for (const item of recentQuery.data?.data ?? []) {
+      const card = byCode.get(item.categoryCode ?? item.category?.code ?? '');
+      if (card && !picked.includes(card)) {
+        picked.push(card);
+      }
+      if (picked.length === RECENT_LIMIT) {
+        break;
+      }
+    }
+    return picked;
+  }, [allCards, recentQuery.data]);
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const buckets = new Map<RequestGroup, PickerCard[]>();
 
-    for (const category of categories) {
-      const name = formatApprovalCategoryName(category.code, t, category.name);
-      const description =
-        formatApprovalCategoryDescription(
-          category.code,
-          t,
-          category.description,
-        ) || category.code;
-      const haystack = `${name} ${description} ${category.code}`.toLowerCase();
+    for (const card of allCards) {
+      const haystack =
+        `${card.name} ${card.description} ${card.category.code}`.toLowerCase();
       if (needle && !haystack.includes(needle)) {
         continue;
       }
-      const group =
-        REQUEST_GROUPS.find((g) => g.codes.includes(category.code)) ??
-        OTHER_GROUP;
+      const group = groupFor(card.category.code);
       const cards = buckets.get(group) ?? [];
-      cards.push({ category, name, description });
+      cards.push(card);
       buckets.set(group, cards);
     }
 
@@ -188,7 +276,7 @@ export default function NewRequestCategoryPicker({
         });
         return { group, cards };
       });
-  }, [categories, query, t]);
+  }, [allCards, query]);
 
   const totalCards = groups.reduce((sum, entry) => sum + entry.cards.length, 0);
   // A chip whose group no longer matches the search falls back to "All".
@@ -199,6 +287,8 @@ export default function NewRequestCategoryPicker({
     selectedGroup === 'all'
       ? groups
       : groups.filter(({ group }) => group.key === selectedGroup);
+  const showRecent =
+    recentCards.length > 0 && query.trim() === '' && selectedGroup === 'all';
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-approvals-new-page erp-request-picker erp-hr-travel-v2">
@@ -276,6 +366,32 @@ export default function NewRequestCategoryPicker({
         ) : null}
       </div>
 
+      {showRecent ? (
+        <section
+          aria-labelledby="request-group-recent"
+          className="erp-request-picker-group"
+        >
+          <h3
+            id="request-group-recent"
+            className="erp-request-picker-group-title"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            <History aria-hidden size={14} strokeWidth={2} />
+            {t('pages.approvals.picker.recent')}
+          </h3>
+          <ul className="erp-request-picker-grid">
+            {recentCards.map((card) => (
+              <RequestCard
+                key={card.category.id}
+                card={card}
+                group={groupFor(card.category.code)}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {categories.length === 0 ? (
         <ErpNotice tone="info" title={t('pages.approvals.noCategories')} />
       ) : groups.length === 0 ? (
@@ -308,47 +424,14 @@ export default function NewRequestCategoryPicker({
                 </span>
               </h3>
               <ul className="erp-request-picker-grid">
-                {cards.map(({ category, name, description }) => {
-                  const Icon = CATEGORY_ICONS[category.code] ?? FileText;
-                  return (
-                    <li key={category.id}>
-                      <button
-                        type="button"
-                        onClick={() => onSelect(category)}
-                        className="erp-request-card"
-                        style={
-                          {
-                            '--req-accent': group.accent,
-                            '--req-tint': group.tint,
-                          } as CSSProperties
-                        }
-                      >
-                        <span aria-hidden className="erp-request-card-icon">
-                          <Icon size={20} strokeWidth={1.75} />
-                        </span>
-                        <span className="erp-request-card-body">
-                          <span
-                            className="erp-request-card-name"
-                            style={{ color: tokens.colorTextPrimary }}
-                          >
-                            {name}
-                          </span>
-                          <span
-                            className="erp-request-card-description"
-                            style={{ color: tokens.colorTextSecondary }}
-                          >
-                            {description}
-                          </span>
-                        </span>
-                        <ChevronRight
-                          aria-hidden
-                          size={18}
-                          className="erp-request-card-arrow"
-                        />
-                      </button>
-                    </li>
-                  );
-                })}
+                {cards.map((card) => (
+                  <RequestCard
+                    key={card.category.id}
+                    card={card}
+                    group={group}
+                    onSelect={onSelect}
+                  />
+                ))}
               </ul>
             </section>
           );
