@@ -1,14 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { CW, fullName } from '../../../../shared/pdf/hr-pdf-renderer';
 import {
-  HrDocumentPdfService,
-  HrDocumentPdfInput,
-} from '../../../hr-shared/application/services/hr-document-pdf.service';
+  DOC_APPROVAL_INCLUDE,
+  DOC_EMPLOYEE_SELECT,
+  DOC_PERSON_SELECT,
+  humanize,
+  isoDate,
+  personName,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
+import { HrDocumentPdfService } from '../../../hr-shared/application/services/hr-document-pdf.service';
 
-const d = (v: string | number | null | undefined): string =>
-  v == null || v === '' ? '-' : String(v);
+function dateTime(value: Date | null | undefined): string {
+  return value ? new Date(value).toISOString().replace('T', ' ').slice(0, 16) : '-';
+}
 
 @Injectable()
 export class VehicleApplicationPdfService {
@@ -24,11 +30,12 @@ export class VehicleApplicationPdfService {
     const record = await this.prisma.vehicleApplication.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        employee: { select: { firstName: true, lastName: true, email: true } },
+        employee: { select: DOC_EMPLOYEE_SELECT },
         vehicle: { select: { plateNumber: true, make: true, model: true } },
-        driver: { select: { firstName: true, lastName: true } },
+        driver: { select: DOC_PERSON_SELECT },
         project: { select: { projectCode: true, name: true } },
-        releasedByUser: { select: { firstName: true, lastName: true } },
+        releasedByUser: { select: DOC_PERSON_SELECT },
+        approvalRequest: DOC_APPROVAL_INCLUDE,
       },
     });
     if (!record) throw new NotFoundException('Vehicle application not found');
@@ -36,71 +43,70 @@ export class VehicleApplicationPdfService {
     const passengers = record.passengerNames
       ? record.passengerNames.split(/[,;\n]/).map((n: string) => n.trim()).filter(Boolean)
       : [];
-
     const vehicleLabel = record.vehicle
-      ? `${record.vehicle.plateNumber} - ${record.vehicle.make} ${record.vehicle.model}`.trim()
+      ? `${record.vehicle.plateNumber} · ${record.vehicle.make} ${record.vehicle.model}`.trim()
       : '-';
-
     const projectLabel = record.project
-      ? [record.project.projectCode, record.project.name].filter(Boolean).join(' - ')
+      ? [record.project.projectCode, record.project.name].filter(Boolean).join(' · ')
       : '-';
 
-    const input: HrDocumentPdfInput = {
-      documentTitle: 'Vehicle Application',
-      subtitle: d(record.destination),
-      requestNumber: record.applicationNumber,
-      preparedBy: fullName(record.employee),
+    const buffer = await this.hrDocPdf.render({
+      title: 'Vehicle Application',
+      titleZh: '用车申请',
+      number: record.applicationNumber,
+      status: record.status,
+      hero: {
+        headline: record.destination || 'Vehicle trip / 用车',
+        caption: vehicleLabel !== '-' ? vehicleLabel : null,
+        dateLabel: 'Departure / 出发',
+        date: dateTime(record.departureDatetime),
+      },
+      employee: { person: record.employee, department: record.employee?.department?.name },
       sections: [
         {
-          title: 'Request',
+          title: 'Trip / 行程',
           rows: [
-            ['Application Number', record.applicationNumber],
-            ['Status', record.status],
-            ['Employee', fullName(record.employee)],
-            ['Employee Email', d(record.employee?.email)],
-            ['Project', projectLabel],
+            ['Project / 项目', projectLabel],
+            ['Vehicle / 车辆', vehicleLabel],
+            ['Drive type / 驾驶方式', humanize(record.driveType)],
+            ['Driver / 司机', personName(record.driver)],
+            ['Departure / 出发', dateTime(record.departureDatetime)],
+            ['Return / 返回', dateTime(record.returnDatetime)],
+            ['Destination / 目的地', record.destination],
+            ['Passenger count / 乘车人数', record.passengerCount],
+          ],
+          paragraphs: [
+            ['Purpose / 用途', record.purpose],
+            ['Notes / 备注', record.notes],
           ],
         },
         {
-          title: 'Trip',
+          title: 'Record / 记录',
           rows: [
-            ['Vehicle', vehicleLabel],
-            ['Drive Type', d(record.driveType)],
-            ['Driver', fullName(record.driver)],
-            ['Departure', record.departureDatetime ? new Date(record.departureDatetime).toISOString().replace('T', ' ').slice(0, 16) : '-'],
-            ['Return', record.returnDatetime ? new Date(record.returnDatetime).toISOString().replace('T', ' ').slice(0, 16) : '-'],
-            ['Destination', d(record.destination)],
-            ['Purpose', d(record.purpose)],
-            ['Passenger Count', d(record.passengerCount)],
-            ['Notes', d(record.notes)],
-          ],
-        },
-        {
-          title: 'Record',
-          rows: [
-            ['Created', record.createdAt ? new Date(record.createdAt).toISOString().slice(0, 10) : '-'],
-            ['Submitted', record.submittedAt ? new Date(record.submittedAt).toISOString().slice(0, 10) : '-'],
-            ['Released', record.releasedAt ? new Date(record.releasedAt).toISOString().slice(0, 10) : '-'],
-            ['Released By', fullName(record.releasedByUser)],
-            ['Completed', record.completedAt ? new Date(record.completedAt).toISOString().slice(0, 10) : '-'],
+            ['Created / 创建', isoDate(record.createdAt)],
+            ['Submitted / 提交', isoDate(record.submittedAt)],
+            ['Released / 放行', isoDate(record.releasedAt)],
+            ['Released by / 放行人', personName(record.releasedByUser)],
+            ['Completed / 完成', isoDate(record.completedAt)],
           ],
         },
       ],
-      itemsTable: passengers.length > 0 ? {
-        title: 'Passengers',
-        headers: ['No.', 'Passenger Name'],
-        rows: passengers.map((name: string, i: number) => [i + 1, name]),
-        colWidths: [CW * 0.15, CW * 0.85],
-      } : undefined,
-    };
+      tables: passengers.length
+        ? [
+            {
+              title: 'Passengers / 乘车人员',
+              columns: [{ header: 'Name / 姓名', weight: 1 }],
+              rows: passengers.map((name) => ({ cells: [name] })),
+            },
+          ]
+        : [],
+      approvalTiers: record.approvalRequest?.tiers ?? [],
+    });
 
-    const buffer = await this.hrDocPdf.render(input);
-    const safe = record.applicationNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = new Date().toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `vehicle-application_${safe}_${dateStamp}.pdf`,
+      filename: `vehicle-application_${safeFilePart(record.applicationNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

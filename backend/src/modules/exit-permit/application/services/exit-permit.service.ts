@@ -31,8 +31,11 @@ import { OnBehalfService } from "@/modules/on-behalf/on-behalf.service";
 const USER_SELECT = {
     id: true,
     firstName: true,
+    middleName: true,
     lastName: true,
+    chineseName: true,
     email: true,
+    employeeId: true,
 } as const;
 
 const DOCUMENT_SELECT = {

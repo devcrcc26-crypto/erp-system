@@ -2,13 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
-  bilingualTitle,
-  dash,
-  fmtDate,
-  fmtGeneratedDate,
-  fullName,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
+  DOC_APPROVAL_INCLUDE,
+  DOC_EMPLOYEE_SELECT,
+  isoDate,
+  renderDocumentPdf,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
 
 @Injectable()
 export class MaterialRequisitionPdfService {
@@ -21,7 +20,7 @@ export class MaterialRequisitionPdfService {
     const req = await this.prisma.materialRequisition.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        employee: { select: { firstName: true, lastName: true } },
+        employee: { select: DOC_EMPLOYEE_SELECT },
         project: { select: { projectCode: true, name: true } },
         items: {
           orderBy: { createdAt: 'asc' },
@@ -33,101 +32,69 @@ export class MaterialRequisitionPdfService {
             unit: true,
           },
         },
-        attachmentFolder: {
-          include: { documents: { select: { name: true } } },
-        },
+        attachmentFolder: { include: { documents: { select: { name: true } } } },
+        approvalRequest: DOC_APPROVAL_INCLUDE,
       },
     });
     if (!req) throw new NotFoundException('Material requisition not found');
 
-    const generatedAt = new Date();
-    const requestNumber = String(
-      (req as { requestNumber?: string }).requestNumber ?? id,
-    );
     const projectLabel = req.project
-      ? [req.project.projectCode, req.project.name].filter(Boolean).join(' – ')
-      : '-';
-    const docs = req.attachmentFolder?.documents ?? [];
+      ? [req.project.projectCode, req.project.name].filter(Boolean).join(' · ')
+      : null;
+    const totalQuantity = req.items.reduce((sum, item) => sum + Number(item.quantity), 0);
 
-    const buffer = await renderPayslipPdf(
-      { title: 'Material Requisition' },
-      (p) => {
-        p.brand(bilingualTitle('Material Requisition', '材料申请'));
-        p.subtitleRight(requestNumber);
-        p.rule();
-
-        p.section('OVERVIEW');
-        p.fields([
-          ['Request Number', requestNumber],
-          ['Status', req.status],
-          ['Employee', fullName(req.employee)],
-          ['Title', dash((req as { title?: string }).title)],
-          ['Purpose', dash((req as { purpose?: string }).purpose)],
-          [
-            'Warehouse Location',
-            dash((req as { warehouseLocation?: string }).warehouseLocation),
-          ],
-          [
-            'Required By',
-            fmtDate((req as { requiredByDate?: Date }).requiredByDate),
-          ],
-          ['Project', projectLabel],
-          [
-            'Item Count',
-            String(
-              (req as { itemCount?: number }).itemCount ?? req.items.length,
-            ),
-          ],
-          [
-            'Submitted At',
-            (req as { submittedAt?: Date }).submittedAt
-              ? fmtDate((req as { submittedAt?: Date }).submittedAt)
-              : '-',
-          ],
-          ['Created At', fmtDate(req.createdAt)],
-        ]);
-
-        p.rule();
-        p.section('ITEMS', 'Qty');
-        if (req.items.length === 0) {
-          p.line('No items recorded', { indent: 1, color: '#333333' });
-        } else {
-          for (const item of req.items) {
-            p.field(
-              dash(item.itemName),
-              `${item.quantity} ${dash(item.unit)}`,
-              1,
-            );
-            p.wrapped(
-              [dash(item.itemCode), dash(item.description)]
-                .filter((part) => part !== '-')
-                .join(' · ') || '-',
-              { indent: 24, size: 8 },
-            );
-          }
-        }
-
-        if (docs.length > 0) {
-          p.rule();
-          p.section('DOCUMENTS');
-          for (const doc of docs) {
-            p.line(`•  ${doc.name}`, { indent: 1, color: '#333333' });
-          }
-        }
-
-        p.footerNotes([
-          `Generated ${fmtGeneratedDate(generatedAt)}`,
-          'This material requisition is system-generated.',
-        ]);
+    const buffer = await renderDocumentPdf({
+      title: 'Material Requisition',
+      titleZh: '材料申请',
+      number: req.requestNumber,
+      status: req.status,
+      hero: {
+        headline: req.title || 'Materials / 材料',
+        caption: projectLabel,
+        dateLabel: 'Required by / 需用日期',
+        date: isoDate(req.requiredByDate),
       },
-    );
+      employee: { person: req.employee, department: req.employee?.department?.name },
+      sections: [
+        {
+          title: 'Request / 申请',
+          rows: [
+            ['Title / 标题', req.title],
+            ['Project / 项目', projectLabel],
+            ['Warehouse / 仓库', req.warehouseLocation],
+            ['Required by / 需用日期', isoDate(req.requiredByDate)],
+          ],
+          paragraphs: [['Purpose / 用途', req.purpose]],
+        },
+      ],
+      tables: [
+        {
+          title: 'Items / 物品',
+          columns: [
+            { header: 'Item / 物品', weight: 4 },
+            { header: 'Code / 编码', weight: 2 },
+            { header: 'Qty / 数量', weight: 1.2, align: 'right' },
+            { header: 'Unit / 单位', weight: 1.2 },
+          ],
+          rows: req.items.map((item) => ({
+            cells: [item.itemName, item.itemCode, Number(item.quantity), item.unit],
+            sub: item.description,
+          })),
+          totals: [['Total quantity / 总数量', String(totalQuantity)]],
+        },
+      ],
+      approvalTiers: req.approvalRequest?.tiers ?? [],
+      documents: (req.attachmentFolder?.documents ?? []).map((doc) => doc.name),
+      notes: [
+        `Created ${isoDate(req.createdAt)}  ·  Submitted ${isoDate(req.submittedAt)}  ·  Completed ${isoDate(req.completedAt)}`,
+        'This document is system-generated. / 本文件由系统生成。',
+      ],
+    });
 
-    const safe = requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = generatedAt.toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `material-requisition_${safe}_${dateStamp}.pdf`,
+      filename: `material-requisition_${safeFilePart(req.requestNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

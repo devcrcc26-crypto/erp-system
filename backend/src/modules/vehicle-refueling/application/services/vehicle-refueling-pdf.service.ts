@@ -1,17 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { CW, fullName } from '../../../../shared/pdf/hr-pdf-renderer';
+import { fmtEtb } from '../../../../shared/pdf/payslip-style-pdf';
 import {
-  HrDocumentPdfService,
-  HrDocumentPdfInput,
-} from '../../../hr-shared/application/services/hr-document-pdf.service';
+  DOC_APPROVAL_INCLUDE,
+  DOC_EMPLOYEE_SELECT,
+  DOC_PERSON_SELECT,
+  humanize,
+  isoDate,
+  personName,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
+import { HrDocumentPdfService } from '../../../hr-shared/application/services/hr-document-pdf.service';
 
-const d = (v: string | number | null | undefined): string =>
-  v == null || v === '' ? '-' : String(v);
-
-const etb = (v: number | null | undefined): string =>
-  v == null ? '-' : `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
+function etb(value: { toNumber(): number } | number | null | undefined): string {
+  if (value == null) return '-';
+  return `ETB ${fmtEtb(typeof value === 'number' ? value : value.toNumber())}`;
+}
 
 @Injectable()
 export class VehicleRefuelingPdfService {
@@ -27,78 +32,79 @@ export class VehicleRefuelingPdfService {
     const record = await this.prisma.vehicleRefueling.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        employee: { select: { firstName: true, lastName: true, email: true } },
-        driver: { select: { firstName: true, lastName: true } },
+        employee: { select: DOC_EMPLOYEE_SELECT },
+        driver: { select: DOC_PERSON_SELECT },
         vehicle: { select: { plateNumber: true, make: true, model: true } },
         receiptDocument: { select: { name: true } },
+        approvalRequest: DOC_APPROVAL_INCLUDE,
       },
     });
     if (!record) throw new NotFoundException('Vehicle refueling request not found');
 
     const vehicleLabel = record.vehicle
-      ? `${record.vehicle.plateNumber} - ${record.vehicle.make} ${record.vehicle.model}`.trim()
+      ? `${record.vehicle.plateNumber} · ${record.vehicle.make} ${record.vehicle.model}`.trim()
       : '-';
 
-    const subtitle = record.vehicle
-      ? `${record.vehicle.plateNumber} - ${d(record.fuelStation)}`
-      : d(record.fuelStation);
-
-    const input: HrDocumentPdfInput = {
-      documentTitle: 'Vehicle Refueling Request',
-      subtitle,
-      requestNumber: record.requestNumber,
-      preparedBy: fullName(record.employee),
+    const buffer = await this.hrDocPdf.render({
+      title: 'Vehicle Refueling Request',
+      titleZh: '车辆加油申请',
+      number: record.requestNumber,
+      status: record.status,
+      hero: {
+        headline: record.vehicle?.plateNumber ?? 'Vehicle / 车辆',
+        caption: [record.vehicle ? `${record.vehicle.make} ${record.vehicle.model}` : null, record.fuelStation]
+          .filter(Boolean)
+          .join('  ·  ') || null,
+        dateLabel: 'Fuel date / 加油日期',
+        date: isoDate(record.fuelDate),
+      },
+      employee: { person: record.employee, department: record.employee?.department?.name },
       sections: [
         {
-          title: 'Request',
+          title: 'Vehicle / 车辆',
           rows: [
-            ['Request Number', record.requestNumber],
-            ['Status', record.status],
-            ['Employee', fullName(record.employee)],
-            ['Employee Email', d(record.employee?.email)],
-            ['Driver', fullName(record.driver)],
+            ['Vehicle / 车辆', vehicleLabel],
+            ['Driver / 司机', personName(record.driver)],
+            ['Fuel station / 加油站', record.fuelStation],
+            ['Fuel date / 加油日期', isoDate(record.fuelDate)],
           ],
+          paragraphs: [['Notes / 备注', record.notes]],
         },
         {
-          title: 'Vehicle',
+          title: 'Record / 记录',
           rows: [
-            ['Vehicle', vehicleLabel],
-            ['Fuel Date', record.fuelDate ? new Date(record.fuelDate).toISOString().slice(0, 10) : '-'],
-            ['Fuel Station', d(record.fuelStation)],
-            ['Notes', d(record.notes)],
-          ],
-        },
-        {
-          title: 'Record',
-          rows: [
-            ['Created', record.createdAt ? new Date(record.createdAt).toISOString().slice(0, 10) : '-'],
-            ['Submitted', record.submittedAt ? new Date(record.submittedAt).toISOString().slice(0, 10) : '-'],
-            ['Completed', record.completedAt ? new Date(record.completedAt).toISOString().slice(0, 10) : '-'],
-            ['Receipt', d(record.receiptDocument?.name) === '-' ? 'Not attached' : d(record.receiptDocument?.name)],
+            ['Created / 创建', isoDate(record.createdAt)],
+            ['Submitted / 提交', isoDate(record.submittedAt)],
+            ['Completed / 完成', isoDate(record.completedAt)],
+            ['Receipt / 收据', record.receiptDocument?.name ?? 'Not attached / 未上传'],
           ],
         },
       ],
-      itemsTable: {
-        title: 'Fuel Details',
-        headers: ['Detail', 'Value', 'Unit'],
-        rows: [
-          ['Fuel Type', d(record.fuelType), ''],
-          ['Current Mileage', record.currentMileage.toNumber().toString(), 'km'],
-          ['Requested Litres', record.requestedLitres.toNumber().toString(), 'L'],
-          ['Unit Price', etb(record.unitPriceEtb?.toNumber() ?? null), 'ETB/L'],
-          ['Total Cost', etb(record.totalCostEtb?.toNumber() ?? null), 'ETB'],
-        ],
-        colWidths: [CW * 0.5, CW * 0.3, CW * 0.2],
-      },
-    };
+      tables: [
+        {
+          title: 'Fuel details / 加油明细',
+          numbered: false,
+          columns: [
+            { header: 'Detail / 项目', weight: 3 },
+            { header: 'Value / 数值', weight: 2, align: 'right' },
+            { header: 'Unit / 单位', weight: 1 },
+          ],
+          rows: [
+            { cells: ['Fuel type / 燃料类型', humanize(record.fuelType), ''] },
+            { cells: ['Current mileage / 当前里程', record.currentMileage.toNumber(), 'km'] },
+            { cells: ['Requested litres / 申请升数', record.requestedLitres.toNumber(), 'L'] },
+            { cells: ['Unit price / 单价', etb(record.unitPriceEtb), 'per L'] },
+          ],
+          totals: [['Total cost / 总费用', etb(record.totalCostEtb)]],
+        },
+      ],
+      approvalTiers: record.approvalRequest?.tiers ?? [],
+    });
 
-    const buffer = await this.hrDocPdf.render(input);
-    const safe = record.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = new Date().toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `vehicle-refueling_${safe}_${dateStamp}.pdf`,
+      filename: `vehicle-refueling_${safeFilePart(record.requestNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

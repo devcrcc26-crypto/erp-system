@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
-  bilingualTitle,
-  dash,
-  fmtDate,
-  fmtGeneratedDate,
-  fullName,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
+  DOC_PERSON_SELECT,
+  type DocTable,
+  type DocTableRow,
+  personEmployeeId,
+  personName,
+  renderDocumentPdf,
+} from '../../../../shared/pdf/document-pdf';
 
 @Injectable()
 export class ExitPermitGateRegisterPdfService {
@@ -36,88 +36,80 @@ export class ExitPermitGateRegisterPdfService {
         deletedAt: null,
       },
       include: {
-        employee: { select: { firstName: true, lastName: true } },
+        employee: { select: DOC_PERSON_SELECT },
         department: { select: { name: true } },
         items: {
-          select: {
-            itemName: true,
-            issue: true,
-            quantity: true,
-            unit: true,
-          },
+          orderBy: { createdAt: 'asc' },
+          select: { itemName: true, issue: true, quantity: true, unit: true },
         },
       },
       orderBy: { requestNumber: 'asc' },
     });
 
-    const generatedAt = new Date();
-    const dirLabel = direction === 'ALL' ? 'Entrance & Exit' : direction;
+    const groups =
+      direction === 'ALL'
+        ? [
+            { title: 'Entrance / 进门', data: permits.filter((row) => row.direction === 'ENTRANCE') },
+            { title: 'Exit / 出门', data: permits.filter((row) => row.direction === 'EXIT') },
+          ]
+        : [{ title: direction === 'ENTRANCE' ? 'Entrance / 进门' : 'Exit / 出门', data: permits }];
 
-    const buffer = await renderPayslipPdf(
-      { title: 'Gate Pass Register', layout: 'landscape' },
-      (p) => {
-        p.brand(bilingualTitle('Gate Pass Register', '门岗登记'));
-        p.subtitleRight(`Approved ${dirLabel} — ${fmtDate(dateKey)}`);
-        p.line(`${permits.length} permit(s) · Approved only`, {
-          color: '#333333',
-        });
-        p.rule();
-
-        const sections =
-          direction === 'ALL'
-            ? [
-                {
-                  title: 'ENTRANCE',
-                  data: permits.filter((row) => row.direction === 'ENTRANCE'),
-                },
-                {
-                  title: 'EXIT',
-                  data: permits.filter((row) => row.direction === 'EXIT'),
-                },
-              ]
-            : [{ title: direction, data: permits }];
-
-        for (const section of sections) {
-          if (direction === 'ALL') {
-            p.section(`${section.title} (${section.data.length})`);
-          }
-          if (section.data.length === 0) {
-            p.line('No approved permits for this date and direction.', {
-              indent: 1,
-              color: '#333333',
-            });
-            continue;
-          }
-          for (const permit of section.data) {
-            const items = permit.items ?? [];
-            p.field(
-              `${permit.requestNumber} · ${fullName(permit.employee)}`,
-              dash(permit.department?.name),
-              1,
-            );
-            if (items.length === 0) {
-              p.wrapped('No items', { indent: 24, size: 8 });
-            } else {
-              for (const item of items) {
-                p.wrapped(
-                  [
-                    dash(item.itemName),
-                    dash(item.issue),
-                    `${item.quantity ?? '-'} ${dash(item.unit)}`,
-                  ].join(' · '),
-                  { indent: 24, size: 8 },
-                );
-              }
-            }
-          }
+    // One row per item; permit columns are printed on the permit's first row only.
+    const tables: DocTable[] = groups.map((group) => ({
+      title: `${group.title} (${group.data.length} permit(s))`,
+      numbered: false,
+      checkColumn: true,
+      subColumn: 4,
+      columns: [
+        { header: 'Permit / 编号', weight: 1.6 },
+        { header: 'Employee / 员工', weight: 2.4 },
+        { header: 'Employee ID / 工号', weight: 1.4 },
+        { header: 'Department / 部门', weight: 1.8 },
+        { header: 'Item / 物品', weight: 3.4 },
+        { header: 'Qty / 数量', weight: 0.9, align: 'right' },
+        { header: 'Unit / 单位', weight: 0.9 },
+      ],
+      rows: group.data.flatMap((permit): DocTableRow[] => {
+        const first = [
+          permit.requestNumber,
+          personName(permit.employee),
+          personEmployeeId(permit.employee),
+          permit.department?.name ?? '-',
+        ];
+        const blank = ['', '', '', ''];
+        if (permit.items.length === 0) {
+          return [{ cells: [...first, 'No items / 无物品', '', ''] }];
         }
+        return permit.items.map((item, index) => ({
+          cells: [...(index === 0 ? first : blank), item.itemName, Number(item.quantity), item.unit],
+          sub: item.issue,
+        }));
+      }),
+      emptyText: 'No approved permits for this date / 当日无已批准许可',
+    }));
 
-        p.footerNotes([
-          `Generated ${fmtGeneratedDate(generatedAt)}`,
-          'This gate pass register is system-generated.',
-        ]);
+    const dirLabel =
+      direction === 'ALL' ? 'ENTRANCE & EXIT  /  进出门' : direction === 'ENTRANCE' ? 'ENTRANCE  /  进门' : 'EXIT  /  出门';
+    const itemCount = permits.reduce((sum, permit) => sum + permit.items.length, 0);
+
+    const buffer = await renderDocumentPdf({
+      title: 'Gate Pass Register',
+      titleZh: '门岗登记',
+      numberPrefix: '',
+      number: `Gate register ${dateKey}`,
+      layout: 'landscape',
+      hero: {
+        headline: dirLabel,
+        caption: `${permits.length} approved permit(s)  ·  ${itemCount} item(s)`,
+        dateLabel: 'Date / 日期',
+        date: dateKey,
       },
-    );
+      tables,
+      notes: [
+        'Approved permits only. Security ticks each item as it passes the gate.',
+        '仅列出已批准的许可。保安在物品通过门岗时逐项勾选。',
+      ],
+    });
 
     const dirSlug = direction === 'ALL' ? 'all' : direction.toLowerCase();
     return {

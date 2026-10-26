@@ -2,13 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
-  bilingualTitle,
-  dash,
-  fmtDate,
-  fmtGeneratedDate,
-  fullName,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
+  DOC_APPROVAL_INCLUDE,
+  DOC_EMPLOYEE_SELECT,
+  humanize,
+  isoDate,
+  personEmployeeId,
+  personName,
+  renderDocumentPdf,
+  safeFilePart,
+  yesNo,
+} from '../../../../shared/pdf/document-pdf';
 
 @Injectable()
 export class FlightApplicationPdfService {
@@ -21,121 +24,89 @@ export class FlightApplicationPdfService {
     const app = await this.prisma.flightApplication.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        submitter: { select: { firstName: true, lastName: true } },
+        submitter: { select: DOC_EMPLOYEE_SELECT },
         passengers: {
-          include: {
-            employee: {
-              select: { firstName: true, lastName: true, email: true },
-            },
-          },
+          orderBy: { createdAt: 'asc' },
+          include: { employee: { select: DOC_EMPLOYEE_SELECT } },
         },
-        attachmentFolder: {
-          include: { documents: { select: { name: true } } },
-        },
+        attachmentFolder: { include: { documents: { select: { name: true } } } },
+        approvalRequest: DOC_APPROVAL_INCLUDE,
       },
     });
     if (!app) throw new NotFoundException('Flight application not found');
 
-    const generatedAt = new Date();
-    const applicationNumber = String(
-      (app as { applicationNumber?: string }).applicationNumber ?? id,
-    );
-    const docs = app.attachmentFolder?.documents ?? [];
+    const route = `${app.originCity}, ${app.originCountry}  →  ${app.destination}`;
 
-    const buffer = await renderPayslipPdf(
-      { title: 'Flight Application' },
-      (p) => {
-        p.brand(bilingualTitle('Flight Application', '机票申请'));
-        p.subtitleRight(applicationNumber);
-        p.rule();
-
-        p.section('APPLICATION OVERVIEW');
-        p.fields([
-          ['Application Number', applicationNumber],
-          ['Status', app.status],
-          ['Submitted By', fullName(app.submitter)],
-          ['Trip Type', dash((app as { tripType?: string }).tripType)],
-          [
-            'International',
-            (app as { isInternational?: boolean }).isInternational
-              ? 'Yes'
-              : 'No',
-          ],
-          ['Ticket Class', dash((app as { ticketClass?: string }).ticketClass)],
-        ]);
-
-        p.section('TRAVEL DETAILS');
-        p.fields([
-          [
-            'Origin',
-            `${dash((app as { originCity?: string }).originCity)}, ${dash((app as { originCountry?: string }).originCountry)}`,
-          ],
-          ['Destination', dash((app as { destination?: string }).destination)],
-          [
-            'Departure',
-            fmtDate((app as { departureDate?: Date }).departureDate),
-          ],
-          ['Return', fmtDate((app as { returnDate?: Date }).returnDate)],
-          ['Purpose', dash((app as { purpose?: string }).purpose)],
-        ]);
-        const notes = (app as { notes?: string }).notes?.trim();
-        if (notes) {
-          p.line('Notes:', { indent: 1 });
-          p.wrapped(notes, { indent: 24, size: 8 });
-        }
-
-        p.rule();
-        p.section('PASSENGERS');
-        const passengers = app.passengers ?? [];
-        if (passengers.length === 0) {
-          p.line('No passengers', { indent: 1, color: '#333333' });
-        } else {
-          for (const passenger of passengers) {
-            const name =
-              fullName(passenger.employee) !== '-'
-                ? fullName(passenger.employee)
-                : dash(passenger.employeeId);
-            p.field(
-              name,
-              passenger.visaRequired ? 'Visa required' : 'Visa not required',
-              1,
-            );
-            p.wrapped(
-              [
-                passenger.employee?.email ?? null,
-                passenger.passportNumber
-                  ? `Passport ${passenger.passportNumber}`
-                  : null,
-                passenger.visaStatus ? `Status ${passenger.visaStatus}` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ') || '-',
-              { indent: 24, size: 8 },
-            );
-          }
-        }
-
-        if (docs.length > 0) {
-          p.rule();
-          p.section('DOCUMENTS');
-          for (const doc of docs) {
-            p.line(`•  ${doc.name}`, { indent: 1, color: '#333333' });
-          }
-        }
-
-        p.footerNotes([
-          `Generated ${fmtGeneratedDate(generatedAt)}`,
-          'This flight application is system-generated.',
-        ]);
+    const buffer = await renderDocumentPdf({
+      title: 'Flight Application',
+      titleZh: '机票申请',
+      number: app.applicationNumber,
+      status: app.status,
+      hero: {
+        headline: route,
+        caption: `${humanize(app.tripType)}  ·  ${humanize(app.ticketClass)}`,
+        dateLabel: 'Departure / 出发',
+        date: isoDate(app.departureDate),
       },
-    );
+      // Flights have passengers rather than one employee; the block shows who filed it.
+      employee: {
+        person: app.submitter,
+        department: app.submitter?.department?.name,
+        extraRows: [['Role / 角色', 'Submitted by / 提交人']],
+      },
+      sections: [
+        {
+          title: 'Travel / 行程',
+          rows: [
+            ['Trip type / 行程类型', humanize(app.tripType)],
+            ['International / 国际', yesNo(app.isInternational)],
+            ['Ticket class / 舱位', humanize(app.ticketClass)],
+            ['Origin / 出发地', `${app.originCity}, ${app.originCountry}`],
+            ['Destination / 目的地', app.destination],
+            ['Departure / 出发', isoDate(app.departureDate)],
+            ['Return / 返回', isoDate(app.returnDate)],
+          ],
+          paragraphs: [
+            ['Purpose / 事由', app.purpose],
+            ['Notes / 备注', app.notes],
+          ],
+        },
+      ],
+      tables: [
+        {
+          title: 'Passengers / 乘客',
+          columns: [
+            { header: 'Name / 姓名', weight: 3.4 },
+            { header: 'Employee ID / 工号', weight: 1.6 },
+            { header: 'Passport / 护照', weight: 1.6 },
+            { header: 'Visa / 签证', weight: 1.8 },
+          ],
+          rows: app.passengers.map((passenger) => ({
+            cells: [
+              personName(passenger.employee),
+              personEmployeeId(passenger.employee),
+              passenger.passportNumber,
+              passenger.visaRequired
+                ? `Required · ${humanize(passenger.visaStatus)}`
+                : 'Not required',
+            ],
+            sub: passenger.employee?.email ?? null,
+          })),
+          emptyText: 'No passengers / 无乘客',
+        },
+      ],
+      approvalTiers: app.approvalRequest?.tiers ?? [],
+      documents: (app.attachmentFolder?.documents ?? []).map((doc) => doc.name),
+      notes: [
+        `Created ${isoDate(app.createdAt)}  ·  Submitted ${isoDate(app.submittedAt)}  ·  Completed ${isoDate(app.completedAt)}`,
+        'This document is system-generated. / 本文件由系统生成。',
+      ],
+    });
 
-    const safe = applicationNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = generatedAt.toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `flight-application_${safe}_${dateStamp}.pdf`,
+      filename: `flight-application_${safeFilePart(app.applicationNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

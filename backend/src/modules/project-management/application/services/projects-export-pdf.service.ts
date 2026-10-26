@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { fmtEtb } from '../../../../shared/pdf/payslip-style-pdf';
 import {
-  bilingualTitle,
-  fmtDate,
-  fmtEtb,
-  fmtGeneratedDate,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
+  humanize,
+  isoDate,
+  renderDocumentPdf,
+} from '../../../../shared/pdf/document-pdf';
 
 @Injectable()
 export class ProjectsExportPdfService {
@@ -17,27 +16,13 @@ export class ProjectsExportPdfService {
     filters?: { search?: string; status?: string },
   ): Promise<{ buffer: Buffer; mimeType: string; filename: string }> {
     const whereStatus = filters?.status
-      ? {
-          status: {
-            in: filters.status.split(',').map((s) => s.trim()) as never[],
-          },
-        }
+      ? { status: { in: filters.status.split(',').map((s) => s.trim()) as never[] } }
       : {};
     const whereSearch = filters?.search?.trim()
       ? {
           OR: [
-            {
-              name: {
-                contains: filters.search,
-                mode: 'insensitive' as const,
-              },
-            },
-            {
-              projectCode: {
-                contains: filters.search,
-                mode: 'insensitive' as const,
-              },
-            },
+            { name: { contains: filters.search, mode: 'insensitive' as const } },
+            { projectCode: { contains: filters.search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -47,7 +32,6 @@ export class ProjectsExportPdfService {
       orderBy: { projectCode: 'asc' },
     });
 
-    const generatedAt = new Date();
     const totalBudget = projects.reduce((sum, project) => {
       const n = Number(project.budget);
       return Number.isFinite(n) ? sum + n : sum;
@@ -59,67 +43,64 @@ export class ProjectsExportPdfService {
       ]
         .filter(Boolean)
         .join(', ') || 'None';
+    const today = isoDate(new Date());
 
-    const buffer = await renderPayslipPdf(
-      { title: 'Project Register Export', layout: 'landscape' },
-      (p) => {
-        p.brand(bilingualTitle('Project Register Export', '项目台账'));
-        p.subtitleRight(`${projects.length} project(s)`);
-        p.rule();
-
-        p.section('SUMMARY');
-        p.fields([
-          ['Total projects', String(projects.length)],
-          ['Total budget (USD)', fmtEtb(totalBudget)],
-          ['Filters', filterDesc],
-        ]);
-
-        p.rule();
-        p.section('PROJECTS', 'Progress');
-        if (projects.length === 0) {
-          p.line('No projects', { indent: 1, color: '#333333' });
-        } else {
-          for (const project of projects) {
-            p.field(
-              `${project.projectCode ?? '-'} · ${project.name ?? '-'}`,
-              project.overallProgressPct != null
-                ? `${project.overallProgressPct}%`
+    const buffer = await renderDocumentPdf({
+      title: 'Project Register Export',
+      titleZh: '项目台账',
+      numberPrefix: '',
+      number: `Project register ${today}`,
+      layout: 'landscape',
+      hero: {
+        headline: `${projects.length} project(s)  /  项目`,
+        caption: `Filters: ${filterDesc}`,
+        dateLabel: 'Total budget / 总预算',
+        date: fmtEtb(totalBudget),
+      },
+      tables: [
+        {
+          title: 'Projects / 项目',
+          columns: [
+            { header: 'Code / 编码', weight: 1.3 },
+            { header: 'Name / 名称', weight: 3 },
+            { header: 'Type / 类型', weight: 1.3 },
+            { header: 'Status / 状态', weight: 1.3 },
+            { header: 'Progress / 进度', weight: 1, align: 'right' },
+            { header: 'Budget / 预算', weight: 1.6, align: 'right' },
+            { header: 'Start / 开工', weight: 1.2 },
+            { header: 'Finish / 完工', weight: 1.2 },
+          ],
+          rows: projects.map((project) => ({
+            cells: [
+              project.projectCode,
+              project.name,
+              humanize(project.projectType),
+              humanize(project.status),
+              project.overallProgressPct != null ? `${project.overallProgressPct}%` : '-',
+              project.budget != null
+                ? `${Number(project.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${project.currency ?? ''}`.trim()
                 : '-',
-              1,
-            );
-            p.wrapped(
+              isoDate(project.startDate),
+              isoDate(project.plannedFinishDate),
+            ],
+            sub:
               [
-                project.projectType ?? null,
-                project.status ?? null,
-                project.budget != null
-                  ? `${Number(project.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${project.currency ?? ''}`
-                  : null,
-                `Start ${fmtDate(project.startDate)}`,
-                `Finish ${fmtDate(project.plannedFinishDate)}`,
                 project.client ? `Client ${project.client}` : null,
-                project.responsibleDepartment
-                  ? `Dept ${project.responsibleDepartment}`
-                  : null,
+                project.responsibleDepartment ? `Dept ${project.responsibleDepartment}` : null,
               ]
                 .filter(Boolean)
-                .join(' · '),
-              { indent: 24, size: 8 },
-            );
-          }
-        }
+                .join(' · ') || null,
+          })),
+          subColumn: 1,
+          emptyText: 'No projects / 无项目',
+        },
+      ],
+    });
 
-        p.footerNotes([
-          `Generated ${fmtGeneratedDate(generatedAt)}`,
-          'This project register export is system-generated.',
-        ]);
-      },
-    );
-
-    const dateStamp = generatedAt.toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `projects-export_${dateStamp}.pdf`,
+      filename: `projects-export_${today}.pdf`,
     };
   }
 }

@@ -1,108 +1,46 @@
 import { Injectable } from '@nestjs/common';
 import {
-  PayslipPdfPainter,
-  bilingualTitle,
-  dash,
-  fmtGeneratedDate,
-  fullName,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
-import { ExitPermitService } from './exit-permit.service';
-import {
-  ExitPermitPdfRecord,
-  MUTED,
-  drawDirectionBox,
-  drawItemsTable,
+  type DocTable,
+  humanize,
   isoDate,
-  stampPageFooters,
-} from './exit-permit-pdf-parts';
+  personName,
+  renderDocumentPdf,
+  safeFilePart,
+  yesNo,
+} from '../../../../shared/pdf/document-pdf';
+import { ExitPermitService } from './exit-permit.service';
 
-/** "SUBMITTED" -> "Submitted", "IN_PROGRESS" -> "In progress". */
-function humanize(value: string | null | undefined): string {
-  if (!value) return '-';
-  const text = value.toLowerCase().replace(/_/g, ' ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+export type ExitPermitPdfRecord = Awaited<ReturnType<ExitPermitService['getRequest']>>;
+
+export function exitPermitDirectionLabel(direction: string | null | undefined): string {
+  return direction === 'ENTRANCE' ? 'ENTRANCE  /  进门' : 'EXIT  /  出门';
 }
 
-function drawApprovalChain(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
-  p.section('Approval chain / 审批流程');
-  const tiers = [...(permit.approvalRequest?.tiers ?? [])].sort(
-    (a, b) => a.tierOrder - b.tierOrder,
-  );
-  if (tiers.length === 0) {
-    p.line(
-      permit.status === 'APPROVED'
-        ? 'Approved directly, no approval chain / 直接批准'
-        : 'Not submitted for approval yet / 尚未提交审批',
-      { indent: 1, color: MUTED },
-    );
-    return;
-  }
-  for (const tier of tiers) {
-    const decided = tier.decidedAt ? `  ·  ${isoDate(tier.decidedAt)}` : '';
-    p.field(
-      `${tier.tierOrder}. ${tier.label} — ${fullName(tier.approver)}`,
-      `${humanize(tier.decision)}${decided}`,
-      1,
-    );
-    if (tier.comment?.trim()) {
-      p.wrapped(`“${tier.comment.trim()}”`, { indent: 24, size: 8 });
-    }
-  }
+/** Items table shared by the record PDF and the gate pass. */
+export function exitPermitItemsTable(
+  permit: ExitPermitPdfRecord,
+  options: { checkColumn: boolean },
+): DocTable {
+  const items = permit.items ?? [];
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0);
+  return {
+    title: 'Items / 物品',
+    checkColumn: options.checkColumn,
+    columns: [
+      { header: 'Item / 物品', weight: 4 },
+      { header: 'Qty / 数量', weight: 1.1, align: 'right' },
+      { header: 'Unit / 单位', weight: 1.2 },
+    ],
+    rows: items.map((item) => ({
+      cells: [item.itemName, Number(item.quantity ?? 0), item.unit],
+      sub: item.issue,
+    })),
+    totals: [['Total quantity / 总数量', String(totalQuantity)]],
+    emptyText: 'No items recorded / 无物品',
+  };
 }
 
-function drawPermitRecord(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
-  const isApproved = permit.status === 'APPROVED';
-
-  p.brand(bilingualTitle('Equipment & Materials Exit Permit', '设备物资出入许可单'));
-  p.subtitleRight(
-    `No. ${permit.requestNumber}  ·  ${humanize(permit.status)}  ·  Printed ${fmtGeneratedDate(new Date())}`,
-  );
-  p.rule();
-
-  drawDirectionBox(p, permit, 'Permit date / 许可日期');
-
-  p.section('Permit / 许可信息');
-  p.field('Employee / 员工', fullName(permit.employee), 1);
-  p.field('Email / 邮箱', dash(permit.employee?.email), 1);
-  p.field('Department / 部门', dash(permit.department?.name), 1);
-  p.field('Status / 状态', humanize(permit.status), 1);
-  if (permit.currentTierLabel) {
-    p.field('Waiting on / 当前审批', permit.currentTierLabel, 1);
-  }
-  p.field('Filed on behalf / 代为提交', permit.isOnBehalf ? 'Yes / 是' : 'No / 否', 1);
-
-  drawItemsTable(p, permit.items ?? [], { checkColumn: false });
-
-  drawApprovalChain(p, permit);
-
-  p.section('Record / 记录');
-  p.field('Created by / 创建人', `${fullName(permit.creator)}  ·  ${isoDate(permit.createdAt)}`, 1);
-  p.field(
-    'Submitted by / 提交人',
-    permit.submittedAt
-      ? `${fullName(permit.submitter ?? permit.creator)}  ·  ${isoDate(permit.submittedAt)}`
-      : '-',
-    1,
-  );
-  p.field('Completed / 完成', isoDate(permit.completedAt), 1);
-
-  p.footerNotes(
-    isApproved
-      ? [
-          'Approved. Print the A5 gate pass from the permit page and present it at the gate.',
-          '已批准。请在许可页面打印A5出入门证，并在门岗出示。',
-        ]
-      : [
-          'Not valid at the gate until approved.',
-          '批准前不得作为出入门凭证。',
-        ],
-  );
-
-  stampPageFooters(p, permit.requestNumber);
-}
-
-/** Full A4 record of one exit permit, in the same layout as the gate pass. */
+/** Full A4 record of one exit permit, in the shared document layout. */
 @Injectable()
 export class ExitPermitPdfService {
   constructor(private readonly exitPermitService: ExitPermitService) {}
@@ -114,17 +52,49 @@ export class ExitPermitPdfService {
   ): Promise<{ buffer: Buffer; mimeType: string; filename: string }> {
     // getRequest applies the same visibility rule as GET :id.
     const permit = await this.exitPermitService.getRequest(id, companyId, userId);
+    const isApproved = permit.status === 'APPROVED';
 
-    const buffer = await renderPayslipPdf(
-      { title: `Exit Permit ${permit.requestNumber}` },
-      (painter) => drawPermitRecord(painter, permit),
-    );
-    const safe = permit.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = new Date().toISOString().slice(0, 10);
+    const buffer = await renderDocumentPdf({
+      title: 'Equipment & Materials Exit Permit',
+      titleZh: '设备物资出入许可单',
+      number: permit.requestNumber,
+      status: permit.status,
+      hero: {
+        headline: exitPermitDirectionLabel(permit.direction),
+        dateLabel: 'Permit date / 许可日期',
+        date: isoDate(permit.date),
+      },
+      employee: { person: permit.employee, department: permit.department?.name },
+      sections: [
+        {
+          title: 'Permit / 许可信息',
+          rows: [
+            ['Status / 状态', humanize(permit.status)],
+            ...(permit.currentTierLabel
+              ? ([['Waiting on / 当前审批', permit.currentTierLabel]] as const)
+              : []),
+            ['Filed on behalf / 代为提交', yesNo(permit.isOnBehalf)],
+          ],
+        },
+      ],
+      tables: [exitPermitItemsTable(permit, { checkColumn: false })],
+      approvalTiers: permit.approvalRequest?.tiers ?? [],
+      documents: (permit.documents ?? []).map((doc) => doc.name),
+      notes: [
+        `Created by ${personName(permit.creator)} ${isoDate(permit.createdAt)}  ·  Submitted ${isoDate(permit.submittedAt)}  ·  Completed ${isoDate(permit.completedAt)}`,
+        ...(isApproved
+          ? [
+              'Approved. Print the A5 gate pass from the permit page and present it at the gate.',
+              '已批准。请在许可页面打印A5出入门证，并在门岗出示。',
+            ]
+          : ['Not valid at the gate until approved.', '批准前不得作为出入门凭证。']),
+      ],
+    });
+
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `exit-permit_${safe}_${dateStamp}.pdf`,
+      filename: `exit-permit_${safeFilePart(permit.requestNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

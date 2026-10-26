@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { PAYSLIP_COMPANY } from '../../../../shared/pdf/payslip-style-pdf';
 import {
-  bilingualTitle,
-  fmtDate,
-  fmtGeneratedDate,
-  PAYSLIP_COMPANY,
-  renderPayslipPdf,
-} from '../../../../shared/pdf/payslip-style-pdf';
+  humanize,
+  isoDate,
+  renderDocumentPdf,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
 import { ReportingService } from './reporting.service';
 
 @Injectable()
@@ -61,101 +61,111 @@ export class SystemReportPdfService {
       },
     });
 
-    const generatedAt = new Date();
     const companyName = summary.companyName ?? PAYSLIP_COMPANY;
     const reportTitle = summary.title ?? 'System Report';
+    const today = isoDate(new Date());
+    const totalProjects = summary.projects?.total ?? 0;
+    const statusEntries = Object.entries(summary.projects?.byStatus ?? {})
+      .filter(([, count]) => count > 0)
+      .sort(([, a], [, b]) => b - a);
+    const totalBudget = summary.projects?.totalBudget
+      ? `${Number(summary.projects.totalBudget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${summary.baseCurrency ?? ''}`.trim()
+      : '-';
 
-    const buffer = await renderPayslipPdf({ title: reportTitle }, (p) => {
-      p.brand(bilingualTitle(reportTitle, '系统报告'));
-      p.subtitleRight(companyName);
-      p.rule();
-
-      p.section('EXECUTIVE SUMMARY');
-      p.fields([
-        ['Total Projects', String(summary.projects?.total ?? '-')],
-        ['Active Projects', String(summary.projects?.active ?? '-')],
-        ['Completion Rate', `${summary.completionRate ?? '-'}%`],
-        [
-          'Average Progress',
-          summary.projects?.averageProgressPct != null
-            ? `${summary.projects.averageProgressPct}%`
-            : '-',
-        ],
-        [
-          'Total Budget',
-          summary.projects?.totalBudget
-            ? `${Number(summary.projects.totalBudget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${summary.baseCurrency ?? ''}`
-            : '-',
-        ],
-        ['Branches', String(summary.organization?.branches ?? '-')],
-        ['Departments', String(summary.organization?.departments ?? '-')],
-        ['Open Site Ops', String(summary.siteOps?.totalOpen ?? '-')],
-        ['Audit (Last 30 Days)', String(summary.audit?.last30Days ?? '-')],
-      ]);
-
-      const statusEntries = Object.entries(summary.projects?.byStatus ?? {})
-        .filter(([, count]) => (count as number) > 0)
-        .sort(([, a], [, b]) => (b as number) - (a as number));
-      if (statusEntries.length > 0) {
-        p.section('PORTFOLIO — BY STATUS', 'Share');
-        const total = summary.projects?.total ?? 1;
-        for (const [status, count] of statusEntries) {
-          const share = `${Math.round(((count as number) / total) * 100)}%`;
-          p.field(status, `${count} · ${share}`, 1);
-        }
-      }
-
-      p.section('SITE OPS');
-      p.fields([
-        ['Open RFIs', String(summary.siteOps?.openRfis ?? '-')],
-        ['Overdue RFIs', String(summary.siteOps?.overdueRfis ?? '-')],
-        ['Open Issues', String(summary.siteOps?.openIssues ?? '-')],
-        ['Open Punch Items', String(summary.siteOps?.openPunchItems ?? '-')],
-      ]);
-
-      p.rule();
-      p.section('PROJECT REGISTER', 'Progress');
-      if (projects.length === 0) {
-        p.line('No projects', { indent: 1, color: '#333333' });
-      } else {
-        for (const project of projects) {
-          p.field(
-            `${project.projectCode} · ${project.name}`,
-            project.overallProgressPct != null
-              ? `${project.overallProgressPct}%`
-              : '-',
-            1,
-          );
-          p.wrapped(
+    const buffer = await renderDocumentPdf({
+      title: reportTitle,
+      titleZh: '系统报告',
+      numberPrefix: '',
+      number: `System report ${today}`,
+      hero: {
+        headline: companyName,
+        caption: `${totalProjects} project(s)  ·  completion ${summary.completionRate ?? '-'}%`,
+        dateLabel: 'Report date / 报告日期',
+        date: today,
+      },
+      sections: [
+        {
+          title: 'Executive summary / 概要',
+          rows: [
+            ['Total projects / 项目总数', summary.projects?.total],
+            ['Active projects / 在建项目', summary.projects?.active],
+            ['Completion rate / 完成率', `${summary.completionRate ?? '-'}%`],
             [
-              project.status,
-              project.projectType ?? null,
-              project.budget != null
-                ? Number(project.budget).toLocaleString('en-US', {
-                    maximumFractionDigits: 0,
-                  })
-                : null,
-              `Finish ${fmtDate(project.plannedFinishDate)}`,
-            ]
-              .filter(Boolean)
-              .join(' · '),
-            { indent: 24, size: 8 },
-          );
-        }
-      }
-
-      p.footerNotes([
-        `Generated ${fmtGeneratedDate(generatedAt)}`,
-        'This system report is system-generated.',
-      ]);
+              'Average progress / 平均进度',
+              summary.projects?.averageProgressPct != null ? `${summary.projects.averageProgressPct}%` : '-',
+            ],
+            ['Total budget / 总预算', totalBudget],
+            ['Branches / 分支机构', summary.organization?.branches],
+            ['Departments / 部门', summary.organization?.departments],
+            ['Audit events, last 30 days / 近30天审计', summary.audit?.last30Days],
+          ],
+        },
+        {
+          title: 'Site operations / 现场管理',
+          rows: [
+            ['Open items / 未关闭事项', summary.siteOps?.totalOpen],
+            ['Open RFIs / 未关闭RFI', summary.siteOps?.openRfis],
+            ['Overdue RFIs / 逾期RFI', summary.siteOps?.overdueRfis],
+            ['Open issues / 未关闭问题', summary.siteOps?.openIssues],
+            ['Open punch items / 未关闭整改项', summary.siteOps?.openPunchItems],
+          ],
+        },
+      ],
+      tables: [
+        {
+          title: 'Portfolio by status / 项目状态',
+          numbered: false,
+          columns: [
+            { header: 'Status / 状态', weight: 3 },
+            { header: 'Projects / 项目数', weight: 1.4, align: 'right' },
+            { header: 'Share / 占比', weight: 1.4, align: 'right' },
+          ],
+          rows: statusEntries.map(([status, count]) => ({
+            cells: [
+              humanize(status),
+              count,
+              totalProjects > 0 ? `${Math.round((count / totalProjects) * 100)}%` : '-',
+            ],
+          })),
+          emptyText: 'No projects / 无项目',
+        },
+        {
+          title: 'Project register / 项目台账',
+          columns: [
+            { header: 'Code / 编码', weight: 1.4 },
+            { header: 'Name / 名称', weight: 3.2 },
+            { header: 'Status / 状态', weight: 1.4 },
+            { header: 'Progress / 进度', weight: 1.1, align: 'right' },
+            { header: 'Finish / 完工', weight: 1.4 },
+          ],
+          rows: projects.map((project) => ({
+            cells: [
+              project.projectCode,
+              project.name,
+              humanize(project.status),
+              project.overallProgressPct != null ? `${project.overallProgressPct}%` : '-',
+              isoDate(project.plannedFinishDate),
+            ],
+            sub:
+              [
+                project.projectType ? humanize(project.projectType) : null,
+                project.budget != null
+                  ? `${Number(project.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${project.currency ?? ''}`.trim()
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || null,
+          })),
+          subColumn: 1,
+          emptyText: 'No projects / 无项目',
+        },
+      ],
     });
 
-    const dateStamp = generatedAt.toISOString().slice(0, 10);
-    const safeCompany = companyName.replace(/[^a-zA-Z0-9-_]/g, '_');
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `system-report_${safeCompany}_${dateStamp}.pdf`,
+      filename: `system-report_${safeFilePart(companyName)}_${today}.pdf`,
     };
   }
 }

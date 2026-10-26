@@ -1,14 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { CW, fullName } from '../../../../shared/pdf/hr-pdf-renderer';
 import {
-  HrDocumentPdfService,
-  HrDocumentPdfInput,
-} from '../../../hr-shared/application/services/hr-document-pdf.service';
-
-const d = (v: string | number | null | undefined): string =>
-  v == null || v === '' ? '-' : String(v);
+  DOC_APPROVAL_INCLUDE,
+  DOC_EMPLOYEE_SELECT,
+  DOC_PERSON_SELECT,
+  humanize,
+  isoDate,
+  personName,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
+import { HrDocumentPdfService } from '../../../hr-shared/application/services/hr-document-pdf.service';
 
 @Injectable()
 export class OfficialSealPdfService {
@@ -24,73 +26,62 @@ export class OfficialSealPdfService {
     const record = await this.prisma.officialSeal.findFirst({
       where: activeOnly({ id, companyId }),
       include: {
-        employee: { select: { firstName: true, lastName: true, email: true } },
-        issuer: { select: { firstName: true, lastName: true } },
+        employee: { select: DOC_EMPLOYEE_SELECT },
+        issuer: { select: DOC_PERSON_SELECT },
         sealedDocument: { select: { name: true } },
-        attachmentFolder: {
-          include: { documents: { select: { name: true, fileType: true } } },
-        },
+        attachmentFolder: { include: { documents: { select: { name: true } } } },
+        approvalRequest: DOC_APPROVAL_INCLUDE,
       },
     });
     if (!record) throw new NotFoundException('Official seal request not found');
 
-    const attachments = record.attachmentFolder?.documents ?? [];
-
-    const input: HrDocumentPdfInput = {
-      documentTitle: 'Official Seal Usage Request',
-      subtitle: d(record.fileName),
-      requestNumber: record.requestNumber,
-      preparedBy: fullName(record.employee),
+    const buffer = await this.hrDocPdf.render({
+      title: 'Official Seal Usage Request',
+      titleZh: '公章使用申请',
+      number: record.requestNumber,
+      status: record.status,
+      hero: {
+        headline: record.fileName || 'Official seal / 公章',
+        caption: record.sealCategory ? humanize(record.sealCategory) : null,
+        dateLabel: 'Date needed / 需用日期',
+        date: isoDate(record.dateNeeded),
+      },
+      employee: { person: record.employee, department: record.employee?.department?.name },
       sections: [
         {
-          title: 'Request',
+          title: 'Request / 申请',
           rows: [
-            ['Request Number', record.requestNumber],
-            ['Status', record.status],
-            ['Employee', fullName(record.employee)],
-            ['Employee Email', d(record.employee?.email)],
-            ['Urgency', d(record.urgency)],
-            ['Date Needed', record.dateNeeded ? new Date(record.dateNeeded).toISOString().slice(0, 10) : '-'],
+            ['Urgency / 紧急程度', humanize(record.urgency)],
+            ['Seal category / 印章类别', humanize(record.sealCategory)],
+            ['Copies / 份数', record.copyCount],
+          ],
+          paragraphs: [['Description / 说明', record.description]],
+        },
+        {
+          title: 'Issuance / 用印',
+          rows: [
+            ['Issued by / 用印人', personName(record.issuer)],
+            ['Issued on / 用印日期', isoDate(record.issuedAt)],
+            ['Sealed document / 已盖章文件', record.sealedDocument?.name ?? 'Not attached / 未上传'],
           ],
         },
         {
-          title: 'Document',
+          title: 'Record / 记录',
           rows: [
-            ['Document Name', d(record.fileName)],
-            ['Seal Category', d(record.sealCategory)],
-            ['Copy Count', d(record.copyCount)],
-            ['Description', d(record.description)],
-          ],
-        },
-        {
-          title: 'Issuance',
-          rows: [
-            ['Issued By', fullName(record.issuer)],
-            ['Issued At', record.issuedAt ? new Date(record.issuedAt).toISOString().slice(0, 10) : '-'],
-            ['Sealed Document', d(record.sealedDocument?.name) === '-' ? 'Not attached' : d(record.sealedDocument?.name)],
-            ['Created', record.createdAt ? new Date(record.createdAt).toISOString().slice(0, 10) : '-'],
-            ['Submitted', record.submittedAt ? new Date(record.submittedAt).toISOString().slice(0, 10) : '-'],
-            ['Completed', record.completedAt ? new Date(record.completedAt).toISOString().slice(0, 10) : '-'],
+            ['Created / 创建', isoDate(record.createdAt)],
+            ['Submitted / 提交', isoDate(record.submittedAt)],
+            ['Completed / 完成', isoDate(record.completedAt)],
           ],
         },
       ],
-      itemsTable: {
-        title: 'Attachments',
-        headers: ['No.', 'File Name', 'Type'],
-        rows: attachments.length > 0
-          ? attachments.map((doc: { name: string; fileType: string }, i: number) => [i + 1, d(doc.name), d(doc.fileType)])
-          : [['—', 'No attachments', '']],
-        colWidths: [CW * 0.1, CW * 0.6, CW * 0.3],
-      },
-    };
+      approvalTiers: record.approvalRequest?.tiers ?? [],
+      documents: (record.attachmentFolder?.documents ?? []).map((doc) => doc.name),
+    });
 
-    const buffer = await this.hrDocPdf.render(input);
-    const safe = record.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const dateStamp = new Date().toISOString().slice(0, 10);
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `official-seal_${safe}_${dateStamp}.pdf`,
+      filename: `official-seal_${safeFilePart(record.requestNumber)}_${isoDate(new Date())}.pdf`,
     };
   }
 }

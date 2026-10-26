@@ -1,52 +1,71 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   PayslipPdfPainter,
-  bilingualTitle,
-  dash,
-  fmtGeneratedDate,
-  fullName,
   renderPayslipPdf,
 } from '../../../../shared/pdf/payslip-style-pdf';
+import {
+  DOC_INK,
+  DOC_MUTED,
+  docHeader,
+  docHero,
+  docHline,
+  docPageFooters,
+  docTable,
+  isoDate,
+  personEmployeeId,
+  personName,
+  safeFilePart,
+} from '../../../../shared/pdf/document-pdf';
 import { ExitPermitService } from './exit-permit.service';
 import {
-  ExitPermitPdfRecord,
-  INK,
-  MUTED,
-  approvalInfo,
-  drawDirectionBox,
-  drawItemsTable,
-  hline,
-  stampPageFooters,
-} from './exit-permit-pdf-parts';
+  type ExitPermitPdfRecord,
+  exitPermitDirectionLabel,
+  exitPermitItemsTable,
+} from './exit-permit-pdf.service';
+
+function approvalInfo(permit: ExitPermitPdfRecord): { by: string; on: string } {
+  const lastApproved = [...(permit.approvalRequest?.tiers ?? [])]
+    .filter((tier) => tier.decision === 'APPROVED')
+    .sort((a, b) => b.tierOrder - a.tierOrder)[0];
+  if (lastApproved) {
+    return {
+      by: personName(lastApproved.approver),
+      on: isoDate(lastApproved.decidedAt ?? permit.completedAt),
+    };
+  }
+  return { by: 'Direct approval / 直接批准', on: isoDate(permit.completedAt) };
+}
 
 /** Label, then a signature line and a date/time line with captions under them. */
 function signatureBlock(p: PayslipPdfPainter, label: string, x: number, y: number, width: number): void {
-  p.text(label, x, y, width, { size: 8, color: MUTED });
+  p.text(label, x, y, width, { size: 8, color: DOC_MUTED });
   const lineY = y + 30;
   const signW = width * 0.6;
-  hline(p, x, x + signW, lineY);
-  hline(p, x + signW + 10, x + width, lineY);
-  p.text('Signature / 签名', x, lineY + 2, signW, { size: 7, color: MUTED });
+  docHline(p, x, x + signW, lineY);
+  docHline(p, x + signW + 10, x + width, lineY);
+  p.text('Signature / 签名', x, lineY + 2, signW, { size: 7, color: DOC_MUTED });
   p.text('Date & time / 日期时间', x + signW + 10, lineY + 2, width - signW - 10, {
     size: 7,
-    color: MUTED,
+    color: DOC_MUTED,
   });
 }
 
 function drawGatePass(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
-  p.brand(bilingualTitle('Gate Pass', '出入门证'));
-  p.subtitleRight(`No. ${permit.requestNumber}  ·  Printed ${fmtGeneratedDate(new Date())}`);
-  p.rule();
+  docHeader(p, { title: 'Gate Pass', titleZh: '出入门证', number: permit.requestNumber });
+  docHero(p, {
+    headline: exitPermitDirectionLabel(permit.direction),
+    dateLabel: 'Valid on / 有效日期',
+    date: isoDate(permit.date),
+  });
 
-  drawDirectionBox(p, permit, 'Valid on / 有效日期');
-
+  // No section heading here: the A5 pass must keep the sign-off on page one.
   const approval = approvalInfo(permit);
-  p.field('Employee / 员工', fullName(permit.employee));
-  p.field('Department / 部门', dash(permit.department?.name));
-  p.field('Approved by / 批准人', approval.by);
-  p.field('Approved on / 批准日期', approval.on);
+  p.field('Employee / 员工', personName(permit.employee));
+  p.field('Employee ID / 工号', personEmployeeId(permit.employee));
+  p.field('Department / 部门', permit.department?.name?.trim() || '-');
+  p.field('Approved / 批准', `${approval.by}  ·  ${approval.on}`);
 
-  drawItemsTable(p, permit.items ?? [], { checkColumn: true });
+  docTable(p, exitPermitItemsTable(permit, { checkColumn: true }));
 
   // Signatures on the left, stamp box on the right. Reserve the block plus the
   // two footer notes so the whole sign-off stays together on one page.
@@ -63,7 +82,7 @@ function drawGatePass(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
     .save()
     .lineWidth(0.8)
     .dash(3, { space: 3 })
-    .strokeColor(INK)
+    .strokeColor(DOC_INK)
     .rect(p.right - stamp, blockTop, stamp, stamp)
     .stroke()
     .undash()
@@ -71,7 +90,7 @@ function drawGatePass(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
   p.text('STAMP / 盖章', p.right - stamp, blockTop + stamp / 2 - 5, stamp, {
     size: 8,
     align: 'center',
-    color: MUTED,
+    color: DOC_MUTED,
   });
   p.y = blockTop + blockH + 6;
 
@@ -80,7 +99,7 @@ function drawGatePass(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
     '仅限上述日期有效。放行前，保安须按清单逐项核对物品。',
   ]);
 
-  stampPageFooters(p, permit.requestNumber);
+  docPageFooters(p, permit.requestNumber);
 }
 
 /** Small A5 gate pass for an approved exit permit, printed and stamped at the gate. */
@@ -104,11 +123,10 @@ export class ExitPermitGatePassPdfService {
       { title: `Gate Pass ${permit.requestNumber}`, size: 'A5', margin: 28 },
       (painter) => drawGatePass(painter, permit),
     );
-    const safe = permit.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
     return {
       buffer,
       mimeType: 'application/pdf',
-      filename: `gate-pass_${safe}.pdf`,
+      filename: `gate-pass_${safeFilePart(permit.requestNumber)}.pdf`,
     };
   }
 }
