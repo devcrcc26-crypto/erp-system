@@ -534,6 +534,10 @@
         "export": "导出报表",
         "empty": "该期间暂无数据。",
         "chartEmpty": "所选期间该图表暂无数据。",
+        "notSpecified": "未填写",
+        "showTable": "显示",
+        "hideTable": "隐藏",
+        "allMonths": "全部",
         "kpi": {
           "activeEmployees": "在职员工",
           "inactiveEmployees": "停用员工",
@@ -559,7 +563,17 @@
           "approvedAmount": "已批准 {{amount}} 比尔",
           "evaluations": "绩效考核",
           "avgScore": "平均分 {{score}}",
-          "completedEvals": "已完成 {{count}} 份"
+          "completedEvals": "已完成 {{count}} 份",
+          "totalGross": "应发工资合计（比尔）",
+          "totalDeductions": "扣款合计（比尔）",
+          "totalNet": "实发工资合计（比尔）",
+          "payrollRuns": "{{count}} 期工资单",
+          "deductionsSplit": "员工养老金 + 个人所得税",
+          "workingDays": "期间工作日",
+          "attendanceRecords": "{{count}} 条月度考勤",
+          "attendanceRate": "平均出勤率",
+          "absentDays": "缺勤天数",
+          "unpaidLeaveDays": "无薪假天数"
         },
         "sections": {
           "headcount": "各部门人数",
@@ -594,7 +608,22 @@
           "evaluationStatus": "绩效考核状态",
           "evaluationStatusSubtitle": "期间内创建的考核",
           "attendanceSnapshot": "出勤与人员",
-          "attendanceSnapshotSubtitle": "现场派驻、居家办公与停用员工"
+          "attendanceSnapshotSubtitle": "现场派驻、居家办公与停用员工",
+          "noEvaluations": "该期间暂无考核",
+          "headcountTrend": "人数趋势",
+          "headcountTrendSubtitle": "近 6 个月每月月末在职人数",
+          "contractTimeline": "合同续签时间线",
+          "contractTimelineSubtitle": "未来 3 个月到期的有效合同 · 点击柱形筛选",
+          "expiringContracts": "即将到期合同",
+          "expiringContractsSubtitle": "未来 3 个月内到期 {{count}} 份",
+          "contractMonthFilter": "按到期月份筛选",
+          "noExpiringContracts": "未来 3 个月内无合同到期。",
+          "payrollByDepartment": "各部门实发工资",
+          "payrollByDepartmentSubtitle": "期间内各月工资单（不含已取消）",
+          "payrollStatus": "工资单状态",
+          "payrollStatusSubtitle": "期间内各月的工资单",
+          "attendanceByDepartment": "各部门出勤率",
+          "attendanceByDepartmentSubtitle": "出勤天数 ÷ 应出勤天数 · 绿色 ≥ 90%，橙色 75–89%，红色 < 75%"
         },
         "columns": {
           "department": "部门",
@@ -607,7 +636,9 @@
           "approvedHours": "已批准工时",
           "category": "类别",
           "lineItems": "明细行",
-          "amountEtb": "金额（比尔）"
+          "amountEtb": "金额（比尔）",
+          "contractNumber": "合同编号",
+          "endDate": "到期日"
         }
       },
       "leave": {
@@ -2240,24 +2271,41 @@
           "normal": "平时",
           "evening": "夜班",
           "sunday": "周日",
-          "holiday": "节假日"
+          "holiday": "节假日",
+          "employee": "员工"
         },
         "overview": {
           "pendingApprovals": "待审批",
           "pendingApprovalsHint": "全公司",
           "noAttendance": "本月暂无考勤数据。",
           "leaveByType": "按类型统计请假",
-          "noLeaveByType": "本月暂无请假申请。"
+          "noLeaveByType": "本月暂无请假申请。",
+          "contractsSubtitle": "按剩余期限统计有效合同",
+          "contractsEmptyHint": "未来 90 天内没有即将到期的合同。",
+          "total": "合计",
+          "soonestToEnd": "最早到期",
+          "attendanceImportHint": "导入本月考勤表以启动审批流程。",
+          "requests": "申请",
+          "noSites": "暂无有效的工地派驻。",
+          "headcountHint": "在职员工",
+          "onLeaveHint": "今日休假",
+          "newHiresHint": "本月入职",
+          "noNewHires": "暂无新入职"
         },
         "payrollOt": {
           "otByEmployee": "员工加班统计",
+          "otByEmployeeSubtitle": "本月前十名，按费率拆分",
           "otByEmployeeEmpty": "本月暂无加班记录。",
           "payrollStatus": "薪资状态",
           "noPayroll": "本月暂无薪资批次。",
+          "noPayrollHint": "启动薪资后将在此显示批次。",
           "status": "状态",
           "employeesInRun": "批次员工数",
           "flagged": "异常条目",
-          "openPayroll": "打开薪资"
+          "openPayroll": "打开薪资",
+          "hoursHint": "本月",
+          "employeesHint": "有加班的员工",
+          "pendingHint": "待审批"
         },
         "operations": {
           "noPerDiem": "暂无差旅津贴数据。"
@@ -2265,17 +2313,26 @@
         "myTeam": {
           "title": "我的团队",
           "noTeam": "您没有直属下属。",
+          "noTeamHint": "有人向您汇报后将显示团队指标。",
           "directReports": "直属下属",
+          "directReportsHint": "组织架构中",
           "pendingMyApproval": "待我审批",
+          "pendingHint": "需要您决定",
           "otHours": "团队本月加班",
+          "otHoursHint": "全部直属下属",
           "otByEmployee": "团队成员加班统计",
+          "otByEmployeeSubtitle": "本月已登记工时",
           "otByEmployeeEmpty": "本月团队暂无加班。",
           "leave": "团队请假",
           "siteAssignments": "团队驻场安排",
           "siteExpiringSoon": "即将到期"
         },
         "myWork": {
-          "nextSite": "下一个驻场安排"
+          "nextSite": "下一个驻场安排",
+          "noSiteHint": "暂无安排给您的驻场。",
+          "leaveBalanceHint": "剩余天数",
+          "otHoursHint": "本月",
+          "pendingHint": "进行中"
         },
         "sections": {
           "summary": "概览",

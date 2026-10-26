@@ -1,41 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { Banknote, Timer, UserRound } from 'lucide-react';
+import { Timer, UserRound } from 'lucide-react';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useDashboardOperationalStats } from '@/lib/query/dashboard';
-import { DashboardStackedBarChart } from '../charts/DashboardChart';
-import {
-  KpiTile,
-  PerDiemStatsCard,
-  Pill,
-  STATS,
-  Stat,
-  type Tone,
-} from '../OperationalStatsWidgets';
-import WidgetCard from '../WidgetCard';
 import { formatCount } from '../format';
-import { KpiStripShell } from './TabParts';
+import OverviewCard from './overview/OverviewCard';
+import OverviewStatCard from './overview/OverviewStatCard';
+import OtStackedBarChart from './overview/OtStackedBarChart';
+import PayrollStatusCard from './overview/PayrollStatusCard';
+import PerDiemCard from './overview/PerDiemCard';
+import { MetricStrip } from './TabParts';
 
 const HOME = 'pages.dashboard.home';
-const ICON = { size: 18, strokeWidth: 1.9 } as const;
-
-const KNOWN_PAYROLL_STATUSES: readonly string[] = [
-  'DRAFT',
-  'REVIEWED',
-  'SUBMITTED',
-  'APPROVED',
-  'GM_APPROVED',
-  'PAID',
-  'CANCELLED',
-];
-
-function payrollTone(status: string): Tone | undefined {
-  if (status === 'PAID' || status === 'GM_APPROVED') return 'ok';
-  if (status === 'CANCELLED') return 'urgent';
-  if (status === 'DRAFT') return undefined;
-  return 'warn';
-}
+const STATS = `${HOME}.stats`;
 
 /** HR "Payroll & OT": overtime totals and split, per diem, payroll run state. */
 export default function PayrollOtTab({ enabled }: { enabled: boolean }): React.ReactNode {
@@ -43,97 +20,63 @@ export default function PayrollOtTab({ enabled }: { enabled: boolean }): React.R
   const query = useDashboardOperationalStats(enabled);
   const stats = query.data;
   const pendingOt = stats?.overtime.pendingApprovalCount ?? 0;
-  const payroll = stats?.payroll ?? null;
+  const totalHours = stats?.overtime.totalHours ?? 0;
+  const employeesWithOt = stats?.overtime.employeesWithOT ?? 0;
 
   return (
-    <>
-      <KpiStripShell
-        query={query}
-        label={t(`${STATS}.overtime.title`)}
-        columns={3}
-      >
-        <KpiTile
+    <div className="flex flex-col gap-5">
+      <MetricStrip query={query} label={t(`${STATS}.overtime.title`)} columns={3}>
+        <OverviewStatCard
+          index={0}
           icon={Timer}
+          tone="ok"
+          valueTone="neutral"
           label={t(`${STATS}.overtime.totalHours`)}
-          value={formatCount(stats?.overtime.totalHours ?? 0, locale)}
+          value={formatCount(totalHours, locale)}
+          badge={t(`${HOME}.payrollOt.hoursHint`)}
           href="/hr/overtime"
         />
-        <KpiTile
+        <OverviewStatCard
+          index={1}
           icon={UserRound}
+          tone="info"
+          valueTone="neutral"
           label={t(`${STATS}.overtime.employees`)}
-          value={formatCount(stats?.overtime.employeesWithOT ?? 0, locale)}
+          value={formatCount(employeesWithOt, locale)}
+          badge={t(`${HOME}.payrollOt.employeesHint`)}
         />
-        <KpiTile
+        <OverviewStatCard
+          index={2}
           icon={Timer}
+          tone={pendingOt > 0 ? 'urgent' : 'neutral'}
+          valueTone={pendingOt > 0 ? 'urgent' : 'neutral'}
           label={t(`${STATS}.overtime.pending`)}
           value={formatCount(pendingOt, locale)}
-          tone={pendingOt > 0 ? 'urgent' : undefined}
+          badge={t(`${HOME}.payrollOt.pendingHint`)}
           href="/hr/overtime"
         />
-      </KpiStripShell>
+      </MetricStrip>
 
-      <WidgetCard
+      <OverviewCard
         title={t(`${HOME}.payrollOt.otByEmployee`)}
-        icon={<Timer {...ICON} />}
-        span={12}
+        subtitle={t(`${HOME}.payrollOt.otByEmployeeSubtitle`)}
+        icon={<Timer size={18} strokeWidth={1.9} />}
+        tone="ok"
         viewAllHref="/hr/overtime"
         query={query}
+        className="lg:col-span-2"
       >
-        <DashboardStackedBarChart
+        <OtStackedBarChart
           data={stats?.overtimeByEmployee ?? []}
-          seriesLabels={{
-            normal: t(`${HOME}.charts.normal`),
-            evening: t(`${HOME}.charts.evening`),
-            sunday: t(`${HOME}.charts.sunday`),
-            holiday: t(`${HOME}.charts.holiday`),
-          }}
           emptyLabel={t(`${HOME}.payrollOt.otByEmployeeEmpty`)}
           ariaLabel={t(`${HOME}.payrollOt.otByEmployee`)}
         />
-      </WidgetCard>
+      </OverviewCard>
 
-      <div className="dv2-row">
-        <PerDiemStatsCard enabled={enabled} span={6} />
-
-        <WidgetCard
-          title={t(`${HOME}.payrollOt.payrollStatus`)}
-          icon={<Banknote {...ICON} />}
-          span={6}
-          viewAllHref="/hr/payroll"
-          query={query}
-          isEmpty={!payroll}
-          emptyLabel={t(`${HOME}.payrollOt.noPayroll`)}
-        >
-          {payroll ? (
-            <>
-              <div className="dv2-figure">
-                <p className="dv2-label m-0">{t(`${HOME}.payrollOt.status`)}</p>
-                <Pill tone={payrollTone(payroll.status)}>
-                  {KNOWN_PAYROLL_STATUSES.includes(payroll.status)
-                    ? t(`hr.payroll.status.${payroll.status}`)
-                    : payroll.status}
-                </Pill>
-              </div>
-              <div className="dv2-stat-row">
-                <Stat
-                  label={t(`${HOME}.payrollOt.employeesInRun`)}
-                  value={payroll.totalEmployees}
-                  locale={locale}
-                />
-                <Stat
-                  label={t(`${HOME}.payrollOt.flagged`)}
-                  value={payroll.flaggedCount}
-                  tone={payroll.flaggedCount > 0 ? 'urgent' : undefined}
-                  locale={locale}
-                />
-              </div>
-              <Link href="/hr/payroll" className="dv2-button">
-                {t(`${HOME}.payrollOt.openPayroll`)}
-              </Link>
-            </>
-          ) : null}
-        </WidgetCard>
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
+        <PerDiemCard stats={stats} query={query} />
+        <PayrollStatusCard stats={stats} query={query} />
       </div>
-    </>
+    </div>
   );
 }

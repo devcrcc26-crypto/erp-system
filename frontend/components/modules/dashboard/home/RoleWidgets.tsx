@@ -19,6 +19,8 @@ import { formatEmployeeContractEmployeeName } from '@/lib/utils/employee-contrac
 import { formatUserName } from '@/lib/utils/user-display';
 import WidgetCard, { WidgetFigure, type WidgetSpan } from './WidgetCard';
 import { formatCount, formatMonthYear, formatShortDate } from './format';
+import OverviewCard from './tabs/overview/OverviewCard';
+import OverviewEmptyState from './tabs/overview/OverviewEmptyState';
 
 const HOME = 'pages.dashboard.home';
 const ICON = { size: 18, strokeWidth: 1.9 } as const;
@@ -54,38 +56,44 @@ export function useLeadEvaluations(enabled: boolean) {
 const DL_ACTION_STATUSES: readonly EvaluationStatus[] = ['TEAM_LEAD_ASSESSED', 'DISPUTED'];
 
 /** Discipline / team leads: evaluations of other people waiting on me. */
-export function EvaluationInboxWidget({
-  enabled,
-  span = 4,
-}: {
-  enabled: boolean;
-  span?: WidgetSpan;
-}): React.ReactNode {
+export function EvaluationInboxWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const { needsAction: items, query } = useLeadEvaluations(enabled);
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.evaluationInbox.title`)}
-      icon={<ListChecks {...ICON} />}
-      span={span}
+      icon={<ListChecks size={18} strokeWidth={1.9} />}
+      tone={items.length > 0 ? 'warn' : 'info'}
       viewAllHref="/hr/evaluations/inbox"
       query={query}
       isEmpty={items.length === 0}
-      emptyLabel={t(`${HOME}.evaluationInbox.empty`)}
+      emptyState={
+        <OverviewEmptyState
+          icon={ListChecks}
+          title={t(`${HOME}.evaluationInbox.empty`)}
+        />
+      }
     >
-      <WidgetFigure
-        label={t(`${HOME}.evaluationInbox.countLabel`)}
-        value={formatCount(items.length, locale)}
-      />
-      <ul className="dv2-list">
+      <div>
+        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          {t(`${HOME}.evaluationInbox.countLabel`)}
+        </p>
+        <p className="m-0 mt-1 text-[28px] font-semibold leading-none tracking-tight tabular-nums text-slate-900">
+          {formatCount(items.length, locale)}
+        </p>
+      </div>
+      <ul className="m-0 mt-auto flex flex-col p-0">
         {items.slice(0, 3).map((item) => (
-          <li key={item.id}>
-            <Link href={`/hr/evaluations/${item.id}`} className="dv2-list-row">
-              <span className="dv2-list-title">
+          <li key={item.id} className="list-none">
+            <Link
+              href={`/hr/evaluations/${item.id}`}
+              className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 text-inherit no-underline last:border-b-0 last:pb-0 transition-colors hover:bg-slate-50/80 -mx-1 rounded-lg px-1"
+            >
+              <span className="truncate text-sm font-medium text-slate-900">
                 {formatUserName(item.employee)}
               </span>
-              <span className="dv2-list-meta">
+              <span className="shrink-0 text-xs text-slate-500">
                 {t(`${HOME}.evaluation.cycle`, {
                   quarter: item.cycle.quarter,
                   year: item.cycle.year,
@@ -95,7 +103,7 @@ export function EvaluationInboxWidget({
           </li>
         ))}
       </ul>
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 

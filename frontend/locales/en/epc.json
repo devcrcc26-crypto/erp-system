@@ -534,6 +534,10 @@
         "export": "Export report",
         "empty": "No data for this period.",
         "chartEmpty": "No data for this chart in the selected period.",
+        "notSpecified": "Not specified",
+        "showTable": "Show",
+        "hideTable": "Hide",
+        "allMonths": "All",
         "kpi": {
           "activeEmployees": "Active employees",
           "inactiveEmployees": "Inactive employees",
@@ -559,7 +563,17 @@
           "approvedAmount": "{{amount}} ETB approved",
           "evaluations": "Evaluations",
           "avgScore": "Avg score {{score}}",
-          "completedEvals": "{{count}} completed"
+          "completedEvals": "{{count}} completed",
+          "totalGross": "Total gross pay (ETB)",
+          "totalDeductions": "Total deductions (ETB)",
+          "totalNet": "Total net pay (ETB)",
+          "payrollRuns": "{{count}} payroll run(s)",
+          "deductionsSplit": "Employee pension + income tax",
+          "workingDays": "Working days in period",
+          "attendanceRecords": "{{count}} monthly record(s)",
+          "attendanceRate": "Avg attendance rate",
+          "absentDays": "Absent days",
+          "unpaidLeaveDays": "Unpaid leave days"
         },
         "sections": {
           "headcount": "Headcount by department",
@@ -594,7 +608,22 @@
           "evaluationStatus": "Evaluations by status",
           "evaluationStatusSubtitle": "Evaluations created in the period",
           "attendanceSnapshot": "Attendance & workforce",
-          "attendanceSnapshotSubtitle": "Site assignments, WFH days and inactive staff"
+          "attendanceSnapshotSubtitle": "Site assignments, WFH days and inactive staff",
+          "noEvaluations": "No evaluations in this period",
+          "headcountTrend": "Headcount trend",
+          "headcountTrendSubtitle": "Employed headcount at each month end, last 6 months",
+          "contractTimeline": "Contract renewal timeline",
+          "contractTimelineSubtitle": "Active contracts ending in the next 3 months · click a bar to filter",
+          "expiringContracts": "Expiring contracts",
+          "expiringContractsSubtitle": "{{count}} contract(s) ending in the next 3 months",
+          "contractMonthFilter": "Filter by end month",
+          "noExpiringContracts": "No contracts end in the next 3 months.",
+          "payrollByDepartment": "Net pay by department",
+          "payrollByDepartmentSubtitle": "Payroll runs for months in the period, excluding cancelled",
+          "payrollStatus": "Payroll runs by status",
+          "payrollStatusSubtitle": "Runs for months in the period",
+          "attendanceByDepartment": "Attendance rate by department",
+          "attendanceByDepartmentSubtitle": "Present ÷ scheduled days · green ≥ 90%, orange 75–89%, red < 75%"
         },
         "columns": {
           "department": "Department",
@@ -607,7 +636,9 @@
           "approvedHours": "Approved hours",
           "category": "Category",
           "lineItems": "Line items",
-          "amountEtb": "Amount (ETB)"
+          "amountEtb": "Amount (ETB)",
+          "contractNumber": "Contract no.",
+          "endDate": "End date"
         }
       },
       "leave": {
@@ -2240,24 +2271,41 @@
           "normal": "Normal",
           "evening": "Evening",
           "sunday": "Sunday",
-          "holiday": "Holiday"
+          "holiday": "Holiday",
+          "employee": "Employee"
         },
         "overview": {
           "pendingApprovals": "Pending approvals",
           "pendingApprovalsHint": "Company-wide",
           "noAttendance": "No attendance data for this month.",
           "leaveByType": "Leave by type",
-          "noLeaveByType": "No leave requests this month."
+          "noLeaveByType": "No leave requests this month.",
+          "contractsSubtitle": "Active contracts by time to expiry",
+          "contractsEmptyHint": "Nothing is ending in the next 90 days.",
+          "total": "Total",
+          "soonestToEnd": "Soonest to end",
+          "attendanceImportHint": "Import this month's timesheet to start the approval cycle.",
+          "requests": "Requests",
+          "noSites": "No active site assignments.",
+          "headcountHint": "Active employees",
+          "onLeaveHint": "Away today",
+          "newHiresHint": "Joined this month",
+          "noNewHires": "No new hires yet"
         },
         "payrollOt": {
           "otByEmployee": "Overtime by employee",
+          "otByEmployeeSubtitle": "Top 10 this month, split by rate",
           "otByEmployeeEmpty": "No overtime recorded this month.",
           "payrollStatus": "Payroll status",
           "noPayroll": "No payroll run for this month.",
+          "noPayrollHint": "A run will appear here once payroll is started.",
           "status": "Status",
           "employeesInRun": "Employees in run",
           "flagged": "Flagged entries",
-          "openPayroll": "Open payroll"
+          "openPayroll": "Open payroll",
+          "hoursHint": "This month",
+          "employeesHint": "With OT hours",
+          "pendingHint": "Awaiting approval"
         },
         "operations": {
           "noPerDiem": "No per diem activity to show."
@@ -2265,17 +2313,26 @@
         "myTeam": {
           "title": "My team",
           "noTeam": "You have no direct reports.",
+          "noTeamHint": "Team metrics appear once people report to you.",
           "directReports": "Direct reports",
+          "directReportsHint": "On your org chart",
           "pendingMyApproval": "Pending my approval",
+          "pendingHint": "Needs your decision",
           "otHours": "Team OT this month",
+          "otHoursHint": "All direct reports",
           "otByEmployee": "Team overtime by employee",
+          "otByEmployeeSubtitle": "Hours logged this month",
           "otByEmployeeEmpty": "No team overtime this month.",
           "leave": "Team leave",
           "siteAssignments": "Team site assignments",
           "siteExpiringSoon": "Expiring soon"
         },
         "myWork": {
-          "nextSite": "Next site assignment"
+          "nextSite": "Next site assignment",
+          "noSiteHint": "Nothing scheduled for you yet.",
+          "leaveBalanceHint": "Days remaining",
+          "otHoursHint": "This month",
+          "pendingHint": "In flight"
         },
         "sections": {
           "summary": "Summary",

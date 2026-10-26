@@ -6839,6 +6839,34 @@ main::-webkit-scrollbar,
   }
 }
 
+/* HR reports - headline KPIs as equal-size cards: 4 / 2 / 1 per row */
+.erp-dashboard-page .erp-hr-report-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 12px;
+}
+
+.erp-dashboard-page .erp-hr-report-kpis .erp-users-stat {
+  height: 100%;
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 1024px) {
+  .erp-dashboard-page .erp-hr-report-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-dashboard-page .erp-hr-report-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Attendance module */
 .erp-attendance-page .erp-users-stat-bar {
   grid-template-columns: repeat(4, 1fr);

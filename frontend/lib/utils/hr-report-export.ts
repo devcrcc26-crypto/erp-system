@@ -37,6 +37,15 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
     { metric: 'Active contracts', value: exportNumber(report.contracts.active) },
     { metric: 'Contracts expiring in period', value: exportNumber(report.contracts.expiringInRange) },
     { metric: 'Contracts ended in period', value: exportNumber(report.contracts.endedInRange) },
+    { metric: 'Payroll runs', value: exportNumber(report.payroll.runs) },
+    { metric: 'Total gross pay (ETB)', value: exportNumber(report.payroll.totalGross) },
+    { metric: 'Total deductions - pension + income tax (ETB)', value: exportNumber(report.payroll.totalDeductions) },
+    { metric: 'Total net pay (ETB)', value: exportNumber(report.payroll.totalNet) },
+    { metric: 'Attendance records', value: exportNumber(report.attendance.records) },
+    { metric: 'Working days in period', value: exportNumber(report.attendance.totalWorkingDays) },
+    { metric: 'Average attendance rate (%)', value: exportNumber(report.attendance.averageAttendanceRate) },
+    { metric: 'Absent days', value: exportNumber(report.attendance.totalAbsentDays) },
+    { metric: 'Unpaid leave days', value: exportNumber(report.attendance.totalUnpaidLeaveDays) },
     { metric: 'Site assignments', value: exportNumber(report.siteAssignments.requests) },
     { metric: 'Approved site assignments', value: exportNumber(report.siteAssignments.approvedRequests) },
     { metric: 'Work-from-home days', value: exportNumber(report.workFromHome.days) },
@@ -74,7 +83,61 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
         ...statusRows('Site assignment status', report.siteAssignments.byStatus),
         ...statusRows('Expense status', report.expenses.byStatus),
         ...statusRows('Evaluation status', report.evaluations.byStatus),
+        ...statusRows(
+          'Payroll run status',
+          Object.fromEntries(
+            report.payroll.byStatus.map((row) => [row.status, row.count]),
+          ),
+        ),
       ],
+    },
+    {
+      name: 'Headcount Trend',
+      columns: [
+        { header: 'Month', key: 'month', width: 14 },
+        { header: 'Employees', key: 'employees', width: 14 },
+      ],
+      rows: report.headcountTrend.map((row) => ({
+        month: exportCell(row.month),
+        employees: exportNumber(row.count),
+      })),
+    },
+    {
+      name: 'Contract Renewals',
+      columns: [
+        { header: 'Employee', key: 'employee', width: 26 },
+        { header: 'Department', key: 'department', width: 24 },
+        { header: 'Contract No.', key: 'contractNumber', width: 16 },
+        { header: 'End Date', key: 'endDate', width: 14 },
+      ],
+      rows: report.expiringContracts.map((row) => ({
+        employee: exportCell(row.employeeName),
+        department: exportCell(row.department),
+        contractNumber: exportCell(row.contractNumber),
+        endDate: exportCell(row.endDate),
+      })),
+    },
+    {
+      name: 'Payroll by Department',
+      columns: [
+        { header: 'Department', key: 'department', width: 30 },
+        { header: 'Net Pay (ETB)', key: 'net', width: 18 },
+      ],
+      rows: report.payroll.byDepartment.map((row) => ({
+        department: exportCell(row.department),
+        net: exportNumber(row.totalNet),
+      })),
+    },
+    {
+      name: 'Attendance by Department',
+      columns: [
+        { header: 'Department', key: 'department', width: 30 },
+        { header: 'Attendance Rate (%)', key: 'rate', width: 20 },
+      ],
+      rows: report.attendance.byDepartment.map((row) => ({
+        department: exportCell(row.department),
+        rate: exportNumber(row.attendanceRate),
+      })),
     },
     {
       name: 'Headcount by Department',

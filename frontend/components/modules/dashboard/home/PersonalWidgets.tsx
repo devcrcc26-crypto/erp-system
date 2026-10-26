@@ -34,11 +34,12 @@ import {
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
 import { useAuthStore } from '@/stores/auth.store';
-import WidgetCard, { WidgetFigure, type WidgetSpan } from './WidgetCard';
 import { formatCount, formatMonthYear } from './format';
+import OverviewCard, { TonePill } from './tabs/overview/OverviewCard';
+import OverviewEmptyState from './tabs/overview/OverviewEmptyState';
+import { ProgressRow } from './tabs/overview/AttendanceCard';
 
 const HOME = 'pages.dashboard.home';
-const ICON = { size: 18, strokeWidth: 1.9 } as const;
 
 type TFn = ReturnType<typeof useEpcTranslation>['t'];
 
@@ -57,6 +58,9 @@ function waitingLabel(item: ApprovalRequestListItem, t: TFn): string {
     : t(`${HOME}.pendingApprovals.waitingDays`, { count: days });
 }
 
+const listRowClass =
+  'flex items-center gap-3 border-b border-slate-100 py-2.5 last:border-b-0 last:pb-0 text-inherit no-underline transition-colors hover:bg-slate-50/80 -mx-1 px-1 rounded-lg';
+
 /** Requests awaiting my decision: count plus the five oldest-first page items. */
 export function PendingApprovalsWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
@@ -68,35 +72,43 @@ export function PendingApprovalsWidget({ enabled }: { enabled: boolean }): React
   const total = query.data?.meta.total ?? 0;
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.pendingApprovals.title`)}
-      icon={<Inbox {...ICON} />}
-      span={6}
+      icon={<Inbox size={18} strokeWidth={1.9} />}
+      tone={total > 0 ? 'warn' : 'neutral'}
       viewAllHref="/approvals"
       query={query}
       isEmpty={items.length === 0}
-      emptyLabel={t(`${HOME}.pendingApprovals.empty`)}
+      emptyState={
+        <OverviewEmptyState icon={Inbox} title={t(`${HOME}.pendingApprovals.empty`)} />
+      }
     >
-      <WidgetFigure
-        label={t(`${HOME}.pendingApprovals.countLabel`)}
-        value={formatCount(total, locale)}
-      />
-      <ul className="dv2-list">
+      <div>
+        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          {t(`${HOME}.pendingApprovals.countLabel`)}
+        </p>
+        <p className="m-0 mt-1 text-[28px] font-semibold leading-none tracking-tight tabular-nums text-slate-900">
+          {formatCount(total, locale)}
+        </p>
+      </div>
+      <ul className="m-0 mt-auto flex flex-col p-0">
         {items.map((item) => (
-          <li key={item.id}>
-            <Link href={`/approvals/${item.id}`} className="dv2-list-row">
-              <span className="dv2-list-main">
-                <span className="dv2-list-title">{categoryLabel(item, t)}</span>
-                <span className="dv2-list-sub">
+          <li key={item.id} className="list-none">
+            <Link href={`/approvals/${item.id}`} className={listRowClass}>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-slate-900">
+                  {categoryLabel(item, t)}
+                </span>
+                <span className="block truncate text-xs text-slate-500">
                   {formatApprovalUserName(item.requester)}
                 </span>
               </span>
-              <span className="dv2-list-meta">{waitingLabel(item, t)}</span>
+              <TonePill tone="warn">{waitingLabel(item, t)}</TonePill>
             </Link>
           </li>
         ))}
       </ul>
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 
@@ -110,22 +122,28 @@ export function MyRequestsWidget({ enabled }: { enabled: boolean }): React.React
   const items = query.data?.data ?? [];
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.myRequests.title`)}
-      icon={<FileClock {...ICON} />}
-      span={6}
+      icon={<FileClock size={18} strokeWidth={1.9} />}
+      tone="info"
       viewAllHref="/approvals"
       query={query}
       isEmpty={items.length === 0}
-      emptyLabel={t(`${HOME}.myRequests.empty`)}
+      emptyState={
+        <OverviewEmptyState icon={FileClock} title={t(`${HOME}.myRequests.empty`)} />
+      }
     >
-      <ul className="dv2-list">
+      <ul className="m-0 flex flex-col p-0">
         {items.map((item) => (
-          <li key={item.id}>
-            <Link href={`/approvals/${item.id}`} className="dv2-list-row">
-              <span className="dv2-list-main">
-                <span className="dv2-list-title">{categoryLabel(item, t)}</span>
-                <span className="dv2-list-sub">{item.requestNumber}</span>
+          <li key={item.id} className="list-none">
+            <Link href={`/approvals/${item.id}`} className={listRowClass}>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-slate-900">
+                  {categoryLabel(item, t)}
+                </span>
+                <span className="block truncate text-xs tabular-nums text-slate-500">
+                  {item.requestNumber}
+                </span>
               </span>
               <StatusBadge
                 label={formatApprovalStatus(item.status, t)}
@@ -135,47 +153,45 @@ export function MyRequestsWidget({ enabled }: { enabled: boolean }): React.React
           </li>
         ))}
       </ul>
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 
 /** Remaining days for each leave type the employee holds a balance for. */
-export function LeaveBalanceWidget({
-  enabled,
-  span = 4,
-}: {
-  enabled: boolean;
-  span?: WidgetSpan;
-}): React.ReactNode {
+export function LeaveBalanceWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const query = useMyLeaveBalances({ enabled });
-  const leaveYearLabel =
-    query.data?.[0]?.year ?? addisParts().year;
+  const leaveYearLabel = query.data?.[0]?.year ?? addisParts().year;
   const balances = (query.data ?? []).filter(
     (balance) =>
       balance.entitled + balance.broughtForward > 0 || balance.remaining > 0,
   );
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.leaveBalance.title`)}
-      icon={<CalendarDays {...ICON} />}
-      span={span}
+      icon={<CalendarDays size={18} strokeWidth={1.9} />}
+      tone="ok"
       viewAllHref="/hr/leave-requests"
       query={query}
       isEmpty={balances.length === 0}
-      emptyLabel={t(`${HOME}.leaveBalance.empty`, { year: leaveYearLabel })}
+      emptyState={
+        <OverviewEmptyState
+          icon={CalendarDays}
+          title={t(`${HOME}.leaveBalance.empty`, { year: leaveYearLabel })}
+        />
+      }
     >
-      <ul className="dv2-list">
+      <ul className="m-0 flex flex-col p-0">
         {balances.map((balance) => (
           <li
             key={`${balance.year}-${balance.leaveType}`}
-            className="dv2-list-row dv2-list-row--static"
+            className="flex list-none items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0 last:pb-0"
           >
-            <span className="dv2-list-title">
+            <span className="truncate text-sm font-medium text-slate-800">
               {formatLeaveType(balance.leaveType, t)}
             </span>
-            <span className="dv2-list-figure">
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
               {t(`${HOME}.leaveBalance.daysLeft`, {
                 days: formatCount(balance.remaining, locale),
               })}
@@ -183,7 +199,7 @@ export function LeaveBalanceWidget({
           </li>
         ))}
       </ul>
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 
@@ -192,13 +208,7 @@ export function LeaveBalanceWidget({
  * scheduled as a bar. Attendance is imported after the fact, so when this
  * month has no record yet the latest imported month is shown, labelled.
  */
-export function AttendanceWidget({
-  enabled,
-  span = 4,
-}: {
-  enabled: boolean;
-  span?: WidgetSpan;
-}): React.ReactNode {
+export function AttendanceWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const { month, year } = addisParts();
   const query = useMyAttendance(year, enabled);
@@ -210,115 +220,115 @@ export function AttendanceWidget({
 
   const scheduled = latest?.scheduledDays ?? 0;
   const present = latest?.presentDays ?? 0;
-  const percent = scheduled > 0 ? Math.min(100, Math.round((present / scheduled) * 100)) : 0;
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.attendance.title`)}
-      icon={<CalendarCheck2 {...ICON} />}
-      span={span}
+      icon={<CalendarCheck2 size={18} strokeWidth={1.9} />}
+      tone="info"
       viewAllHref="/profile"
       query={query}
       isEmpty={!latest}
-      emptyLabel={t(`${HOME}.attendance.empty`)}
+      emptyState={
+        <OverviewEmptyState
+          icon={CalendarCheck2}
+          title={t(`${HOME}.attendance.empty`)}
+        />
+      }
     >
       {latest ? (
         <>
           {current ? null : (
-            <p className="dv2-hint m-0 mb-3">
+            <TonePill tone="neutral">
               {t(`${HOME}.attendance.latest`, {
                 period: formatMonthYear(latest.month, latest.year, locale),
               })}
-            </p>
+            </TonePill>
           )}
-          <div className="dv2-stat-row">
-            <WidgetFigure
-              label={t(`${HOME}.attendance.present`)}
-              value={formatCount(present, locale)}
-            />
-            <WidgetFigure
-              label={t(`${HOME}.attendance.absent`)}
-              value={formatCount(latest.absentDays, locale)}
-            />
-            <WidgetFigure
-              label={t(`${HOME}.attendance.holidays`)}
-              value={formatCount(latest.holidayDays, locale)}
-            />
+          <div className="grid grid-cols-3 gap-4">
+            {(
+              [
+                { label: t(`${HOME}.attendance.present`), value: present },
+                { label: t(`${HOME}.attendance.absent`), value: latest.absentDays },
+                { label: t(`${HOME}.attendance.holidays`), value: latest.holidayDays },
+              ] as const
+            ).map((row) => (
+              <div key={row.label}>
+                <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  {row.label}
+                </p>
+                <p className="m-0 mt-1 text-xl font-semibold tabular-nums text-slate-900">
+                  {formatCount(row.value, locale)}
+                </p>
+              </div>
+            ))}
           </div>
-          <div
-            className="dv2-progress"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-            aria-label={t(`${HOME}.attendance.rate`, {
+          <ProgressRow
+            label={t(`${HOME}.attendance.rate`, {
               present: formatCount(present, locale),
               scheduled: formatCount(scheduled, locale),
             })}
-          >
-            <span style={{ width: `${percent}%` }} />
-          </div>
-          <p className="dv2-hint m-0">
-            {t(`${HOME}.attendance.rate`, {
-              present: formatCount(present, locale),
-              scheduled: formatCount(scheduled, locale),
-            })}
-          </p>
+            current={present}
+            total={scheduled}
+            tone="ok"
+            locale={locale}
+          />
         </>
       ) : null}
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 
 /** Current month's overtime sheet: hours, status and a link to open it. */
-export function OvertimeWidget({
-  enabled,
-  span = 4,
-}: {
-  enabled: boolean;
-  span?: WidgetSpan;
-}): React.ReactNode {
+export function OvertimeWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t } = useEpcTranslation();
   const query = useCurrentOvertimeSheet(enabled);
   const sheet = query.data;
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.overtime.title`)}
-      icon={<Timer {...ICON} />}
-      span={span}
+      icon={<Timer size={18} strokeWidth={1.9} />}
+      tone="ok"
       viewAllHref="/hr/overtime"
       query={query}
       isEmpty={!sheet}
-      emptyLabel={t(`${HOME}.overtime.empty`)}
+      emptyState={
+        <OverviewEmptyState icon={Timer} title={t(`${HOME}.overtime.empty`)} />
+      }
     >
       {sheet ? (
         <>
-          <div className="dv2-stat-row">
-            <WidgetFigure
-              label={t(`${HOME}.overtime.hours`)}
-              value={formatOvertimeHours(sheet.totalHours)}
-            />
-            <div className="dv2-figure">
-              <p className="dv2-label m-0">{t(`${HOME}.overtime.status`)}</p>
-              <StatusBadge
-                label={formatOvertimeStatus(sheet.status, t)}
-                variant={overtimeStatusVariant(sheet.status)}
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                {t(`${HOME}.overtime.hours`)}
+              </p>
+              <p className="m-0 mt-1 text-[28px] font-semibold leading-none tracking-tight tabular-nums text-slate-900">
+                {formatOvertimeHours(sheet.totalHours)}
+              </p>
+            </div>
+            <div>
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                {t(`${HOME}.overtime.status`)}
+              </p>
+              <div className="mt-2">
+                <StatusBadge
+                  label={formatOvertimeStatus(sheet.status, t)}
+                  variant={overtimeStatusVariant(sheet.status)}
+                />
+              </div>
             </div>
           </div>
           <Link
-            href={overtimeSheetDetailHref(
-              sheet.id,
-              '/profile?tab=overtime',
-            )}
-            className="dv2-button"
+            href={overtimeSheetDetailHref(sheet.id, '/profile?tab=overtime')}
+            className="mt-auto inline-flex w-fit items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           >
             {t(`${HOME}.overtime.openSheet`)}
           </Link>
         </>
       ) : null}
-    </WidgetCard>
+    </OverviewCard>
   );
 }
 
@@ -335,13 +345,7 @@ function currentEvaluation(
 }
 
 /** My evaluation in the current cycle and whether it is waiting on me. */
-export function MyEvaluationWidget({
-  enabled,
-  span = 4,
-}: {
-  enabled: boolean;
-  span?: WidgetSpan;
-}): React.ReactNode {
+export function MyEvaluationWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t } = useEpcTranslation();
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const query = useMyEvaluations();
@@ -354,41 +358,53 @@ export function MyEvaluationWidget({
     );
 
   return (
-    <WidgetCard
+    <OverviewCard
       title={t(`${HOME}.evaluation.title`)}
-      icon={<ClipboardCheck {...ICON} />}
-      span={span}
+      icon={<ClipboardCheck size={18} strokeWidth={1.9} />}
+      tone={waitingOnMe ? 'warn' : 'info'}
       viewAllHref="/profile/evaluations"
       query={query}
       isEmpty={!evaluation}
-      emptyLabel={t(`${HOME}.evaluation.empty`)}
+      emptyState={
+        <OverviewEmptyState
+          icon={ClipboardCheck}
+          title={t(`${HOME}.evaluation.empty`)}
+        />
+      }
     >
       {evaluation ? (
         <>
-          <div className="dv2-stat-row">
-            <div className="dv2-figure">
-              <p className="dv2-label m-0">
-                {t(`${HOME}.evaluation.cycle`, {
-                  quarter: evaluation.cycle.quarter,
-                  year: evaluation.cycle.year,
-                })}
-              </p>
-              <StatusBadge
-                label={t(`${HOME}.evaluation.status.${evaluation.status}`)}
-                variant={EVALUATION_STATUS_BADGE[evaluation.status]}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+              {t(`${HOME}.evaluation.cycle`, {
+                quarter: evaluation.cycle.quarter,
+                year: evaluation.cycle.year,
+              })}
+            </span>
+            <StatusBadge
+              label={t(`${HOME}.evaluation.status.${evaluation.status}`)}
+              variant={EVALUATION_STATUS_BADGE[evaluation.status]}
+            />
           </div>
-          <p className={`dv2-callout m-0 ${waitingOnMe ? 'dv2-callout--action' : ''}`}>
+          <p
+            className={`m-0 rounded-xl px-4 py-3 text-sm ${
+              waitingOnMe
+                ? 'bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-100'
+                : 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-100'
+            }`}
+          >
             {waitingOnMe
               ? t(`${HOME}.evaluation.actionNeeded`)
               : t(`${HOME}.evaluation.noAction`)}
           </p>
-          <Link href={`/hr/evaluations/${evaluation.id}`} className="dv2-button">
+          <Link
+            href={`/hr/evaluations/${evaluation.id}`}
+            className="mt-auto inline-flex w-fit items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          >
             {t(`${HOME}.evaluation.open`)}
           </Link>
         </>
       ) : null}
-    </WidgetCard>
+    </OverviewCard>
   );
 }
