@@ -1,74 +1,92 @@
 'use client';
 
 import type { ComponentType, CSSProperties } from 'react';
-import {
-  ApartmentOutlined,
-  AppstoreOutlined,
-  AuditOutlined,
-  BarChartOutlined,
-  BookOutlined,
-  CalendarOutlined,
-  CheckSquareOutlined,
-  ClusterOutlined,
-  CommentOutlined,
-  DashboardOutlined,
-  DiffOutlined,
-  ExportOutlined,
-  FileProtectOutlined,
-  FlagOutlined,
-  FolderOpenOutlined,
-  FundOutlined,
-  IdcardOutlined,
-  InboxOutlined,
-  IssuesCloseOutlined,
-  MailOutlined,
-  MessageOutlined,
-  PieChartOutlined,
-  ProjectOutlined,
-  QuestionCircleOutlined,
-  SafetyOutlined,
-  ScheduleOutlined,
-  SettingOutlined,
-  TeamOutlined,
-  UserOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
 import type { LucideIcon } from 'lucide-react';
 import {
+  Activity,
   BadgeCheck,
   Banknote,
   BarChart3,
+  BookOpenCheck,
   Boxes,
-  Megaphone,
   BriefcaseBusiness,
+  Building2,
   CalendarCheck2,
-  CalendarClock,
   CalendarDays,
   CalendarOff,
+  CalendarRange,
   Car,
+  ChartGantt,
+  CircleAlert,
   CircleDollarSign,
   CircleUserRound,
   ClipboardCheck,
-  ClipboardList,
-  Clock3,
+  Clock,
+  Coins,
+  Contact,
+  DoorOpen,
+  FileCheck2,
+  FileDiff,
+  FileOutput,
   FilePlus2,
   FileSignature,
+  Fingerprint,
+  Flag,
+  FolderKanban,
+  FolderOpen,
   Fuel,
+  Gauge,
+  HardHat,
+  IdCard,
+  Inbox,
+  Kanban,
+  Laptop,
+  LayoutDashboard,
+  LayoutTemplate,
+  Layers,
+  ListChecks,
+  ListTodo,
+  Mail,
+  MailCheck,
+  MapPin,
+  Megaphone,
+  MessageCircleQuestion,
+  MessageSquare,
+  MessagesSquare,
   Monitor,
+  Network,
+  Newspaper,
+  NotebookPen,
   Package,
-  PackageMinus,
+  PackageCheck,
   PackageOpen,
+  PieChart,
   Pin,
   PinOff,
   Plane,
+  Presentation,
   Receipt,
+  Repeat,
+  Route,
+  ScrollText,
   Search,
+  Settings,
+  Settings2,
+  Shapes,
   ShoppingCart,
+  SlidersHorizontal,
+  SquareCheckBig,
   Stamp,
   Star,
   Timer,
+  TriangleAlert,
+  Truck,
+  UserCog,
+  UserRound,
   Users,
+  UsersRound,
   Wallet,
+  Workflow,
   Wrench,
 } from 'lucide-react';
 
@@ -78,7 +96,9 @@ type NavIconComponent = ComponentType<{
 }>;
 
 /**
- * Adapts a Lucide icon to the sidebar icon API (className / style / 16px).
+ * Adapts a Lucide icon to the nav icon API. The glyph is sized `1em` so it
+ * follows the surrounding `font-size` (`.sb-icon`, `navIconClassName`, KPI
+ * tiles) exactly like the previous Ant Design glyphs did.
  */
 function lucideNavIcon(Icon: LucideIcon): NavIconComponent {
   function LucideNavIcon({
@@ -93,8 +113,9 @@ function lucideNavIcon(Icon: LucideIcon): NavIconComponent {
         aria-hidden
         className={className}
         style={style}
-        size={16}
+        size="1em"
         strokeWidth={1.75}
+        absoluteStrokeWidth={false}
       />
     );
   }
@@ -104,88 +125,115 @@ function lucideNavIcon(Icon: LucideIcon): NavIconComponent {
 }
 
 /**
- * Single source of truth for app-rail and project-context sidebar icons.
- * Keys match `IconRailItem.iconKey` and `ProjectWorkspaceNavItem.iconKey`.
- * HR keys use Lucide for clearer title matching.
+ * Single source of truth for sidebar, project-workspace and list-page icons.
+ * Keys match `SidebarLinkConfig.icon`, `SidebarFolderConfig.icon` and
+ * `ProjectWorkspaceNavItem.iconKey`.
+ *
+ * One glyph per destination: every key below maps to a distinct Lucide icon
+ * so no two sidebar entries share a symbol (a test in
+ * `sidebar-model.test.ts` enforces this for the sidebar config).
  */
 export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
-  dashboard: DashboardOutlined,
-  projects: ProjectOutlined,
-
-  // Sidebar rail domains - one per module group
-  'domain-projects': ProjectOutlined,
-  'domain-hr': lucideNavIcon(Users),
-  'domain-time': lucideNavIcon(CalendarClock),
-  'domain-finance': lucideNavIcon(Banknote),
-  'domain-operations': lucideNavIcon(Boxes),
-  'domain-hr-configuration': lucideNavIcon(ClipboardList),
-  'domain-organization': ApartmentOutlined,
+  // ── Top of rail ──
+  dashboard: lucideNavIcon(LayoutDashboard),
   'new-request': lucideNavIcon(FilePlus2),
-  'my-profile': lucideNavIcon(CircleUserRound),
-  'review-inbox': InboxOutlined,
-  'my-comments': CommentOutlined,
-  'my-work': CheckSquareOutlined,
-  departments: ApartmentOutlined,
-  positions: IdcardOutlined,
-  'disciplines-catalog': ClusterOutlined,
-  kanban: AppstoreOutlined,
-  users: lucideNavIcon(Users),
-  teams: TeamOutlined,
-  'audit-logs': AuditOutlined,
-  reports: PieChartOutlined,
-  messages: MessageOutlined,
-  settings: SettingOutlined,
-  profile: UserOutlined,
-  'status-board': BarChartOutlined,
-  workload: FundOutlined,
-  schedule: ScheduleOutlined,
-  disciplines: ClusterOutlined,
-  deliverables: CheckSquareOutlined,
-  submittals: FileProtectOutlined,
-  'change-requests': DiffOutlined,
-  'external-release': ExportOutlined,
-  rfis: QuestionCircleOutlined,
-  issues: IssuesCloseOutlined,
-  'daily-logs': BookOutlined,
-  meetings: CalendarOutlined,
-  correspondence: MailOutlined,
-  risks: WarningOutlined,
-  'punch-list': SafetyOutlined,
-  documents: FolderOpenOutlined,
-  team: TeamOutlined,
-  closeout: FlagOutlined,
-  approvals: AuditOutlined,
+  approvals: lucideNavIcon(ListChecks),
   announcements: lucideNavIcon(Megaphone),
 
-  // HR - Lucide icons matched to module titles
-  'hr-leave': lucideNavIcon(CalendarDays),
-  'hr-leave-policy': lucideNavIcon(ClipboardList),
-  'hr-work-schedules': lucideNavIcon(CalendarClock),
-  'hr-public-holidays': lucideNavIcon(CalendarOff),
-  'hr-overtime': lucideNavIcon(Timer),
-  'hr-payroll': lucideNavIcon(CircleDollarSign),
+  // ── Rail folders (one per domain) ──
+  'domain-hr': lucideNavIcon(UsersRound),
+  'domain-time': lucideNavIcon(Clock),
+  'domain-finance': lucideNavIcon(Banknote),
+  'domain-operations': lucideNavIcon(Boxes),
+  'domain-projects': lucideNavIcon(FolderKanban),
+  'domain-hr-configuration': lucideNavIcon(Settings2),
+  'domain-organization': lucideNavIcon(Network),
+
+  // ── People ──
+  users: lucideNavIcon(Users),
   'hr-employee-contract': lucideNavIcon(FileSignature),
+  'hr-evaluation-inbox': lucideNavIcon(MailCheck),
+  'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),
+  'hr-evaluation-cycles': lucideNavIcon(Repeat),
+  'hr-evaluation-templates': lucideNavIcon(LayoutTemplate),
+  departments: lucideNavIcon(Building2),
+  positions: lucideNavIcon(IdCard),
+  'disciplines-catalog': lucideNavIcon(Shapes),
+  'hr-reports': lucideNavIcon(BarChart3),
+  'hr-policy-settings': lucideNavIcon(SlidersHorizontal),
+  'hr-org-gaps': lucideNavIcon(Workflow),
+
+  // ── Time & Attendance ──
+  'hr-leave': lucideNavIcon(CalendarDays),
+  'hr-leave-policy': lucideNavIcon(BookOpenCheck),
+  'hr-public-holidays': lucideNavIcon(CalendarOff),
+  'hr-attendance': lucideNavIcon(CalendarCheck2),
+  'hr-attendance-identities': lucideNavIcon(Fingerprint),
+  'hr-field-movement': lucideNavIcon(Route),
+  'hr-work-from-home': lucideNavIcon(Laptop),
+  'hr-site-assignments': lucideNavIcon(MapPin),
+  'hr-work-schedules': lucideNavIcon(CalendarRange),
+  'hr-overtime': lucideNavIcon(Timer),
+
+  // ── Pay & Travel ──
+  'hr-payroll': lucideNavIcon(CircleDollarSign),
   'hr-expense': lucideNavIcon(Receipt),
+  'hr-flight': lucideNavIcon(Plane),
+  'hr-business-trip': lucideNavIcon(BriefcaseBusiness),
+  'hr-per-diem': lucideNavIcon(Wallet),
+  'hr-per-diem-rates': lucideNavIcon(Coins),
+
+  // ── Operations ──
   'hr-purchase': lucideNavIcon(ShoppingCart),
   'hr-material': lucideNavIcon(Package),
   'hr-consumables': lucideNavIcon(PackageOpen),
-  'hr-flight': lucideNavIcon(Plane),
   'hr-vehicle': lucideNavIcon(Car),
-  'hr-official-seal': lucideNavIcon(Stamp),
-  'hr-project-seal': lucideNavIcon(BadgeCheck),
   'hr-refueling': lucideNavIcon(Fuel),
   'hr-inspection': lucideNavIcon(Wrench),
-  'hr-business-trip': lucideNavIcon(BriefcaseBusiness),
-  'hr-per-diem': lucideNavIcon(Wallet),
-  'hr-per-diem-rates': lucideNavIcon(CircleDollarSign),
+  'hr-company-vehicles': lucideNavIcon(Truck),
   'hr-company-asset': lucideNavIcon(Monitor),
-  'hr-attendance': lucideNavIcon(CalendarCheck2),
-  'hr-field-movement': lucideNavIcon(Clock3),
-  'hr-equipment-and-materials-exit-permit': lucideNavIcon(PackageMinus),
-  'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),
-  'hr-reports': lucideNavIcon(BarChart3),
+  'hr-official-seal': lucideNavIcon(Stamp),
+  'hr-project-seal': lucideNavIcon(BadgeCheck),
+  'hr-equipment-and-materials-exit-permit': lucideNavIcon(DoorOpen),
+  'announcements-manage': lucideNavIcon(Newspaper),
 
-  // Sidebar chrome
+  // ── Project Management ──
+  projects: lucideNavIcon(HardHat),
+  'review-inbox': lucideNavIcon(Inbox),
+  'my-comments': lucideNavIcon(MessageSquare),
+  'my-work': lucideNavIcon(SquareCheckBig),
+  kanban: lucideNavIcon(Kanban),
+  reports: lucideNavIcon(PieChart),
+  submittals: lucideNavIcon(FileCheck2),
+  'external-release': lucideNavIcon(FileOutput),
+  'change-requests': lucideNavIcon(FileDiff),
+  rfis: lucideNavIcon(MessageCircleQuestion),
+  issues: lucideNavIcon(CircleAlert),
+  risks: lucideNavIcon(TriangleAlert),
+  'punch-list': lucideNavIcon(ListTodo),
+  'daily-logs': lucideNavIcon(NotebookPen),
+  meetings: lucideNavIcon(Presentation),
+  correspondence: lucideNavIcon(Mail),
+
+  // ── Project workspace extras ──
+  documents: lucideNavIcon(FolderOpen),
+  team: lucideNavIcon(Contact),
+  teams: lucideNavIcon(UserCog),
+  closeout: lucideNavIcon(Flag),
+  schedule: lucideNavIcon(ChartGantt),
+  disciplines: lucideNavIcon(Layers),
+  deliverables: lucideNavIcon(PackageCheck),
+  'status-board': lucideNavIcon(Activity),
+  workload: lucideNavIcon(Gauge),
+  messages: lucideNavIcon(MessagesSquare),
+  profile: lucideNavIcon(UserRound),
+
+  // ── Footer ──
+  'my-profile': lucideNavIcon(CircleUserRound),
+  'audit-logs': lucideNavIcon(ScrollText),
+  settings: lucideNavIcon(Settings),
+
+  // ── Sidebar chrome ──
   favorites: lucideNavIcon(Star),
   search: lucideNavIcon(Search),
   'sidebar-pin': lucideNavIcon(Pin),
@@ -210,7 +258,7 @@ export function resolveNavIconKey(
  * Returns the icon component for a navigation key.
  */
 export function getNavIconComponent(iconKey: string): NavIconComponent {
-  return NAV_ICON_COMPONENTS[iconKey] ?? ProjectOutlined;
+  return NAV_ICON_COMPONENTS[iconKey] ?? NAV_ICON_COMPONENTS.projects!;
 }
 
 /**

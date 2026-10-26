@@ -680,6 +680,7 @@ export default function SidebarShell({
           id={panelId('desktop', SEARCH_PANEL)}
           variant="docked"
           title={t('shell.searchNavigation')}
+          icon="search"
           bindings={bindings}
           onClose={close}
         >
@@ -702,6 +703,7 @@ export default function SidebarShell({
           id={panelId('desktop', FAVORITES_PANEL)}
           variant="docked"
           title={t('shell.favorites')}
+          icon="favorites"
           bindings={bindings}
           onClose={close}
         >
@@ -723,6 +725,7 @@ export default function SidebarShell({
         id={panelId('desktop', folder.id)}
         variant="docked"
         title={t(folder.labelKey)}
+        icon={folder.icon}
         groups={folder.groups}
         project={folder.project}
         loading={folder.project !== null && projectLoading}

@@ -317,3 +317,32 @@ describe('module search', () => {
     ).toEqual(['positions']);
   });
 });
+
+describe('icons', () => {
+  it('gives every destination and folder its own icon', () => {
+    // Two entries may share an icon only when they open the same page
+    // (e.g. Evaluation Inbox at the rail and inside People › Performance).
+    const iconToHrefs = new Map<string, Set<string>>();
+    const record = (icon: string, target: string): void => {
+      const set = iconToHrefs.get(icon) ?? new Set<string>();
+      set.add(target);
+      iconToHrefs.set(icon, set);
+    };
+    for (const entry of [...SIDEBAR_CONFIG.primary, ...SIDEBAR_CONFIG.utility]) {
+      if (entry.kind === 'link') {
+        record(entry.icon, entry.href ?? `coming-soon:${entry.id}`);
+        continue;
+      }
+      record(entry.icon, `folder:${entry.id}`);
+      for (const group of entry.groups) {
+        for (const link of group.items) {
+          record(link.icon, link.href ?? `coming-soon:${link.id}`);
+        }
+      }
+    }
+    const shared = [...iconToHrefs.entries()]
+      .filter(([, targets]) => targets.size > 1)
+      .map(([icon, targets]) => `${icon} → ${[...targets].join(', ')}`);
+    expect(shared).toEqual([]);
+  });
+});

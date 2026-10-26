@@ -108,7 +108,10 @@ Add one `link` entry to the right group in `SIDEBAR_CONFIG` (`sidebar.config.ts`
 That is all. No component changes. Checklist:
 
 1. Add the label to **both** `locales/en/epc.json` and `locales/zh/epc.json`.
-2. Use an existing icon key, or register a new one in `NAV_ICON_COMPONENTS`.
+2. Register a **new** Lucide icon key in `NAV_ICON_COMPONENTS` for the destination. Every
+   sidebar link and folder has its own glyph; two entries may share one only when they open
+   the same page (a test in `sidebar-model.test.ts` enforces this). The registry is
+   Lucide-only so stroke weight stays consistent.
 3. Pick the narrowest permission token that matches the page's own access check (see below).
 4. If the page is not built yet, use `href: null, comingSoon: true`. It renders as
    non-interactive text with a "Coming soon" pill.
@@ -190,8 +193,12 @@ There is exactly one "you are here" treatment, defined once in `sidebar.css`:
 - primary-coloured text and icon (`--sb-active-text`, the primary-hover shade #0F6E56,
   5.3:1 on the tint), medium weight (500).
 
-The base rules earlier in `sidebar.css` (icon tiles, left accent bar) are overridden by
-the `.erp-sidebar-v2` block at the end of the file; v2 has no accent bar and no icon tiles.
+The base rules earlier in `sidebar.css` (left accent bar) are overridden by the
+`.erp-sidebar-v2` block at the end of the file; v2 has no accent bar. Every destination icon
+sits in a soft **icon chip** (`--sb-chip-*`): 30px on rail rows, 28px on panel items, 38px
+on compact tiles. The chip is part of the one selected state - it deepens to the primary
+tint with a primary icon, so the current page reads from the icon alone in the compact
+rail. Docked panels show the folder's own icon beside the heading (`.sb-panel-icon`).
 
 It applies to any `.sb-selectable` element with `aria-current="page"` (links) or
 `data-active="true"` (the rail folder containing the current page). Rail rows,

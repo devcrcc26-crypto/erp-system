@@ -183,7 +183,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
     { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
     // Non-HR discipline/team leads (limitedNavigation + evaluation.inbox).
     // HR users get the same inbox inside People › Performance.
-    { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
+    { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-evaluation-inbox', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
     // Everyone: company news they received, with the unread count.
     { kind: 'link', id: 'announcements', labelKey: 'announcements.nav.announcements', icon: 'announcements', href: '/announcements', activePaths: ['/whats-new'], badge: 'unreadAnnouncements', keywords: ['news', 'notice', 'memo', "what's new", 'update'] },
     // ── Modules: one rail folder per domain, each panel short ──
@@ -206,10 +206,10 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'people-performance',
           labelKey: 'nav.sections.performance',
           items: [
-            { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
+            { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-evaluation-inbox', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
             { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
-            { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
-            { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-employee-evaluation', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
+            { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-evaluation-cycles', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
+            { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-evaluation-templates', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
           ],
         },
         {
@@ -233,8 +233,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'people-settings',
           labelKey: 'nav.sections.hrSettings',
           items: [
-            { kind: 'link', id: 'policy-settings', labelKey: 'nav.hr.policySettings', icon: 'hr-leave-policy', href: '/hr/policy-settings', requires: HR, keywords: ['policy', 'rules', 'tax', 'pension', 'overtime rate', 'grace', 'late'] },
-            { kind: 'link', id: 'org-gaps', labelKey: 'nav.hr.orgGaps', icon: 'hr-reports', href: '/hr/org-gaps', requires: HR, keywords: ['org', 'supervisor', 'department', 'discipline', 'gaps'] },
+            { kind: 'link', id: 'policy-settings', labelKey: 'nav.hr.policySettings', icon: 'hr-policy-settings', href: '/hr/policy-settings', requires: HR, keywords: ['policy', 'rules', 'tax', 'pension', 'overtime rate', 'grace', 'late'] },
+            { kind: 'link', id: 'org-gaps', labelKey: 'nav.hr.orgGaps', icon: 'hr-org-gaps', href: '/hr/org-gaps', requires: HR, keywords: ['org', 'supervisor', 'department', 'discipline', 'gaps'] },
           ],
         },
       ],
@@ -260,10 +260,10 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.sections.attendance',
           items: [
             { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
-            { kind: 'link', id: 'attendance-identities', labelKey: 'nav.hr.attendanceIdentities', icon: 'hr-attendance', href: '/hr/attendance/identities', requires: HR, keywords: ['deli', 'device mapping', 'ignored'] },
+            { kind: 'link', id: 'attendance-identities', labelKey: 'nav.hr.attendanceIdentities', icon: 'hr-attendance-identities', href: '/hr/attendance/identities', requires: HR, keywords: ['deli', 'device mapping', 'ignored'] },
             { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
-            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/work-from-home', requires: ['wfh.assign'], keywords: ['wfh', 'remote', 'home office'] },
-            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-field-movement', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
+            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-work-from-home', href: '/hr/work-from-home', requires: ['wfh.assign'], keywords: ['wfh', 'remote', 'home office'] },
+            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-site-assignments', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
           ],
         },
         {
@@ -326,7 +326,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             { kind: 'link', id: 'vehicle-applications', labelKey: 'nav.hr.vehicleApplications', icon: 'hr-vehicle', href: '/hr/vehicle-applications', requires: ['fleet.access'], keywords: ['car'] },
             { kind: 'link', id: 'vehicle-refueling', labelKey: 'nav.hr.vehicleRefueling', icon: 'hr-refueling', href: '/hr/vehicle-refueling', requires: ['fleet.access'], keywords: ['fuel'] },
             { kind: 'link', id: 'inspection-repair', labelKey: 'nav.hr.inspectionRepair', icon: 'hr-inspection', href: '/hr/inspection-repair', requires: ['fleet.access'], keywords: ['maintenance'] },
-            { kind: 'link', id: 'company-vehicles', labelKey: 'nav.organization.vehicles', icon: 'hr-vehicle', href: '/organization/vehicles', requires: ['org.vehicles'] },
+            { kind: 'link', id: 'company-vehicles', labelKey: 'nav.organization.vehicles', icon: 'hr-company-vehicles', href: '/organization/vehicles', requires: ['org.vehicles'] },
             { kind: 'link', id: 'company-asset', labelKey: 'nav.hr.companyAssets', icon: 'hr-company-asset', href: '/hr/company-asset', requires: ['fleet.access'], keywords: ['equipment'] },
           ],
         },
@@ -337,7 +337,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             { kind: 'link', id: 'official-seal', labelKey: 'nav.hr.officialSeal', icon: 'hr-official-seal', href: '/hr/official-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
             { kind: 'link', id: 'project-seal', labelKey: 'nav.hr.projectSeal', icon: 'hr-project-seal', href: '/hr/project-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
             { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access'], keywords: ['gate pass'] },
-            { kind: 'link', id: 'manage-announcements', labelKey: 'announcements.nav.manage', icon: 'announcements', href: '/hr/announcements', requires: ['announcements.manage'], keywords: ['news', 'publish', 'broadcast', "what's new", 'system update'] },
+            { kind: 'link', id: 'manage-announcements', labelKey: 'announcements.nav.manage', icon: 'announcements-manage', href: '/hr/announcements', requires: ['announcements.manage'], keywords: ['news', 'publish', 'broadcast', "what's new", 'system update'] },
           ],
         },
       ],

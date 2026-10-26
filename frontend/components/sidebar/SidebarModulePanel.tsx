@@ -9,6 +9,7 @@ import type {
 } from '@/components/sidebar/sidebar-model';
 import SidebarModuleGroup from '@/components/sidebar/SidebarModuleGroup';
 import { SIDEBAR_PANEL_WIDTH } from '@/components/sidebar/sidebar.config';
+import { getNavIcon } from '@/lib/navigation/nav-icons';
 
 /** Shared rendering hooks the shell hands to every panel. */
 export interface SidebarPanelBindings {
@@ -35,6 +36,7 @@ export default function SidebarModulePanel({
   id,
   variant,
   title,
+  icon,
   groups = [],
   project = null,
   loading = false,
@@ -45,6 +47,8 @@ export default function SidebarModulePanel({
   id: string;
   variant: 'inline' | 'docked';
   title: string;
+  /** Docked only - the folder's icon key, shown beside the heading. */
+  icon?: string;
   groups?: readonly SidebarGroup[];
   project?: SidebarProjectHeader | null;
   /** Project workspace items are still resolving. */
@@ -100,6 +104,11 @@ export default function SidebarModulePanel({
       }}
     >
       <div className="sb-panel-header shrink-0">
+        {icon ? (
+          <span className="sb-panel-icon" aria-hidden>
+            {getNavIcon(icon)}
+          </span>
+        ) : null}
         {/* The shell focuses this heading (by id) when the panel opens. */}
         <h2 id={headingId} tabIndex={-1} className="sb-panel-title">
           {title}

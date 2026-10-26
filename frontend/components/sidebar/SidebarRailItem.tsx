@@ -74,7 +74,7 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
       ) : null}
       {isFolder && compact ? (
         <span className="sb-tile-folder-mark" aria-hidden>
-          <ChevronRight size={12} strokeWidth={2.25} />
+          <ChevronRight size={9} strokeWidth={2.75} />
         </span>
       ) : null}
     </>
