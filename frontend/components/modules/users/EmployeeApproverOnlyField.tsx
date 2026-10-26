@@ -96,6 +96,8 @@ export default function EmployeeApproverOnlyField({
 
       <Modal
         open={pending !== null}
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
         title={
           pending
             ? t('users.approverOnlyEnableTitle')

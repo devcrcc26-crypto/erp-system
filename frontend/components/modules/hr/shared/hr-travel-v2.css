@@ -1,9 +1,11 @@
 /*
  * Shared v2 chrome for Expense Claims, Flight Applications, Business Trips,
- * Per Diem (requests / settlements), Employee Per Diem Rates, and Operations
+ * Per Diem (requests / settlements), Employee Per Diem Rates, Operations
  * request/register details & forms (purchase, material, consumables, fleet,
- * seals, exit permit, company assets/vehicles).
- * Scoped under `.erp-hr-travel-v2`. Portaled modals use `.erp-hr-travel-modal`.
+ * seals, exit permit, company assets/vehicles), New Request picker, and
+ * Employees (list / detail / add / edit).
+ * Scoped under `.erp-hr-travel-v2`. Portaled modals and drawers use
+ * `.erp-hr-travel-modal`.
  */
 
 .erp-hr-travel-v2 {
@@ -618,6 +620,76 @@
 .erp-hr-travel-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
   background: var(--htv2-primary);
   border-color: var(--htv2-primary);
+}
+
+/* Portaled drawers (employee import) share the same header/footer chrome. */
+.erp-hr-travel-modal.ant-drawer .ant-drawer-header,
+.erp-hr-travel-modal .ant-drawer-header {
+  border-bottom-color: var(--htv2-divider);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-drawer-title,
+.erp-hr-travel-modal .ant-drawer-title {
+  color: var(--htv2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-drawer-footer,
+.erp-hr-travel-modal .ant-drawer-footer {
+  border-top-color: var(--htv2-divider);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn-primary,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary {
+  background: var(--htv2-primary);
+  border-color: var(--htv2-primary);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn-primary:hover,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary:hover {
+  background: var(--htv2-primary-strong) !important;
+  border-color: var(--htv2-primary-strong) !important;
+}
+
+/* New Request picker: inherit travel tokens, give tiles a quiet hover lift. */
+.erp-hr-travel-v2.erp-request-picker {
+  gap: 20px;
+}
+
+.erp-hr-travel-v2 .erp-request-picker-hero,
+.erp-hr-travel-v2 .erp-request-picker-group {
+  border-radius: var(--htv2-radius);
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-request-card {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.erp-hr-travel-v2 .erp-request-card:hover {
+  border-color: var(--htv2-divider);
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-request-card-icon {
+  border-radius: 12px;
+}
+
+.erp-hr-travel-v2 .erp-request-picker-search.ant-input-affix-wrapper,
+.erp-hr-travel-v2 .erp-request-picker-actions .ant-btn,
+.erp-hr-travel-v2 .erp-request-picker-chip {
+  border-radius: 999px;
 }
 
 @media (max-width: 900px) {

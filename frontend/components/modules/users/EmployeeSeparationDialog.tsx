@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useState } from 'react';
 import { Alert, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Spin } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -97,6 +99,8 @@ export default function EmployeeSeparationDialog({
       onCancel={close}
       destroyOnHidden
       width={step === 'handover' ? 760 : undefined}
+      rootClassName="erp-hr-travel-modal"
+      className="erp-hr-travel-modal"
       footer={
         <div className="flex flex-wrap justify-end gap-2">
           {step === 'handover' ? (

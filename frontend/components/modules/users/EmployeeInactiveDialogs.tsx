@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { Alert, DatePicker, Form, Input, Modal, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -64,6 +66,8 @@ export function EmployeeSetInactiveDialog({
       onOk={() => void submit()}
       onCancel={close}
       destroyOnHidden
+      rootClassName="erp-hr-travel-modal"
+      className="erp-hr-travel-modal"
     >
       <Alert
         type="info"
@@ -173,6 +177,8 @@ export function EmployeeReactivateDialog({
       onOk={() => void submit()}
       onCancel={close}
       destroyOnHidden
+      rootClassName="erp-hr-travel-modal"
+      className="erp-hr-travel-modal"
     >
       <p className="mt-0">
         {inactive.current

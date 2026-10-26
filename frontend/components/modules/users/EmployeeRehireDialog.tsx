@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useState } from 'react';
 import { Alert, DatePicker, Form, Input, InputNumber, Modal, Select, Typography } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -88,6 +90,8 @@ export default function EmployeeRehireDialog({
       onCancel={close}
       mask={{ closable: !temporaryPassword }}
       destroyOnHidden
+      rootClassName="erp-hr-travel-modal"
+      className="erp-hr-travel-modal"
     >
       {temporaryPassword ? (
         <Alert

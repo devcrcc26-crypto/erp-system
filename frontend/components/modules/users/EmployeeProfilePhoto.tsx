@@ -250,6 +250,7 @@ export default function EmployeeProfilePhoto({
 
   const dialog = (
     <ConfirmDialog
+      className="erp-hr-travel-modal"
       open={confirmRemove}
       title={t('users.removePhotoTitle')}
       description={t('users.removePhotoDescription')}

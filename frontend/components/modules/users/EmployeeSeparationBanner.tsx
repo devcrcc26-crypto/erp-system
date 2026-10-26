@@ -64,6 +64,7 @@ export default function EmployeeSeparationBanner({
         action={cancelButton}
       />
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmOpen}
         title={t('users.separation.cancelTitle')}
         description={t('users.separation.cancelDescription')}

@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Button, Input, Skeleton, Spin, Typography } from 'antd';
 import { ArrowLeft } from 'lucide-react';
@@ -30,6 +32,9 @@ import { formatDisplayDate } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import NewRequestCategoryPicker from './NewRequestCategoryPicker';
+
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-approvals-new-page erp-hr-travel-v2';
 
 const CATEGORY_ROUTES: Record<string, string> = {
   LEAVE_REQUEST: '/approvals/new/leave-request',
@@ -138,7 +143,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (categoriesQuery.isLoading && !categoriesQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex justify-center p-12">
+      <div className={`${PAGE_ROOT} flex justify-center p-12`}>
         <Spin />
       </div>
     );
@@ -146,7 +151,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (categoriesQuery.isError) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page">
+      <div className={PAGE_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -177,7 +182,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex flex-col gap-4">
+    <div className={`${PAGE_ROOT} flex flex-col gap-4`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
           type="text"

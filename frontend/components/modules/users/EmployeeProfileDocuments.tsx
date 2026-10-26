@@ -189,6 +189,7 @@ export default function EmployeeProfileDocuments({
       )}
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(confirmDeleteId)}
         title={t('users.deleteDocumentTitle')}
         description={t('users.deleteDocumentDescription', {

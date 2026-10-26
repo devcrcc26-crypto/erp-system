@@ -1,5 +1,8 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/hr/import-export/hr-import-v2.css';
+
 import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -822,7 +825,7 @@ export default function UserImportModal({
       open
       placement="right"
       size={DRAWER_WIDTH_SUBMITTAL}
-      className={`${responsiveDetailDrawerClassName} erp-user-import-drawer`}
+      className={`${responsiveDetailDrawerClassName} erp-user-import-drawer erp-hr-travel-modal erp-hr-import-v2`}
       styles={{
         ...detailDrawerStyles,
         header: {

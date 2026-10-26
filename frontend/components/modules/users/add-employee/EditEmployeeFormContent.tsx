@@ -1,13 +1,18 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployeeForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useUser } from '@/lib/query/users';
 import { formatUserName } from '@/lib/utils/user-display';
+
+const FORM_ROOT = `erp-pro-list-page erp-users-page erp-employee-form-page erp-hr-travel-v2 ${DETAIL_PAGE_V2}`;
 
 export default function EditEmployeeFormContent({
   userId,
@@ -36,7 +41,7 @@ export default function EditEmployeeFormContent({
 
   if (userQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+      <div className={FORM_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -45,7 +50,7 @@ export default function EditEmployeeFormContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+    <div className={FORM_ROOT}>
       <HrFormPageShell
         title={t('pages.users.edit')}
         description={t('users.form.editEmployeeDescription')}

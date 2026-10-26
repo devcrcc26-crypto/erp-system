@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import './employees-v2.css';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -77,12 +78,15 @@ import {
   type UsersListSortField,
 } from '@/lib/utils/users-list-filter';
 import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { canResetUserPassword } from '@/lib/utils/user-permissions';
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import {
   userStatusLabel,
   userStatusVariant,
 } from '@/lib/utils/user-status';
+
+const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 ${LIST_PAGE_V2}`;
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
@@ -472,7 +476,7 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employees-v2">
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -630,7 +634,7 @@ export default function UsersPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employees-v2">
+    <div className={PAGE_ROOT}>
       {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}
@@ -642,6 +646,7 @@ export default function UsersPageContent(): React.ReactNode {
       ) : null}
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={Boolean(deletingUser)}
         title={t('users.deleteEmployee')}
         description={
@@ -667,6 +672,8 @@ export default function UsersPageContent(): React.ReactNode {
         onOk={() => setTempPasswordModal(null)}
         onCancel={() => setTempPasswordModal(null)}
         destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
       >
         {tempPasswordModal ? (
           <div className="space-y-3">

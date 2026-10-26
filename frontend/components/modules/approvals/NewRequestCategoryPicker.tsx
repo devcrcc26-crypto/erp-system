@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Button, Input } from 'antd';
 import type { LucideIcon } from 'lucide-react';
@@ -199,7 +201,7 @@ export default function NewRequestCategoryPicker({
       : groups.filter(({ group }) => group.key === selectedGroup);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-approvals-new-page erp-request-picker">
+    <div className="erp-pro-list-page erp-users-page erp-approvals-new-page erp-request-picker erp-hr-travel-v2">
       <div className="erp-request-picker-hero">
         <div className="min-w-0">
           <h2

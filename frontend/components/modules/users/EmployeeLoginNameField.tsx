@@ -172,6 +172,8 @@ export default function EmployeeLoginNameField({
         onOk={() => void handleSave()}
         onCancel={() => setEditOpen(false)}
         destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
       >
         <Form form={form} layout="vertical" requiredMark={false}>
           <Form.Item

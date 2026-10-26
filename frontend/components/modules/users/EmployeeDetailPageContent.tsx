@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/profile/profile-v2.css';
 import './employee-detail-v2.css';
 
@@ -78,6 +79,9 @@ import {
   userStatusLabel,
   userStatusVariant,
 } from '@/lib/utils/user-status';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-hr-travel-v2 ${DETAIL_PAGE_V2}`;
 
 const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
   success: '#16a34a',
@@ -356,7 +360,7 @@ export default function EmployeeDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2">
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active avatar paragraph={{ rows: 8 }} />
         </div>
@@ -371,7 +375,7 @@ export default function EmployeeDetailPageContent({
         : 0;
 
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className={`${DETAIL_ROOT}`}>
         <Alert
           type="error"
           showIcon
@@ -472,7 +476,7 @@ export default function EmployeeDetailPageContent({
   ];
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2">
+    <div className={DETAIL_ROOT}>
       <div className="erp-pro-card erp-profile-identity">
         <div className="erp-employee-toolbar">
           <Button
@@ -966,6 +970,7 @@ export default function EmployeeDetailPageContent({
       </div>
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmDelete}
         title={t('users.deleteEmployee')}
         description={t('users.deleteDescription', {
