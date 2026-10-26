@@ -249,6 +249,7 @@ function HrReportsPageInner(): React.ReactNode {
                   key: 'export-hr-report',
                   label: t(`${PAGE}.export`),
                   filePrefix: 'hr-report',
+                  documentTitle: t(`${PAGE}.title`),
                   disabled: !report,
                   buildSheets: () =>
                     report ? buildHrReportExportSheets(report) : [],

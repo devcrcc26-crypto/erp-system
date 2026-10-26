@@ -5,6 +5,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { HrExportSheet } from '@/lib/utils/hr-export-excel';
 import {
+  HR_EXPORT_COMPANY_NAME,
   buildHrExportFileName,
   downloadHrExcelWorkbook,
 } from '@/lib/utils/hr-export-excel';
@@ -23,6 +24,11 @@ export interface HrExcelExportAction {
    * async when a sheet needs extra detail fetched first.
    */
   buildSheets: () => HrExportSheet[] | Promise<HrExportSheet[]>;
+  /**
+   * Title printed at the top of every sheet (e.g. `HR Report`), with the
+   * sheet name as subtitle. Defaults to each sheet's own name.
+   */
+  documentTitle?: string;
   disabled?: boolean;
 }
 
@@ -37,6 +43,9 @@ export function useHrExcelExport(): {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const companyName = useAuthStore((state) => state.user?.companyName);
+  const firstName = useAuthStore((state) => state.user?.firstName);
+  const lastName = useAuthStore((state) => state.user?.lastName);
+  const preparedBy = [firstName, lastName].filter(Boolean).join(' ') || null;
   const [exporting, setExporting] = useState(false);
 
   const runExport = useCallback(
@@ -47,9 +56,12 @@ export function useHrExcelExport(): {
         await downloadHrExcelWorkbook({
           fileName: buildHrExportFileName(
             action.filePrefix,
-            companyName ?? 'CRCC International Consulting',
+            companyName ?? HR_EXPORT_COMPANY_NAME,
           ),
           sheets,
+          companyName,
+          preparedBy,
+          documentTitle: action.documentTitle,
         });
         messageApi.success(t('hr.exportImport.exportSuccess'));
       } catch {
@@ -58,7 +70,7 @@ export function useHrExcelExport(): {
         setExporting(false);
       }
     },
-    [companyName, messageApi, t],
+    [companyName, messageApi, preparedBy, t],
   );
 
   return { exporting, runExport };

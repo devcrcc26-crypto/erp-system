@@ -1,7 +1,8 @@
-import ExcelJS from 'exceljs';
+import { downloadHrExcelWorkbook } from '@/lib/utils/hr-export-excel';
 
 /**
- * Shared Excel download helper for HR list exports.
+ * Shared single-sheet Excel download for HR exports. Uses the same
+ * PDF-style document layout as the multi-sheet HR builder.
  */
 export async function downloadExcelWorkbook(input: {
   sheetName: string;
@@ -9,38 +10,25 @@ export async function downloadExcelWorkbook(input: {
   columns: Array<{ header: string; key: string; width?: number }>;
   rows: Array<Record<string, string | number>>;
   generatedAt?: string;
+  companyName?: string;
+  preparedBy?: string | null;
 }): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Construction ERP';
-  workbook.created = new Date(input.generatedAt ?? new Date().toISOString());
-
-  const sheet = workbook.addWorksheet(input.sheetName);
-  sheet.columns = input.columns.map((column) => ({
-    header: column.header,
-    key: column.key,
-    width: column.width ?? 16,
-  }));
-
-  const headerRow = sheet.getRow(1);
-  headerRow.font = { bold: true };
-  headerRow.alignment = { vertical: 'middle', wrapText: true };
-
-  if (input.rows.length > 0) {
-    sheet.addRows(input.rows);
-  }
-
-  sheet.views = [{ state: 'frozen', ySplit: 1 }];
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  await downloadHrExcelWorkbook({
+    fileName: input.fileName,
+    generatedAt: input.generatedAt,
+    companyName: input.companyName,
+    preparedBy: input.preparedBy,
+    sheets: [
+      {
+        name: input.sheetName,
+        columns: input.columns.map((column) => ({
+          ...column,
+          width: column.width ?? 16,
+        })),
+        rows: input.rows,
+      },
+    ],
   });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = input.fileName;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }
 
 export function cell(value: string | number | null | undefined): string {
