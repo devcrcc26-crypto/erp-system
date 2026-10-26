@@ -539,6 +539,13 @@
         "showTable": "显示",
         "hideTable": "隐藏",
         "allMonths": "全部",
+        "tabs": {
+          "label": "人力资源报表分区",
+          "overview": "总览",
+          "leaveOt": "请假与加班",
+          "payrollSpend": "薪资与支出",
+          "contractsAttendance": "合同与考勤"
+        },
         "kpi": {
           "activeEmployees": "在职员工",
           "inactiveEmployees": "停用员工",

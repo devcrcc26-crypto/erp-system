@@ -539,6 +539,13 @@
         "showTable": "Show",
         "hideTable": "Hide",
         "allMonths": "All",
+        "tabs": {
+          "label": "HR report sections",
+          "overview": "Overview",
+          "leaveOt": "Leave & OT",
+          "payrollSpend": "Payroll & spend",
+          "contractsAttendance": "Contracts & attendance"
+        },
         "kpi": {
           "activeEmployees": "Active employees",
           "inactiveEmployees": "Inactive employees",

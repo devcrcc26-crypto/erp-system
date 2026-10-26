@@ -27,6 +27,7 @@ export default function OverviewCard({
   action,
   children,
   className = '',
+  bodyClassName = 'p-5',
 }: {
   title: string;
   subtitle?: string;
@@ -40,6 +41,8 @@ export default function OverviewCard({
   action?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /** Body padding/layout; use `p-0` for edge-to-edge tables. */
+  bodyClassName?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const headingId = useId();
@@ -110,7 +113,9 @@ export default function OverviewCard({
           </Link>
         ) : null}
       </header>
-      <div className="flex flex-1 flex-col gap-4 p-5">{body}</div>
+      <div className={`flex flex-1 flex-col gap-4 ${bodyClassName}`.trim()}>
+        {body}
+      </div>
     </motion.section>
   );
 }
