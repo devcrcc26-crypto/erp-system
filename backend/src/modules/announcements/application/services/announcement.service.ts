@@ -29,6 +29,10 @@ import {
   STORAGE_SERVICE,
 } from '../../../../shared/storage/storage.constants';
 import { IStorageService } from '../../../../shared/storage/storage.interface';
+import {
+  finishDocumentSheet,
+  startDocumentSheet,
+} from '../../../../shared/utils/excel-document.util';
 import { buildPaginatedResult } from '../../../../shared/utils/pagination.util';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
@@ -514,25 +518,41 @@ export class AnnouncementService {
       },
     });
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'CCECC PWF ERP';
-    const sheet = workbook.addWorksheet('Read statistics');
     const read = recipients.filter((recipient) => recipient.readAt).length;
     const acknowledged = recipients.filter((recipient) => recipient.acknowledgedAt).length;
-
-    sheet.addRow([`${row.number} · ${row.title}`]).font = { bold: true, size: 13 };
-    sheet.addRow([
-      `Published ${row.publishedAt ? formatDateTime(row.publishedAt) : '-'}`,
-      `Recipients ${recipients.length}`,
-      `Read ${read}`,
-      row.requireAcknowledgement ? `Acknowledged ${acknowledged}` : '',
+    const [company, preparer] = await Promise.all([
+      this.prisma.company.findUnique({
+        where: { id: ctx.companyId },
+        select: { legalName: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: ctx.userId },
+        select: { firstName: true, lastName: true },
+      }),
     ]);
-    sheet.addRow([]);
-    const header = sheet.addRow(['Name', 'Employee ID', 'Department', 'Read at', 'Acknowledged at']);
-    header.font = { bold: true };
-    header.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF1F4' } };
-    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = company?.legalName ?? 'CRCC International Consulting';
+    const sheet = workbook.addWorksheet('Read statistics');
+    const layout = startDocumentSheet(
+      sheet,
+      {
+        companyName: company?.legalName ?? 'CRCC International Consulting',
+        title: `${row.number} · ${row.title}`,
+        preparedBy: preparer
+          ? `${preparer.firstName} ${preparer.lastName}`.trim()
+          : null,
+        details: [
+          ['Published', row.publishedAt ? formatDateTime(row.publishedAt) : '-'],
+          ['Read', `${read} of ${recipients.length}`],
+          ...(row.requireAcknowledgement
+            ? ([['Acknowledged', String(acknowledged)]] as Array<[string, string]>)
+            : []),
+        ],
+      },
+      [['Name', 'Employee ID', 'Department', 'Read at', 'Acknowledged at']],
+      [30, 14, 32, 20, 20],
+    );
     for (const recipient of recipients) {
       sheet.addRow([
         `${recipient.user.firstName} ${recipient.user.lastName}`.trim(),
@@ -542,7 +562,7 @@ export class AnnouncementService {
         recipient.acknowledgedAt ? formatDateTime(recipient.acknowledgedAt) : '',
       ]);
     }
-    sheet.columns = [{ width: 30 }, { width: 14 }, { width: 32 }, { width: 20 }, { width: 20 }];
+    finishDocumentSheet(sheet, layout);
 
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
     return { buffer, filename: `Announcement_${row.number}_read_stats.xlsx` };

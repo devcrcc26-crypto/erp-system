@@ -4,6 +4,10 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import {
+  findHeaderRowNumber,
+  isExportFooterRow,
+} from '../../../../shared/utils/excel-header-row.util';
+import {
   DEFAULT_MAX_IMPORT_ROWS,
   MAX_IMPORT_FILE_BYTES,
   buildHeaderLookup,
@@ -78,8 +82,16 @@ export class HrExcelImportService {
     );
     const headerLookup = buildHeaderLookup(schema);
     const fieldByColumnNumber = new Map<number, string>();
+    const cellText = (value: ExcelJS.CellValue): string =>
+      this.cellToString(value);
+    // Exports put a document header above the table; find the column row.
+    const headerRowNumber = findHeaderRowNumber(
+      sheet,
+      (text) => headerLookup.has(normalizeLookupKey(text)),
+      cellText,
+    );
 
-    sheet.getRow(1).eachCell((cell, colNumber) => {
+    sheet.getRow(headerRowNumber).eachCell((cell, colNumber) => {
       const field = headerLookup.get(
         normalizeLookupKey(this.cellToString(cell.value)),
       );
@@ -94,9 +106,13 @@ export class HrExcelImportService {
     const maxRows = schema.maxRows ?? DEFAULT_MAX_IMPORT_ROWS;
     const rows: ValidatedImportRow[] = [];
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    for (
+      let rowNumber = headerRowNumber + 1;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
       const excelRow = sheet.getRow(rowNumber);
-      if (this.isRowEmpty(excelRow)) {
+      if (this.isRowEmpty(excelRow) || isExportFooterRow(excelRow, cellText)) {
         continue;
       }
 

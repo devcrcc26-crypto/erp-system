@@ -103,10 +103,10 @@ describe('ProjectExportService', () => {
 
     const buffer = await service.exportProjectList(ctx);
     const sheet = await readWorksheet(buffer, 'Project list');
-    const dataRow = sheet.getRow(3);
+    const dataRow = sheet.getRow(7);
 
-    expect(sheet.getRow(1).getCell(4).value).toBe('项目状态');
-    expect(sheet.getRow(2).getCell(4).value).toBe('Project Status');
+    expect(sheet.getRow(5).getCell(4).value).toBe('项目状态');
+    expect(sheet.getRow(6).getCell(4).value).toBe('Project Status');
     expect(dataRow.getCell(4).value).toBe('In Progress');
     expect(dataRow.getCell(6).value).toBe('Email');
     expect(dataRow.getCell(9).value).toBe(
@@ -114,8 +114,8 @@ describe('ProjectExportService', () => {
     );
     expect(dataRow.getCell(10).value).toBe('Implementation（DB）');
     expect(dataRow.getCell(11).value).toBe('Detailed Design (DD)');
-    expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
-    expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
+    expect(sheet.getRow(5).getCell(14).value).toBe('铁路长度(km)');
+    expect(sheet.getRow(6).getCell(14).value).toBe('Length of Railway (km)');
     expect(dataRow.getCell(14).value).toBe(120.5);
     expect(dataRow.getCell(15).value).toBe('');
     expect(dataRow.getCell(16).value).toBe('');
@@ -152,7 +152,7 @@ describe('ProjectExportService', () => {
 
     const buffer = await service.exportProjectList(ctx);
     const sheet = await readWorksheet(buffer, 'Project list');
-    expect(sheet.getRow(3).getCell(2).value).toBe('Marina Tower (滨海大厦)');
+    expect(sheet.getRow(7).getCell(2).value).toBe('Marina Tower (滨海大厦)');
   });
 
   it('exports task list with populated discipline blocks for matching disciplines', async () => {
@@ -300,7 +300,7 @@ describe('ProjectExportService', () => {
 
     const buffer = await service.exportTaskList(ctx, projectId);
     const sheet = await readWorksheet(buffer, 'task list');
-    const dataRow = sheet.getRow(3);
+    const dataRow = sheet.getRow(7);
 
     expect(taskAccessScopeService.buildTaskListWhere).toHaveBeenCalledWith(
       ctx,
@@ -363,7 +363,7 @@ describe('ProjectExportService', () => {
 
     const buffer = await service.exportTaskList(ctx, projectId);
     const sheet = await readWorksheet(buffer, 'task list');
-    const dataRow = sheet.getRow(3);
+    const dataRow = sheet.getRow(7);
 
     expect(dataRow.getCell(1).value).toBe('TASK-002');
     expect(dataRow.getCell(4).value).toBe('General coordination');

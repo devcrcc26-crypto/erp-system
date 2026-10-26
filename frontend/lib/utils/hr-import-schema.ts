@@ -91,6 +91,11 @@ function requiredGroupsOf(
   return [...groups].map(([name, group]) => ({ name, ...group }));
 }
 
+/** Rows scanned for the column header (exports put a title block above it). */
+const HEADER_SCAN_ROWS = 15;
+/** Rows the exporter adds under the table that are not data. */
+const EXPORT_FOOTER_LABELS = new Set(['total', 'no records']);
+
 /**
  * Parses and validates an uploaded workbook in the browser.
  *
@@ -131,8 +136,29 @@ export async function parseHrImportFile(
     }
   }
 
+  // Exports put a document header (company, title, generated line) above the
+  // table, so the column row is the best-matching one among the first rows.
+  let headerRowNumber = 1;
+  let bestMatches = 0;
+  for (
+    let rowNumber = 1;
+    rowNumber <= Math.min(sheet.rowCount, HEADER_SCAN_ROWS);
+    rowNumber += 1
+  ) {
+    let matches = 0;
+    sheet.getRow(rowNumber).eachCell((cell) => {
+      if (headerLookup.has(normalizeKey(cellText(cell.value)))) {
+        matches += 1;
+      }
+    });
+    if (matches > bestMatches) {
+      bestMatches = matches;
+      headerRowNumber = rowNumber;
+    }
+  }
+
   const fieldByColumn = new Map<number, string>();
-  sheet.getRow(1).eachCell((cell, colNumber) => {
+  sheet.getRow(headerRowNumber).eachCell((cell, colNumber) => {
     const field = headerLookup.get(normalizeKey(cellText(cell.value)));
     if (field && !fieldByColumn.has(colNumber)) {
       fieldByColumn.set(colNumber, field);
@@ -162,8 +188,18 @@ export async function parseHrImportFile(
   );
   const rows: HrClientParsedRow[] = [];
 
-  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+  for (
+    let rowNumber = headerRowNumber + 1;
+    rowNumber <= sheet.rowCount;
+    rowNumber += 1
+  ) {
     const excelRow = sheet.getRow(rowNumber);
+    // Skip the exporter's own "Total" / "No records" row under the table.
+    if (
+      EXPORT_FOOTER_LABELS.has(cellText(excelRow.getCell(1).value).trim().toLowerCase())
+    ) {
+      continue;
+    }
     const cells: Record<string, string> = {};
     let hasValue = false;
 

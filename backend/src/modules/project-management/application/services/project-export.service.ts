@@ -23,8 +23,10 @@ import { ProjectExportListQueryDto } from '../dtos/pm.dtos';
 import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   applyBilingualHeaders,
+  finishProjectExportSheet,
   workbookToBuffer,
 } from '../utils/project-export-excel.util';
+import type { DocumentSheetMeta } from '../../../../shared/utils/excel-document.util';
 import {
   formatExportApprovalLevel,
   formatExportCommissionMode,
@@ -128,7 +130,10 @@ export class ProjectExportService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return this.buildProjectListWorkbook(projects);
+    return this.buildProjectListWorkbook(
+      projects,
+      await this.exportMeta(ctx, 'Project List'),
+    );
   }
 
   /**
@@ -139,7 +144,13 @@ export class ProjectExportService {
     projectId: string,
   ): Promise<Buffer> {
     const project = await this.loadProjectExportRow(ctx, projectId);
-    return this.buildProjectListWorkbook([project]);
+    return this.buildProjectListWorkbook(
+      [project],
+      await this.exportMeta(
+        ctx,
+        `Project - ${formatExportLocalizedName(project.name, project.nameZh)}`,
+      ),
+    );
   }
 
   /**
@@ -184,6 +195,7 @@ export class ProjectExportService {
       tasks,
       changeRequests,
       userNameMap,
+      await this.exportMeta(ctx, await this.taskListTitle(ctx, projectId, 'Task List')),
     );
   }
 
@@ -231,7 +243,14 @@ export class ProjectExportService {
       [...userIds],
     );
 
-    return this.buildTaskListSummaryWorkbook(tasks, userNameMap);
+    return this.buildTaskListSummaryWorkbook(
+      tasks,
+      userNameMap,
+      await this.exportMeta(
+        ctx,
+        await this.taskListTitle(ctx, projectId, 'Task List (Summary)'),
+      ),
+    );
   }
 
   private async loadProjectExportRow(
@@ -259,10 +278,12 @@ export class ProjectExportService {
 
   private buildProjectListWorkbook(
     projects: ProjectExportRow[],
+    meta: DocumentSheetMeta,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
+    workbook.creator = meta.companyName;
     const sheet = workbook.addWorksheet('Project list');
-    applyBilingualHeaders(sheet, PROJECT_LIST_EXPORT_COLUMNS);
+    const layout = applyBilingualHeaders(sheet, PROJECT_LIST_EXPORT_COLUMNS, meta);
 
     projects.forEach((project, index) => {
       const onSitePerson =
@@ -298,6 +319,7 @@ export class ProjectExportService {
       ]);
     });
 
+    finishProjectExportSheet(sheet, layout);
     return workbookToBuffer(workbook);
   }
 
@@ -308,32 +330,95 @@ export class ProjectExportService {
       'id' | 'sourceEntityId' | 'originEntityId'
     >[],
     userNameMap: Map<string, string>,
+    meta: DocumentSheetMeta,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
+    workbook.creator = meta.companyName;
     const sheet = workbook.addWorksheet('task list');
     const columns = buildTaskListExportColumns();
-    applyBilingualHeaders(sheet, columns);
+    const layout = applyBilingualHeaders(sheet, columns, meta);
 
     for (const task of tasks) {
       sheet.addRow(this.buildTaskExportRow(task, changeRequests, userNameMap));
     }
 
+    finishProjectExportSheet(sheet, layout);
     return workbookToBuffer(workbook);
   }
 
   private buildTaskListSummaryWorkbook(
     tasks: TaskStandardExportRow[],
     userNameMap: Map<string, string>,
+    meta: DocumentSheetMeta,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
+    workbook.creator = meta.companyName;
     const sheet = workbook.addWorksheet('task list (summary)');
-    applyBilingualHeaders(sheet, TASK_LIST_SUMMARY_EXPORT_COLUMNS);
+    const layout = applyBilingualHeaders(
+      sheet,
+      TASK_LIST_SUMMARY_EXPORT_COLUMNS,
+      meta,
+    );
 
     for (const task of tasks) {
       sheet.addRow(this.buildTaskStandardRow(task, userNameMap));
     }
 
+    finishProjectExportSheet(sheet, layout);
     return workbookToBuffer(workbook);
+  }
+
+  /**
+   * Company and caller names for the export's document header. A failed
+   * lookup falls back to defaults - the header must never block an export.
+   */
+  private async exportMeta(
+    ctx: PmContext,
+    title: string,
+  ): Promise<DocumentSheetMeta> {
+    let companyName = '';
+    let preparedBy: string | null = null;
+    try {
+      const [company, user] = await Promise.all([
+        this.prisma.company.findUnique({
+          where: { id: ctx.companyId },
+          select: { legalName: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: ctx.userId },
+          select: { firstName: true, lastName: true, email: true },
+        }),
+      ]);
+      companyName = company?.legalName ?? '';
+      preparedBy = user ? formatUserDisplayName(user) : null;
+    } catch {
+      // Defaults below.
+    }
+    return {
+      companyName: companyName || 'CRCC International Consulting',
+      title,
+      preparedBy,
+      generatedAt: new Date(),
+    };
+  }
+
+  /** `Task List - Marina Tower (滨海大厦)`, or just the label if not found. */
+  private async taskListTitle(
+    ctx: PmContext,
+    projectId: string,
+    label: string,
+  ): Promise<string> {
+    try {
+      const project = await this.prisma.project.findFirst({
+        where: activeOnly({ id: projectId, companyId: ctx.companyId }),
+        select: { name: true, nameZh: true },
+      });
+      return project
+        ? `${label} - ${formatExportLocalizedName(project.name, project.nameZh)}`
+        : label;
+    } catch {
+      return label;
+    }
   }
 
   /** The 17 standard task columns shared by the full and summary exports. */

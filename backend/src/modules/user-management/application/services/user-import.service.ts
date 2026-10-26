@@ -11,6 +11,10 @@ import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
+import {
+  findHeaderRowNumber,
+  isExportFooterRow,
+} from '../../../../shared/utils/excel-header-row.util';
 import { parseUserDisciplineInput } from '../../../../shared/user-discipline';
 import {
   ImportCommitResponseDto,
@@ -575,7 +579,15 @@ export class UserImportService {
       throw new BadRequestException('Workbook must contain at least one sheet');
     }
 
-    const headerRow = sheet.getRow(1);
+    // Exports put a document header above the table; find the column row.
+    const cellText = (value: ExcelJS.CellValue): string =>
+      this.cellToString(value);
+    const headerRowNumber = findHeaderRowNumber(
+      sheet,
+      (text) => Boolean(HEADER_ALIASES[this.normalizeHeader(text)]),
+      cellText,
+    );
+    const headerRow = sheet.getRow(headerRowNumber);
     const columnMap = new Map<number, keyof ParsedImportRow>();
 
     headerRow.eachCell((cell, colNumber) => {
@@ -598,9 +610,13 @@ export class UserImportService {
 
     const rows: ParsedImportRow[] = [];
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    for (
+      let rowNumber = headerRowNumber + 1;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
       const row = sheet.getRow(rowNumber);
-      if (this.isRowEmpty(row)) {
+      if (this.isRowEmpty(row) || isExportFooterRow(row, cellText)) {
         continue;
       }
 
