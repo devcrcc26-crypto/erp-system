@@ -1,95 +1,125 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../../shared/prisma/prisma.service';
-import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { CW, fullName } from '../../../../shared/pdf/hr-pdf-renderer';
+import { Injectable } from '@nestjs/common';
 import {
-  HrDocumentPdfService,
-  HrDocumentPdfInput,
-} from '../../../hr-shared/application/services/hr-document-pdf.service';
+  PayslipPdfPainter,
+  bilingualTitle,
+  dash,
+  fmtGeneratedDate,
+  fullName,
+  renderPayslipPdf,
+} from '../../../../shared/pdf/payslip-style-pdf';
+import { ExitPermitService } from './exit-permit.service';
+import {
+  ExitPermitPdfRecord,
+  MUTED,
+  drawDirectionBox,
+  drawItemsTable,
+  isoDate,
+  stampPageFooters,
+} from './exit-permit-pdf-parts';
 
-const d = (v: string | number | null | undefined): string =>
-  v == null || v === '' ? '-' : String(v);
+/** "SUBMITTED" -> "Submitted", "IN_PROGRESS" -> "In progress". */
+function humanize(value: string | null | undefined): string {
+  if (!value) return '-';
+  const text = value.toLowerCase().replace(/_/g, ' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
+function drawApprovalChain(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
+  p.section('Approval chain / 审批流程');
+  const tiers = [...(permit.approvalRequest?.tiers ?? [])].sort(
+    (a, b) => a.tierOrder - b.tierOrder,
+  );
+  if (tiers.length === 0) {
+    p.line(
+      permit.status === 'APPROVED'
+        ? 'Approved directly, no approval chain / 直接批准'
+        : 'Not submitted for approval yet / 尚未提交审批',
+      { indent: 1, color: MUTED },
+    );
+    return;
+  }
+  for (const tier of tiers) {
+    const decided = tier.decidedAt ? `  ·  ${isoDate(tier.decidedAt)}` : '';
+    p.field(
+      `${tier.tierOrder}. ${tier.label} — ${fullName(tier.approver)}`,
+      `${humanize(tier.decision)}${decided}`,
+      1,
+    );
+    if (tier.comment?.trim()) {
+      p.wrapped(`“${tier.comment.trim()}”`, { indent: 24, size: 8 });
+    }
+  }
+}
+
+function drawPermitRecord(p: PayslipPdfPainter, permit: ExitPermitPdfRecord): void {
+  const isApproved = permit.status === 'APPROVED';
+
+  p.brand(bilingualTitle('Equipment & Materials Exit Permit', '设备物资出入许可单'));
+  p.subtitleRight(
+    `No. ${permit.requestNumber}  ·  ${humanize(permit.status)}  ·  Printed ${fmtGeneratedDate(new Date())}`,
+  );
+  p.rule();
+
+  drawDirectionBox(p, permit, 'Permit date / 许可日期');
+
+  p.section('Permit / 许可信息');
+  p.field('Employee / 员工', fullName(permit.employee), 1);
+  p.field('Email / 邮箱', dash(permit.employee?.email), 1);
+  p.field('Department / 部门', dash(permit.department?.name), 1);
+  p.field('Status / 状态', humanize(permit.status), 1);
+  if (permit.currentTierLabel) {
+    p.field('Waiting on / 当前审批', permit.currentTierLabel, 1);
+  }
+  p.field('Filed on behalf / 代为提交', permit.isOnBehalf ? 'Yes / 是' : 'No / 否', 1);
+
+  drawItemsTable(p, permit.items ?? [], { checkColumn: false });
+
+  drawApprovalChain(p, permit);
+
+  p.section('Record / 记录');
+  p.field('Created by / 创建人', `${fullName(permit.creator)}  ·  ${isoDate(permit.createdAt)}`, 1);
+  p.field(
+    'Submitted by / 提交人',
+    permit.submittedAt
+      ? `${fullName(permit.submitter ?? permit.creator)}  ·  ${isoDate(permit.submittedAt)}`
+      : '-',
+    1,
+  );
+  p.field('Completed / 完成', isoDate(permit.completedAt), 1);
+
+  p.footerNotes(
+    isApproved
+      ? [
+          'Approved. Print the A5 gate pass from the permit page and present it at the gate.',
+          '已批准。请在许可页面打印A5出入门证，并在门岗出示。',
+        ]
+      : [
+          'Not valid at the gate until approved.',
+          '批准前不得作为出入门凭证。',
+        ],
+  );
+
+  stampPageFooters(p, permit.requestNumber);
+}
+
+/** Full A4 record of one exit permit, in the same layout as the gate pass. */
 @Injectable()
 export class ExitPermitPdfService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly hrDocPdf: HrDocumentPdfService,
-  ) {}
+  constructor(private readonly exitPermitService: ExitPermitService) {}
 
   async getPdf(
     id: string,
     companyId: string,
+    userId: string,
   ): Promise<{ buffer: Buffer; mimeType: string; filename: string }> {
-    const record = await this.prisma.exitPermit.findFirst({
-      where: activeOnly({ id, companyId }),
-      include: {
-        employee: { select: { firstName: true, lastName: true, email: true } },
-        creator: { select: { firstName: true, lastName: true } },
-        submitter: { select: { firstName: true, lastName: true } },
-        department: { select: { name: true } },
-        items: { orderBy: { createdAt: 'asc' } },
-      },
-    });
-    if (!record) throw new NotFoundException('Exit permit not found');
+    // getRequest applies the same visibility rule as GET :id.
+    const permit = await this.exitPermitService.getRequest(id, companyId, userId);
 
-    const isApproved = record.status === 'APPROVED';
-    const documentTitle = isApproved
-      ? 'Approved Gate Pass — Equipment & Materials'
-      : 'Equipment & Materials Exit Permit';
-
-    const direction = record.direction ?? '';
-    const date = record.date
-      ? new Date(record.date).toISOString().slice(0, 10)
-      : '-';
-    const subtitle = `${direction} - ${date}`;
-
-    const input: HrDocumentPdfInput = {
-      documentTitle,
-      subtitle,
-      requestNumber: record.requestNumber,
-      preparedBy: fullName(record.employee) || 'HR Department',
-      sections: [
-        {
-          title: 'Permit',
-          rows: [
-            ['Request Number', d(record.requestNumber)],
-            ['Status', d(record.status)],
-            ['Direction', direction || '-'],
-            ['Date', date],
-            ['Employee', fullName(record.employee) || '-'],
-            ['Employee Email', d(record.employee?.email)],
-            ['Department', d(record.department?.name)],
-          ],
-        },
-        {
-          title: 'Record',
-          rows: [
-            ['Filed On Behalf', record.isOnBehalf ? 'Yes' : 'No'],
-            ['Created By', fullName(record.creator) || '-'],
-            ['Created', record.createdAt ? new Date(record.createdAt).toISOString().slice(0, 10) : '-'],
-            ['Submitted By', fullName(record.submitter) || '-'],
-            ['Submitted', record.submittedAt ? new Date(record.submittedAt).toISOString().slice(0, 10) : '-'],
-            ['Completed', record.completedAt ? new Date(record.completedAt).toISOString().slice(0, 10) : '-'],
-          ],
-        },
-      ],
-      itemsTable: {
-        title: 'Items',
-        headers: ['No.', 'Item Name', 'Issue', 'Quantity', 'Unit'],
-        rows: (record.items ?? []).map((item, index) => [
-          String(index + 1),
-          d(item.itemName),
-          d(item.issue),
-          item.quantity != null ? String(item.quantity) : '-',
-          d(item.unit),
-        ]),
-        colWidths: [CW * 0.1, CW * 0.35, CW * 0.3, CW * 0.12, CW * 0.13],
-      },
-    };
-
-    const buffer = await this.hrDocPdf.render(input);
-    const safe = record.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const buffer = await renderPayslipPdf(
+      { title: `Exit Permit ${permit.requestNumber}` },
+      (painter) => drawPermitRecord(painter, permit),
+    );
+    const safe = permit.requestNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
     const dateStamp = new Date().toISOString().slice(0, 10);
     return {
       buffer,

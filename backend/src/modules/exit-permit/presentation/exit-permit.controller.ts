@@ -106,9 +106,7 @@ export class ExitPermitController {
         @CurrentCompany() companyId: string,
         @Param('id') id: string,
     ): Promise<StreamableFile> {
-        // Same visibility rule as GET :id (owner, HR, or permit managers).
-        await this.exitPermitService.getRequest(id, companyId, user.userId);
-        const file = await this.exitPermitPdfService.getPdf(id, companyId);
+        const file = await this.exitPermitPdfService.getPdf(id, companyId, user.userId);
         return new StreamableFile(file.buffer, {
             type: file.mimeType,
             disposition: contentDisposition('inline', file.filename),
