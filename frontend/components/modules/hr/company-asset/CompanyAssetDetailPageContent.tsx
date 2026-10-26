@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -385,7 +387,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -395,7 +397,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isError || !asset) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -459,7 +461,7 @@ export default function CompanyAssetDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -785,6 +787,7 @@ export default function CompanyAssetDetailPageContent({
 
       <ConfirmDialog
         open={statusModalOpen}
+        className="erp-hr-travel-modal"
         title={t('hr.assetDialog.statusTitle')}
         description={
           asset
@@ -869,6 +872,7 @@ export default function CompanyAssetDetailPageContent({
 
       <ConfirmDialog
         open={confirmDelete}
+        className="erp-hr-travel-modal"
         title={t('hr.assetDialog.deleteTitle')}
         description={t('hr.assetDialog.deleteDesc')}
         confirmLabel={t('hr.assetButtons.deleteAsset')}
@@ -880,6 +884,7 @@ export default function CompanyAssetDetailPageContent({
 
       <ConfirmDialog
         open={issueModalOpen}
+        className="erp-hr-travel-modal"
         title={t('hr.assetDialog.issueTitle')}
         description={
           asset
@@ -929,6 +934,7 @@ export default function CompanyAssetDetailPageContent({
 
       <ConfirmDialog
         open={returnModalOpen}
+        className="erp-hr-travel-modal"
         title={t('hr.assetDialog.returnTitle')}
         description={
           asset
@@ -1009,6 +1015,7 @@ export default function CompanyAssetDetailPageContent({
 
       <ConfirmDialog
         open={acknowledgeModalOpen}
+        className="erp-hr-travel-modal"
         title="Acknowledge Asset Return"
         description="Confirm that you have received this asset back."
         confirmLabel="Acknowledge Return"

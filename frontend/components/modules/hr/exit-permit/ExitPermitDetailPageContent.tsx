@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -326,7 +328,7 @@ export default function ExitPermitDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -336,7 +338,7 @@ export default function ExitPermitDetailPageContent({
 
   if (detailQuery.isError || !permit) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -400,7 +402,7 @@ export default function ExitPermitDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -660,6 +662,8 @@ export default function ExitPermitDetailPageContent({
       </div>
 
       <Modal
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
         open={Boolean(editingItem)}
         title={t('hr.dialog.editExitPermitItemTitle')}
         onCancel={closeEditItem}
@@ -751,6 +755,7 @@ export default function ExitPermitDetailPageContent({
 
       <ConfirmDialog
         open={confirmSubmit}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.submitExitPermitTitle')}
         description={t('hr.dialog.submitExitPermitDesc')}
         confirmLabel={submitLabel}
@@ -763,6 +768,7 @@ export default function ExitPermitDetailPageContent({
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.deleteExitPermitItemTitle')}
         description={t('hr.dialog.deleteExitPermitItemDesc')}
         confirmLabel={t('hr.buttons.removeItem')}
@@ -776,6 +782,7 @@ export default function ExitPermitDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelExitPermitTitle')}
         description={t('hr.dialog.cancelExitPermitDesc')}
         confirmLabel={t('hr.buttons.cancelRequest')}

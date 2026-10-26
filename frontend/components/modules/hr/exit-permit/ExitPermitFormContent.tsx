@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useRouter } from 'next/navigation';
 import ExitPermitForm from '@/components/modules/hr/exit-permit/ExitPermitForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -24,7 +26,7 @@ export default function ExitPermitFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-exit-permit-form-page flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-exit-permit-form-page flex flex-col gap-4">
       <HrFormPageShell
         title={t('pages.hr.exitPermit.new')}
         description={t('pages.hr.exitPermit.formDescription')}

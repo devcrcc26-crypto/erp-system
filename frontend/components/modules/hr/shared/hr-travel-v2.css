@@ -1,6 +1,8 @@
 /*
  * Shared v2 chrome for Expense Claims, Flight Applications, Business Trips,
- * Per Diem (requests / settlements), and Employee Per Diem Rates.
+ * Per Diem (requests / settlements), Employee Per Diem Rates, and Operations
+ * request/register details & forms (purchase, material, consumables, fleet,
+ * seals, exit permit, company assets/vehicles).
  * Scoped under `.erp-hr-travel-v2`. Portaled modals use `.erp-hr-travel-modal`.
  */
 

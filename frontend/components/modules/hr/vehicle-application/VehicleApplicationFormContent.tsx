@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
 import VehicleApplicationForm from '@/components/modules/hr/vehicle-application/VehicleApplicationForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -22,7 +23,7 @@ export default function VehicleApplicationFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-vehicle-application-form-page flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-vehicle-application-form-page flex flex-col gap-4">
       <HrFormPageShell
         title={t('pages.hr.vehicleApplication.new')}
         description={t('pages.hr.vehicleApplication.formDescription')}

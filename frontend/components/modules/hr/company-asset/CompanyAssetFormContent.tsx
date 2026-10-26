@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import CompanyAssetForm from '@/components/modules/hr/company-asset/CompanyAssetForm';
@@ -30,7 +32,7 @@ export default function CompanyAssetFormContent({
 
   if (isEdit && detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-company-asset-form-page">
+      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-company-asset-form-page">
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -40,7 +42,7 @@ export default function CompanyAssetFormContent({
 
   if (isEdit && (detailQuery.isError || !detailQuery.data)) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+      <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
         <ErpNotice
           tone="error"
           title={t('hr.assetMessages.notFound')}
@@ -55,7 +57,7 @@ export default function CompanyAssetFormContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-company-asset-form-page flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-company-asset-form-page flex flex-col gap-4">
       <HrFormPageShell
         title={
           isEdit

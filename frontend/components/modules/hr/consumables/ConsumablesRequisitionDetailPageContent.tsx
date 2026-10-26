@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -346,7 +347,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -356,7 +357,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   if (detailQuery.isError || !requisition) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -410,7 +411,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         : 400;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -711,6 +712,8 @@ export default function ConsumablesRequisitionDetailPageContent({
       </div>
 
       <Modal
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
         open={Boolean(editingItem)}
         title={t('hr.dialog.editConsumablesRequisitionItemTitle')}
         onCancel={closeEditItem}
@@ -800,6 +803,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.deleteConsumablesRequisitionItemTitle')}
         description={t('hr.dialog.deleteConsumablesRequisitionItemDesc')}
         confirmLabel={t('hr.buttons.removeItem')}
@@ -813,6 +817,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelConsumablesRequisitionTitle')}
         description={t('hr.dialog.cancelConsumablesRequisitionDesc')}
         confirmLabel={t('hr.buttons.cancelRequest')}

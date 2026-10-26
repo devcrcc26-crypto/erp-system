@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import { DatePicker, Form, Modal, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -63,6 +65,8 @@ export default function ExitPermitGateRegisterModal({
 
   return (
     <Modal
+      rootClassName="erp-hr-travel-modal"
+      className="erp-hr-travel-modal"
       title={t('pages.hr.exitPermit.gateRegister.title')}
       open={open}
       onCancel={onClose}

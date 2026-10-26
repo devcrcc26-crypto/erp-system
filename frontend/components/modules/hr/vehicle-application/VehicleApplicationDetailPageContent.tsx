@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -137,7 +138,7 @@ export default function VehicleApplicationDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-application-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-vehicle-application-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -147,7 +148,7 @@ export default function VehicleApplicationDetailPageContent({
 
   if (detailQuery.isError || !application) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -207,7 +208,7 @@ export default function VehicleApplicationDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-application-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-vehicle-application-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -467,6 +468,7 @@ export default function VehicleApplicationDetailPageContent({
       </div>
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmRelease}
         title={t('hr.labels.releaseVehicle')}
         description={t('hr.labels.releaseVehicleDesc')}
@@ -477,6 +479,7 @@ export default function VehicleApplicationDetailPageContent({
       />
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmCancel}
         title={t('hr.dialog.cancelVehicleApplicationTitle')}
         description={t('hr.dialog.cancelVehicleApplicationDesc')}

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
 import MaterialRequisitionForm from '@/components/modules/hr/material-requisition/MaterialRequisitionForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -22,7 +23,7 @@ export default function MaterialRequisitionFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-material-requisition-form-page">
+    <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-material-requisition-form-page">
       <HrFormPageShell
         title={t('pages.hr.materialRequisition.new')}
         description={t('pages.hr.materialRequisition.formDescription')}

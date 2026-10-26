@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -161,7 +163,7 @@ export default function ProjectSealDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-project-seal-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-project-seal-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -171,7 +173,7 @@ export default function ProjectSealDetailPageContent({
 
   if (detailQuery.isError || !seal) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -232,7 +234,7 @@ export default function ProjectSealDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-project-seal-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-project-seal-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -502,6 +504,8 @@ export default function ProjectSealDetailPageContent({
       </div>
 
       <Modal
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
         open={issueModalOpen}
         title={t('hr.section.issueSeal')}
         onCancel={closeIssueModal}
@@ -532,6 +536,7 @@ export default function ProjectSealDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
+        className="erp-hr-travel-modal"
         title={t('hr.dialog.cancelProjectSealTitle')}
         description={t('hr.dialog.cancelProjectSealDesc')}
         confirmLabel={t('hr.buttons.cancelRequest')}

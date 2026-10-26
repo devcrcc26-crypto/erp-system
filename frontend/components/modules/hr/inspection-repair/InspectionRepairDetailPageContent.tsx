@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -193,7 +194,7 @@ export default function InspectionRepairDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -203,7 +204,7 @@ export default function InspectionRepairDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -255,7 +256,7 @@ export default function InspectionRepairDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -517,6 +518,7 @@ export default function InspectionRepairDetailPageContent({
       </div>
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={statusModalOpen}
         title={t('hr.dialog.updateInspectionRepairStatusTitle')}
         description={`${t('hr.dialog.updateInspectionRepairStatusDesc')} (${request.requestNumber} · ${request.deviceName})`}
@@ -586,6 +588,7 @@ export default function InspectionRepairDetailPageContent({
       </ConfirmDialog>
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmCancel}
         title={t('hr.empty.cancelInspectionRepairTitle')}
         description={t('hr.empty.cancelInspectionRepairDescription')}

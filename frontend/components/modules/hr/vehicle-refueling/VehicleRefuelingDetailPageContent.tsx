@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useMemo, useRef, useState } from 'react';
 import {
   Button,
@@ -139,7 +140,7 @@ export default function VehicleRefuelingDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-refueling-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-vehicle-refueling-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -149,7 +150,7 @@ export default function VehicleRefuelingDetailPageContent({
 
   if (detailQuery.isError || !refueling) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -200,7 +201,7 @@ export default function VehicleRefuelingDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-refueling-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-vehicle-refueling-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -477,6 +478,7 @@ export default function VehicleRefuelingDetailPageContent({
       </div>
 
       <ConfirmDialog
+        className="erp-hr-travel-modal"
         open={confirmCancel}
         title={t('hr.dialog.cancelVehicleRefuelingTitle')}
         description={t('hr.dialog.cancelVehicleRefuelingDesc')}
