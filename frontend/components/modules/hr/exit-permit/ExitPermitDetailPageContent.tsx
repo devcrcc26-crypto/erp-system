@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/hr/overtime/overtime-entries-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -18,7 +19,7 @@ import {
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MoreOutlined, StopOutlined } from '@ant-design/icons';
-import { ArrowLeft, Inbox, LogIn, LogOut, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -234,24 +235,16 @@ export default function ExitPermitDetailPageContent({
   const itemColumns: ColumnsType<ExitPermitItem> = useMemo(
     () => [
       {
-        title: '#',
-        key: 'no',
-        width: 44,
-        render: (_: unknown, _row: ExitPermitItem, index: number) => (
-          <span className="erp-exit-permit-item-no">{index + 1}</span>
-        ),
-      },
-      {
         title: t('hr.table.itemImage'),
         key: 'image',
-        width: 76,
+        width: 68,
         render: (_: unknown, row: ExitPermitItem) => (
           <DocumentImageThumb
             documentId={row.documentId ?? row.image?.id}
             alt={row.itemName}
             fileName={row.image?.name}
             fileType={row.image?.fileType}
-            size={56}
+            size={44}
             emptyLabel={t('hr.labels.noItemImage')}
           />
         ),
@@ -264,9 +257,7 @@ export default function ExitPermitDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">{row.itemName}</p>
             {row.issue?.trim() ? (
-              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
-                {row.issue}
-              </p>
+              <p className="erp-ot-task m-0 mt-0.5">{row.issue}</p>
             ) : null}
           </div>
         ),
@@ -275,22 +266,18 @@ export default function ExitPermitDetailPageContent({
         title: t('hr.table.quantity'),
         dataIndex: 'quantity',
         key: 'quantity',
-        width: 72,
-        align: 'right',
-        render: (value: number | string) => (
-          <span className="erp-users-cell-sub tabular-nums">
-            {Number(value)}
-          </span>
-        ),
-      },
-      {
-        title: t('hr.table.unit'),
-        dataIndex: 'unit',
-        key: 'unit',
-        width: 72,
-        responsive: ['sm'],
-        render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '-'}</span>
+        width: 110,
+        render: (value: number | string, row: ExitPermitItem) => (
+          <div>
+            <span className="erp-ot-hours-total">{Number(value)}</span>
+            {row.unit?.trim() ? (
+              <div className="erp-ot-pills">
+                <span className="erp-ot-pill" data-kind="site">
+                  {row.unit}
+                </span>
+              </div>
+            ) : null}
+          </div>
         ),
       },
       ...(canEdit
@@ -365,6 +352,43 @@ export default function ExitPermitDetailPageContent({
   }
 
   const employeeName = formatExitPermitEmployeeName(permit.employee);
+  const totalQuantity = permit.items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0,
+  );
+  const summaryTiles = [
+    {
+      key: 'direction',
+      label: t('hr.table.direction'),
+      value: formatExitPermitDirection(permit.direction, t),
+      color: permit.direction === 'ENTRANCE' ? 'text-green-700' : 'text-red-700',
+    },
+    {
+      key: 'date',
+      label: t('hr.table.date'),
+      value: formatProjectDate(permit.date),
+      color: 'text-blue-700',
+    },
+    {
+      key: 'department',
+      label: t('hr.table.department'),
+      value: formatExitPermitDepartmentName(permit.department),
+      color: 'text-gray-900',
+    },
+    {
+      key: 'quantity',
+      label: t('hr.labels.quantity'),
+      value: totalQuantity > 0 ? totalQuantity.toLocaleString() : '-',
+      color: totalQuantity > 0 ? 'text-amber-700' : 'text-gray-400',
+    },
+    {
+      key: 'items',
+      label: t('hr.table.items'),
+      value: permit.items.length > 0 ? permit.items.length.toLocaleString() : '-',
+      color: permit.items.length > 0 ? 'text-[#0f6e56]' : 'text-gray-400',
+      total: true,
+    },
+  ];
   const submitLabel =
     permit.status === 'RETURNED'
       ? t('hr.buttons.resubmit')
@@ -479,53 +503,54 @@ export default function ExitPermitDetailPageContent({
           </div>
         </div>
 
-        <section
-          className="erp-exit-permit-pass"
-          data-direction={permit.direction}
-          aria-label={`${formatExitPermitDirection(permit.direction, t)} · ${permit.requestNumber}`}
-        >
-          <div className="erp-exit-permit-pass-direction">
-            <span className="erp-exit-permit-pass-icon" aria-hidden>
-              {permit.direction === 'ENTRANCE' ? (
-                <LogIn size={26} strokeWidth={1.9} />
-              ) : (
-                <LogOut size={26} strokeWidth={1.9} />
-              )}
-            </span>
-            <div className="min-w-0">
-              <h2 className="erp-exit-permit-pass-label">
-                {formatExitPermitDirection(permit.direction, t)}
-              </h2>
-              <p className="erp-exit-permit-pass-date">
-                {formatProjectDate(permit.date)}
-              </p>
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{permit.requestNumber}</span>
+              <StatusBadge
+                label={formatExitPermitStatus(permit.status, t)}
+                variant={exitPermitStatusVariant(permit.status)}
+              />
+              {permit.isOnBehalf ? (
+                <Tag color="blue" className="rounded-xl">
+                  {t('hr.table.onBehalf')}
+                </Tag>
+              ) : null}
             </div>
-          </div>
-
-          <div className="erp-exit-permit-pass-who">
-            <p className="erp-exit-permit-pass-name" title={employeeName}>
-              {employeeName}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {employeeName}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5">
+              {`${formatExitPermitDirection(permit.direction, t)} · ${formatProjectDate(permit.date)}`}
             </p>
-            <p className="erp-exit-permit-pass-sub">
+            <p className="erp-users-cell-sub m-0 mt-1">
               {formatExitPermitDepartmentName(permit.department)}
-              {' · '}
-              {t('hr.form.itemCount', { count: permit.items.length })}
             </p>
           </div>
+        </div>
+      </div>
 
-          <div className="erp-exit-permit-pass-ref">
-            <span className="erp-users-id-chip">{permit.requestNumber}</span>
-            <StatusBadge
-              label={formatExitPermitStatus(permit.status, t)}
-              variant={exitPermitStatusVariant(permit.status)}
-            />
-            {permit.isOnBehalf ? (
-              <Tag color="blue" className="rounded-xl">
-                {t('hr.table.onBehalf')}
-              </Tag>
-            ) : null}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+        {summaryTiles.map((tile) => (
+          <div
+            key={tile.key}
+            className={`min-w-0 rounded-2xl px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] ${
+              tile.total ? 'bg-[#f0faf6]' : 'bg-white'
+            }`}
+          >
+            <p className="m-0 text-xs font-semibold tracking-[0.06em] text-gray-600 uppercase">
+              {tile.label}
+            </p>
+            <p
+              className={`m-0 mt-1 truncate font-semibold tabular-nums ${tile.total ? 'text-2xl' : 'text-xl'} ${tile.color}`}
+              title={tile.value}
+            >
+              {tile.value}
+            </p>
           </div>
-        </section>
+        ))}
       </div>
 
       {permit.status === 'RETURNED' && isActor ? (
@@ -548,69 +573,44 @@ export default function ExitPermitDetailPageContent({
         />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
-              <DocumentPreviewGroup
-                documents={exitPermitItemImages(permit.items)}
-              >
-                <DataTable<ExitPermitItem>
-                  rowKey="id"
-                  className="erp-pro-table erp-users-table"
-                  size="middle"
-                  columns={itemColumns}
-                  dataSource={permit.items}
-                  pagination={false}
-                  scroll={canEdit ? { x: 'max-content' } : false}
-                  locale={{
-                    emptyText: (
-                      <TableEmptyState
-                        icon={<Inbox size={28} strokeWidth={1.5} />}
-                        title={t('hr.empty.noItems')}
-                        description={t(
-                          'pages.hr.exitPermit.itemsStepDescription',
-                        )}
-                      />
-                    ),
-                  }}
-                />
-              </DocumentPreviewGroup>
-            </DetailSection>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <section
+            className="erp-pro-card erp-ot-entries min-w-0"
+            aria-labelledby="exit-permit-items-title"
+          >
+            <div className="erp-ot-entries-header">
+              <h3 id="exit-permit-items-title" className="erp-ot-entries-title">
+                {t('hr.section.items')}
+                <span className="erp-ot-entries-count">
+                  {permit.items.length.toLocaleString()}
+                </span>
+              </h3>
+            </div>
+            <DocumentPreviewGroup documents={exitPermitItemImages(permit.items)}>
+              <DataTable<ExitPermitItem>
+                rowKey="id"
+                className="erp-pro-table erp-users-table"
+                size="middle"
+                columns={itemColumns}
+                dataSource={permit.items}
+                pagination={false}
+                scroll={canEdit ? { x: 'max-content' } : false}
+                locale={{
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<Inbox size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t('pages.hr.exitPermit.itemsStepDescription')}
+                    />
+                  ),
+                }}
+              />
+            </DocumentPreviewGroup>
+          </section>
 
-            <DetailSection title={t('hr.section.requestDetails')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.table.employee')}>
-                  {employeeName}
-                </MetaItem>
-                <MetaItem label={t('hr.table.submittedBy')}>
-                  {formatExitPermitEmployeeName(
-                    permit.submitter ?? permit.creator,
-                  )}
-                </MetaItem>
-                <MetaItem label={t('hr.table.department')}>
-                  {formatExitPermitDepartmentName(permit.department)}
-                </MetaItem>
-                <MetaItem label={t('hr.table.direction')}>
-                  <Tag
-                    color={permit.direction === 'ENTRANCE' ? 'green' : 'red'}
-                    className="rounded-xl"
-                  >
-                    {formatExitPermitDirection(permit.direction, t)}
-                  </Tag>
-                </MetaItem>
-                <MetaItem label={t('hr.table.date')}>
-                  {formatProjectDate(permit.date)}
-                </MetaItem>
-                {permit.completedAt ? (
-                  <MetaItem label={t('hr.labels.completed')}>
-                    {formatProjectDate(permit.completedAt)}
-                  </MetaItem>
-                ) : null}
-              </div>
-            </DetailSection>
-
-            {(permit.documents?.length ?? 0) > 0 ? (
+          {(permit.documents?.length ?? 0) > 0 ? (
+            <div className="erp-pro-card overflow-hidden">
               <DetailSection title={t('hr.section.attachments')}>
                 <AttachmentDownloadList
                   documents={(permit.documents ?? []).map((doc) => ({
@@ -621,11 +621,32 @@ export default function ExitPermitDetailPageContent({
                   }))}
                 />
               </DetailSection>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
 
-        <aside className="min-w-0 lg:sticky lg:top-4">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
+          <div className="erp-pro-card overflow-hidden">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="flex flex-col gap-4">
+                <MetaItem label={t('hr.table.submittedBy')}>
+                  {formatExitPermitEmployeeName(
+                    permit.submitter ?? permit.creator,
+                  )}
+                </MetaItem>
+                {permit.submittedAt ? (
+                  <MetaItem label={t('hr.table.submittedDate')}>
+                    {formatProjectDate(permit.submittedAt)}
+                  </MetaItem>
+                ) : null}
+                {permit.completedAt ? (
+                  <MetaItem label={t('hr.labels.completed')}>
+                    {formatProjectDate(permit.completedAt)}
+                  </MetaItem>
+                ) : null}
+              </div>
+            </DetailSection>
+          </div>
           {isDirectApproved || tiers.length === 0 ? (
             <div className="erp-pro-card overflow-hidden">
               <DetailSection title={t('hr.section.approvalChain')}>
