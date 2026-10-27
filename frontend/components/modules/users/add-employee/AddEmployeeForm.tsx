@@ -139,6 +139,8 @@ export interface AddEmployeeFormProps {
   onSuccess: (result: {
     userId: string;
     email: string | null;
+    /** Shown once when create used issueTemporaryPassword. */
+    temporaryPassword?: string;
     /** Shown when name fields changed but loginName was left alone. */
     loginNameUnchangedToast?: string | null;
   }) => void;
@@ -158,6 +160,7 @@ export default function AddEmployeeForm({
 
   const emailValue = Form.useWatch('email', form);
   const hasEmail = Boolean(emailValue?.trim());
+  const accountAccessMethod = Form.useWatch('accountAccessMethod', form);
   const formValues = Form.useWatch([], form) as AddEmployeeFormValues | undefined;
 
   const userQuery = useUser(userId ?? '', isEdit);
@@ -389,6 +392,9 @@ export default function AddEmployeeForm({
       }
 
       const invitedAddress = values.email?.trim().toLowerCase() || undefined;
+      const issueTemporaryPassword =
+        Boolean(invitedAddress) &&
+        values.accountAccessMethod === 'temporaryPassword';
       const body: CreateUserRequest = {
         firstName: values.firstName.trim(),
         lastName: (values.lastName ?? '').trim(),
@@ -405,6 +411,9 @@ export default function AddEmployeeForm({
       };
       if (invitedAddress) {
         body.email = invitedAddress;
+      }
+      if (issueTemporaryPassword) {
+        body.issueTemporaryPassword = true;
       }
       if (showLoginName && values.loginName?.trim()) {
         body.loginName = values.loginName.trim();
@@ -445,7 +454,11 @@ export default function AddEmployeeForm({
         await uploadPhoto.mutateAsync({ userId: user.id, file: pendingPhoto });
       }
 
-      onSuccess({ userId: user.id, email: invitedAddress ?? null });
+      onSuccess({
+        userId: user.id,
+        email: invitedAddress ?? null,
+        temporaryPassword: user.temporaryPassword,
+      });
     } catch (err) {
       const apiError = toApiRequestError(err);
       setError(
@@ -848,6 +861,7 @@ export default function AddEmployeeForm({
       pendingPhoto,
       formValues,
       form,
+      accountAccessMethod,
     ],
   );
 
@@ -874,7 +888,11 @@ export default function AddEmployeeForm({
       form={form}
       layout="vertical"
       className="flex min-h-0 flex-1 flex-col"
-      initialValues={{ isActive: true, emergencyContacts: [] }}
+      initialValues={{
+        isActive: true,
+        emergencyContacts: [],
+        accountAccessMethod: 'invite',
+      }}
     >
       {error ? (
         <Alert
@@ -895,9 +913,11 @@ export default function AddEmployeeForm({
         submitLabel={
           isEdit
             ? t('common.saveChanges')
-            : hasEmail
-              ? t('users.sendInvitation')
-              : t('users.createUser')
+            : !hasEmail
+              ? t('users.createUser')
+              : accountAccessMethod === 'temporaryPassword'
+                ? t('users.form.createWithTemporaryPassword')
+                : t('users.sendInvitation')
         }
       />
     </Form>

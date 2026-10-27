@@ -2,6 +2,8 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
+import { useState } from 'react';
+import { Alert, Modal, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployeeForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -15,13 +17,30 @@ export default function AddEmployeeFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const [tempPasswordModal, setTempPasswordModal] = useState<{
+    temporaryPassword: string;
+  } | null>(null);
 
-  function handleSuccess(result: { userId: string; email: string | null }): void {
+  function handleSuccess(result: {
+    userId: string;
+    email: string | null;
+    temporaryPassword?: string;
+  }): void {
+    if (result.temporaryPassword) {
+      setTempPasswordModal({ temporaryPassword: result.temporaryPassword });
+      return;
+    }
     if (result.email) {
       messageApi.success(t('users.invitationSentBody', { email: result.email }));
     } else {
       messageApi.success(t('users.recordOnlyCreated'));
     }
+    router.push('/users');
+  }
+
+  function closeTempPasswordModal(): void {
+    setTempPasswordModal(null);
+    messageApi.success(t('users.temporaryPasswordCreated'));
     router.push('/users');
   }
 
@@ -36,6 +55,35 @@ export default function AddEmployeeFormContent(): React.ReactNode {
       >
         <AddEmployeeForm onSuccess={handleSuccess} />
       </HrFormPageShell>
+
+      <Modal
+        open={Boolean(tempPasswordModal)}
+        title={t('users.employment.temporaryPasswordTitle')}
+        okText={t('common.close')}
+        cancelButtonProps={{ style: { display: 'none' } }}
+        onOk={closeTempPasswordModal}
+        onCancel={closeTempPasswordModal}
+        mask={{ closable: false }}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+      >
+        {tempPasswordModal ? (
+          <Alert
+            type="success"
+            showIcon
+            title={t('users.employment.temporaryPasswordTitle')}
+            description={
+              <div className="flex flex-col gap-2">
+                <Typography.Text code copyable className="text-base">
+                  {tempPasswordModal.temporaryPassword}
+                </Typography.Text>
+                <span>{t('users.employment.temporaryPasswordHint')}</span>
+              </div>
+            }
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }

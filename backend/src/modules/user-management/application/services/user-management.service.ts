@@ -220,6 +220,7 @@ export class UserManagementService {
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
     const {
       password,
+      issueTemporaryPassword,
       email,
       firstName,
       lastName,
@@ -283,16 +284,41 @@ export class UserManagementService {
     };
 
     let provisionedUser: { id: string };
+    let temporaryPasswordPlain: string | null = null;
+    let invitationSent = false;
+
+    if (issueTemporaryPassword === true && !email) {
+      throw new BadRequestException(
+        'issueTemporaryPassword requires an email address',
+      );
+    }
 
     if (!email) {
       provisionedUser = await this.userProvisioningService.provisionRecordOnlyUser(
         ctx,
         sharedInput,
       );
-    } else if (password) {
+    } else if (issueTemporaryPassword === true) {
+      let plainPassword = password?.trim() || generateTemporaryPassword(12);
+      while (normalizeLoginName(plainPassword) === loginNameNormalized) {
+        plainPassword = generateTemporaryPassword(12);
+      }
+      assertPasswordPolicy(plainPassword, resolvedLoginName);
+      temporaryPasswordPlain = plainPassword;
       provisionedUser = await this.userProvisioningService.provisionWithPassword(
         ctx,
-        { email, password, ...sharedInput },
+        {
+          email,
+          password: plainPassword,
+          mustChangePassword: true,
+          ...sharedInput,
+        },
+      );
+    } else if (password?.trim()) {
+      assertPasswordPolicy(password.trim(), resolvedLoginName);
+      provisionedUser = await this.userProvisioningService.provisionWithPassword(
+        ctx,
+        { email, password: password.trim(), ...sharedInput },
       );
     } else {
       provisionedUser = await this.userProvisioningService.provisionInvitedUser(
@@ -310,13 +336,14 @@ export class UserManagementService {
       profileInput,
     );
 
-    if (email && !password) {
+    if (email && !password?.trim() && issueTemporaryPassword !== true) {
       const userForInvite = await this.prisma.user.findFirst({
         where: activeOnly({ id: provisionedUser.id, companyId: ctx.companyId }),
         select: { id: true, email: true, firstName: true, lastName: true },
       });
       if (userForInvite?.email) {
         await this.userProvisioningService.sendActivationInvite(userForInvite);
+        invitationSent = true;
       }
     }
 
@@ -330,7 +357,14 @@ export class UserManagementService {
       mapped,
       await this.canViewLoginName(ctx, provisionedUser.id),
     );
-    if (email && !password) {
+    if (temporaryPasswordPlain) {
+      return {
+        ...visible,
+        temporaryPassword: temporaryPasswordPlain,
+        mustChangePassword: true,
+      };
+    }
+    if (invitationSent) {
       return { ...visible, invitationSent: true };
     }
     return visible;

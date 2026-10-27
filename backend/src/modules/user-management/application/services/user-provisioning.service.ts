@@ -189,11 +189,15 @@ export class UserProvisioningService {
   }
 
   /**
-   * Creates a verified user with an admin-supplied password.
+   * Creates a verified user with an admin-supplied (or generated) password.
+   * When mustChangePassword is true, first login forces a password change.
    */
   async provisionWithPassword(
     ctx: AuditContext,
-    input: ProvisionInvitedUserInput & { password: string },
+    input: ProvisionInvitedUserInput & {
+      password: string;
+      mustChangePassword?: boolean;
+    },
   ): Promise<ProvisionedUser> {
     const email = normalizeEmail(input.email);
     await this.assertEmailAvailable(ctx.companyId, email);
@@ -221,6 +225,7 @@ export class UserProvisioningService {
         preferredDateFormat: input.preferredDateFormat ?? null,
         isActive: input.isActive ?? true,
         passwordHash,
+        mustChangePassword: input.mustChangePassword === true,
         emailVerifiedAt: new Date(),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,

@@ -170,11 +170,24 @@ export class CreateUserDto {
   @MaxLength(USER_NAME_MAX * 3)
   loginName?: string;
 
-  @ApiPropertyOptional({ description: 'Omit to send an email activation invite instead' })
+  @ApiPropertyOptional({
+    description:
+      'Optional temporary password. When omitted with issueTemporaryPassword=true, the server generates one. ' +
+      'When omitted without that flag and email is set, an activation invite is emailed instead.',
+  })
   @IsOptional()
   @IsString()
   @MinLength(8)
   password?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true (and email is set), create a login-ready account with mustChangePassword and return ' +
+      'temporaryPassword once. Mutually exclusive with the activation-invite path.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  issueTemporaryPassword?: boolean;
 
   @ApiPropertyOptional({
     example: '+251 911 234 567',

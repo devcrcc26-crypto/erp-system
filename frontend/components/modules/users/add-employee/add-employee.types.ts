@@ -27,6 +27,11 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   excludedFromHrProcesses?: boolean;
   excludedReason?: string;
   dateOfBirth?: Dayjs;
+  /**
+   * Create only: how the employee gets first sign-in access when email is set.
+   * Invite = activation email; temporaryPassword = one-time password + must change.
+   */
+  accountAccessMethod?: 'invite' | 'temporaryPassword';
 }
 
 export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [

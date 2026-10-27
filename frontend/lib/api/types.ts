@@ -314,6 +314,8 @@ export interface User {
 
 export interface CreateUserResponse extends User {
   invitationSent?: boolean;
+  /** Present once when issueTemporaryPassword was requested. */
+  temporaryPassword?: string;
 }
 
 export interface UserRoleAssignment {
@@ -346,6 +348,8 @@ export interface CreateUserRequest {
   /** OA login name; defaults to full name when omitted. */
   loginName?: string;
   password?: string;
+  /** Create login-ready account and return temporaryPassword once. */
+  issueTemporaryPassword?: boolean;
   phone?: string;
   secondaryPhone?: string;
   branchId?: string;
