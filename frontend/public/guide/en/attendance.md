@@ -1,161 +1,135 @@
 # Attendance (HR)
 
-Attendance comes from the monthly export of the attendance machine (Deli e+). HR imports the file, matches each machine record to an employee, reviews the flagged days, and approves the month. An approved month is locked and used for payroll.
+Each month you import the attendance machine's export (Deli e+), match each machine record to an employee, review the month, and approve it. An approved month is locked and is used for payroll.
 
-**Who does what**
-
-| Role | What you can do |
-| --- | --- |
-| Employee (everyone) | See your own attendance by clicking **My Profile** in the left menu, then **Attendance**, and explain flagged days (see the **Field Movement** topic). |
-| HR (HR Manager, HR Assistant, HR Specialist) | Import the monthly file, map machine records to employees, review and correct days, and approve or unlock months. |
+*(This guide is for HR: HR Manager, HR Assistant, HR Specialist.)*
 
 **Where to find it**
-- Your attendance: click **My Profile** in the left menu, then click **Attendance**.
-- Monthly attendance (HR): click **Time & Attendance** in the left menu, then click **Attendance**. Open a month with its **Review** button.
-- Machine-to-employee mapping (HR): click **Time & Attendance** in the left menu, then click **Attendance Identities**.
-- Explanations for flagged days (HR): click **Time & Attendance** in the left menu, then click **Field Movement Logs**.
+- Monthly attendance: in the left menu, go to **Time & Attendance** → **Attendance**.
+- Machine-to-employee mapping: **Time & Attendance** → **Attendance Identities**.
 
 ---
 
-## How to import a monthly attendance file
+## How to import a month of attendance
 
-*(HR only)*
+1. Export the **monthly summary** (月度汇总表) from the Deli e+ attendance machine as an .xlsx file.
+2. In the left menu, go to **Time & Attendance** → **Attendance**.
+3. Click **Import Attendance**. The **Import Attendance** window opens with three steps: **Upload File**, **Review & Confirm** and **Done**.
 
-1. Export the monthly summary from the attendance machine. It must be the Deli e+ **Monthly summary export** (月度汇总表) in `.xlsx` format.
-2. Click **Time & Attendance** in the left menu, then click **Attendance**, then click **Import Attendance**.
-3. In step **Upload File**, drop the file into the drop area, or click to browse. Only `.xlsx` files up to 10 MB are accepted.
-4. Wait for the preview. The system reads the file and matches each row to an employee.
-5. Step **Review & Confirm** shows four sections:
-   - **Matched**: rows matched to an employee. The match type is shown: *Saved identity*, *ID Match*, *Name Match*, or *Manual*.
-   - **Needs Review**: rows the system is not sure about. Check the suggested employee.
-   - **Not Matched**: rows that could not be matched. For each one, click **Assign Employee +** to choose the ERP employee, click **Ignore** (with a reason of at least 3 characters) if the person has left the company, or leave it blank to skip the row.
-   - **Not in Attendance File**: active scanner employees with no row in the file. For each one, choose to mark them as exempt, mark them *present this month* (a reason is required), or note that they still need enrolment on the machine.
-6. Click **Confirm Import**.
-7. If the month was already imported, you will be asked **Replace existing data?**. Confirm to replace it.
-8. Step **Done** shows **Import Complete**. Click **Import Another Month** to start again.
+[SCREENSHOT: attendance-import-upload.png]
 
-> **What happens next:** The daily logs and monthly summaries are built for each employee. The month is set to **Pending Review** and stays unlocked until it is approved. Your mapping choices are saved, so the next import matches those people automatically.
+## Step 1 — Upload File
 
+1. Drop the .xlsx file into **Upload Deli e+ Monthly Export**, or click to browse.
+2. Wait while the system reads the file (*"Reading attendance file…"*).
 
+> **Note:** If the month was imported before, you see *"Attendance data for … has already been imported."* Confirming later replaces all the existing records for that month.
 
-### Rules the import enforces
+## Step 2 — Review & Confirm
 
-- Only `.xlsx` files are accepted. Other files are rejected.
-- A preview is kept for 10 minutes. If you wait longer, upload the file again.
-- An ignored identity can be restored from the preview with **Undo**.
+The review shows four sections. Work through each one.
 
----
+1. **Matched**: rows matched to an employee. **Match Type** shows how: **Saved identity**, **ID Match**, **Name Match** or **Manual**. Untick **Include** to leave a row out.
+2. **Needs Review**: rows the system is not sure about. Check the **Best Match** and its **Score**. Click **Change →** to pick a different employee.
+3. **Not Matched**: rows with no matching employee (*"No matching employee found in ERP"*). For each one:
+   - Click **Assign Employee +** and choose the employee, or
+   - Click **Ignore - left company**, write why in the box (at least 3 characters), and click **Ignore**, or
+   - Leave it blank to skip the row.
+4. **Not in Attendance File**: active employees who have no row in the file. Under **Presence**, choose one:
+   - **Set as exempt**
+   - **Present this month**: write a **Reason (required)**.
+   - **Needs enrolment**: they are not yet set up on the machine.
+   - If the employee was on site or working from home, click **Submit site assignment** (or **Submit work from home**) to file it for them. Employees fully covered by leave or a schedule are imported automatically (*"Fully covered - imported automatically"*).
+5. Check the summary at the bottom: how many records will be imported, skipped and not matched.
+6. Click **Confirm Import**. If the month was imported before, confirm **Replace existing data?** with **Yes, Replace**.
 
-## How to map attendance identities
+[SCREENSHOT: attendance-import-review.png]
 
-*(HR only)*
+## Step 3 — Done
 
-The machine records people by a device name and ID. An identity links that device record to an ERP employee.
+**Import Complete** shows how many rows were matched automatically, assigned by hand, skipped and not matched. Open **Employees not imported** to see who was left out. Click **Import Another Month** or **Close**.
 
-1. Click **Time & Attendance** in the left menu, then click **Attendance Identities**.
-2. Use the status filter: **All**, **Mapped**, or **Ignored**. Search by name or device ID.
-3. For an unmapped row, click **Map to employee**. For a mapped row, click **Change employee**.
-4. Type to search the employee, pick the right person, and save.
-5. To ignore an identity (for example, a former employee), choose to ignore it and enter a reason.
-
-> **What happens next:** The mapping is used for every future import. Changes take effect on the next import or re-import.
+> **After you import:** The month's status is **Pending Review**. Your matching choices are saved, so the same people match automatically next month. Ignored identities can be restored with **Undo** in the **Ignored** section of a later import.
 
 ---
 
 ## How to review a month
 
-*(HR staff who approve attendance)*
+1. Go to **Time & Attendance** → **Attendance**, choose the **Month** and **Year**, and click **Review [month] [year]**.
+2. The banner shows the state, for example *"Pending Review - Review all employee records before approving"*.
+3. The counters show **Total Employees**, **Employees with Flags**, **Total Flagged Days**, **Resolved Flags** and **On Leave**.
+4. The table shows each employee's **Days attended**, **Absent**, **Late Days**, **Leave Days**, **Unpaid leave**, **Paid days (30-day basis)**, **Site / WFH**, **Early departure**, **Field movements**, **Forgot to clock** and **Flagged Days**.
+5. Click **View Daily Logs** on an employee to see each day's **Status**, **Clock In (Local)**, **Clock Out (Local)**, **Flag** and **Deduction**, and any explanation the employee submitted.
+6. When every record is checked, click **Mark as Reviewed**. The banner changes to *"Reviewed - Ready for approval"*.
 
-1. Click **Time & Attendance** in the left menu, then click **Attendance**. Find the month, and click its **Review** button (labelled *Review* with the month and year).
-2. Read the summary: **Employees**, **Total Flagged Days**, **Employees with Flags** and **Resolved Flags**.
-3. Use the banner to see the state:
-   - **Pending Review**: review all employee records before approving.
-   - **Reviewed**: ready for approval.
-   - A *schedule changed* warning appears when a site, WFH or leave change was approved after the month was locked. Unlock the month so those changes are applied to the attendance figures.
-4. Open an employee to see the **Daily logs**. Each day shows its status and any deduction.
-5. Flag columns:
-   - **Forgot to clock**: a missing clock-in or clock-out.
-   - **Early departure**: left before the scheduled end. Shows *Early departure - approval pending* while it is under review.
-   - **Field movements**: an explanation has been submitted through a field movement log.
-6. To correct a day, click **Correct**, enter the corrected clock-in or clock-out time, add a **Correction Note**, and click **Save Correction**. Corrections are allowed only while the month is open.
-7. When every record is checked, click **Mark as Reviewed**.
+[SCREENSHOT: attendance-review-month.png]
 
-> **What happens next:** The month moves from **Pending Review** to **Reviewed**.
+> **Note:** *"Would deduct … (not applied)"* shows a deduction that would apply but has not been applied.
+
+---
+
+## How to correct a day's clock times
+
+*(Only while the month is not locked)*
+
+1. On the review page, click **View Daily Logs** for the employee.
+2. Click **Correct** on the day. The **Correct clock times** window opens.
+3. Enter **Corrected Clock In** and/or **Corrected Clock Out**. At least one is required.
+4. **Correction Note** (required): say why.
+5. Click **Save Correction**. The day shows *"Corrected from …"*.
+
+> **Note:** If the month is locked, you see *"Attendance is locked. Unlock the month before making corrections."*
+
+---
+
+## How to review late scans
+
+Some employees only scan once a day. If their first scan was after the latest allowed time, they appear under **Scans after the latest scan time**. This has no effect on pay.
+
+1. On the review page, find **Scans after the latest scan time**. Filter by **Pending** or **Reviewed**.
+2. On each row, click **Excuse** or **Mark late**, add an optional note, and click **Save**.
 
 ---
 
 ## How to approve a month
 
-*(HR staff who approve attendance)*
-
-1. Open the month in **Review**. The month must be **Reviewed** first.
+1. Open the month's review page. Its status must be **Pending Review** or **Reviewed**.
 2. Click **Approve Month**.
-3. Read the dialog: it locks the attendance for the month and notifies employees who have flagged days to submit explanations.
-4. Click **Approve** to confirm.
+3. Read **Approve [month] [year] Attendance?**: approving locks the month and notifies every employee with flagged days to submit explanations.
+4. Click **Approve**.
 
-> **What happens next:**
-> - The month is locked. Daily corrections are no longer possible.
-> - Each employee with unresolved flagged days receives a notification to submit an explanation (a field movement log).
-> - The month's figures are used for payroll.
+[SCREENSHOT: attendance-approve-month.png]
+
+> **After you approve:** You see *"Attendance month approved and locked."* No corrections are possible. The banner shows who approved and when.
 
 ---
 
 ## How to unlock an approved month
 
-*(HR staff who approve attendance)*
+Unlock only to make a real correction, or when the banner says *"Schedule approved after this month was locked - unlock the month to apply site / WFH / leave to attendance figures"*.
 
-Unlock only when a correction must be made after approval, or when a site, WFH or leave change needs to be applied.
-
-1. Open the approved month in **Review**.
+1. Open the approved month's review page.
 2. Click **Unlock Month**.
-3. Enter the **Unlock reason**. It is required.
-4. Click **Unlock**.
+3. **Unlock reason** (required): write why.
+4. Click **Unlock**. The banner shows when it was unlocked and why.
+5. Make the corrections, then approve the month again.
 
-> **What happens next:** The month reopens. Corrections are allowed again. Approve the month once the corrections are complete. Payroll for the month may need to be reviewed too (see the Payroll guide).
+---
+
+## How to map machine records to employees
+
+1. Go to **Time & Attendance** → **Attendance Identities**.
+2. The counters show **All identities**, **Mapped** and **Ignored**. Search by machine name, ID or employee.
+3. For a row that is **Not mapped**, click **Map to employee**. For a mapped row, click **Change employee**.
+4. Type at least 2 letters of the employee's name, choose them, and save.
+
+> **After you save:** You see *"Identity updated."* The mapping is used in every future import.
 
 ---
 
 ## How to handle employees awaiting enrolment
 
-*(HR only)*
+**Awaiting enrolment** lists employees who are not yet set up on the attendance machine. They are counted as present. Each shows *"Since [month] [year]"*.
 
-Some new employees are not yet enrolled on the attendance machine. They are counted as present, and the system tracks them on the **Awaiting enrolment** list.
-
-1. From **Attendance**, open **Awaiting enrolment**.
-2. Review the list. Each employee is listed while they have no scan in any later import.
-3. Enrol the employee on the attendance machine when possible.
-
-> **What happens next:** Once an import contains a scan for the employee, they leave this list automatically.
-
----
-
-## How to check your own attendance
-
-*(Everyone)*
-
-1. Click **My Profile** in the left menu, then click **Attendance**.
-2. Choose the **Year**. The summary shows your payable hours, present days, absences and late days.
-3. Open a month to see each day: clock-in and clock-out times, hours, lateness and any flag.
-4. If a banner says some days need an explanation, click **Submit Explanation** (see the **Field Movement** topic).
-
----
-
-## How to check an employee's attendance (HR)
-
-1. Click **Time & Attendance** in the left menu, then click **Attendance**. Search by employee and month.
-2. Click a row to open the employee's year profile or daily logs.
-3. The columns show:
-   - **Days attended**: the actual attendance days.
-   - **Absent**, **Late Days** and **Leave Days**.
-   - **Paid days (30-day basis)**: the paid days used for the month.
-   - **Unpaid leave**.
-   - **Site / WFH**: days covered by site assignments or work from home.
-
----
-
-## Tips
-
-- Import each month as soon as the export is ready, and before the payroll run.
-- Clear the **Not Matched** rows before confirming. A person left unmatched will have no attendance for the month.
-- Use **Mark as Reviewed** only after you have checked the flagged days.
-- Unlock a month only for a real correction, and record the reason.
+1. Enrol the employee on the attendance machine.
+2. They leave the list automatically once an import contains a scan for them.

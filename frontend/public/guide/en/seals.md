@@ -1,50 +1,130 @@
 # Official & Project Seals
 
-Use a seal request when a document needs the company's official seal or a project seal. You describe why the seal is needed, set urgency and the date needed, optionally attach the document to be sealed, and submit. HR then issues the seal and records the sealed copy.
+Use a seal request when a document needs the company's official seal or a project seal. You describe the document and when you need it, and send the request for approval. After approval, HR stamps the document and records the sealed copy.
 
-**Who does what**
+**Find your part of this guide**
 
-| Role | What you can do |
+| You are | Read these sections |
 | --- | --- |
-| Employee (everyone) | Submit an official or project seal request, track it in **My Official Seal Requests** or **My Project Seal Requests**, and cancel it while it is still open. |
-| Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR and administration staff | See all seal requests by clicking **Operations** in the left menu, then **Official Seal Usage** or **Project Seal Usage**, issue the seal, and attach the sealed proof. |
-
-**Where to find it**
-- Submit: click **New Request** in the left menu, then click **Official Seal** or **Project Seal**.
-- HR lists: click **Operations** in the left menu, then click **Official Seal Usage** or **Project Seal Usage** (HR and administration staff only).
+| Employee | Requesting a seal, following your request, and what to do if it is returned |
+| Anyone who approves seal requests | How to approve a seal request |
+| HR and administration staff | Seeing all requests, issuing the seal, and exporting or importing requests |
 
 ---
 
-## How to submit a seal request
+## How to request a seal
 
-1. Click **New Request** in the left menu, then click **Official Seal** or **Project Seal**.
-2. **Request Details:** enter the **Purpose**, choose the **Urgency**, and set the **Date needed**.
-3. **Document to Seal** (optional): choose the document to stamp. Each attachment has a **File name** and **Description**.
-4. **Review & Submit:** choose the **Category** and the **Copy Count**, check the summary, and click **Submit Request**.
+*(Employees)*
 
-> **What happens next:** The request is sent to your approvers. You can follow it in **Approvals**.
+1. In the left menu, go to **New Request**.
+2. Click **Official Seal Usage** or **Project Seal Usage**. The form has three steps: **Request Details**, **Document to Seal** and **Review & Submit**.
+
+[SCREENSHOT: seals-new-request.png]
+
+## Step 1 — Request Details
+
+*(Employees)*
+
+1. **File name** (required): the name of the document to be sealed.
+2. **Description**: why the seal is needed.
+3. **Date needed** (required): today or a later date.
+4. **Urgency** (required): **Minor**, **Medium**, **Urgent** or **Critical**.
+5. **Category** (required): **Contract**, **Letter**, **Certificate**, **Report**, **Drawing** or **Other (specify)**. If you choose **Other (specify)**, enter the **Other category**.
+6. **Copy Count**: how many copies need the seal.
+7. Click **Next**.
+
+## Step 2 — Document to Seal
+
+*(Employees)*
+
+1. Click **Choose document (optional)** to attach the document that needs the seal.
+2. Click **Next**.
+
+## Step 3 — Review & Submit
+
+*(Employees)*
+
+1. Check the details and the attachment.
+2. Click **Back** to change anything.
+3. Click **Submit Request**.
+
+> **After you submit:** Your request has been sent for approval. You will receive a notification when it is approved or returned.
 
 ---
 
-## How HR issues a seal
+## How to follow your seal request
 
-1. Open the seal request from **Official Seal Usage** or **Project Seal Usage**.
-2. Check who has approved it and look at the attached document.
-3. Click **Issue Seal**. The sealed proof is attached to the request, with the issuer and the completion time.
+*(Employees)*
 
----
-
-## Cancelling a request
-
-1. Open your request.
-2. Click **Cancel Request** and confirm.
-
-> **What happens next:** The seal request and any open approval request are cancelled.
+1. In the left menu, go to **Approvals** → **My Requests** and open the request.
+2. When the seal has been applied, the status shows **Seal Issued** and the **Sealed Document (Proof)** is attached.
 
 ---
 
-## Tips
+## What to do if your request is returned
 
-- Attach the document when you submit. A request without it can still be processed, but HR may need to ask you for it.
-- Set the **Date needed** early so HR has time to issue the seal before your deadline.
+*(Employees)*
+
+If your request is returned, you receive the notification **Approval returned**. Open it to see the reason.
+
+1. In the left menu, go to **Approvals** → **My Requests** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
+2. Read the note.
+3. In the **Resubmit** panel, write a **Note to approver (optional)**, and click **Attach files** to add the corrected document if needed.
+4. Click **Resubmit**. The request goes back through the approval chain from the beginning.
+
+---
+
+## How to approve a seal request
+
+*(Anyone who approves seal requests)*
+
+When a request reaches you, you receive the notification **Approval required**.
+
+1. In the left menu, go to **Approvals** → **Pending My Action** and open the request.
+2. Check the file name, category, copies, date needed and the attached document.
+3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The submitter is notified.
+
+---
+
+## How to see all seal requests
+
+*(HR and administration staff)*
+
+1. In the left menu, go to **Operations** → **Official Seal Usage** or **Project Seal Usage**.
+2. The counters show **Total**, **Draft**, **Pending**, **Approved** and **Rejected**.
+3. Search by request number, file name or employee.
+4. The columns show **Request #**, **Employee**, **File Name**, **Urgency**, **Date Needed**, **Status** and **Current Tier**.
+5. Click a request to open it.
+
+[SCREENSHOT: seals-hr-list.png]
+
+---
+
+## How to issue the seal
+
+*(HR — approved requests only)*
+
+1. Open the approved request.
+2. Check the **Document to Seal**.
+3. Stamp the document.
+4. In **Issue Seal**, click **Choose document (optional)** to attach the sealed copy, then click **Issue Seal**.
+
+> **After you issue it:** The status becomes **Seal Issued**. The request shows **Issued by** and **Completed at**, and the sealed copy appears under **Sealed Document (Proof)**.
+
+---
+
+## How to export or import seal requests
+
+*(HR and administration staff)*
+
+- **Export:** on the list, click **Export requests**.
+- **Import:** click **Import from Excel** and **Download template**. Imported requests are created as **Draft**. Attachments are not imported, so the document must be added before the request is submitted.
+
+---
+
+## Things HR should know
+
+*(HR and administration staff)*
+
+- **Cancelling.** Only the person who made the request can cancel it, while it is **Draft** or **Submitted**.
+- **Approved directly.** A request marked **Direct approval** had no approvers.

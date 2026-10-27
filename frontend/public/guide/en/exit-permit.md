@@ -1,48 +1,125 @@
 # Exit Permit
 
-An exit permit records equipment and materials that leave or return to a site. You list each item with its quantity and unit, optionally add a photo of each item and supporting documents, then submit the permit for approval. Approved permits are used at the gate.
+An exit permit records equipment and materials that leave or enter a site. You list each item and send the permit for approval. Approved permits are printed for the gate so security can check every item.
 
-**Who does what**
+**Find your part of this guide**
 
-| Role | What you can do |
+| You are | Read these sections |
 | --- | --- |
-| Employee (everyone) | Submit an exit permit for items you are moving, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
-| Approvers | Approve the permit when it reaches you in **Approvals**. |
-| HR and administration staff | See all exit permits by clicking **Operations** in the left menu, then **Exit Permit** and process them. |
-
-**Where to find it**
-- Submit: click **New Request** in the left menu, then click **Exit Permit**.
-- HR list: click **Operations** in the left menu, then click **Exit Permit** (HR and administration staff only).
+| Employee | Requesting an exit permit, following it, and what to do if it is returned |
+| Anyone who approves exit permits | How to approve an exit permit |
+| HR and administration staff | Seeing all permits, gate passes and the gate register |
 
 ---
 
-## How to submit an exit permit
+## How to request an exit permit
 
-1. Click **New Request** in the left menu, then click **Exit Permit**.
-2. **Request Details:**
-   - Choose the **Direction** (items leaving the site or returning to it).
-   - Optionally set the **Date**, the **Department**, and the employee the permit is **On behalf** of.
-3. **Items:** click **Add Item**, then for each line enter:
-   - **Item Name**
-   - **Issue**
-   - **Quantity** and **Unit**
+*(Employees)*
+
+1. In the left menu, go to **New Request**.
+2. Click **Exit Permit**. The form has three steps: **Request Details**, **Items** and **Review & Submit**.
+
+[SCREENSHOT: exit-permit-new-form.png]
+
+## Step 1 — Request Details
+
+*(Employees)*
+
+1. **Direction** (required): **Exit** for items leaving the site, or **Entrance** for items coming in.
+2. **Date** (required): today or a later date.
+3. **Department** (optional).
+4. Click **Next**.
+
+## Step 2 — Items
+
+*(Employees)*
+
+1. Click **Add Item**. For each item, enter:
+   - **Item Name** (required)
+   - **Issue**: what the item is for, or its condition
+   - **Quantity** (required) and **Unit**
    - **Item Image** (optional): a JPEG, PNG, WebP or GIF photo
-   - Click **Save** to add the line. Use **Edit Item** to change it.
-4. **Supporting Documents:** optionally attach documents.
-5. Click **Review & Submit**, check the summary, and click **Submit Request**.
+2. Click **Save** to add the item. Add at least one item.
+3. Click **Next**.
 
-> **What happens next:** The permit is sent to your approvers. Track it in **Approvals**. Once it is approved, it can be used at the gate.
+[SCREENSHOT: exit-permit-items.png]
+
+## Step 3 — Review & Submit
+
+*(Employees)*
+
+1. Check the direction, date and items.
+2. Attach **Supporting Documents** if needed.
+3. Click **Back** to change anything.
+4. Click **Submit Request**.
+
+> **After you submit:** You see *"Exit permit submitted for approval"*. Your permit has been sent for approval. You will receive a notification when it is approved or returned.
 
 ---
 
-## Things that stop a submission
+## How to follow your exit permit
 
-- No items. At least one item line is required.
-- An item without a name, quantity or unit.
+*(Employees)*
+
+1. In the left menu, go to **Approvals** → **My Requests** and open the permit.
+2. You see the items, the status and the **Approval Chain**.
 
 ---
 
-## Tips
+## What to do if your permit is returned
 
-- List every item on its own line with its own quantity. The gate checks the list line by line.
-- A photo is optional, but a clear photo helps the gate officer confirm the item.
+*(Employees)*
+
+If your permit is returned, you receive the notification **Approval returned**. Open it to see the reason.
+
+1. In the left menu, go to **Approvals** → **My Requests** and open the permit with status **Returned**. The banner says **This request was returned** and shows the approver's note.
+2. Read the note.
+3. In the **Resubmit** panel, write a **Note to approver (optional)** with the corrections, and attach files if needed.
+4. Click **Resubmit**. The permit goes back through the approval chain from the beginning.
+
+---
+
+## How to approve an exit permit
+
+*(Anyone who approves exit permits)*
+
+When a permit reaches you, you receive the notification **Approval required**.
+
+1. In the left menu, go to **Approvals** → **Pending My Action** and open the permit.
+2. Check the direction, date and each item's name, quantity and photo.
+3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The submitter is notified.
+
+---
+
+## How to see all exit permits
+
+*(HR and administration staff)*
+
+1. In the left menu, go to **Operations** → **Exit Permit**. **Equipment and Materials Exit Permits** opens.
+2. The counters show **Total**, **Draft**, **Pending**, **Approved** and **Rejected**.
+3. Search by request number, employee or department, or filter by **Employee**.
+4. The columns show **Request #**, **Employee**, **On behalf**, **Direction**, **Date**, **Department**, **Items**, **Status** and **Current Tier**.
+5. Click a permit to open it.
+
+---
+
+## How to print a gate pass or the gate register
+
+*(HR and administration staff)*
+
+- **One permit:** open an approved permit and click **Gate pass**.
+- **All permits for a day:** on the list, click **Gate pass register**. Choose the **Date** and the **Direction** (**Entrance and exit**, **Entrance** or **Exit**), and click **Download PDF**. The PDF lists every item, with a column for security to tick.
+
+[SCREENSHOT: exit-permit-gate-register.png]
+
+> **After you download:** You see *"Gate pass register PDF downloaded."* Post it at the gate.
+
+---
+
+## Things HR should know
+
+*(HR and administration staff)*
+
+- **Permits filed on behalf of someone** always need at least one approver.
+- **Cancelling.** The employee, HR or a full-access role can cancel a permit while it is **Draft** or **Submitted**: open it and click **Cancel Request**, then confirm **Cancel exit permit?**.
+- **Approved directly.** A permit with *"Approved directly - no approval required"* had no approvers.

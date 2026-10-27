@@ -424,7 +424,7 @@ function classifyParagraph(text: string): Block {
 }
 
 const TONE_BY_LABEL: ReadonlyArray<readonly [RegExp, Tone]> = [
-  [/^(what happens next|接下来会发生什么)/i, 'success'],
+  [/^(what happens next|after you|接下来会发生什么|提交后|保存后)/i, 'success'],
   [/^(important|重要)/i, 'warning'],
   [/^(note|注意)/i, 'info'],
 ];
