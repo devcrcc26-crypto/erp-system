@@ -6,14 +6,14 @@ Attendance comes from the monthly export of the attendance machine (Deli e+). HR
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | See your own attendance under **My Profile** → **Attendance**, and explain flagged days (see the **Field Movement** topic). |
+| Employee (everyone) | See your own attendance by clicking **My Profile** in the left menu, then **Attendance**, and explain flagged days (see the **Field Movement** topic). |
 | HR (HR Manager, HR Assistant, HR Specialist) | Import the monthly file, map machine records to employees, review and correct days, and approve or unlock months. |
 
 **Where to find it**
-- Your attendance: **My Profile** → **Attendance**.
-- Monthly attendance (HR): **Time & Attendance** → **Attendance** → **Attendance**. Open a month with its **Review** button.
-- Machine-to-employee mapping (HR): **Time & Attendance** → **Attendance** → **Attendance Identities**.
-- Explanations for flagged days (HR): **Time & Attendance** → **Attendance** → **Field Movement Logs**.
+- Your attendance: click **My Profile** in the left menu, then click **Attendance**.
+- Monthly attendance (HR): click **Time & Attendance** in the left menu, then click **Attendance**. Open a month with its **Review** button.
+- Machine-to-employee mapping (HR): click **Time & Attendance** in the left menu, then click **Attendance Identities**.
+- Explanations for flagged days (HR): click **Time & Attendance** in the left menu, then click **Field Movement Logs**.
 
 ---
 
@@ -22,7 +22,7 @@ Attendance comes from the monthly export of the attendance machine (Deli e+). HR
 *(HR only; needs the create permission for attendance)*
 
 1. Export the monthly summary from the attendance machine. It must be the Deli e+ **Monthly summary export** (月度汇总表) in `.xlsx` format.
-2. Go to **Attendance** and click **Import Attendance**.
+2. Click **Time & Attendance** in the left menu, then click **Attendance**, then click **Import Attendance**.
 3. In step **Upload File**, drop the file into the drop area, or click to browse. Only `.xlsx` files up to 10 MB are accepted.
 4. Wait for the preview. The system reads the file and matches each row to an employee.
 5. Step **Review & Confirm** shows four sections:
@@ -52,7 +52,7 @@ Attendance comes from the monthly export of the attendance machine (Deli e+). HR
 
 The machine records people by a device name and ID. An identity links that device record to an ERP employee.
 
-1. Go to **Attendance** → **Attendance Identities**.
+1. Click **Time & Attendance** in the left menu, then click **Attendance Identities**.
 2. Use the status filter: **All**, **Mapped**, or **Ignored**. Search by name or device ID.
 3. For an unmapped row, click **Map to employee**. For a mapped row, click **Change employee**.
 4. Type to search the employee, pick the right person, and save.
@@ -66,7 +66,7 @@ The machine records people by a device name and ID. An identity links that devic
 
 *(HR users with the approve permission)*
 
-1. Go to **Attendance**, find the month, and click its **Review** button (labelled *Review* with the month and year).
+1. Click **Time & Attendance** in the left menu, then click **Attendance**. Find the month, and click its **Review** button (labelled *Review* with the month and year).
 2. Read the summary: **Employees**, **Total Flagged Days**, **Employees with Flags** and **Resolved Flags**.
 3. Use the banner to see the state:
    - **Pending Review**: review all employee records before approving.
@@ -133,7 +133,7 @@ Some new employees are not yet enrolled on the attendance machine. They are coun
 
 *(Everyone)*
 
-1. Go to **My Profile** → **Attendance**.
+1. Click **My Profile** in the left menu, then click **Attendance**.
 2. Choose the **Year**. The summary shows your payable hours, present days, absences and late days.
 3. Open a month to see each day: clock-in and clock-out times, hours, lateness and any flag.
 4. If a banner says some days need an explanation, click **Submit Explanation** (see the **Field Movement** topic).
@@ -142,7 +142,7 @@ Some new employees are not yet enrolled on the attendance machine. They are coun
 
 ## How to check an employee's attendance (HR)
 
-1. Go to **Time & Attendance** → **Attendance** → **Attendance**. Search by employee and month.
+1. Click **Time & Attendance** in the left menu, then click **Attendance**. Search by employee and month.
 2. Click a row to open the employee's year profile or daily logs.
 3. The columns show:
    - **Days attended**: the actual attendance days.

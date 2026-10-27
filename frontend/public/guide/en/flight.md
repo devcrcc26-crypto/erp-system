@@ -8,17 +8,17 @@ Use a flight application to request an air ticket for business travel. You fill 
 | --- | --- |
 | Employee (everyone) | Submit a flight application for yourself, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | See all flight applications under **Pay & Travel** → **Flight Applications** and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See all flight applications by clicking **Pay & Travel** in the left menu, then **Flight Applications** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Flight**.
-- HR list: sidebar → **Pay & Travel** → **Flight Applications** (HR only).
+- Submit: click **New Request** in the left menu, then click **Flight**.
+- HR list: click **Pay & Travel** in the left menu, then click **Flight Applications** (HR only).
 
 ---
 
 ## How to submit a flight application
 
-1. Go to **New Request** → **Flight**.
+1. Click **New Request** in the left menu, then click **Flight**.
 2. **Submit on behalf (optional):** if you are submitting for someone else, select the employee first. The form requires this when you submit on behalf.
 3. **Trip Details:**
    - Enter the **Origin country** and **Origin city**.

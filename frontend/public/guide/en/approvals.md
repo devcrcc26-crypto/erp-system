@@ -12,8 +12,8 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 | HR Manager, System Administrator | Reassign a pending step to a different approver. |
 
 **Where to find it**
-- Sidebar → **Approvals**. The badge shows how many requests are waiting for you.
-- Sidebar → **New Request** to start a request.
+- Click **Approvals** in the left menu. The badge shows how many requests are waiting for you.
+- Click **New Request** in the left menu to start a request.
 
 ---
 
@@ -21,7 +21,7 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 
 *(All employees)*
 
-1. Go to **New Request**. This opens the **What would you like to request?** picker.
+1. Click **New Request** in the left menu. This opens the **What would you like to request?** picker.
 2. Search for a request type in **Search request types**, or pick one from **Recently used**.
 3. Click the request type. The form for that type opens.
 4. Fill in the required fields. Missing required fields show *"Please fill in all required fields"*.
@@ -56,7 +56,7 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 
 *(All employees)*
 
-1. Go to **Approvals**.
+1. Click **Approvals** in the left menu.
 2. Click **Pending My Action**. These are requests where you are the approver for the current step.
 3. Use the search box, **Filter by category**, the date range or the status filter to narrow the list.
 4. Click a request to open it.
@@ -215,7 +215,7 @@ Some request types use their own chain. The chain is always shown on the request
 
 ## Tips
 
-- Check **Pending My Action** each day. The **Approvals** badge in the sidebar counts what is waiting for you.
+- Check **Pending My Action** each day. The **Approvals** badge in the left menu counts what is waiting for you.
 - Put a clear note on a **Return** or **Reject**. It is sent to the requester.
 - Resolve conditions before you approve. The approve button stays blocked while a condition is open.
 - If a request is stuck at a step whose approver has left, ask HR to reassign it.

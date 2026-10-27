@@ -6,19 +6,19 @@ Use an expense claim to get back money you spent on work: transport, meals, acco
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | Submit your own expense claims and track them in **Approvals** and under **Pay & Travel** → **Expense Claims**. |
+| Employee (everyone) | Submit your own expense claims and track them in **Approvals** and by clicking **Pay & Travel** in the left menu, then **Expense Claims**. |
 | Approvers | Approve the claim when it reaches you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | See everyone's expense claims under **Pay & Travel** → **Expense Claims** and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See everyone's expense claims by clicking **Pay & Travel** in the left menu, then **Expense Claims** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Expense Claim**.
-- Track: sidebar → **Pay & Travel** → **Expense Claims**. You see your own claims; HR sees everyone's.
+- Submit: click **New Request** in the left menu, then click **Expense Claim**.
+- Track: click **Pay & Travel** in the left menu, then click **Expense Claims**. You see your own claims; HR sees everyone's.
 
 ---
 
 ## How to submit an expense claim
 
-1. Go to **New Request** → **Expense Claim**.
+1. Click **New Request** in the left menu, then click **Expense Claim**.
 2. **Request Details:** enter a **Title** that approvers will recognize, and an optional **Description** (purpose, project, and so on).
 3. **Items:** click **Add Item** for each expense. For each item, enter:
    - **Expense Date**

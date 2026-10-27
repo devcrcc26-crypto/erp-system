@@ -6,18 +6,18 @@ The company asset register lists the fixed assets and equipment the company owns
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | See the assets assigned to you under **My Profile** → **Assets**. |
-| Fleet and HR staff | Add, edit and review company assets under **Operations** → **Fleet & Assets** → **Company Assets**. |
+| Employee (everyone) | See the assets assigned to you by clicking **My Profile** in the left menu, then **Assets**. |
+| Fleet and HR staff | Add, edit and review company assets by clicking **Operations** in the left menu, then **Company Assets**. |
 
 **Where to find it**
-- Your assets: sidebar → **My Profile** → **Assets**.
-- Register (HR): sidebar → **Operations** → **Fleet & Assets** → **Company Assets** (fleet access only).
+- Your assets: click **My Profile** in the left menu, then click **Assets**.
+- Register (HR): click **Operations** in the left menu, then click **Company Assets** (fleet access only).
 
 ---
 
 ## How to add a company asset (HR)
 
-1. Go to **Operations** → **Fleet & Assets** → **Company Assets** and click **New Company Asset**.
+1. Click **Operations** in the left menu, then click **Company Assets** and click **New Company Asset**.
 2. **Asset Details:** enter the **Asset Name**, **Serial Number**, **Type**, **Brand**, **Model**, **Year**, and optionally **Color** and **Description**.
 3. **Fixed Asset Ledger** (optional, for depreciation tracking): enter the **Asset Code**, **Specifications**, **Asset Category**, **Start of Use Date**, **Useful Life (Months)**, **Original Value**, **Managing Department** and **Storage Location**.
 4. **Photo** (optional): upload a clear photo in JPG, PNG or WEBP format.

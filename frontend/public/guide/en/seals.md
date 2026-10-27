@@ -8,17 +8,17 @@ Use a seal request when a document needs the company's official seal or a projec
 | --- | --- |
 | Employee (everyone) | Submit an official or project seal request, track it in **My Official Seal Requests** or **My Project Seal Requests**, and cancel it while it is still open. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR and administration staff | See all seal requests under **Operations** → **Administration**, issue the seal, and attach the sealed proof. |
+| HR and administration staff | See all seal requests by clicking **Operations** in the left menu, then **Official Seal Usage** or **Project Seal Usage**, issue the seal, and attach the sealed proof. |
 
 **Where to find it**
-- Submit: **New Request** → **Official Seal** or **Project Seal**.
-- HR lists: sidebar → **Operations** → **Administration** → **Official Seal Usage** or **Project Seal Usage** (HR and administration staff only).
+- Submit: click **New Request** in the left menu, then click **Official Seal** or **Project Seal**.
+- HR lists: click **Operations** in the left menu, then click **Official Seal Usage** or **Project Seal Usage** (HR and administration staff only).
 
 ---
 
 ## How to submit a seal request
 
-1. Go to **New Request** and choose **Official Seal** or **Project Seal**.
+1. Click **New Request** in the left menu, then click **Official Seal** or **Project Seal**.
 2. **Request Details:** enter the **Purpose**, choose the **Urgency**, and set the **Date needed**.
 3. **Document to Seal** (optional): choose the document to stamp. Each attachment has a **File name** and **Description**.
 4. **Review & Submit:** choose the **Category** and the **Copy Count**, check the summary, and click **Submit Request**.

@@ -6,7 +6,7 @@ Quick answers to the questions people ask most often.
 
 ## Where do I start a request?
 
-Go to **New Request** in the sidebar and choose the request type. Every request type you are allowed to submit is listed there.
+Click **New Request** in the left menu, then click the request type you need. Every request type you are allowed to submit is listed there.
 
 ---
 
@@ -16,9 +16,9 @@ Go to **New Request** in the sidebar and choose the request type. Every request 
 
 ---
 
-## Why is my sidebar shorter than a colleague's?
+## Why is my left menu shorter than a colleague's?
 
-The sidebar only shows what your role can use. Most staff see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
+The left menu only shows what your role can use. Most staff see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
 
 ---
 

@@ -12,15 +12,15 @@ Use a leave request to take time off: annual, sick, unpaid and other leave types
 | General Manager, Managing Director, System Administrator | Your own leave is approved as soon as you submit it. |
 
 **Where to find it**
-- Request leave: **New Request** → **Leave**.
-- Your balance and history: **My Profile** → **Leave**. Click **View all** for your full history.
-- All requests and balances (HR only): **Time & Attendance** → **Leave** → **Leave Requests**.
+- Request leave: click **New Request** in the left menu, then click **Leave**.
+- Your balance and history: click **My Profile** in the left menu, then click **Leave**. Click **View all** for your full history.
+- All requests and balances (HR only): click **Time & Attendance** in the left menu, then click **Leave Requests**.
 
 ---
 
 ## How to request leave
 
-1. Go to **New Request** → **Leave**.
+1. Click **New Request** in the left menu, then click **Leave**.
 2. Choose the **Leave Type**: Annual, Sick, Unpaid, Maternity, Paternity, Emergency, Compassionate, Study Leave or Exam Leave. Maternity only appears for employees recorded as female.
 3. Add your **Leave periods**:
    - Pick a **date range** for each period.
@@ -45,7 +45,7 @@ Use a leave request to take time off: annual, sick, unpaid and other leave types
 
 ## How to check your leave balance
 
-1. Open **New Request** → **Leave**. The **Leave Balance** panel updates as you choose dates.
+1. Click **New Request** in the left menu, then click **Leave**. The **Leave Balance** panel updates as you choose dates.
 2. The panel shows, for the selected leave type:
    - **Entitled**: the days you are allowed in this leave year.
    - **Brought Forward**: days carried over from last year.
@@ -54,7 +54,7 @@ Use a leave request to take time off: annual, sick, unpaid and other leave types
    - **Remaining**: Entitled + Brought Forward − Used − Pending.
 3. Your leave year runs from your **employment anniversary**, not from January. The panel shows which year it is using.
 
-You can also see your balances at any time under **My Profile** → **Leave**.
+You can also see your balances at any time by clicking **My Profile** in the left menu, then **Leave**.
 
 > **Note:** Unpaid leave has no balance, so the panel says so.
 
@@ -62,10 +62,10 @@ You can also see your balances at any time under **My Profile** → **Leave**.
 
 ## How to follow your leave requests
 
-1. Go to **My Profile** → **Leave** and click **View all**.
+1. Click **My Profile** in the left menu, then click **Leave** and click **View all**.
 2. Click a request to open it. The detail page shows the dates, days, periods, reason, attachments, the balance at the time, and the approval chain.
 
-You can also follow any request in **Approvals** → **My Requests**.
+You can also follow any request by clicking **Approvals** in the left menu, then **My Requests**.
 
 ---
 
@@ -115,7 +115,7 @@ You can also follow any request in **Approvals** → **My Requests**.
 
 *(HR Manager, General Manager, Managing Director, System Administrator; Department Heads for their own department; Discipline Leads for their own discipline)*
 
-1. Open **New Request** → **Leave**.
+1. Click **New Request** in the left menu, then click **Leave**.
 2. In **Submission details**, switch on **Submit on behalf of another employee** and choose the employee.
 3. Fill in the form as usual and submit.
 
@@ -127,7 +127,7 @@ You can also follow any request in **Approvals** → **My Requests**.
 
 *(HR only)*
 
-1. Go to **Time & Attendance** → **Leave** → **Leave Requests**.
+1. Click **Time & Attendance** in the left menu, then click **Leave Requests**.
 2. Use the **Requests** tab to see every request. Filter by **Employee**, **Leave Type** or **Status**, or search by request number.
 3. Use the **Balances** tab to see every employee's balance by leave type and year.
 4. Click **Edit Balances** to adjust a balance (opening balance, adjustment or snapshot). Every change is kept in the balance history.

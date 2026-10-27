@@ -30,14 +30,14 @@ If HR gave you a temporary password, the ERP asks you to choose a new password b
 
 | Area | What it is for |
 | --- | --- |
-| **Sidebar** (left) | The modules you can use. You only see what your role allows. |
+| **Left menu** | The modules you can use. You only see what your role allows. |
 | **New Request** | Start any request: leave, overtime, travel, expenses, seals and more. |
 | **Approvals** | Follow your own requests, and act on requests that are waiting for you. |
 | **My Profile** | Your own record: leave balance, overtime, attendance, payslips, assets and more. |
 | **Bell icon** (top right) | Your notifications, such as approval updates and announcements. |
 | **User Guide** | This guide. It opens in a new tab. |
 
-**What you see in the sidebar depends on your role:**
+**What you see in the left menu depends on your role:**
 - **Most staff** see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide.
 - **HR staff** also see the module folders: **People**, **Time & Attendance**, **Pay & Travel** and **Operations**.
 
@@ -47,9 +47,9 @@ If HR gave you a temporary password, the ERP asks you to choose a new password b
 
 Almost everything you ask for follows the same four steps.
 
-1. **Start:** go to **New Request** and choose the request type.
+1. **Start:** click **New Request** in the left menu, then click the request type you need.
 2. **Fill in:** complete each step of the form. Check the summary on **Review & Submit**, then submit.
-3. **Approval:** the request goes to your approvers in order, usually your manager first and then HR. Follow it in **Approvals** → **My Requests**.
+3. **Approval:** the request goes to your approvers in order, usually your manager first and then HR. Follow it by clicking **Approvals** in the left menu, then **My Requests**.
 4. **Result:** you get a notification when the request is approved, rejected or returned. If it is returned, change what the approver asked for and resubmit.
 
 See the **Approvals Inbox** topic for the full approval process.

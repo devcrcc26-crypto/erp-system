@@ -8,17 +8,17 @@ Use a work-from-home request to ask for one or more days working from home. You 
 | --- | --- |
 | Employee (everyone) | Request work-from-home days for yourself and track them in **Approvals**. |
 | Discipline Lead | Approve work-from-home requests from your team. |
-| HR (HR Manager, HR Assistant, HR Specialist) | Assign work-from-home days directly (no approval) and see all days at **Time & Attendance** → **Work From Home**. |
+| HR (HR Manager, HR Assistant, HR Specialist) | Assign work-from-home days directly (no approval) and see all days by clicking **Time & Attendance** in the left menu, then **Work From Home**. |
 
 **Where to find it**
-- Request: **New Request** → **Work From Home**.
-- HR calendar: sidebar → **Time & Attendance** → **Work From Home** (HR only).
+- Request: click **New Request** in the left menu, then click **Work From Home**.
+- HR calendar: click **Time & Attendance** in the left menu, then click **Work From Home** (HR only).
 
 ---
 
 ## How to request work from home
 
-1. Go to **New Request** → **Work From Home**.
+1. Click **New Request** in the left menu, then click **Work From Home**.
 2. **Submit on behalf (optional):** choose **Yourself**, or choose the **Employee** you are submitting for (if you are allowed to).
 3. **Details:**
    - Pick the **Dates**. You can request up to the maximum number of days shown per request. Sundays, public holidays and days you already have covered are skipped.
@@ -39,4 +39,4 @@ Use a work-from-home request to ask for one or more days working from home. You 
 
 ## For HR: assigning work from home directly
 
-HR can assign work-from-home days without an approval step from **Time & Attendance** → **Work From Home**, which shows the company's work-from-home calendar.
+HR can assign work-from-home days without an approval step by clicking **Time & Attendance** in the left menu, then **Work From Home**, which shows the company's work-from-home calendar.

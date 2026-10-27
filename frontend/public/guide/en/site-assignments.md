@@ -6,20 +6,20 @@ A site assignment records the days you work at a project site away from your nor
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | Request your own site assignment and see your assignments under **My Profile** → **Leave**. |
+| Employee (everyone) | Request your own site assignment and see your assignments by clicking **My Profile** in the left menu, then **Leave**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR and leave staff | See all site assignments at **Time & Attendance** → **Site Assignments** and file requests for other employees. |
+| HR and leave staff | See all site assignments by clicking **Time & Attendance** in the left menu, then **Site Assignments** and file requests for other employees. |
 
 **Where to find it**
-- Request: **New Request** → **Site Assignment**.
-- Your assignments: sidebar → **My Profile** → **Leave**.
-- HR list: sidebar → **Time & Attendance** → **Site Assignments** (HR and leave staff only).
+- Request: click **New Request** in the left menu, then click **Site Assignment**.
+- Your assignments: click **My Profile** in the left menu, then click **Leave**.
+- HR list: click **Time & Attendance** in the left menu, then click **Site Assignments** (HR and leave staff only).
 
 ---
 
 ## How to request site time
 
-1. Go to **New Request** → **Site Assignment**.
+1. Click **New Request** in the left menu, then click **Site Assignment**.
 2. **Submit on behalf (optional):** HR can select another employee.
 3. Enter the **Site** or **project** and the **Reason**.
 4. Add one or more **date ranges**.

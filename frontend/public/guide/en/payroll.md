@@ -6,14 +6,14 @@ Payroll runs once a month. HR creates the run, the ERP calculates each employee'
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | See your own payslips under **My Profile** → **Payroll**. |
+| Employee (everyone) | See your own payslips by clicking **My Profile** in the left menu, then **Payroll**. |
 | HR with payroll access | Create, check, recalculate and submit runs, add top-ups and freelancers, mark runs as paid, and generate and release payslips. |
 | HR Manager, System Administrator | Give the HR approval. |
 | General Manager, System Administrator | Give the final (GM) approval. |
 
 **Where to find it**
-- Your payslips: **My Profile** → **Payroll**.
-- Payroll runs (payroll access only): **Pay & Travel** → **Payroll & Expenses** → **Payroll**. Company payroll settings open from the same page.
+- Your payslips: click **My Profile** in the left menu, then click **Payroll**.
+- Payroll runs (payroll access only): click **Pay & Travel** in the left menu, then click **Payroll**. Company payroll settings open from the same page.
 
 > **Important:** Salary figures are confidential. Only people with payroll access can open this module.
 
@@ -23,7 +23,7 @@ Payroll runs once a month. HR creates the run, the ERP calculates each employee'
 
 *(HR with the payroll create permission)*
 
-1. Go to **Payroll** and click **New run**.
+1. Click **Pay & Travel** in the left menu, then click **Payroll**, then click **New run**.
 2. In **New payroll run**, choose the **Pay period** (month and year).
 3. Optionally add notes.
 4. Click **Create & generate**.
@@ -140,13 +140,13 @@ Approval moves through these steps in order. Each step is a button on the run.
 
 Payslips can be generated only when the run is **GM approved** or **Paid**.
 
-1. Open the run and go to **Payslips**.
+1. Open the run and click the **Payslips** tab.
 2. Click **Generate payslips**.
 3. Check the list. Open an employee's payslip to view its PDF.
 4. Click **Release to employees** and confirm **Release payslips to employees?**.
 5. To download all payslips together, click **Download all (ZIP)**.
 
-> **What happens next:** Each employee who receives a payslip is notified. Employees see their payslips in **My Profile** → payslips. Employees can view only their own.
+> **What happens next:** Each employee who receives a payslip is notified. Employees see their payslips on the **Payroll** tab of **My Profile**. Employees can view only their own.
 
 ---
 

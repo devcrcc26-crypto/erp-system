@@ -10,7 +10,7 @@
 | HR | Manages employee records. Employees edit only what is listed above. |
 
 **Where to find it**
-- Sidebar → **My Profile** (at the bottom of the sidebar, next to your name).
+- Click **My Profile** at the bottom of the left menu. It shows your name.
 
 ---
 
@@ -34,14 +34,14 @@
 
 ## How to change your preferences
 
-1. Go to **My Profile** → **Account**.
+1. Click **My Profile** in the left menu, then click **Account**.
 2. Change the **Language**, **Time zone** or **Date format** and save.
 
 ---
 
 ## How to change your email or password
 
-1. Go to **My Profile** → **Account**.
+1. Click **My Profile** in the left menu, then click **Account**.
 2. **Change email:** enter the new email address and save.
 3. **Change password:** enter your current password, then the new password twice, and save.
 

@@ -11,9 +11,9 @@ Overtime is recorded on a **monthly overtime sheet**. You open one sheet for the
 | HR (HR Manager, HR Assistant, HR Specialist) | See every sheet, edit or delete entries, import overtime from Excel, and delete sheets. |
 
 **Where to find it**
-- Start a sheet: **New Request** → **Overtime**.
-- Your overtime and history: **My Profile** → **Overtime**. Click **View all** to open any of your sheets.
-- All sheets (HR only): **Time & Attendance** → **Schedules & Overtime** → **Overtime**.
+- Start a sheet: click **New Request** in the left menu, then click **Overtime**.
+- Your overtime and history: click **My Profile** in the left menu, then click **Overtime**. Click **View all** to open any of your sheets.
+- All sheets (HR only): click **Time & Attendance** in the left menu, then click **Overtime**.
 
 ---
 
@@ -32,7 +32,7 @@ Overtime is recorded on a **monthly overtime sheet**. You open one sheet for the
 
 ## How to open your overtime sheet
 
-1. Go to **New Request** → **Overtime**.
+1. Click **New Request** in the left menu, then click **Overtime**.
 2. Choose the **Month** you worked overtime in. You can choose previous months.
 3. Click **Open sheet**.
    - If you already have a draft for that month, click **Continue draft**.
@@ -91,7 +91,7 @@ You cannot cancel a sheet that is **Approved**, **Rejected** or **Returned**.
 
 *(HR only)*
 
-- **See all sheets:** **Time & Attendance** → **Schedules & Overtime** → **Overtime**. Use the counters (**Total**, **Pending**, **Approved**, **Rejected**) and search by sheet number.
+- **See all sheets:** click **Time & Attendance** in the left menu, then click **Overtime**. Use the counters (**Total**, **Pending**, **Approved**, **Rejected**) and search by sheet number.
 - **Delete an entry:** open the sheet, click **Delete** on the entry and confirm. The totals are recalculated.
 - **Delete a sheet:** open it, click **Delete** and confirm. This removes it permanently and cancels its approval.
 - **Import from Excel:**

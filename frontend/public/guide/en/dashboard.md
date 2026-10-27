@@ -11,7 +11,7 @@ The Dashboard is the first page you see after signing in. It gives you shortcuts
 | HR, General Manager, Managing Director, System Administrator | **Overview**, **Payroll & OT** and **Operations**, plus **My Team** if they lead a team, and **My Work** |
 
 **Where to find it**
-- Sidebar → **Dashboard** (the first item). You also land here after you sign in.
+- Click **Dashboard** in the left menu (the first item). You also land here after you sign in.
 
 ---
 

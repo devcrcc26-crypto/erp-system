@@ -6,14 +6,14 @@ Performance evaluations are reviews that HR runs in cycles. Team leads and Disci
 
 | Role | What you can do |
 | --- | --- |
-| Employee (everyone) | See your own evaluations under **My Profile** → **Evaluations**. |
+| Employee (everyone) | See your own evaluations by clicking **My Profile** in the left menu, then **Evaluations**. |
 | Team Lead and Discipline Lead | Complete and submit the evaluations for your team in **My Evaluation Inbox**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | Run cycles, set up templates, see all evaluations, and use the same inbox under **People** → **Performance**. |
+| HR (HR Manager, HR Assistant, HR Specialist) | Run cycles, set up templates, see all evaluations, and use the same inbox by clicking **People** in the left menu, then **My Evaluation Inbox**. |
 
 **Where to find it**
-- Your evaluations: sidebar → **My Profile** → **Evaluations**.
-- Evaluation Inbox: sidebar → **My Evaluation Inbox** (team leads and Discipline Leads), or **People** → **Performance** → **My Evaluation Inbox** (HR).
-- HR pages (HR only): **People** → **Performance** → **All Evaluations**, **Evaluation Cycles** and **Evaluation Templates**.
+- Your evaluations: click **My Profile** in the left menu, then click **Evaluations**.
+- Evaluation Inbox: click **My Evaluation Inbox** in the left menu (team leads and Discipline Leads), or click **People** in the left menu, then click **My Evaluation Inbox** (HR).
+- HR pages (HR only): click **People** in the left menu, then click **All Evaluations**, **Evaluation Cycles** or **Evaluation Templates**.
 
 ---
 
@@ -28,7 +28,7 @@ Performance evaluations are reviews that HR runs in cycles. Team leads and Disci
 
 ## How to see your own evaluation (employee)
 
-1. Go to **My Profile** → **Evaluations**.
+1. Click **My Profile** in the left menu, then click **Evaluations**.
 2. Open an evaluation to see the scores and comments that have been shared with you.
 
 ---

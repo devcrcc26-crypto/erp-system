@@ -8,17 +8,17 @@ An exit permit records equipment and materials that leave or return to a site. Y
 | --- | --- |
 | Employee (everyone) | Submit an exit permit for items you are moving, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
 | Approvers | Approve the permit when it reaches you in **Approvals**. |
-| HR and administration staff | See all exit permits under **Operations** → **Administration** → **Exit Permit** and process them. |
+| HR and administration staff | See all exit permits by clicking **Operations** in the left menu, then **Exit Permit** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Exit Permit**.
-- HR list: sidebar → **Operations** → **Administration** → **Exit Permit** (HR and administration staff only).
+- Submit: click **New Request** in the left menu, then click **Exit Permit**.
+- HR list: click **Operations** in the left menu, then click **Exit Permit** (HR and administration staff only).
 
 ---
 
 ## How to submit an exit permit
 
-1. Go to **New Request** → **Exit Permit**.
+1. Click **New Request** in the left menu, then click **Exit Permit**.
 2. **Request Details:**
    - Choose the **Direction** (items leaving the site or returning to it).
    - Optionally set the **Date**, the **Department**, and the employee the permit is **On behalf** of.

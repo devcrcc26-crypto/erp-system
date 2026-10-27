@@ -8,11 +8,11 @@ Per diem is the daily allowance for days you are away on business travel or depl
 | --- | --- |
 | Employee (everyone) | Submit your own per diem request and track it in **Approvals** and in the **Per Diem** list. |
 | Team Lead, Department Head, Discipline Lead | Approve per diem requests that reach you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | Set each employee's per diem rate, see everyone's requests under **Pay & Travel** → **Per Diem**, and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | Set each employee's per diem rate, see everyone's requests by clicking **Pay & Travel** in the left menu, then **Per Diem**, and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Per Diem**.
-- Track: sidebar → **Pay & Travel** → **Per Diem**. You see your own requests; HR sees everyone's.
+- Submit: click **New Request** in the left menu, then click **Per Diem**.
+- Track: click **Pay & Travel** in the left menu, then click **Per Diem**. You see your own requests; HR sees everyone's.
 
 ---
 
@@ -24,7 +24,7 @@ Per diem is the daily allowance for days you are away on business travel or depl
 
 ## How to submit a per diem request (Employee)
 
-1. Go to **New Request** → **Per Diem**.
+1. Click **New Request** in the left menu, then click **Per Diem**.
 2. **Destination:** choose the **Destination Country**, then the **Destination City**. The destination category is set from the country automatically. You can change it if needed.
 3. **Trip details:**
    - Choose the **Trip type**: *Travel* or *Site deployment*.
@@ -42,7 +42,7 @@ Per diem is the daily allowance for days you are away on business travel or depl
 
 ## How to track your per diem requests
 
-1. Go to **Pay & Travel** → **Per Diem**.
+1. Click **Pay & Travel** in the left menu, then click **Per Diem**.
 2. Open a row to see the dates, destination, rate, total amount and approval status.
 
 ---
@@ -51,8 +51,8 @@ Per diem is the daily allowance for days you are away on business travel or depl
 
 *(HR Manager, HR Assistant, HR Specialist)*
 
-1. Set each employee's per diem rate under **Pay & Travel** → **Employee Per Diem Rates**. Requests cannot be submitted without a rate.
-2. Use **Pay & Travel** → **Per Diem** to see all requests, filter them, and open each one.
+1. Set each employee's per diem rate by clicking **Pay & Travel** in the left menu, then **Employee Per Diem Rates**. Requests cannot be submitted without a rate.
+2. Click **Pay & Travel** in the left menu, then click **Per Diem** to see all requests, filter them, and open each one.
 3. Review the rate-increase reason on requests that ask for a higher rate before you approve them.
 
 ---

@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,12 +10,17 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { getNavIcon } from '@/lib/navigation/nav-icons';
 
 /**
  * Lightweight markdown renderer for the user guide (no react-markdown).
  *
- * Guides stay plain markdown; this maps their conventions onto ERP-styled blocks:
- * - `## Heading` sections, listed in an "On this page" index
+ * Guides stay plain markdown; this lays them out as ERP cards:
+ * - a header card with the topic icon, title, opening paragraph and an
+ *   "On this page" row of section links
+ * - the blocks before the first section as overview cards, split at each
+ *   `**Label**` line ("Who does what", "Where to find it")
+ * - one card per `## Heading` section
  * - `> **What happens next:** …` callouts, toned by their opening label
  * - `1.` numbered steps and nested `-` lists
  * - a line that is only `**Label**` becomes a section label
@@ -24,8 +29,14 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
  */
 export default function HelpContent({
   content,
+  title,
+  iconKey,
 }: {
   content: string;
+  /** Article title for the header card. */
+  title?: string;
+  /** Sidebar icon key of the topic, shown beside the title. */
+  iconKey?: string;
 }): ReactNode {
   const { locale } = useEpcTranslation();
 
@@ -35,35 +46,144 @@ export default function HelpContent({
       `![screenshot](/guide/images/${filename.trim()})`,
   );
 
-  const blocks = parseBlocks(
-    processed.replace(/\r\n/g, '\n').split('\n'),
-    { next: 0 },
+  const { lead, overview, sections } = layoutArticle(
+    parseBlocks(processed.replace(/\r\n/g, '\n').split('\n'), { next: 0 }),
   );
-  // The opening paragraph introduces the topic; give it more weight.
-  if (blocks[0]?.type === 'p') {
-    blocks[0] = { type: 'lead', text: blocks[0].text };
-  }
-
-  const sections = blocks.filter(
-    (block): block is HeadingBlock => block.type === 'h2',
-  );
-  const firstSectionIndex = blocks.findIndex((block) => block.type === 'h2');
 
   return (
-    <div className="text-[14px] leading-7 text-[rgba(0,0,0,0.75)]">
-      {blocks.map((block, index) => (
-        <Fragment key={index}>
-          {index === firstSectionIndex && sections.length >= 3 ? (
+    <article className="flex flex-col gap-4 text-[14px] leading-7 text-[rgba(0,0,0,0.75)]">
+      {title || lead ? (
+        <header className="erp-pro-card px-6 py-5">
+          <div className="flex items-start gap-4">
+            {iconKey ? (
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E1F5EE] text-[22px] text-[#0F6E56]"
+                aria-hidden
+              >
+                {getNavIcon(iconKey)}
+              </span>
+            ) : null}
+            <div className="min-w-0">
+              {title ? (
+                <h1 className="m-0 text-[20px] font-semibold leading-8 text-[rgba(0,0,0,0.88)]">
+                  {title}
+                </h1>
+              ) : null}
+              {lead ? (
+                <p className="mb-0 mt-1 text-[14px] leading-6 text-[rgba(0,0,0,0.65)]">
+                  {inline(lead)}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {sections.length >= 3 ? (
             <SectionIndex
-              sections={sections}
+              sections={sections.map((section) => section.heading)}
               title={locale === 'zh' ? '本页内容' : 'On this page'}
             />
           ) : null}
-          <BlockView block={block} />
-        </Fragment>
+        </header>
+      ) : null}
+
+      {overview.length > 0 ? (
+        <div
+          className={
+            overview.length === 2
+              ? 'grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
+              : 'flex flex-col gap-4'
+          }
+        >
+          {overview.map((group, index) => (
+            <section key={index} className="erp-employee-section">
+              {group.label ? (
+                <div className="erp-employee-section-header">
+                  <h2 className="erp-employee-section-title">{plainText(group.label)}</h2>
+                </div>
+              ) : null}
+              <div className="erp-employee-section-body [&>*:last-child]:mb-0">
+                {group.blocks.map((block, blockIndex) => (
+                  <BlockView key={blockIndex} block={block} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : null}
+
+      {sections.map((section) => (
+        <section
+          key={section.heading.id}
+          id={section.heading.id}
+          aria-labelledby={`${section.heading.id}-title`}
+          className="erp-employee-section scroll-mt-4"
+        >
+          <div className="erp-employee-section-header !justify-start gap-2.5">
+            <span className="h-4 w-1 shrink-0 rounded-full bg-[#1D9E75]" aria-hidden />
+            <h2
+              id={`${section.heading.id}-title`}
+              className="m-0 text-[15px] font-semibold leading-6 text-[rgba(0,0,0,0.88)]"
+            >
+              {inline(section.heading.text)}
+            </h2>
+          </div>
+          <div className="erp-employee-section-body [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            {section.blocks.map((block, index) => (
+              <BlockView key={index} block={block} />
+            ))}
+          </div>
+        </section>
       ))}
-    </div>
+    </article>
   );
+}
+
+interface ArticleLayout {
+  /** The opening paragraph, shown under the title. */
+  lead: string | null;
+  /** Blocks before the first section, split at each `**Label**` line. */
+  overview: { label: string | null; blocks: Block[] }[];
+  /** One card per `## Heading`. */
+  sections: { heading: HeadingBlock; blocks: Block[] }[];
+}
+
+/** Splits parsed blocks into header, overview cards and section cards. */
+function layoutArticle(blocks: readonly Block[]): ArticleLayout {
+  const layout: ArticleLayout = { lead: null, overview: [], sections: [] };
+  let rest = blocks;
+  const first = rest[0];
+  if (first?.type === 'p') {
+    layout.lead = first.text;
+    rest = rest.slice(1);
+  }
+
+  for (const block of rest) {
+    // Cards replace the `---` separators between parts of a guide.
+    if (block.type === 'hr' || block.type === 'h1') {
+      continue;
+    }
+    if (block.type === 'h2') {
+      layout.sections.push({ heading: block, blocks: [] });
+      continue;
+    }
+    const section = layout.sections[layout.sections.length - 1];
+    if (section) {
+      section.blocks.push(block);
+      continue;
+    }
+    if (block.type === 'label') {
+      layout.overview.push({ label: block.text, blocks: [] });
+      continue;
+    }
+    const group = layout.overview[layout.overview.length - 1];
+    if (group) {
+      group.blocks.push(block);
+    } else {
+      layout.overview.push({ label: null, blocks: [block] });
+    }
+  }
+
+  layout.overview = layout.overview.filter((group) => group.blocks.length > 0);
+  return layout;
 }
 
 // ── Parsing ──────────────────────────────────────────────────────────────
@@ -376,23 +496,23 @@ function SectionIndex({
   return (
     <nav
       aria-label={title}
-      className="mb-6 rounded-lg border border-[#E8EBEF] bg-[#FBFCFD] px-4 py-3"
+      className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EEF1F4] pt-4"
     >
-      <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
+      <span className="mr-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
         {title}
-      </p>
-      <ol className="m-0 grid list-none gap-x-6 gap-y-0.5 p-0 sm:grid-cols-2">
+      </span>
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {sections.map((section) => (
           <li key={section.id}>
             <a
               href={`#${section.id}`}
-              className="text-[13px] leading-6 !text-[#0F6E56] underline-offset-2 hover:underline"
+              className="inline-flex rounded-full border border-[#E8EBEF] bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[#1D9E75] hover:!text-[#0F6E56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D9E75]"
             >
               {plainText(section.text)}
             </a>
           </li>
         ))}
-      </ol>
+      </ul>
     </nav>
   );
 }

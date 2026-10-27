@@ -8,17 +8,17 @@ Use these requests to buy items, take materials from the warehouse, or request l
 | --- | --- |
 | Employee (everyone) | Submit a purchase request, a material requisition or a consumables requisition if your account is allowed to create it. Track it in **Approvals**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| Procurement and storekeeping staff | See the procurement lists under **Operations** → **Procurement** and process the requests. |
+| Procurement and storekeeping staff | See the procurement lists by clicking **Operations** in the left menu, then **Purchase Requests**, **Material Requisition** or **Consumables**, and process the requests. |
 
 **Where to find it**
-- Submit: **New Request**, then choose **Purchase Request**, **Material Requisition** or **Consumables**.
-- Lists: sidebar → **Operations** → **Procurement** → **Purchase Requests**, **Material Requisition** or **Consumables** (procurement access only).
+- Submit: click **New Request** in the left menu, then click **Purchase Request**, **Material Requisition** or **Consumables**.
+- Lists: click **Operations** in the left menu, then click **Purchase Requests**, **Material Requisition** or **Consumables** (procurement access only).
 
 ---
 
 ## How to submit a material requisition
 
-1. Go to **New Request** → **Material Requisition**.
+1. Click **New Request** in the left menu, then click **Material Requisition**.
 2. **Request Details:** enter the **Title**, the **Purpose**, and optionally the **Warehouse Location** and the **Required By Date**.
 3. **Items:** click **Add Item**. For each line enter the **Item Name**, **Item Code** (if known), **Description**, **Quantity** and **Unit**. Click **Save** to add the line.
 4. **Supporting Documents** (optional): attach drawings, specifications or other documents.
@@ -30,7 +30,7 @@ Use these requests to buy items, take materials from the warehouse, or request l
 
 Consumables are low-value items. Each item must be under **ETB 5,000**, and a request can hold up to **20** items.
 
-1. Go to **New Request** → **Consumables**.
+1. Click **New Request** in the left menu, then click **Consumables**.
 2. **Request Details:** enter the **Title** and **Purpose**, and optionally the **Required By Date**.
 3. **Items:** add each item with its **Item Name**, **Item Code**, **Model / Specification**, **Description**, **Quantity** and **Unit**.
 4. **Supporting Documents** (optional).
@@ -40,7 +40,7 @@ Consumables are low-value items. Each item must be under **ETB 5,000**, and a re
 
 ## How to submit a purchase request
 
-1. Go to **New Request** → **Purchase Request**.
+1. Click **New Request** in the left menu, then click **Purchase Request**.
 2. Fill in the request details and the items you want to buy, following the steps on the screen.
 3. Click **Review & Submit**, check the summary, and submit.
 

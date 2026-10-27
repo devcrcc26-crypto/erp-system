@@ -41,12 +41,26 @@ const SAMPLE = `Intro paragraph for the topic.
 `;
 
 describe('HelpContent', () => {
-  it('maps guide markdown onto styled blocks', () => {
-    const { container } = render(<HelpContent content={SAMPLE} />);
+  it('lays guide markdown out as ERP cards', () => {
+    const { container } = render(
+      <HelpContent content={SAMPLE} title="Leave Requests" iconKey="guide-leave" />,
+    );
 
-    expect(screen.getByText('Intro paragraph for the topic.').className).toContain('text-[15px]');
-    expect(screen.getByText('Who does what').className).toContain('uppercase');
+    // Header card: title and the opening paragraph.
+    const header = screen.getByRole('heading', { level: 1, name: 'Leave Requests' }).closest('header');
+    expect(header).toBeTruthy();
+    expect(within(header as HTMLElement).getByText('Intro paragraph for the topic.')).toBeTruthy();
+
+    // Overview card: the label is the card title, the table its body.
+    const overview = screen.getByText('Who does what').closest('section');
+    expect(overview?.className).toContain('erp-employee-section');
+    expect(within(overview as HTMLElement).getByRole('table')).toBeTruthy();
     expect(screen.getByText('HR only').closest('span')?.className).toContain('rounded-full');
+
+    // One card per section; `---` separators are dropped.
+    const first = screen.getByRole('heading', { level: 2, name: 'First section' }).closest('section');
+    expect(first?.id).toBeTruthy();
+    expect(container.querySelector('hr')).toBeNull();
 
     const index = screen.getByRole('navigation', { name: 'On this page' });
     expect(within(index).getAllByRole('link').map((link) => link.textContent)).toEqual([
@@ -55,7 +69,7 @@ describe('HelpContent', () => {
       'Third section',
     ]);
 
-    const steps = container.querySelector('ol:not(nav ol)');
+    const steps = (first as HTMLElement).querySelector('ol');
     expect(steps?.children).toHaveLength(3);
     expect(within(steps as HTMLElement).getByText('Amount')).toBeTruthy();
 

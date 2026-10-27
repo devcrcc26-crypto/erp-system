@@ -1,6 +1,6 @@
 # Announcements
 
-Announcements are company news and notices. Everyone sees the announcements sent to them, with an unread count in the sidebar. HR Managers publish announcements, and other staff with the right access can write drafts.
+Announcements are company news and notices. Everyone sees the announcements sent to them, with an unread count in the left menu. HR Managers publish announcements, and other staff with the right access can write drafts.
 
 **Who does what**
 
@@ -11,14 +11,14 @@ Announcements are company news and notices. Everyone sees the announcements sent
 | HR Manager and System Administrator | Write, publish, schedule, pin and edit announcements. |
 
 **Where to find it**
-- Read: sidebar → **Announcements**. The unread count shows on the item.
-- Manage: sidebar → **Operations** → **Administration** → **Manage announcements** (announcement managers only).
+- Read: click **Announcements** in the left menu. The unread count shows on the item.
+- Manage: click **Operations** in the left menu, then click **Manage announcements** (announcement managers only).
 
 ---
 
 ## How to publish an announcement
 
-1. Go to **Operations** → **Administration** → **Manage announcements** and click **New announcement**.
+1. Click **Operations** in the left menu, then click **Manage announcements** and click **New announcement**.
 2. **Write:** enter the **Title** and the **Message**. Markdown is supported, for example **bold**, lists and links. Use **Preview** to check how it looks.
 3. **Chinese version (optional):** enter a **Title (Chinese)** and **Message (Chinese)**.
 4. **Attachments (optional):** add files. Recipients can download them. Up to 20 MB each.

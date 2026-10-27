@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Alert, Spin } from 'antd';
-import HelpContent from '@/components/help/HelpContent';
+import HelpArticle from '@/components/help/HelpArticle';
 import { HelpGettingStartedPage } from '@/components/help/HelpGettingStartedPage';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -27,8 +27,6 @@ export default function HelpModulePage(): ReactNode {
   const { locale } = useEpcTranslation();
   const { data: profile, isPending } = useCurrentUser();
   const canViewHr = useCanViewHr();
-  const [content, setContent] = useState('');
-  const [loadingContent, setLoadingContent] = useState(true);
 
   const mod = isValidHelpSlug(slug) ? getHelpModule(slug) : undefined;
   const roleNames = (profile?.roles ?? []).map((role) => role.name);
@@ -38,56 +36,16 @@ export default function HelpModulePage(): ReactNode {
     !waitingForProfile &&
     getVisibleModules(roleNames, canViewHr).some((m) => m.slug === slug);
 
-  useEffect(() => {
-    if (!mod || !allowed) {
-      setContent('');
-      setLoadingContent(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingContent(true);
-
-    async function load(): Promise<void> {
-      const primary = `/guide/${locale}/${slug}.md`;
-      const fallback = `/guide/en/${slug}.md`;
-      try {
-        let res = await fetch(primary, { cache: 'force-cache' });
-        if (!res.ok && locale !== 'en') {
-          res = await fetch(fallback, { cache: 'force-cache' });
-        }
-        if (!res.ok) {
-          throw new Error('missing');
-        }
-        const text = await res.text();
-        if (!cancelled) {
-          setContent(text);
-          setLoadingContent(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setContent('# Content coming soon\n\n内容即将发布。\n');
-          setLoadingContent(false);
-        }
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [locale, slug, mod, allowed]);
-
   if (!mod) {
     return (
-      <article>
-        <h1 className="mb-6 border-b border-slate-200 pb-4 text-2xl font-bold text-slate-900">
+      <article className="erp-pro-card px-6 py-5">
+        <h1 className="m-0 text-[20px] font-semibold leading-8 text-[rgba(0,0,0,0.88)]">
           {locale === 'zh' ? '未找到' : 'Not found'}
         </h1>
-        <p className="text-slate-600">
+        <p className="mb-0 mt-1 text-[14px] text-[rgba(0,0,0,0.65)]">
           {locale === 'zh' ? '该手册章节不存在。' : 'This guide topic does not exist.'}
         </p>
-        <p className="mt-4">
+        <p className="mb-0 mt-4">
           <Link
             href="/help/getting-started"
             className="font-medium text-[#0F6E56] underline-offset-2 hover:underline"
@@ -117,21 +75,13 @@ export default function HelpModulePage(): ReactNode {
     );
   }
 
-  const title = locale === 'zh' ? mod.titleZh : mod.titleEn;
-  const body = content.replace(/^\s*#\s+[^\n]*\n*/, '');
+  if (waitingForProfile) {
+    return (
+      <div className="erp-pro-card flex justify-center py-16">
+        <Spin />
+      </div>
+    );
+  }
 
-  return (
-    <article>
-      <h1 className="mb-5 border-b border-[#EEF1F4] pb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">
-        {title}
-      </h1>
-      {loadingContent || waitingForProfile ? (
-        <div className="flex justify-center py-10">
-          <Spin />
-        </div>
-      ) : (
-        <HelpContent content={body} />
-      )}
-    </article>
-  );
+  return <HelpArticle slug={slug} />;
 }

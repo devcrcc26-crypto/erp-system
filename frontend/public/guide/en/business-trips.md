@@ -8,17 +8,17 @@ Use a business trip request for travel that needs approval as a trip: origin, de
 | --- | --- |
 | Employee (everyone) | Submit a business trip for yourself, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | See all business trips under **Pay & Travel** → **Third-Country Business Trips** and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See all business trips by clicking **Pay & Travel** in the left menu, then **Third-Country Business Trips** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Business Trip**.
-- HR list: sidebar → **Pay & Travel** → **Third-Country Business Trips** (HR only).
+- Submit: click **New Request** in the left menu, then click **Business Trip**.
+- HR list: click **Pay & Travel** in the left menu, then click **Third-Country Business Trips** (HR only).
 
 ---
 
 ## How to submit a business trip
 
-1. Go to **New Request** → **Business Trip**.
+1. Click **New Request** in the left menu, then click **Business Trip**.
 2. **Submit on behalf (optional):** if you are submitting for someone else, select the employee first.
 3. **Trip Details:**
    - Enter the **Origin country** and **Origin city**.

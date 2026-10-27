@@ -56,8 +56,11 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   requests are tracked under **Approvals**, the next rail item.
 - **My Profile** sits in the footer with no permission requirement, so every signed-in user
   can reach `/profile`.
-- **User Guide** (`/help`, `openInNewTab: true`) sits in the footer utility bar for every
-  signed-in user and opens the bilingual help portal in a new tab.
+- **User Guide** is the last rail folder, for every signed-in user. Its panel lists one link
+  per guide topic (`/help/<slug>`), grouped Basics, Time & Attendance, Pay & Travel,
+  Operations and People. `guideTopic()` in the config builds each link from
+  `lib/help/modules.ts`: a topic whose roles do not include `EMPLOYEE` requires `hr.view`.
+  Guide pages render in the normal content area and follow the header Language control.
 - **Footer (drawer):** utility links render as a row of icon buttons
   (`SidebarFooter.tsx`) with hover/focus tooltips and floating badges. The link flagged
   `accountCard: true` in the config (My Profile) renders as an account card below them,
@@ -85,10 +88,13 @@ The rail is read top to bottom as *daily work → modules → account/system*. K
 | Pay & Travel | Payroll, Expense Claims · Travel (flights, business trips, per diem, per-diem rates) | Money paid to people. |
 | Operations | Procurement · Fleet & Assets (vehicle requests, refueling, inspection & repair, company vehicles, company assets) · Administration (seals, exit permits, Manage announcements for `announcements.manage`) | Company resources — not HR. |
 | Projects | Project Management (System Administrator only; hosts project nav) | |
+| User Guide | One link per guide topic, grouped like the modules | Help for every module; topics follow `lib/help/modules.ts`. |
 | Footer | My Profile (account card), Audit Log, Settings | Account and system only. |
 
 Keep each rail panel to **12 links or fewer** (a test enforces this). If a domain outgrows
 that, split it into a new folder rather than adding another group to an existing one.
+Two folders are exempt: **Project Management**, which hosts per-project navigation, and the
+**User Guide**, a table of contents with one link per guide topic in collapsible groups.
 
 ## Add a new module
 
