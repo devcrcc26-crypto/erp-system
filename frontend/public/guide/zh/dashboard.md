@@ -1,0 +1,21 @@
+# 仪表盘
+
+首页为 **/**（**/dashboard** 会重定向到此）。标签页通过 `?tab=` 控制。
+
+## 标签页
+| 标签 | 参数 | 可见对象 |
+| --- | --- | --- |
+| 总览 | `?tab=overview` | HR / 高管（`hr.view` 或 HR Manager、系统管理员等） |
+| 薪资与加班 | `?tab=payroll-ot` | 同上 |
+| 运营 | `?tab=operations` | 同上 |
+| 我的团队 | `?tab=my-team` | 主管 / 组长（或已有团队数据时） |
+| 我的工作 | `?tab=my-work` | 所有人 |
+
+## 快捷操作
+顶栏可按权限打开请假、加班、差旅补贴、机票等申请，以及 **/approvals**、**/profile**。
+
+## 提示
+- 小组件按你的范围显示假期余额、加班、驻场与待办申请。
+- 无效的 `tab` 会在资料/统计加载后重置。
+
+[SCREENSHOT: dashboard-overview.png]

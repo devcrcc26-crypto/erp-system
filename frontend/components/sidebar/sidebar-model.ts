@@ -29,6 +29,8 @@ export interface SidebarLink {
   readonly pinnable: boolean;
   /** Shown as the account card in the sidebar footer. */
   readonly accountCard: boolean;
+  /** Open in a new browser tab. */
+  readonly openInNewTab: boolean;
 }
 
 export interface SidebarGroup {
@@ -106,6 +108,7 @@ function toLink(config: SidebarLinkConfig): SidebarLink {
     badge: config.badge,
     pinnable: config.comingSoon !== true,
     accountCard: config.accountCard === true,
+    openInNewTab: config.openInNewTab === true,
   };
 }
 
@@ -221,6 +224,7 @@ export function buildProjectContextGroups(
           keywords: [],
           pinnable: false,
           accountCard: false,
+          openInNewTab: false,
         }),
       ),
     }));

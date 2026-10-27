@@ -83,6 +83,8 @@ interface SidebarLinkBase {
    * email) above the footer icon bar instead of as an icon button.
    */
   readonly accountCard?: boolean;
+  /** Open the href in a new browser tab (e.g. User Guide). */
+  readonly openInNewTab?: boolean;
 }
 
 export type SidebarLinkConfig = SidebarLinkBase &
@@ -157,7 +159,17 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   // Staff without hr.view get a self-service sidebar only.
   limitedNavigation: {
     unlessGranted: 'hr.view',
-    entryIds: ['dashboard', 'new-request', 'approvals', 'evaluation-inbox', 'announcements', 'expense-claims', 'per-diem', 'my-profile'],
+    entryIds: [
+      'dashboard',
+      'new-request',
+      'approvals',
+      'evaluation-inbox',
+      'announcements',
+      'expense-claims',
+      'per-diem',
+      'my-profile',
+      'user-guide',
+    ],
   },
   primary: [
     {
@@ -393,6 +405,16 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   utility: [
     // Every signed-in user can open their own profile - no permission.
     { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', accountCard: true, activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
+    {
+      kind: 'link',
+      id: 'user-guide',
+      labelKey: 'nav.userGuide',
+      shortLabelKey: 'nav.short.userGuide',
+      icon: 'user-guide',
+      href: '/help',
+      openInNewTab: true,
+      keywords: ['help', 'manual', 'guide', 'docs', 'handbook', '使用手册'],
+    },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
     { kind: 'link', id: 'settings', labelKey: 'nav.settings', icon: 'settings', href: '/settings', requires: ['settings.manage'], keywords: ['roles', 'permissions'] },
   ],

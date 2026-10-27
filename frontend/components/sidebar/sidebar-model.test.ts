@@ -39,6 +39,7 @@ function pmModuleWithProjects(
 ): Partial<Capabilities> {
   return {
     canViewHr: true,
+    isSystemAdministrator: true,
     modulesProjectManagementEnabled: true,
     ...withProjects(),
     ...overrides,
@@ -60,7 +61,7 @@ describe('sidebar permissions and filtering', () => {
   it('shows only unrestricted links before capabilities load', () => {
     const model = modelFor({ canViewHr: true }, false);
     expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'announcements']);
-    expect(ids(model.utility)).toEqual(['my-profile']);
+    expect(ids(model.utility)).toEqual(['my-profile', 'user-guide']);
   });
 
   it('shows My Profile to every signed-in user', () => {
@@ -100,7 +101,12 @@ describe('sidebar permissions and filtering', () => {
       'finance',
       'operations',
     ]);
-    expect(ids(model.utility)).toEqual(['my-profile', 'audit-logs', 'settings']);
+    expect(ids(model.utility)).toEqual([
+      'my-profile',
+      'user-guide',
+      'audit-logs',
+      'settings',
+    ]);
     expect(folder(model, 'people')?.groups.map((group) => group.id)).toEqual(
       expect.arrayContaining(['people-employees', 'people-performance', 'people-reports']),
     );
@@ -109,8 +115,8 @@ describe('sidebar permissions and filtering', () => {
       'time-attendance',
       'time-schedules',
     ]);
+    // Procurement group only appears when a procurement capability is granted.
     expect(folder(model, 'operations')?.groups.map((group) => group.id)).toEqual([
-      'ops-procurement',
       'ops-fleet-assets',
       'ops-administration',
     ]);
@@ -127,9 +133,22 @@ describe('sidebar permissions and filtering', () => {
     }
   });
 
-  it('keeps the footer to account and system items', () => {
+  it('keeps the footer to account, help, and system items', () => {
     const config = SIDEBAR_CONFIG.utility.map((entry) => entry.id);
-    expect(config).toEqual(['my-profile', 'audit-logs', 'settings']);
+    expect(config).toEqual([
+      'my-profile',
+      'user-guide',
+      'audit-logs',
+      'settings',
+    ]);
+  });
+
+  it('opens the User Guide in a new tab', () => {
+    const link = modelFor({ canViewHr: true }).utility.find(
+      (entry) => entry.kind === 'link' && entry.id === 'user-guide',
+    );
+    expect(link?.kind === 'link' ? link.href : null).toBe('/help');
+    expect(link?.kind === 'link' ? link.openInNewTab : false).toBe(true);
   });
 
   it('shows payroll under Pay & Travel when a payroll capability is granted', () => {
@@ -161,7 +180,7 @@ describe('sidebar permissions and filtering', () => {
       'evaluation-inbox',
       'announcements',
     ]);
-    expect(ids(model.utility)).toEqual(['my-profile']);
+    expect(ids(model.utility)).toEqual(['my-profile', 'user-guide']);
   });
 
   it('grants direct work-from-home assignment to HR only, not Discipline Leads', () => {

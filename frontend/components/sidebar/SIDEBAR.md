@@ -56,14 +56,16 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   requests are tracked under **Approvals**, the next rail item.
 - **My Profile** sits in the footer with no permission requirement, so every signed-in user
   can reach `/profile`.
+- **User Guide** (`/help`, `openInNewTab: true`) sits in the footer utility bar for every
+  signed-in user and opens the bilingual help portal in a new tab.
 - **Footer (drawer):** utility links render as a row of icon buttons
   (`SidebarFooter.tsx`) with hover/focus tooltips and floating badges. The link flagged
   `accountCard: true` in the config (My Profile) renders as an account card below them,
-  with the user's initials, name and email. In compact mode the same links stack vertically
-  as icon buttons, the account becomes an initials avatar, and every item has a right-side
-  hover/focus tooltip.
+  with the user's initials, name and email. Links with `openInNewTab: true` render as
+  `<a target="_blank">`. In compact mode the same links stack vertically as icon buttons,
+  the account becomes an initials avatar, and every item has a right-side hover/focus tooltip.
 - **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals,
-  Evaluation Inbox (leads), Announcements and My Profile. Users with `hr.view` get the full sidebar (see "How
+  Evaluation Inbox (leads), Announcements, My Profile and User Guide. Users with `hr.view` get the full sidebar (see "How
   permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no

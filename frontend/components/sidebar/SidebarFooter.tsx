@@ -144,6 +144,18 @@ function UtilityButton({
   }
   // The span gives the tooltip a DOM anchor; focus bubbles to it, so the
   // label shows on keyboard focus as well as hover.
+  const icon = (
+    <>
+      <span className="sb-icon">{getNavIcon(link.icon)}</span>
+      <span className="sr-only">{state.label}</span>
+      <SidebarBadge
+        count={state.badgeCount}
+        label={state.badgeLabel}
+        floating
+      />
+    </>
+  );
+
   return (
     <Tooltip
       title={state.label}
@@ -152,20 +164,26 @@ function UtilityButton({
       mouseEnterDelay={0.3}
     >
       <span className="block">
-        <Link
-          href={link.href}
-          onClick={onNavigate}
-          aria-current={state.active ? 'page' : undefined}
-          className="sb-selectable sb-utility-button"
-        >
-          <span className="sb-icon">{getNavIcon(link.icon)}</span>
-          <span className="sr-only">{state.label}</span>
-          <SidebarBadge
-            count={state.badgeCount}
-            label={state.badgeLabel}
-            floating
-          />
-        </Link>
+        {link.openInNewTab ? (
+          <a
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onNavigate}
+            className="sb-selectable sb-utility-button"
+          >
+            {icon}
+          </a>
+        ) : (
+          <Link
+            href={link.href}
+            onClick={onNavigate}
+            aria-current={state.active ? 'page' : undefined}
+            className="sb-selectable sb-utility-button"
+          >
+            {icon}
+          </Link>
+        )}
       </span>
     </Tooltip>
   );

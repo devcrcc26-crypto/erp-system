@@ -19,6 +19,7 @@ import {
   ChartGantt,
   CircleAlert,
   CircleDollarSign,
+  CircleHelp,
   CircleUserRound,
   ClipboardCheck,
   Clock,
@@ -139,6 +140,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'new-request': lucideNavIcon(FilePlus2),
   approvals: lucideNavIcon(ListChecks),
   announcements: lucideNavIcon(Megaphone),
+  'user-guide': lucideNavIcon(CircleHelp),
 
   // ── Rail folders (one per domain) ──
   'domain-hr': lucideNavIcon(UsersRound),
