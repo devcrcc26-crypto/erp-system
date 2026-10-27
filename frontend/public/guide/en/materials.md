@@ -1,9 +1,52 @@
 # Materials & Purchases
 
-## How to use
-- Submit / open: **/approvals/new/purchase-request, material-requisition, consumables**
-- Manage / track: **HR procurement lists**
+Use these requests to buy items, take materials from the warehouse, or request low-value consumables. Each one is a separate request type. All three go through the approval chain.
 
-Use **New Request** at **/approvals/new** when available for your role. Full walkthrough screenshots will be added later.
+**Who does what**
 
-[SCREENSHOT: materials.png]
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Submit a purchase request, a material requisition or a consumables requisition if your account is allowed to create it. Track it in **Approvals**. |
+| Approvers | Approve the request when it reaches you in **Approvals**. |
+| Procurement and storekeeping staff | See the procurement lists under **Operations** → **Procurement** and process the requests. |
+
+**Where to find it**
+- Submit: **New Request**, then choose **Purchase Request**, **Material Requisition** or **Consumables**.
+- Lists: sidebar → **Operations** → **Procurement** → **Purchase Requests**, **Material Requisition** or **Consumables** (procurement access only).
+
+---
+
+## How to submit a material requisition
+
+1. Go to **New Request** → **Material Requisition**.
+2. **Request Details:** enter the **Title**, the **Purpose**, and optionally the **Warehouse Location** and the **Required By Date**.
+3. **Items:** click **Add Item**. For each line enter the **Item Name**, **Item Code** (if known), **Description**, **Quantity** and **Unit**. Click **Save** to add the line.
+4. **Supporting Documents** (optional): attach drawings, specifications or other documents.
+5. Click **Review & Submit**, check the summary, and click **Submit Request**.
+
+---
+
+## How to submit a consumables requisition
+
+Consumables are low-value items. Each item must be under **ETB 5,000**, and a request can hold up to **20** items.
+
+1. Go to **New Request** → **Consumables**.
+2. **Request Details:** enter the **Title** and **Purpose**, and optionally the **Required By Date**.
+3. **Items:** add each item with its **Item Name**, **Item Code**, **Model / Specification**, **Description**, **Quantity** and **Unit**.
+4. **Supporting Documents** (optional).
+5. **Review & Submit:** tick the **Declaration** confirming that every item is a low-value consumable under ETB 5,000 each. Then click **Submit Request**.
+
+---
+
+## How to submit a purchase request
+
+1. Go to **New Request** → **Purchase Request**.
+2. Fill in the request details and the items you want to buy, following the steps on the screen.
+3. Click **Review & Submit**, check the summary, and submit.
+
+---
+
+## Tips
+
+- Give each line its own quantity and unit. Procurement and storekeeping work from these lines.
+- Check that each consumable really is under ETB 5,000 before you tick the declaration.

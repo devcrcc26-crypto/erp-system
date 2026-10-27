@@ -1,13 +1,42 @@
 # Site Assignments
 
-## Request site time
-Open **/approvals/new/site-assignment**. Provide site/project, reason, one or more date ranges, and a late reason when required. HR can file for other employees.
+A site assignment records the days you work at a project site away from your normal workplace. You submit the site, reason and date ranges. Once approved, these days are used for per diem and for overtime.
 
-## Lists
-- **/hr/site-assignments** and detail **/hr/site-assignments/[id]**
-- Your assignments also appear on **/profile?tab=leave**
+**Who does what**
 
-## Effect on OT
-Site-assignment days **skip** the weekday lunch OT exclusion so field days can use full selectable windows.
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Request your own site assignment and see your assignments under **My Profile** → **Leave**. |
+| Approvers | Approve the request when it reaches you in **Approvals**. |
+| HR and leave staff | See all site assignments at **Time & Attendance** → **Site Assignments** and file requests for other employees. |
 
-[SCREENSHOT: site-assignment-form.png]
+**Where to find it**
+- Request: **New Request** → **Site Assignment** (or open `/approvals/new/site-assignment`).
+- Your assignments: sidebar → **My Profile** → **Leave**.
+- HR list: sidebar → **Time & Attendance** → **Site Assignments** (HR and leave staff only).
+
+---
+
+## How to request site time
+
+1. Go to **New Request** → **Site Assignment**.
+2. **Submit on behalf (optional):** HR can select another employee.
+3. Enter the **Site** or **project** and the **Reason**.
+4. Add one or more **date ranges**.
+5. Enter a **Late reason** if the form asks for it. It is required when you enter the assignment after the month has ended.
+6. Click **Review & Submit**, check the details, and submit.
+
+> **What happens next:** The request enters the approval chain. Track it in **Approvals**.
+
+---
+
+## Effect on overtime
+
+Site-assignment days skip the weekday lunch overtime exclusion, so field days can use the full selectable overtime windows.
+
+---
+
+## Tips
+
+- Enter the dates exactly as the site work happened. Per diem and overtime use these dates.
+- If you are entering days late, add the late reason at submission. Otherwise the form will not let you submit.

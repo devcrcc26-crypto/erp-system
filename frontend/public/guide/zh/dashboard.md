@@ -18,4 +18,3 @@
 - 小组件按你的范围显示假期余额、加班、驻场与待办申请。
 - 无效的 `tab` 会在资料/统计加载后重置。
 
-[SCREENSHOT: dashboard-overview.png]

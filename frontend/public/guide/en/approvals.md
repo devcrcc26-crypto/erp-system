@@ -38,7 +38,7 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 | Per Diem Request / Per Diem Settlement | Per Diem guide |
 | Vehicle Application / Office Vehicle Refueling | Vehicles guide |
 | Official Seal Usage / Project Seal Usage | Seals guide |
-| Inspection and Repair | Field Movement guide |
+| Inspection and Repair | Vehicles guide |
 | Exit Permit | Exit Permit guide |
 | Field Movement / Early Departure Log | Field Movement guide |
 
@@ -61,7 +61,6 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 >
 > The list opens on **All Requests** for HR users, and on **My Requests** for everyone else.
 
-[SCREENSHOT: approvals-inbox-pending.png]
 
 ---
 
@@ -89,7 +88,6 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 > - If there are more steps, the request moves to the next approver. That approver receives *"Approval required"*.
 > - If this was the last step, the request is **Approved**. The requester receives *"Approved"*, and the request's module updates (for example, leave days are recorded as used).
 
-[SCREENSHOT: approvals-approve-dialog.png]
 
 ---
 

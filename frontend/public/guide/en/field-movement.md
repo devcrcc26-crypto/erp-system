@@ -1,9 +1,33 @@
-# Field Movement & Inspection
+# Field Movement & Early Departure Log
 
-## How to use
-- Submit / open: **/approvals/new/field-movement-log**
-- Manage / track: **/hr/field-movement-logs**
+When your monthly attendance shows a day that needs an explanation, you submit a field movement log to explain it. Examples are a missing clock-in or clock-out, or leaving early because you were on site or on an errand.
 
-Use **New Request** at **/approvals/new** when available for your role. Full walkthrough screenshots will be added later.
+**Who does what**
 
-[SCREENSHOT: field-movement.png]
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Submit an explanation for each flagged day. Track it in **Approvals**. |
+| Approvers | Approve or return the explanation when it reaches you. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See all field movement logs under **Time & Attendance** → **Attendance** → **Field Movement Logs**, and check them when reviewing attendance. |
+
+**Where to find it**
+- Submit: when a month has flagged days, a banner appears on **My Profile** → **Attendance** with the **Submit Explanation** button. You can also start a request from **New Request** → **Field Movement / Early Departure Log**.
+- HR list: sidebar → **Time & Attendance** → **Attendance** → **Field Movement Logs** (HR only).
+
+---
+
+## How to submit an explanation
+
+1. Go to **My Profile** → **Attendance**. If the month has flagged days, the banner says how many days need an explanation.
+2. Click **Submit Explanation**.
+3. Fill in the explanation for each flagged day, and enter a **Late entry reason** if the form asks for one.
+4. Submit. The explanation enters the approval chain. Track it in **Approvals**.
+
+> **What happens next:** HR checks the explanation during the attendance review. Once the month is approved, flagged days that have an explanation are treated as resolved.
+
+---
+
+## Tips
+
+- Submit the explanation soon after the month ends, before HR approves the month.
+- Describe the reason clearly, for example the site or errand you were on.

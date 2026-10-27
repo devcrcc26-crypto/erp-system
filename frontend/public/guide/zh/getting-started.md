@@ -19,4 +19,3 @@
 ## 语言
 主界面语言在 ERP 顶栏切换；本手册顶部另有 **EN / 中文** 切换。
 
-[SCREENSHOT: getting-started-login.png]

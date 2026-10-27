@@ -23,9 +23,7 @@ This guide covers requesting leave, tracking it, editing or cancelling it, and h
 8. Click **Next** to reach **Review & Submit**. Check the summary.
 9. Click **Submit Request**.
 
-[SCREENSHOT: leave-request-form-details.png]
 
-[SCREENSHOT: leave-request-review.png]
 
 > **What happens next:** If you have a line manager, the request enters the approval chain (see *How approval works* below). You are taken to the request's detail page. If the request is auto-approved (for example, an HR manager submitting for themselves), it is approved immediately and the leave is recorded straight away.
 

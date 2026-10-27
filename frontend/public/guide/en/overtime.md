@@ -32,7 +32,6 @@ Overtime is recorded on a **monthly overtime sheet**. You open one sheet per mon
 
 > **What happens next:** The sheet opens in **Draft** status. You can now add entries.
 
-[SCREENSHOT: overtime-open-sheet-month.png]
 
 ---
 
@@ -58,7 +57,6 @@ Overtime is recorded on a **monthly overtime sheet**. You open one sheet per mon
 
 > **What happens next:** The entry is added and the sheet totals are recalculated. The entry may show an **Attendance check** flag if the times do not match your attendance scans for that day. The flag is a warning for review; it does not stop you saving.
 
-[SCREENSHOT: overtime-entry-form.png]
 
 ---
 

@@ -30,9 +30,7 @@ Attendance is built from the monthly export of the attendance machine (Deli e+).
 
 > **What happens next:** The daily logs and monthly summaries are built for each employee. The month is set to **Pending Review** and stays unlocked until it is approved. Your mapping choices are saved, so the next import matches those people automatically.
 
-[SCREENSHOT: attendance-import-upload.png]
 
-[SCREENSHOT: attendance-import-review.png]
 
 ### Rules the import enforces
 

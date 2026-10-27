@@ -22,7 +22,6 @@ Payroll is run once a month. HR creates a payroll run for the pay period, the sy
 
 > **What happens next:** A run is created in **Draft** status and the system generates one entry per employee on the payroll roster for that month. Only one run can exist per month. If a run for the month was cancelled, the system reuses it.
 
-[SCREENSHOT: payroll-new-run.png]
 
 ---
 

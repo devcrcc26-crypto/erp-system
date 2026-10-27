@@ -18,4 +18,3 @@ Header shortcuts (capability-gated) can open new leave, OT, per diem, or flight 
 - Widgets show leave balance, OT, site time, and pending requests for your scope.
 - Invalid `tab` values reset after profile/stats load.
 
-[SCREENSHOT: dashboard-overview.png]

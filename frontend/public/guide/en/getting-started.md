@@ -19,4 +19,3 @@ If HR requires a password change, the app sends you to **/change-password** befo
 ## Language
 Use the language control in the ERP header for the main UI. This User Guide has its own **EN / 中文** toggle in the top bar.
 
-[SCREENSHOT: getting-started-login.png]

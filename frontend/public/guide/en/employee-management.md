@@ -1,9 +1,38 @@
 # Employee Management
 
-## How to use
-- Submit / open: **/users**
-- Manage / track: **/hr/employee-contract**
+HR uses the employee list to create and maintain employee accounts, and the contracts module to record each employee's employment contract. Employees do not manage other employees.
 
-Use **New Request** at **/approvals/new** when available for your role. Full walkthrough screenshots will be added later.
+**Who does what**
 
-[SCREENSHOT: employee-management.png]
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Nothing here. You see your own details in **My Profile**. |
+| HR and System Administrator | Create and edit employees, and manage their contracts. |
+
+**Where to find it**
+- Employees: sidebar → **People** → **Employees** (users management only).
+- Contracts: sidebar → **People** → **Employee Contracts** (HR only).
+
+---
+
+## How to add an employee
+
+1. Go to **People** → **Employees** and click the button to add a new employee.
+2. Enter the employee's details, such as their full name, email, department and position.
+3. Choose whether to set a **temporary password**. If you do, the employee must change it at first sign-in.
+4. Save.
+
+---
+
+## How to record an employee contract
+
+1. Go to **People** → **Employee Contracts**.
+2. Open the employee or click to add a contract, and enter the contract dates and terms.
+3. Save. The contract appears under the employee's **Contract** tab on their profile.
+
+---
+
+## Tips
+
+- Keep the department and position up to date. Approval chains follow the organization structure.
+- Check the **Org Gaps** list under **People** → **HR Settings** for employees who have no supervisor or department.

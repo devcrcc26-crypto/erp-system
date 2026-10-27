@@ -1,9 +1,31 @@
 # Company Assets
 
-## How to use
-- Submit / open: **/hr/company-asset**
-- Manage / track: **/profile?tab=assets**
+The company asset register lists the fixed assets and equipment the company owns, such as laptops and other equipment, with their serial number, model, location and depreciation details. HR maintains the register. Employees can see the assets assigned to them.
 
-Use **New Request** at **/approvals/new** when available for your role. Full walkthrough screenshots will be added later.
+**Who does what**
 
-[SCREENSHOT: company-assets.png]
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | See the assets assigned to you under **My Profile** → **Assets**. |
+| Fleet and HR staff | Add, edit and review company assets under **Operations** → **Fleet & Assets** → **Company Assets**. |
+
+**Where to find it**
+- Your assets: sidebar → **My Profile** → **Assets**.
+- Register (HR): sidebar → **Operations** → **Fleet & Assets** → **Company Assets** (fleet access only).
+
+---
+
+## How to add a company asset (HR)
+
+1. Go to **Operations** → **Fleet & Assets** → **Company Assets** and click **New Company Asset**.
+2. **Asset Details:** enter the **Asset Name**, **Serial Number**, **Type**, **Brand**, **Model**, **Year**, and optionally **Color** and **Description**.
+3. **Fixed Asset Ledger** (optional, for depreciation tracking): enter the **Asset Code**, **Specifications**, **Asset Category**, **Start of Use Date**, **Useful Life (Months)**, **Original Value**, **Managing Department** and **Storage Location**.
+4. **Photo** (optional): upload a clear photo in JPG, PNG or WEBP format.
+5. **Review & Submit:** check the details and click **Create Asset**. To change an existing asset, open it and click **Save**.
+
+---
+
+## Tips
+
+- The **Serial Number** is required, so enter it exactly as it appears on the device.
+- If an asset is missing from your profile, ask HR to check the assignment.
