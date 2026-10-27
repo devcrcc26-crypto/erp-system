@@ -144,10 +144,7 @@ export default function AppShell({
               : 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-3 pt-3 sm:px-4 sm:pb-4 lg:px-6 lg:pb-6'
           }
         >
-          {/* The user guide fills the area so its topic list and article scroll separately. */}
-          <div className={pathname.startsWith('/help') ? 'h-full min-w-0' : 'min-w-0'}>
-            {children}
-          </div>
+          <div className="min-w-0">{children}</div>
         </div>
       </main>
     </div>

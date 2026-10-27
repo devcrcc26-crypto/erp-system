@@ -46,7 +46,7 @@ export const HELP_MODULES: readonly HelpModule[] = [
   {
     slug: 'site-assignments',
     titleEn: 'Site Assignments',
-    titleZh: '驻场安排',
+    titleZh: '现场派驻',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
@@ -70,7 +70,7 @@ export const HELP_MODULES: readonly HelpModule[] = [
   {
     slug: 'exit-permit',
     titleEn: 'Exit Permit',
-    titleZh: '放行条',
+    titleZh: '设备和材料退出许可',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
@@ -82,7 +82,7 @@ export const HELP_MODULES: readonly HelpModule[] = [
   {
     slug: 'business-trips',
     titleEn: 'Business Trips',
-    titleZh: '出差申请',
+    titleZh: '第三国出差',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
@@ -94,13 +94,13 @@ export const HELP_MODULES: readonly HelpModule[] = [
   {
     slug: 'vehicles',
     titleEn: 'Vehicles',
-    titleZh: '用车申请',
+    titleZh: '车辆',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
     slug: 'materials',
     titleEn: 'Materials & Purchases',
-    titleZh: '物资与采购',
+    titleZh: '物料与采购',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
@@ -111,8 +111,8 @@ export const HELP_MODULES: readonly HelpModule[] = [
   },
   {
     slug: 'profile',
-    titleEn: 'Profile & Notifications',
-    titleZh: '个人资料与通知',
+    titleEn: 'My Profile & Notifications',
+    titleZh: '我的资料与通知',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
@@ -147,8 +147,8 @@ export const HELP_MODULES: readonly HelpModule[] = [
   },
   {
     slug: 'field-movement',
-    titleEn: 'Field Movement & Inspection',
-    titleZh: '外勤与检修',
+    titleEn: 'Field Movement & Early Departure',
+    titleZh: '外勤与早退说明',
     roles: ['HR'],
   },
   {

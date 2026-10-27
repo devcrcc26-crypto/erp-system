@@ -1,30 +1,23 @@
 'use client';
 
+import { Table, Tag } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import type {
   OvertimeEditDiff,
-  OvertimeEditDiffLine,
+  OvertimeEntryDiffSummary,
 } from '@/lib/api/overtime.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
-const FIELD_I18N: Record<string, string> = {
-  date: 'pages.hr.overtime.editDiffField.date',
-  otType: 'pages.hr.overtime.editDiffField.otType',
-  startTime: 'pages.hr.overtime.editDiffField.startTime',
-  endTime: 'pages.hr.overtime.editDiffField.endTime',
-  hours: 'pages.hr.overtime.editDiffField.hours',
-  reason: 'pages.hr.overtime.editDiffField.reason',
-};
-
-type DiffRow = {
+type DiffTableRow = {
   key: string;
-  label: string;
-  from: string;
-  to: string;
-  accent?: 'added' | 'removed' | 'changed';
+  kind: 'added' | 'removed' | 'updated';
+  before: OvertimeEntryDiffSummary | null;
+  after: OvertimeEntryDiffSummary | null;
 };
 
 /**
- * Approver-facing list of exact OT field values changed since last approval.
+ * Approver-facing table of OT entries changed since last approval.
+ * Shows each entry as a whole (previous vs current), not field-by-field.
  */
 export default function OvertimeEditDiffBanner({
   editDiff,
@@ -37,7 +30,58 @@ export default function OvertimeEditDiffBanner({
     return null;
   }
 
-  const rows = buildDiffRows(editDiff, t);
+  const rows = buildTableRows(editDiff);
+
+  const columns: ColumnsType<DiffTableRow> = [
+    {
+      title: t('pages.hr.overtime.editDiffChange'),
+      dataIndex: 'kind',
+      key: 'kind',
+      width: 120,
+      render: (kind: DiffTableRow['kind']) => {
+        if (kind === 'added') {
+          return (
+            <Tag color="success" className="!m-0">
+              {t('pages.hr.overtime.editDiffKindAdded')}
+            </Tag>
+          );
+        }
+        if (kind === 'removed') {
+          return (
+            <Tag color="error" className="!m-0">
+              {t('pages.hr.overtime.editDiffKindRemoved')}
+            </Tag>
+          );
+        }
+        return (
+          <Tag color="warning" className="!m-0">
+            {t('pages.hr.overtime.editDiffKindUpdated')}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: t('pages.hr.overtime.editDiffPrevious'),
+      dataIndex: 'before',
+      key: 'before',
+      render: (before: OvertimeEntryDiffSummary | null) => (
+        <EntryWhole summary={before} muted={!before} emptyLabel={t('pages.hr.overtime.editDiffEmpty')} />
+      ),
+    },
+    {
+      title: t('pages.hr.overtime.editDiffCurrent'),
+      dataIndex: 'after',
+      key: 'after',
+      render: (after: OvertimeEntryDiffSummary | null, row) => (
+        <EntryWhole
+          summary={after}
+          muted={!after}
+          strike={row.kind === 'removed'}
+          emptyLabel={t('pages.hr.overtime.editDiffEmpty')}
+        />
+      ),
+    },
+  ];
 
   return (
     <div
@@ -53,54 +97,15 @@ export default function OvertimeEditDiffBanner({
           : t('pages.hr.overtime.editDiffSubtitle')}
       </p>
       {rows.length > 0 ? (
-        <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-          {rows.map((row) => (
-            <li
-              key={row.key}
-              className="rounded-lg border border-[#F5D0AE]/70 bg-white/70 px-3 py-2"
-            >
-              <p className="m-0 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#9A3412]">
-                {row.label}
-              </p>
-              <div className="grid gap-1 sm:grid-cols-[1fr_auto_1fr] sm:items-start sm:gap-3">
-                <div className="min-w-0">
-                  <p className="m-0 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
-                    {t('pages.hr.overtime.editDiffPrevious')}
-                  </p>
-                  <p
-                    className={`m-0 mt-0.5 break-words text-[13px] leading-snug ${
-                      row.accent === 'added'
-                        ? 'text-[var(--color-text-secondary)]'
-                        : 'text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    {displayValue(row.from, t)}
-                  </p>
-                </div>
-                <span
-                  className="hidden pt-4 text-[var(--color-text-secondary)] sm:block"
-                  aria-hidden
-                >
-                  →
-                </span>
-                <div className="min-w-0">
-                  <p className="m-0 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
-                    {t('pages.hr.overtime.editDiffCurrent')}
-                  </p>
-                  <p
-                    className={`m-0 mt-0.5 break-words text-[13px] font-medium leading-snug ${
-                      row.accent === 'removed'
-                        ? 'text-[var(--color-text-secondary)] line-through'
-                        : 'text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    {displayValue(row.to, t)}
-                  </p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <Table<DiffTableRow>
+          size="small"
+          pagination={false}
+          rowKey="key"
+          columns={columns}
+          dataSource={rows}
+          className="overflow-hidden rounded-lg border border-[#F5D0AE]/70 bg-white [&_.ant-table]:bg-white"
+          scroll={{ x: true }}
+        />
       ) : (
         <p className="m-0 text-[var(--color-text-secondary)]">
           {t('pages.hr.overtime.editDiffNoFieldDetails')}
@@ -110,75 +115,92 @@ export default function OvertimeEditDiffBanner({
   );
 }
 
-function displayValue(
-  value: string,
-  t: (key: string) => string,
-): string {
-  if (!value || value === '—') {
-    return t('pages.hr.overtime.editDiffEmpty');
+function EntryWhole({
+  summary,
+  muted = false,
+  strike = false,
+  emptyLabel,
+}: {
+  summary: OvertimeEntryDiffSummary | null;
+  muted?: boolean;
+  strike?: boolean;
+  emptyLabel: string;
+}): React.ReactNode {
+  if (!summary) {
+    return (
+      <span className="text-[var(--color-text-secondary)]">{emptyLabel}</span>
+    );
   }
-  return value;
+
+  return (
+    <div
+      className={`min-w-[180px] max-w-[360px] space-y-0.5 leading-snug ${
+        muted || strike ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-text-primary)]'
+      } ${strike ? 'line-through' : ''}`}
+    >
+      <p className="m-0 font-medium">
+        {summary.date}
+        <span className="mx-1.5 text-[var(--color-text-secondary)]">·</span>
+        {summary.otType}
+      </p>
+      <p className="m-0">
+        {summary.startTime}
+        <span className="mx-1 text-[var(--color-text-secondary)]" aria-hidden>
+          →
+        </span>
+        {summary.endTime}
+        <span className="mx-1.5 text-[var(--color-text-secondary)]">·</span>
+        {summary.hours}
+      </p>
+      <p className="m-0 break-words whitespace-pre-wrap">{summary.reason}</p>
+    </div>
+  );
 }
 
-function buildDiffRows(
-  editDiff: OvertimeEditDiff,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): DiffRow[] {
+function buildTableRows(editDiff: OvertimeEditDiff): DiffTableRow[] {
   const entryChanges = editDiff.entryChanges ?? [];
   if (entryChanges.length > 0) {
-    const multi =
-      entryChanges.length > 1 ||
-      entryChanges.some((row) => row.added || row.removed);
-    const rows: DiffRow[] = [];
-    for (const entry of entryChanges) {
-      const accent = entry.added
-        ? 'added'
-        : entry.removed
-          ? 'removed'
-          : 'changed';
-      for (const change of entry.changes) {
-        const fieldKey = FIELD_I18N[change.field] ?? change.field;
-        const fieldLabel = t(fieldKey);
-        let label = fieldLabel;
-        if (entry.added) {
-          label = multi
-            ? t('pages.hr.overtime.editDiffAddedFieldDated', {
-                date: entry.entryDate ?? '',
-                field: fieldLabel,
-              })
-            : t('pages.hr.overtime.editDiffAddedField', { field: fieldLabel });
-        } else if (entry.removed) {
-          label = multi
-            ? t('pages.hr.overtime.editDiffRemovedFieldDated', {
-                date: entry.entryDate ?? '',
-                field: fieldLabel,
-              })
-            : t('pages.hr.overtime.editDiffRemovedField', {
-                field: fieldLabel,
-              });
-        } else if (multi && entry.entryDate) {
-          label = t('pages.hr.overtime.editDiffFieldDated', {
-            date: entry.entryDate,
-            field: fieldLabel,
-          });
-        }
-        rows.push({
-          key: `${entry.entryId}-${change.field}-${change.from}-${change.to}`,
-          label,
-          from: change.from,
-          to: change.to,
-          accent,
-        });
-      }
-    }
-    return rows;
+    return entryChanges.map((entry) => ({
+      key: entry.entryId,
+      kind: entry.added ? 'added' : entry.removed ? 'removed' : 'updated',
+      before: entry.before ?? null,
+      after: entry.after ?? null,
+    }));
   }
 
-  return (editDiff.summaryLines ?? []).map((line: OvertimeEditDiffLine, index) => ({
-    key: `${line.label}-${line.from}-${line.to}-${index}`,
-    label: line.label,
-    from: line.from,
-    to: line.to,
-    accent: 'changed' as const,
-  }));
+  // Fallback for older payloads that only have summaryLines.
+  return (editDiff.summaryLines ?? []).map((line, index) => {
+    const kind: DiffTableRow['kind'] = line.label.startsWith('Added')
+      ? 'added'
+      : line.label.startsWith('Removed')
+        ? 'removed'
+        : 'updated';
+    return {
+      key: `summary-${index}`,
+      kind,
+      before:
+        line.from && line.from !== '—'
+          ? parseWholeFallback(line.from)
+          : null,
+      after:
+        line.to && line.to !== '—' ? parseWholeFallback(line.to) : null,
+    };
+  });
+}
+
+function parseWholeFallback(text: string): OvertimeEntryDiffSummary {
+  const lines = text.split('\n');
+  const head = lines[0] ?? '';
+  const mid = lines[1] ?? '';
+  const reason = lines.slice(2).join('\n') || '—';
+  const [date = '—', otType = '—'] = head.split(' · ');
+  const timeMatch = mid.match(/^(.+?)\s*→\s*(.+?)\s*·\s*(.+)$/);
+  return {
+    date: date.trim(),
+    otType: (otType ?? '—').trim(),
+    startTime: timeMatch?.[1]?.trim() ?? '—',
+    endTime: timeMatch?.[2]?.trim() ?? '—',
+    hours: timeMatch?.[3]?.trim() ?? '—',
+    reason,
+  };
 }

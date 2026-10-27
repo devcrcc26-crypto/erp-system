@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_CAPABILITIES, type Capabilities } from '@/lib/api/types';
 import { SIDEBAR_CONFIG } from '@/components/sidebar/sidebar.config';
+import { HELP_MODULES } from '@/lib/help/modules';
 import { resolveSidebarPermissions } from '@/components/sidebar/sidebar-permissions';
 import {
   buildSidebarModel,
@@ -60,8 +61,8 @@ const identity = (key: string): string => key;
 describe('sidebar permissions and filtering', () => {
   it('shows only unrestricted links before capabilities load', () => {
     const model = modelFor({ canViewHr: true }, false);
-    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'announcements']);
-    expect(ids(model.utility)).toEqual(['my-profile', 'user-guide']);
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'announcements', 'user-guide']);
+    expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
   it('shows My Profile to every signed-in user', () => {
@@ -100,10 +101,10 @@ describe('sidebar permissions and filtering', () => {
       'time',
       'finance',
       'operations',
+      'user-guide',
     ]);
     expect(ids(model.utility)).toEqual([
       'my-profile',
-      'user-guide',
       'audit-logs',
       'settings',
     ]);
@@ -125,7 +126,9 @@ describe('sidebar permissions and filtering', () => {
   it('keeps every rail panel short', () => {
     const model = modelFor({ ...pmModuleWithProjects(), canManageUsers: true, canAccessPayroll: true });
     for (const entry of model.primary) {
-      if (entry.kind !== 'folder' || entry.id === 'pm') {
+      // Exempt: Project Management hosts project nav; the User Guide is a
+      // table of contents with one link per guide topic.
+      if (entry.kind !== 'folder' || entry.id === 'pm' || entry.id === 'user-guide') {
         continue;
       }
       const count = entry.groups.reduce((sum, group) => sum + group.items.length, 0);
@@ -133,22 +136,36 @@ describe('sidebar permissions and filtering', () => {
     }
   });
 
-  it('keeps the footer to account, help, and system items', () => {
+  it('keeps the footer to account and system items', () => {
     const config = SIDEBAR_CONFIG.utility.map((entry) => entry.id);
-    expect(config).toEqual([
-      'my-profile',
-      'user-guide',
-      'audit-logs',
-      'settings',
-    ]);
+    expect(config).toEqual(['my-profile', 'audit-logs', 'settings']);
   });
 
-  it('opens the User Guide in the same tab', () => {
-    const link = modelFor({ canViewHr: true }).utility.find(
-      (entry) => entry.kind === 'link' && entry.id === 'user-guide',
+  it('lists every User Guide topic for HR, grouped, in the same tab', () => {
+    const guide = folder(modelFor({ canViewHr: true }), 'user-guide');
+    expect(guide?.groups.map((group) => group.id)).toEqual([
+      'guide-basics',
+      'guide-time',
+      'guide-pay-travel',
+      'guide-operations',
+      'guide-people',
+    ]);
+    const links = guide?.groups.flatMap((group) => group.items) ?? [];
+    expect(links).toHaveLength(HELP_MODULES.length);
+    expect(links.every((link) => link.href === `/help/${link.id.replace(/^guide-/, '')}`)).toBe(true);
+    expect(links.some((link) => link.openInNewTab)).toBe(false);
+  });
+
+  it('shows staff without hr.view only the guide topics written for them', () => {
+    const guide = folder(modelFor({}), 'user-guide');
+    const slugs = (guide?.groups.flatMap((group) => group.items) ?? []).map((link) =>
+      link.id.replace(/^guide-/, ''),
     );
-    expect(link?.kind === 'link' ? link.href : null).toBe('/help/getting-started');
-    expect(link?.kind === 'link' ? link.openInNewTab : true).toBe(false);
+    const employeeSlugs = HELP_MODULES.filter((mod) => mod.roles.includes('EMPLOYEE')).map(
+      (mod) => mod.slug,
+    );
+    expect([...slugs].sort()).toEqual([...employeeSlugs].sort());
+    expect(slugs).not.toContain('payroll');
   });
 
   it('shows payroll under Pay & Travel when a payroll capability is granted', () => {
@@ -179,8 +196,9 @@ describe('sidebar permissions and filtering', () => {
       'approvals',
       'evaluation-inbox',
       'announcements',
+      'user-guide',
     ]);
-    expect(ids(model.utility)).toEqual(['my-profile', 'user-guide']);
+    expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
   it('grants direct work-from-home assignment to HR only, not Discipline Leads', () => {
@@ -299,6 +317,12 @@ describe('active link resolution', () => {
       'new-request',
     );
     expect(resolveActiveLink('/approvals/42', links)?.link.id).toBe('approvals');
+  });
+
+  it('highlights the open User Guide topic, and Getting Started on /help', () => {
+    expect(resolveActiveLink('/help', links)?.link.id).toBe('guide-getting-started');
+    expect(resolveActiveLink('/help/leave', links)?.link.id).toBe('guide-leave');
+    expect(resolveActiveLink('/help/leave', links)?.folderId).toBe('user-guide');
   });
 
   it("keeps employee announcements and What's new on the Announcements link", () => {

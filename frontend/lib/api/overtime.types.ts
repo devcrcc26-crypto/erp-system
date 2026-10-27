@@ -83,6 +83,16 @@ export interface OvertimeEditDiffLine {
   to: string;
 }
 
+/** Whole OT entry snapshot for previous / current table columns. */
+export interface OvertimeEntryDiffSummary {
+  date: string;
+  otType: string;
+  startTime: string;
+  endTime: string;
+  hours: string;
+  reason: string;
+}
+
 export interface OvertimeEditDiff {
   editedAfterApproval: boolean;
   reasonOnly: boolean;
@@ -96,6 +106,8 @@ export interface OvertimeEditDiff {
       from: string;
       to: string;
     }>;
+    before?: OvertimeEntryDiffSummary | null;
+    after?: OvertimeEntryDiffSummary | null;
     added?: boolean;
     removed?: boolean;
   }>;

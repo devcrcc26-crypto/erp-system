@@ -30,11 +30,25 @@ export type OvertimeFieldChange = {
   to: string;
 };
 
+/** Whole-entry view for previous / current columns in the approver table. */
+export type OvertimeEntryDiffSummary = {
+  date: string;
+  otType: string;
+  startTime: string;
+  endTime: string;
+  hours: string;
+  reason: string;
+};
+
 export type OvertimeEntryEditChange = {
   entryId: string;
   /** Entry date used for grouping in the approver UI (before date if removed). */
   entryDate: string;
   changes: OvertimeFieldChange[];
+  /** Full previous entry (null when added). */
+  before: OvertimeEntryDiffSummary | null;
+  /** Full current entry (null when removed). */
+  after: OvertimeEntryDiffSummary | null;
   added?: boolean;
   removed?: boolean;
 };
@@ -262,6 +276,25 @@ function diffOneEntry(
   return changes;
 }
 
+function toEntrySummary(entry: OvertimeEntrySnapshot): OvertimeEntryDiffSummary {
+  return {
+    date: entry.date,
+    otType: describeOtType(entry),
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+    hours: formatHoursLabel(entry.totalHours),
+    reason: entry.taskDescription.trim() || '—',
+  };
+}
+
+function formatEntryWhole(summary: OvertimeEntryDiffSummary): string {
+  return [
+    `${summary.date} · ${summary.otType}`,
+    `${summary.startTime} → ${summary.endTime} · ${summary.hours}`,
+    summary.reason,
+  ].join('\n');
+}
+
 /** Full field set for an added or removed entry (exact values). */
 function snapshotAsChanges(
   entry: OvertimeEntrySnapshot,
@@ -283,36 +316,9 @@ function snapshotAsChanges(
   );
 }
 
-const FIELD_LABELS: Record<OvertimeFieldChange['field'], string> = {
-  date: 'Date',
-  otType: 'OT Type',
-  startTime: 'Start time',
-  endTime: 'End time',
-  hours: 'Hours',
-  reason: 'Reason',
-};
-
-function summaryLabel(
-  field: OvertimeFieldChange['field'],
-  entryDate: string,
-  multiEntry: boolean,
-  kind?: 'added' | 'removed',
-): string {
-  const fieldLabel = FIELD_LABELS[field];
-  if (kind === 'added') {
-    return multiEntry ? `Added · ${entryDate} · ${fieldLabel}` : `Added · ${fieldLabel}`;
-  }
-  if (kind === 'removed') {
-    return multiEntry
-      ? `Removed · ${entryDate} · ${fieldLabel}`
-      : `Removed · ${fieldLabel}`;
-  }
-  return multiEntry ? `${entryDate} · ${fieldLabel}` : fieldLabel;
-}
-
 /**
  * Compares the last approved snapshot to current entries for approver UI.
- * Every changed field is listed with exact before → after values.
+ * Each changed entry includes full previous and current snapshots for a table.
  */
 export function buildOvertimeEditDiff(
   snapshot: OvertimeApprovedSnapshot | null,
@@ -334,6 +340,8 @@ export function buildOvertimeEditDiff(
         entryId: after.id,
         entryDate: after.date,
         changes: snapshotAsChanges(after, 'added'),
+        before: null,
+        after: toEntrySummary(after),
         added: true,
       });
       continue;
@@ -344,6 +352,8 @@ export function buildOvertimeEditDiff(
         entryId: after.id,
         entryDate: after.date,
         changes,
+        before: toEntrySummary(before),
+        after: toEntrySummary(after),
       });
     }
   }
@@ -354,6 +364,8 @@ export function buildOvertimeEditDiff(
         entryId: before.id,
         entryDate: before.date,
         changes: snapshotAsChanges(before, 'removed'),
+        before: toEntrySummary(before),
+        after: null,
         removed: true,
       });
     }
@@ -377,21 +389,18 @@ export function buildOvertimeEditDiff(
     ) &&
     entryChanges.some((row) => row.changes.length > 0);
 
-  const multiEntry =
-    entryChanges.length > 1 ||
-    snapshot.entries.length > 1 ||
-    current.length > 1;
-
   const summaryLines: Array<{ label: string; from: string; to: string }> = [];
   for (const row of entryChanges) {
-    const kind = row.added ? 'added' : row.removed ? 'removed' : undefined;
-    for (const change of row.changes) {
-      summaryLines.push({
-        label: summaryLabel(change.field, row.entryDate, multiEntry, kind),
-        from: change.from,
-        to: change.to,
-      });
-    }
+    const kindLabel = row.added
+      ? `Added · ${row.entryDate}`
+      : row.removed
+        ? `Removed · ${row.entryDate}`
+        : `Updated · ${row.entryDate}`;
+    summaryLines.push({
+      label: kindLabel,
+      from: row.before ? formatEntryWhole(row.before) : '—',
+      to: row.after ? formatEntryWhole(row.after) : '—',
+    });
   }
 
   return {

@@ -6,6 +6,8 @@
  * See `SIDEBAR.md` in this folder for the full contract.
  */
 
+import { HELP_MODULES } from '@/lib/help/modules';
+
 /**
  * Permission tokens the sidebar understands. Resolved from session
  * capabilities in `sidebar-permissions.ts` - the only place that maps
@@ -154,6 +156,24 @@ export const SIDEBAR_STORAGE_KEYS = {
 } as const;
 
 const HR = ['hr.view'] as const;
+
+/**
+ * One User Guide topic (`/help/<slug>`). Who sees it follows the topic's roles
+ * in `lib/help/modules.ts`: a topic not written for employees is HR-only.
+ */
+function guideTopic(slug: string, keywords: readonly string[] = []): SidebarLinkConfig {
+  const topic = HELP_MODULES.find((mod) => mod.slug === slug);
+  const hrOnly = topic ? !topic.roles.includes('EMPLOYEE') : false;
+  return {
+    kind: 'link',
+    id: `guide-${slug}`,
+    labelKey: `nav.guide.${slug}`,
+    icon: `guide-${slug}`,
+    href: `/help/${slug}`,
+    ...(hrOnly ? { requires: HR } : {}),
+    keywords: ['help', 'guide', ...keywords],
+  };
+}
 
 export const SIDEBAR_CONFIG: SidebarConfig = {
   // Staff without hr.view get a self-service sidebar only.
@@ -400,20 +420,73 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
         },
       ],
     },
+    {
+      // The guide's table of contents. Exempt from the 12-link panel limit:
+      // one link per guide topic, in collapsible groups.
+      kind: 'folder',
+      id: 'user-guide',
+      labelKey: 'nav.userGuide',
+      shortLabelKey: 'nav.short.userGuide',
+      icon: 'user-guide',
+      groups: [
+        {
+          id: 'guide-basics',
+          labelKey: 'nav.sections.guideBasics',
+          items: [
+            { ...guideTopic('getting-started', ['manual', 'docs', 'handbook', '使用手册']), activePaths: ['/help'] },
+            guideTopic('dashboard'),
+            guideTopic('approvals'),
+            guideTopic('profile'),
+            guideTopic('announcements'),
+            guideTopic('tips', ['faq']),
+          ],
+        },
+        {
+          id: 'guide-time',
+          labelKey: 'nav.groups.timeAttendance',
+          items: [
+            guideTopic('leave'),
+            guideTopic('overtime'),
+            guideTopic('site-assignments'),
+            guideTopic('work-from-home'),
+            guideTopic('field-movement'),
+            guideTopic('attendance'),
+          ],
+        },
+        {
+          id: 'guide-pay-travel',
+          labelKey: 'nav.groups.payTravel',
+          items: [
+            guideTopic('expense-claims'),
+            guideTopic('per-diem'),
+            guideTopic('flight'),
+            guideTopic('business-trips'),
+            guideTopic('payroll'),
+          ],
+        },
+        {
+          id: 'guide-operations',
+          labelKey: 'nav.groups.operations',
+          items: [
+            guideTopic('materials'),
+            guideTopic('vehicles'),
+            guideTopic('seals'),
+            guideTopic('exit-permit'),
+            guideTopic('company-assets'),
+          ],
+        },
+        {
+          id: 'guide-people',
+          labelKey: 'nav.groups.people',
+          items: [guideTopic('evaluations'), guideTopic('employee-management')],
+        },
+      ],
+    },
   ],
   // Footer: account and system administration only.
   utility: [
     // Every signed-in user can open their own profile - no permission.
     { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', accountCard: true, activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
-    {
-      kind: 'link',
-      id: 'user-guide',
-      labelKey: 'nav.userGuide',
-      shortLabelKey: 'nav.short.userGuide',
-      icon: 'user-guide',
-      href: '/help/getting-started',
-      keywords: ['help', 'manual', 'guide', 'docs', 'handbook', '使用手册'],
-    },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
     { kind: 'link', id: 'settings', labelKey: 'nav.settings', icon: 'settings', href: '/settings', requires: ['settings.manage'], keywords: ['roles', 'permissions'] },
   ],

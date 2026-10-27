@@ -42,7 +42,7 @@ describe('overtime-edit-snapshot.util', () => {
     expect(buildOvertimeEditDiff(null, [baseEntry])).toBeNull();
   });
 
-  it('buildOvertimeEditDiff lists exact before/after for every changed field', () => {
+  it('buildOvertimeEditDiff includes whole previous and current entries', () => {
     const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
     const after = {
       ...baseEntry,
@@ -57,25 +57,27 @@ describe('overtime-edit-snapshot.util', () => {
     const diff = buildOvertimeEditDiff(snapshot, [after]);
     expect(diff?.editedAfterApproval).toBe(true);
     expect(diff?.reasonOnly).toBe(false);
-    expect(diff?.summaryLines).toEqual(
-      expect.arrayContaining([
-        { label: 'Date', from: '2026-10-15', to: '2026-10-16' },
-        {
-          label: 'OT Type',
-          from: 'Normal (1.5×)',
-          to: 'Sunday (2×)',
-        },
-        { label: 'Start time', from: '18:00', to: '17:30' },
-        { label: 'End time', from: '21:00', to: '22:00' },
-        { label: 'Hours', from: '3h', to: '4.5h' },
-        { label: 'Reason', from: 'Pour concrete', to: 'Pour slab' },
-      ]),
-    );
-    expect(diff?.entryChanges?.[0]?.changes).toEqual(
-      expect.arrayContaining([
-        { field: 'reason', from: 'Pour concrete', to: 'Pour slab' },
-      ]),
-    );
+    expect(diff?.entryChanges?.[0]).toMatchObject({
+      before: {
+        date: '2026-10-15',
+        otType: 'Normal (1.5×)',
+        startTime: '18:00',
+        endTime: '21:00',
+        hours: '3h',
+        reason: 'Pour concrete',
+      },
+      after: {
+        date: '2026-10-16',
+        otType: 'Sunday (2×)',
+        startTime: '17:30',
+        endTime: '22:00',
+        hours: '4.5h',
+        reason: 'Pour slab',
+      },
+    });
+    expect(diff?.summaryLines?.[0]?.label).toBe('Updated · 2026-10-16');
+    expect(diff?.summaryLines?.[0]?.from).toContain('Pour concrete');
+    expect(diff?.summaryLines?.[0]?.to).toContain('Pour slab');
   });
 
   it('buildOvertimeEditDiff shows exact reason text for reason-only updates', () => {
@@ -86,16 +88,11 @@ describe('overtime-edit-snapshot.util', () => {
     };
     const diff = buildOvertimeEditDiff(snapshot, [after]);
     expect(diff?.reasonOnly).toBe(true);
-    expect(diff?.summaryLines).toEqual([
-      {
-        label: 'Reason',
-        from: 'Pour concrete',
-        to: 'Pour slab and cure',
-      },
-    ]);
+    expect(diff?.entryChanges?.[0]?.before?.reason).toBe('Pour concrete');
+    expect(diff?.entryChanges?.[0]?.after?.reason).toBe('Pour slab and cure');
   });
 
-  it('buildOvertimeEditDiff includes exact values for added entries', () => {
+  it('buildOvertimeEditDiff includes whole values for added entries', () => {
     const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
     const added = {
       ...baseEntry,
@@ -104,19 +101,18 @@ describe('overtime-edit-snapshot.util', () => {
       taskDescription: 'Night pour',
     };
     const diff = buildOvertimeEditDiff(snapshot, [baseEntry, added]);
-    expect(diff?.entryChanges?.some((row) => row.added)).toBe(true);
+    const addedRow = diff?.entryChanges?.find((row) => row.added);
+    expect(addedRow?.before).toBeNull();
+    expect(addedRow?.after).toMatchObject({
+      date: '2026-10-17',
+      reason: 'Night pour',
+    });
     expect(diff?.summaryLines).toEqual(
       expect.arrayContaining([
-        {
-          label: 'Added · 2026-10-17 · Date',
+        expect.objectContaining({
+          label: 'Added · 2026-10-17',
           from: '—',
-          to: '2026-10-17',
-        },
-        {
-          label: 'Added · 2026-10-17 · Reason',
-          from: '—',
-          to: 'Night pour',
-        },
+        }),
       ]),
     );
   });
