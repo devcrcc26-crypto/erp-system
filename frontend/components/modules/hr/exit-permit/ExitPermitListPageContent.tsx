@@ -433,6 +433,7 @@ export default function ExitPermitListPageContent(): React.ReactNode {
                     icon={<FilePdfOutlined />}
                     onClick={() => setGateRegisterOpen(true)}
                     aria-label={t('hr.exportImport.exitPermits.gateRegister')}
+                    data-shot="exit-permit-gate-register"
                   >
                     {isCompact
                       ? null

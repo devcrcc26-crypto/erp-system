@@ -35,7 +35,10 @@ export type EmployeeOvertimeProfileMode = 'self' | 'employee';
 
 interface EmployeeOvertimeProfileSectionProps {
   mode: EmployeeOvertimeProfileMode;
-  /** Required when mode is `employee`. */
+  /**
+   * Required in both modes. The sheet list is always filtered to this id so
+   * a viewer with company-wide overtime access still sees only this employee.
+   */
   employeeId?: string;
   /** Hide the "Start this month's overtime" button (read-only My Profile). */
   hideCreateAction?: boolean;
@@ -145,7 +148,8 @@ function HoursTile({
 
 /**
  * Year overtime totals and sheet history for a profile surface.
- * Use `self` on My Profile; use `employee` on HR employee detail.
+ * Use `self` on My Profile (pass the signed-in user's id); use `employee` on
+ * HR employee detail. Both modes list only that employee's sheets.
  */
 export default function EmployeeOvertimeProfileSection({
   mode,
@@ -162,7 +166,7 @@ export default function EmployeeOvertimeProfileSection({
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
-  const targetEmployeeId = isSelf ? undefined : employeeId;
+  const targetEmployeeId = employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
 
   const detailReturnTo = useMemo((): string => {
@@ -175,23 +179,16 @@ export default function EmployeeOvertimeProfileSection({
     return '/profile?tab=overtime';
   }, [isSelf, targetEmployeeId]);
 
-  const mySheetsQuery = useOvertimeSheetsAll({}, isSelf);
-  const employeeSheetsQuery = useOvertimeSheetsAll(
+  const sheetsQuery = useOvertimeSheetsAll(
     { employeeId: targetEmployeeId },
-    !isSelf && employeeEnabled,
+    employeeEnabled,
   );
 
-  const historyLoading = isSelf
-    ? mySheetsQuery.isLoading
-    : employeeSheetsQuery.isLoading;
-  const historyError = isSelf
-    ? mySheetsQuery.error
-    : employeeSheetsQuery.error;
+  const historyLoading = sheetsQuery.isLoading;
+  const historyError = sheetsQuery.error;
 
   const allHistory = useMemo(() => {
-    const rows = isSelf
-      ? (mySheetsQuery.data ?? [])
-      : (employeeSheetsQuery.data ?? []);
+    const rows = sheetsQuery.data ?? [];
     return [...rows].sort((a, b) => {
       if (a.year !== b.year) {
         return b.year - a.year;
@@ -203,7 +200,7 @@ export default function EmployeeOvertimeProfileSection({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
-  }, [isSelf, mySheetsQuery.data, employeeSheetsQuery.data]);
+  }, [sheetsQuery.data]);
 
   const yearTotals = useMemo(
     () => sumYearTotals(allHistory, year),
@@ -376,7 +373,7 @@ export default function EmployeeOvertimeProfileSection({
     </Button>
   ) : null;
 
-  if (!isSelf && !employeeId) {
+  if (!employeeId) {
     return null;
   }
 

@@ -1,0 +1,21 @@
+{
+  "name": "erp-docs-capture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "playwright test --config=playwright.config.ts",
+    "capture:employee": "playwright test --config=playwright.config.ts --project=capture-employee",
+    "capture:hr-manager": "playwright test --config=playwright.config.ts --project=capture-hr-manager",
+    "build:guide": "tsx scripts/build-guide.ts",
+    "pdf": "tsx scripts/build-pdf.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@types/node": "^20.19.0",
+    "dotenv": "^16.4.7",
+    "md-to-pdf": "^5.2.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

@@ -518,6 +518,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
               <Button
                 icon={<SettingOutlined />}
                 onClick={() => setSettingsOpen(true)}
+                data-shot="payroll-company-settings"
               >
                 {isNarrow
                   ? t('hr.payroll.companySettings.openButtonShort')
@@ -529,6 +530,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => setCreateOpen(true)}
+                data-shot="payroll-new-run"
               >
                 {isNarrow
                   ? t('hr.payroll.list.newRunShort')

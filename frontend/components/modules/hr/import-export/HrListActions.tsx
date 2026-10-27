@@ -20,6 +20,8 @@ export interface HrListPrimaryAction {
   /** Defaults to a plus sign. */
   icon?: React.ReactNode;
   disabled?: boolean;
+  /** Docs-capture hook — opens a modal/dialog worth screenshotting. */
+  dataShot?: string;
 }
 
 /**
@@ -95,6 +97,7 @@ export default function HrListActions({
             onClick={primary.onClick}
             disabled={primary.disabled}
             aria-label={primary.label}
+            data-shot={primary.dataShot}
           />
         ) : null}
       </>
@@ -120,7 +123,11 @@ export default function HrListActions({
         </Button>
       ) : null}
       {onImport ? (
-        <Button icon={<UploadOutlined />} onClick={onImport}>
+        <Button
+          icon={<UploadOutlined />}
+          onClick={onImport}
+          data-shot="hr-import"
+        >
           {importLabel}
         </Button>
       ) : null}
@@ -131,6 +138,7 @@ export default function HrListActions({
           icon={primary.icon ?? <PlusOutlined />}
           onClick={primary.onClick}
           disabled={primary.disabled}
+          data-shot={primary.dataShot}
         >
           {primary.label}
         </Button>

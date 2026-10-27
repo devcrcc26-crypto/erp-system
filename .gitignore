@@ -39,6 +39,11 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Docs capture (Playwright navigation guides)
+docs-capture/.auth/
+docs-capture/out/
+docs-capture/.env
+
 # Test
 coverage/
 

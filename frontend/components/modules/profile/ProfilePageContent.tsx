@@ -591,6 +591,7 @@ export default function ProfilePageContent(): React.ReactNode {
         return (
           <EmployeeOvertimeProfileSection
             mode="self"
+            employeeId={currentProfile.id}
             hideCreateAction
             showCategoryColumns
           />

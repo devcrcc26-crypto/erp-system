@@ -21,7 +21,10 @@
     "test:backend:e2e": "npm --prefix backend run test:e2e",
     "test:frontend": "npm --prefix frontend run test",
     "test:frontend:changed": "npm --prefix frontend run test:changed",
-    "test:frontend:e2e": "npm --prefix frontend run test:e2e"
+    "test:frontend:e2e": "npm --prefix frontend run test:e2e",
+    "docs:capture": "npm --prefix docs-capture run capture",
+    "docs:build": "npm --prefix docs-capture run build:guide",
+    "docs:pdf": "npm --prefix docs-capture run pdf"
   },
   "engines": {
     "node": ">=20"

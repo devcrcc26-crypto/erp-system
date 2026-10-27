@@ -173,6 +173,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
           type="primary"
           icon={<UploadOutlined />}
           onClick={() => setImportModalOpen(true)}
+          data-shot="attendance-import"
         >
           {t('pages.hr.attendance.import')}
         </Button>
@@ -262,6 +263,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
                   label: t('pages.hr.attendance.import'),
                   icon: <UploadOutlined />,
                   onClick: () => setImportModalOpen(true),
+                  dataShot: 'attendance-import',
                 }}
               />
             ) : null}

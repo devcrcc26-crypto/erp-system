@@ -453,6 +453,7 @@ export default function EmployeeAttendanceProfileSection({
               <Button
                 type="primary"
                 size="small"
+                data-shot="profile-field-movement"
                 onClick={() => {
                   setShowFieldMovementForm(true);
                   void flaggedQuery.refetch();
