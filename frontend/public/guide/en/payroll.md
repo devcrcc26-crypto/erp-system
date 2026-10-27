@@ -13,15 +13,15 @@ Payroll runs once a month. HR creates the run, the ERP calculates each employee'
 
 **Where to find it**
 - Your payslips: click **My Profile** in the left menu, then click **Payroll**.
-- Payroll runs (payroll access only): click **Pay & Travel** in the left menu, then click **Payroll**. Company payroll settings open from the same page.
+- Payroll runs (payroll staff only): click **Pay & Travel** in the left menu, then click **Payroll**. Company payroll settings open from the same page.
 
-> **Important:** Salary figures are confidential. Only people with payroll access can open this module.
+> **Important:** Salary figures are confidential. Only payroll staff can open this page.
 
 ---
 
 ## How to create a payroll run
 
-*(HR with the payroll create permission)*
+*(HR staff who run payroll)*
 
 1. Click **Pay & Travel** in the left menu, then click **Payroll**, then click **New run**.
 2. In **New payroll run**, choose the **Pay period** (month and year).
@@ -65,7 +65,7 @@ Before a run can move on, HR must review employees with employment flags. The **
 
 ## How to add a bonus or a net top-up to an employee
 
-*(HR with the payroll edit permission; the run must be **Draft** or **Reviewed**)*
+*(HR staff who run payroll; the run must be **Draft** or **Reviewed**)*
 
 1. Open the run, find the employee, and click **Edit bonus / net top-up**.
 2. Enter the **Bonus top-up (ETB)** or the **Net top-up (ETB)**. Values must be zero or greater.
@@ -165,7 +165,7 @@ Open the **Export** menu on the run:
 
 | Action | Who |
 |---|---|
-| Create a run, edit top-ups, recalculate, mark reviewed, submit, mark paid, cancel, payslips, exports | HR with payroll permissions |
+| Create a run, edit top-ups, recalculate, mark reviewed, submit, mark paid, cancel, payslips, exports | HR staff who run payroll |
 | Approve (HR) | HR Manager or System Administrator |
 | GM approve | General Manager or System Administrator |
 | View own payslips | Every employee |

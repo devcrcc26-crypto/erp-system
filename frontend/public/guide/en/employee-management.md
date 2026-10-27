@@ -1,6 +1,6 @@
 # Employee Management
 
-HR uses the employee list to create and maintain employee accounts, and the contracts module to record each employee's employment contract. Employees do not manage other employees.
+HR uses the employee list to create and maintain employee accounts, and the contracts list to record each employee's employment contract. Employees do not manage other employees.
 
 **Who does what**
 
@@ -34,5 +34,5 @@ HR uses the employee list to create and maintain employee accounts, and the cont
 
 ## Tips
 
-- Keep the department and position up to date. Approval chains follow the organization structure.
+- Keep the department and position up to date. Requests are sent to approvers based on each person's department and manager.
 - Click **People** in the left menu, then **Org Gaps**, to find employees who have no supervisor or department.

@@ -23,14 +23,14 @@ Use a seal request when a document needs the company's official seal or a projec
 3. **Document to Seal** (optional): choose the document to stamp. Each attachment has a **File name** and **Description**.
 4. **Review & Submit:** choose the **Category** and the **Copy Count**, check the summary, and click **Submit Request**.
 
-> **What happens next:** The request enters the approval chain. You can follow it in **Approvals**.
+> **What happens next:** The request is sent to your approvers. You can follow it in **Approvals**.
 
 ---
 
 ## How HR issues a seal
 
 1. Open the seal request from **Official Seal Usage** or **Project Seal Usage**.
-2. Check the approval chain and the attached document.
+2. Check who has approved it and look at the attached document.
 3. Click **Issue Seal**. The sealed proof is attached to the request, with the issuer and the completion time.
 
 ---

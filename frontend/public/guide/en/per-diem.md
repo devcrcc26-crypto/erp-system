@@ -36,7 +36,7 @@ Per diem is the daily allowance for days you are away on business travel or depl
 5. Add **Notes** for the approver if needed.
 6. Click **Review & Submit**, check the summary, and click **Submit Request**.
 
-> **What happens next:** The request enters the approval chain. Track it in **Approvals**. If an approver returns it, edit it there and resubmit.
+> **What happens next:** The request is sent to your approvers. Track it in **Approvals**. If an approver returns it, edit it there and resubmit.
 
 ---
 

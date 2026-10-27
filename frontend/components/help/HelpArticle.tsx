@@ -24,9 +24,10 @@ export default function HelpArticle({ slug }: { slug: string }): ReactNode {
 
     async function load(): Promise<void> {
       try {
-        let res = await fetch(`/guide/${locale}/${slug}.md`, { cache: 'force-cache' });
+        // Revalidate so edited guides show up at once instead of a cached copy.
+        let res = await fetch(`/guide/${locale}/${slug}.md`, { cache: 'no-cache' });
         if (!res.ok && locale !== 'en') {
-          res = await fetch(`/guide/en/${slug}.md`, { cache: 'force-cache' });
+          res = await fetch(`/guide/en/${slug}.md`, { cache: 'no-cache' });
         }
         if (!res.ok) {
           throw new Error('missing');

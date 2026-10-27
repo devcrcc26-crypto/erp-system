@@ -26,7 +26,7 @@ A site assignment records the days you work at a project site away from your nor
 5. Enter a **Late reason** if the form asks for it. It is required when you enter the assignment after the month has ended.
 6. Click **Review & Submit**, check the details, and submit.
 
-> **What happens next:** The request enters the approval chain. Track it in **Approvals**.
+> **What happens next:** The request is sent to your approvers. Track it in **Approvals**.
 
 ---
 

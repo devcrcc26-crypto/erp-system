@@ -27,7 +27,7 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 4. Fill in the required fields. Missing required fields show *"Please fill in all required fields"*.
 5. Click **Submit request**.
 
-> **What happens next:** The request appears in your **My Requests** tab and moves into the approval chain. You get the notification *"Approval request submitted"*. Some request types (for example leave and overtime) have their own form in the module. The picker links you to it.
+> **What happens next:** The request appears in your **My Requests** tab and is sent to your approvers. You get the notification *"Approval request submitted"*. Some request types (for example leave and overtime) have their own form in the module. The picker links you to it.
 
 ### Request types
 
@@ -94,7 +94,7 @@ Every request that needs a decision (leave, overtime, per diem, purchases and mo
 
 > **What happens next:**
 > - If there are more steps, the request moves to the next approver. That approver receives *"Approval required"*.
-> - If this was the last step, the request is **Approved**. The requester receives *"Approved"*, and the request's module updates (for example, leave days are recorded as used).
+> - If this was the last step, the request is **Approved**. The requester receives *"Approved"*, and the related record updates (for example, the leave days are counted as used).
 
 
 ---
@@ -150,7 +150,7 @@ Use a condition when you approve in principle but something must be confirmed fi
 *(HR Manager and System Administrator only)*
 
 1. Open the request.
-2. In the approval chain, find the pending step and click **Reassign**.
+2. In the list of approvers, find the step that is waiting and click **Reassign**.
 3. Choose the **New approver**.
 4. Click **Reassign**.
 
@@ -179,7 +179,7 @@ If you are not the current approver but have on-behalf rights for that request, 
 
 > **What happens next:** The request goes back to the first approver, who receives *"Resubmitted for approval"*. The earlier notes stay in the **Resubmission / response history**.
 >
-> **Note:** For leave and overtime, edit the request in its own module first. Then resubmit it from here. For overtime, you can also use **Submit Sheet** in the sheet itself.
+> **Note:** For leave and overtime, edit the request on its own page first. Then resubmit it from here. For overtime, you can also use **Submit Sheet** in the sheet itself.
 
 ---
 
@@ -207,7 +207,7 @@ Approval steps are set by the request type, and most follow the org chart:
 - **Department Head:** the **General Manager**, then the **HR Manager**.
 - **HR staff:** the **HR Manager**.
 - **HR Manager:** the **General Manager**.
-- **General Manager, Managing Director, System Administrator:** no approval chain. Requests are approved on submit.
+- **General Manager, Managing Director, System Administrator:** no approval needed. Requests are approved as soon as they are submitted.
 
 Some request types use their own chain. The chain is always shown on the request.
 

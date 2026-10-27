@@ -12,7 +12,7 @@ Vehicle requests cover three things: applying to use a company vehicle, recordin
 
 **Where to find it**
 - Submit: **New Request**, then choose **Vehicle Application**, **Vehicle Refueling** or **Inspection & Repair**.
-- Lists: click **Operations** in the left menu, then click **Vehicle Applications**, **Vehicle Refueling** or **Inspection & Repair** (fleet access only).
+- Lists: click **Operations** in the left menu, then click **Vehicle Applications**, **Vehicle Refueling** or **Inspection & Repair** (fleet staff only).
 - Company vehicles register: click **Operations** in the left menu, then click **Company Vehicles** (HR only).
 
 ---
@@ -24,7 +24,7 @@ Vehicle requests cover three things: applying to use a company vehicle, recordin
 3. **Request Details:** enter the **Location**, the **Inspection Type** (*Inspection*, *Maintenance* or *Repair*), the **Urgency** (*Critical*, *Urgent*, *Medium* or *Minor*), a **Description** of the issue, and an optional **Suggested Solution**.
 4. Click **Review & Submit**, check the details, and click **Submit Request**.
 
-> **What happens next:** The request enters the approval chain and you can follow it in **Approvals**.
+> **What happens next:** The request is sent to your approvers and you can follow it in **Approvals**.
 
 ---
 

@@ -19,7 +19,7 @@ Announcements are company news and notices. Everyone sees the announcements sent
 ## How to publish an announcement
 
 1. Click **Operations** in the left menu, then click **Manage announcements** and click **New announcement**.
-2. **Write:** enter the **Title** and the **Message**. Markdown is supported, for example **bold**, lists and links. Use **Preview** to check how it looks.
+2. **Write:** enter the **Title** and the **Message**. You can make words **bold** and add lists and links. Click **Preview** to see how it will look.
 3. **Chinese version (optional):** enter a **Title (Chinese)** and **Message (Chinese)**.
 4. **Attachments (optional):** add files. Recipients can download them. Up to 20 MB each.
 5. **Audience:** choose **Departments**, **Disciplines**, **Roles** or **Employees**. At least one must be picked.

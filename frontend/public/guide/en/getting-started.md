@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the Construction ERP. This page shows you how to sign in, find your way around, and how requests and approvals work. The other topics in this guide explain each module step by step.
+Welcome to the Construction ERP. This page shows you how to sign in, find your way around, and how requests and approvals work. The other topics in this guide explain each part of the system step by step.
 
 **Who this is for:** everyone.
 
@@ -30,7 +30,7 @@ If HR gave you a temporary password, the ERP asks you to choose a new password b
 
 | Area | What it is for |
 | --- | --- |
-| **Left menu** | The modules you can use. You only see what your role allows. |
+| **Left menu** | The parts of the system you can use. You only see what your job needs. |
 | **New Request** | Start any request: leave, overtime, travel, expenses, seals and more. |
 | **Approvals** | Follow your own requests, and act on requests that are waiting for you. |
 | **My Profile** | Your own record: leave balance, overtime, attendance, payslips, assets and more. |
@@ -39,7 +39,7 @@ If HR gave you a temporary password, the ERP asks you to choose a new password b
 
 **What you see in the left menu depends on your role:**
 - **Most staff** see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide.
-- **HR staff** also see the module folders: **People**, **Time & Attendance**, **Pay & Travel** and **Operations**.
+- **HR staff** also see these folders: **People**, **Time & Attendance**, **Pay & Travel** and **Operations**.
 
 ---
 

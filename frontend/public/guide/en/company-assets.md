@@ -11,7 +11,7 @@ The company asset register lists the fixed assets and equipment the company owns
 
 **Where to find it**
 - Your assets: click **My Profile** in the left menu, then click **Assets**.
-- Register (HR): click **Operations** in the left menu, then click **Company Assets** (fleet access only).
+- Register (HR): click **Operations** in the left menu, then click **Company Assets** (fleet staff only).
 
 ---
 

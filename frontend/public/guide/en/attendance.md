@@ -19,7 +19,7 @@ Attendance comes from the monthly export of the attendance machine (Deli e+). HR
 
 ## How to import a monthly attendance file
 
-*(HR only; needs the create permission for attendance)*
+*(HR only)*
 
 1. Export the monthly summary from the attendance machine. It must be the Deli e+ **Monthly summary export** (月度汇总表) in `.xlsx` format.
 2. Click **Time & Attendance** in the left menu, then click **Attendance**, then click **Import Attendance**.
@@ -64,7 +64,7 @@ The machine records people by a device name and ID. An identity links that devic
 
 ## How to review a month
 
-*(HR users with the approve permission)*
+*(HR staff who approve attendance)*
 
 1. Click **Time & Attendance** in the left menu, then click **Attendance**. Find the month, and click its **Review** button (labelled *Review* with the month and year).
 2. Read the summary: **Employees**, **Total Flagged Days**, **Employees with Flags** and **Resolved Flags**.
@@ -86,7 +86,7 @@ The machine records people by a device name and ID. An identity links that devic
 
 ## How to approve a month
 
-*(HR users with the approve permission)*
+*(HR staff who approve attendance)*
 
 1. Open the month in **Review**. The month must be **Reviewed** first.
 2. Click **Approve Month**.
@@ -102,7 +102,7 @@ The machine records people by a device name and ID. An identity links that devic
 
 ## How to unlock an approved month
 
-*(HR users with the approve permission)*
+*(HR staff who approve attendance)*
 
 Unlock only when a correction must be made after approval, or when a site, WFH or leave change needs to be applied.
 

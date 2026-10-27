@@ -1,6 +1,6 @@
 # Flight Applications
 
-Use a flight application to request an air ticket for business travel. You fill in the trip, add the passengers, review, and submit. The request goes into the approval chain.
+Use a flight application to request an air ticket for business travel. You fill in the trip, add the passengers, review, and submit. The request is sent to your approvers.
 
 **Who does what**
 
@@ -29,7 +29,7 @@ Use a flight application to request an air ticket for business travel. You fill 
 4. **Passengers:** add at least one passenger. Each passenger can only be added once. If a passenger needs a passport number for the trip, the form asks for it.
 5. Click **Review & Submit**, check the details, and click **Submit Application**.
 
-> **What happens next:** The application enters the approval chain. You can see its status in **Approvals**. HR can see every application in the HR list.
+> **What happens next:** The application is sent to your approvers. You can see its status in **Approvals**. HR can see every application in the HR list.
 
 ---
 

@@ -42,7 +42,7 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
           label={t(`${STATS}.headcount.total`)}
           value={formatCount(headcount?.total ?? 0, locale)}
           badge={t(`${HOME}.overview.headcountHint`)}
-          href="/hr/employees"
+          href="/users"
         />
         <OverviewStatCard
           index={1}
@@ -66,7 +66,7 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
               ? t(`${HOME}.overview.newHiresHint`)
               : t(`${HOME}.overview.noNewHires`)
           }
-          href="/hr/employees"
+          href="/users"
         />
         <OverviewStatCard
           index={3}

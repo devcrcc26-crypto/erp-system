@@ -31,7 +31,7 @@ An exit permit records equipment and materials that leave or return to a site. Y
 4. **Supporting Documents:** optionally attach documents.
 5. Click **Review & Submit**, check the summary, and click **Submit Request**.
 
-> **What happens next:** The permit enters the approval chain. Track it in **Approvals**. Once it is approved, it can be used at the gate.
+> **What happens next:** The permit is sent to your approvers. Track it in **Approvals**. Once it is approved, it can be used at the gate.
 
 ---
 

@@ -63,7 +63,7 @@ You can also see your balances at any time by clicking **My Profile** in the lef
 ## How to follow your leave requests
 
 1. Click **My Profile** in the left menu, then click **Leave** and click **View all**.
-2. Click a request to open it. The detail page shows the dates, days, periods, reason, attachments, the balance at the time, and the approval chain.
+2. Click a request to open it. The detail page shows the dates, days, periods, reason, attachments, the balance at the time, and who needs to approve it.
 
 You can also follow any request by clicking **Approvals** in the left menu, then **My Requests**.
 
@@ -119,7 +119,7 @@ You can also follow any request by clicking **Approvals** in the left menu, then
 2. In **Submission details**, switch on **Submit on behalf of another employee** and choose the employee.
 3. Fill in the form as usual and submit.
 
-> **What happens next:** The request belongs to the employee, and the approval chain is built from the employee's manager, not from you.
+> **What happens next:** The request belongs to the employee, and it goes to the employee's own approvers, not yours.
 
 ---
 
@@ -168,4 +168,4 @@ When the last approver approves, the request becomes **Approved** and its days m
 
 - Submit leave early so your approvers have time to act.
 - Check **Remaining after request** before you submit.
-- If a request seems stuck, open it and check the approval chain to see who it is waiting for.
+- If a request seems stuck, open it and look at the list of approvers to see who it is waiting for.

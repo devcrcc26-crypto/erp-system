@@ -1,6 +1,6 @@
 # Business Trips
 
-Use a business trip request for travel that needs approval as a trip: origin, destination, dates, passengers, purpose and budget, and a host contact. The request goes into the approval chain.
+Use a business trip request for travel that needs approval as a trip: origin, destination, dates, passengers, purpose and budget, and a host contact. The request is sent to your approvers.
 
 **Who does what**
 
@@ -30,7 +30,7 @@ Use a business trip request for travel that needs approval as a trip: origin, de
 5. **Passengers:** add at least one passenger. Each passenger can only be added once. Enter a passport number where the form asks for it.
 6. Click **Review & Submit**, check the details, and click **Submit Business Trip**.
 
-> **What happens next:** The trip enters the approval chain. Track its status in **Approvals**.
+> **What happens next:** The trip is sent to your approvers. Track its status in **Approvals**.
 
 ---
 

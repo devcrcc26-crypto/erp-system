@@ -30,7 +30,7 @@ Use an expense claim to get back money you spent on work: transport, meals, acco
    - Amounts are converted to ETB automatically for the approval total.
 4. **Review & Submit:** check the items and the **Total**, then click **Submit Claim**.
 
-> **What happens next:** The claim enters the approval chain and you can follow it in **Approvals**. If an approver returns it, edit it there and resubmit.
+> **What happens next:** The claim is sent to your approvers and you can follow it in **Approvals**. If an approver returns it, edit it there and resubmit.
 
 ---
 

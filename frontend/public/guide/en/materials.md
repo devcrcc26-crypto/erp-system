@@ -1,6 +1,6 @@
 # Materials & Purchases
 
-Use these requests to buy items, take materials from the warehouse, or request low-value consumables. Each one is a separate request type. All three go through the approval chain.
+Use these requests to buy items, take materials from the warehouse, or request low-value consumables. Each one is a separate request type. All three need approval.
 
 **Who does what**
 
@@ -12,7 +12,7 @@ Use these requests to buy items, take materials from the warehouse, or request l
 
 **Where to find it**
 - Submit: click **New Request** in the left menu, then click **Purchase Request**, **Material Requisition** or **Consumables**.
-- Lists: click **Operations** in the left menu, then click **Purchase Requests**, **Material Requisition** or **Consumables** (procurement access only).
+- Lists: click **Operations** in the left menu, then click **Purchase Requests**, **Material Requisition** or **Consumables** (procurement staff only).
 
 ---
 
