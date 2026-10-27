@@ -92,7 +92,13 @@ import { buildOvertimeExportSheets } from '@/lib/utils/overtime-export';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 function isEditableSheetStatus(status: OvertimeSheetListItem['status']): boolean {
-  return status === 'DRAFT' || status === 'RETURNED';
+  return (
+    status === 'DRAFT' ||
+    status === 'RETURNED' ||
+    status === 'SUBMITTED' ||
+    status === 'IN_REVIEW' ||
+    status === 'APPROVED'
+  );
 }
 
 const PENDING_STATUSES = statusesForOvertimeMode('pending');

@@ -20,6 +20,7 @@ import BusinessTripDetail from '@/components/modules/approvals/detail/BusinessTr
 import ExpenseClaimDetail from '@/components/modules/approvals/detail/ExpenseClaimDetail';
 import FlightApplicationDetail from '@/components/modules/approvals/detail/FlightApplicationDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
+import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import PerDiemSettlementDetail from '@/components/modules/approvals/detail/PerDiemSettlementDetail';
@@ -60,6 +61,7 @@ import {
   useReturnApprovalTier,
 } from '@/lib/query/approvals';
 import { usePerDiemRequest, useSetApprovedPerDiemRate } from '@/lib/query/per-diem';
+import { useOvertimeSheet } from '@/lib/query/overtime';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
@@ -297,12 +299,17 @@ export default function ApprovalDetailPageContent({
   const [conditionText, setConditionText] = useState('');
   const [approvedRate, setApprovedRate] = useState<number | null>(null);
 
-  // Derive per-diem source id early (before conditional returns) using detailQuery.data directly.
+  // Derive per-diem / overtime source ids early (before conditional returns).
   const _earlyRequest = detailQuery.data;
   const _isPerDiem = Boolean(_earlyRequest) && resolveCategoryCode(_earlyRequest!) === 'PER_DIEM';
   const _perDiemSourceId = _isPerDiem ? (_earlyRequest?.sourceId ?? '') : '';
   const perDiemDetailQuery = usePerDiemRequest(_perDiemSourceId);
   const setApprovedRateMutation = useSetApprovedPerDiemRate(_perDiemSourceId);
+  const _isOvertime =
+    Boolean(_earlyRequest) &&
+    resolveCategoryCode(_earlyRequest!) === 'OVERTIME_APPLICATION';
+  const _overtimeSourceId = _isOvertime ? (_earlyRequest?.sourceId ?? '') : '';
+  const overtimeSheetQuery = useOvertimeSheet(_overtimeSourceId);
 
   useEffect(() => {
     if (actionModal === 'approve' && _isPerDiem && perDiemDetailQuery.data) {
@@ -658,6 +665,11 @@ export default function ApprovalDetailPageContent({
             </div>
           ) : null}
         </div>
+        {_isOvertime && overtimeSheetQuery.data?.editDiff?.editedAfterApproval ? (
+          <div className="border-t border-[var(--color-border)] px-4 py-3 sm:px-5">
+            <OvertimeEditDiffBanner editDiff={overtimeSheetQuery.data.editDiff} />
+          </div>
+        ) : null}
 
         <div className="erp-employee-hero erp-contract-hero">
           <div className="erp-employee-hero-copy min-w-0 flex-1">
@@ -679,6 +691,13 @@ export default function ApprovalDetailPageContent({
                   {t('pages.approvals.resubmittedCount', {
                     count: resubmitCount,
                   })}
+                </Tag>
+              ) : null}
+              {_isOvertime &&
+              (overtimeSheetQuery.data?.editedAfterApproval ||
+                overtimeSheetQuery.data?.editDiff?.editedAfterApproval) ? (
+                <Tag color="orange" className="!m-0 rounded-lg">
+                  {t('pages.hr.overtime.editedBadge')}
                 </Tag>
               ) : null}
             </div>

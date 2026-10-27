@@ -42,6 +42,7 @@ import type {
   ApprovalDecisionListener,
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
+import { AuditService } from '../../../audit/application/services/audit.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
@@ -60,6 +61,11 @@ import {
   WITHIN_SCHEDULE_MESSAGE,
 } from '../utils/overtime-hours.util';
 import { PAYROLL_LOCKED_MESSAGE } from '../utils/overtime-entry-guards.util';
+import {
+  buildOvertimeApprovedSnapshot,
+  buildOvertimeEditDiff,
+  parseOvertimeApprovedSnapshot,
+} from '../utils/overtime-edit-snapshot.util';
 import {
   END_OF_DAY_HHMM,
   END_OF_DAY_MINUTES,
@@ -125,10 +131,26 @@ const SHEET_DETAIL_INCLUDE = {
   },
 };
 
-const EDITABLE_STATUSES: OvertimeSheetStatus[] = [
+/** Draft/returned: edit without restarting approval. */
+const DRAFT_EDITABLE_STATUSES: OvertimeSheetStatus[] = [
   OvertimeSheetStatus.DRAFT,
   OvertimeSheetStatus.RETURNED,
 ];
+
+/** Submitted/approved: edit allowed until payroll lock; restarts approval. */
+const POST_SUBMIT_EDITABLE_STATUSES: OvertimeSheetStatus[] = [
+  OvertimeSheetStatus.SUBMITTED,
+  OvertimeSheetStatus.IN_REVIEW,
+  OvertimeSheetStatus.APPROVED,
+];
+
+const MUTABLE_STATUSES: OvertimeSheetStatus[] = [
+  ...DRAFT_EDITABLE_STATUSES,
+  ...POST_SUBMIT_EDITABLE_STATUSES,
+];
+
+/** @deprecated Use DRAFT_EDITABLE_STATUSES — kept for submitSheet gate. */
+const EDITABLE_STATUSES = DRAFT_EDITABLE_STATUSES;
 
 /**
  * Monthly overtime sheet lifecycle - entries, totals, and approval submit.
@@ -148,6 +170,7 @@ export class OvertimeService
     private readonly overtimeEntryService: OvertimeEntryService,
     private readonly workScheduleService: WorkScheduleService,
     private readonly onBehalfService: OnBehalfService,
+    private readonly auditService: AuditService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -359,6 +382,7 @@ export class OvertimeService
     sheetId: string,
     companyId: string,
     userId: string,
+    options?: { restartedApproval?: boolean },
   ): Promise<unknown> {
     const row = await this.prisma.overtimeSheet.findFirst({
       where: activeOnly({ id: sheetId, companyId }),
@@ -368,7 +392,27 @@ export class OvertimeService
       throw new NotFoundException('Overtime sheet not found');
     }
     await this.assertCanViewSheet(row, companyId, userId);
-    return this.mapSheetWithHolidayNames(row, companyId);
+    const mapped = await this.mapSheetWithHolidayNames(row, companyId);
+    const payrollLocked = await this.isPayrollLocked(
+      companyId,
+      row.month,
+      row.year,
+    );
+    const snapshot = parseOvertimeApprovedSnapshot(row.lastApprovedSnapshot);
+    const editDiff = buildOvertimeEditDiff(
+      snapshot,
+      Array.isArray(row.entries) ? row.entries : [],
+    );
+    const canEditEntries =
+      MUTABLE_STATUSES.includes(row.status) && !payrollLocked;
+    return {
+      ...mapped,
+      payrollLocked,
+      canEditEntries,
+      editedAfterApproval: Boolean(snapshot) && row.status !== OvertimeSheetStatus.APPROVED,
+      editDiff,
+      ...(options?.restartedApproval ? { restartedApproval: true } : {}),
+    };
   }
 
   /**
@@ -434,7 +478,8 @@ export class OvertimeService
   }
 
   /**
-   * Adds an entry to a DRAFT/RETURNED sheet and recalculates totals.
+   * Adds an entry to a mutable sheet and recalculates totals.
+   * Post-submit/approved edits restart the approval chain.
    */
   async addEntry(
     sheetId: string,
@@ -485,6 +530,10 @@ export class OvertimeService
       undefined,
     );
 
+    if (sheet.restartApproval) {
+      await this.captureApprovedSnapshotIfNeeded(sheet);
+    }
+
     const entryId = randomUUID();
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -522,11 +571,27 @@ export class OvertimeService
       this.rethrowEntryConflict(error);
     }
 
-    return this.getSheet(sheetId, companyId, userId);
+    const restarted = await this.maybeRestartApprovalAfterEdit({
+      sheet,
+      companyId,
+      userId,
+      action: 'ADD_ENTRY',
+      beforeValue: null,
+      afterValue: {
+        entryId,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        taskDescription: dto.taskDescription.trim(),
+      },
+    });
+
+    return this.getSheet(sheetId, companyId, userId, { restartedApproval: restarted });
   }
 
   /**
-   * Updates an entry on a DRAFT/RETURNED sheet and recalculates totals.
+   * Updates an entry on a mutable sheet and recalculates totals.
+   * Post-submit/approved edits restart the approval chain.
    */
   async updateEntry(
     sheetId: string,
@@ -581,6 +646,25 @@ export class OvertimeService
       entryId,
     );
 
+    const beforeValue = {
+      entryId: entry.id,
+      date: this.formatDateOnly(entry.date),
+      startTime: this.formatTimeOfDay(entry.startTime),
+      endTime: entry.endsAtEndOfDay
+        ? END_OF_DAY_HHMM
+        : this.formatTimeOfDay(entry.endTime),
+      taskDescription: entry.taskDescription,
+      regularHours: Number(entry.regularHours),
+      nightHours: Number(entry.nightHours),
+      weekendHours: Number(entry.weekendHours),
+      holidayHours: Number(entry.holidayHours),
+      totalHours: Number(entry.totalHours),
+    };
+
+    if (sheet.restartApproval) {
+      await this.captureApprovedSnapshotIfNeeded(sheet);
+    }
+
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.overtimeEntry.update({
@@ -616,7 +700,29 @@ export class OvertimeService
       this.rethrowEntryConflict(error);
     }
 
-    return this.getSheet(sheetId, companyId, userId);
+    const afterValue = {
+      entryId,
+      date: dto.date,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      taskDescription: dto.taskDescription.trim(),
+      regularHours: classified.regularHours,
+      nightHours: classified.nightHours,
+      weekendHours: classified.weekendHours,
+      holidayHours: classified.holidayHours,
+      totalHours: classified.totalHours,
+    };
+
+    const restarted = await this.maybeRestartApprovalAfterEdit({
+      sheet,
+      companyId,
+      userId,
+      action: 'UPDATE_ENTRY',
+      beforeValue,
+      afterValue,
+    });
+
+    return this.getSheet(sheetId, companyId, userId, { restartedApproval: restarted });
   }
 
   /**
@@ -749,7 +855,8 @@ export class OvertimeService
   }
 
   /**
-   * Deletes an entry from a DRAFT/RETURNED sheet and recalculates totals.
+   * Deletes an entry from a mutable sheet and recalculates totals.
+   * Post-submit/approved deletes restart the approval chain.
    */
   async deleteEntry(
     sheetId: string,
@@ -757,12 +864,27 @@ export class OvertimeService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    await this.requireEditableSheet(sheetId, companyId, userId);
+    const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const entry = await this.prisma.overtimeEntry.findFirst({
       where: { id: entryId, sheetId },
     });
     if (!entry) {
       throw new NotFoundException('Overtime entry not found');
+    }
+
+    const beforeValue = {
+      entryId: entry.id,
+      date: this.formatDateOnly(entry.date),
+      startTime: this.formatTimeOfDay(entry.startTime),
+      endTime: entry.endsAtEndOfDay
+        ? END_OF_DAY_HHMM
+        : this.formatTimeOfDay(entry.endTime),
+      taskDescription: entry.taskDescription,
+      totalHours: Number(entry.totalHours),
+    };
+
+    if (sheet.restartApproval) {
+      await this.captureApprovedSnapshotIfNeeded(sheet);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -774,7 +896,16 @@ export class OvertimeService
       });
     });
 
-    return this.getSheet(sheetId, companyId, userId);
+    const restarted = await this.maybeRestartApprovalAfterEdit({
+      sheet,
+      companyId,
+      userId,
+      action: 'DELETE_ENTRY',
+      beforeValue,
+      afterValue: null,
+    });
+
+    return this.getSheet(sheetId, companyId, userId, { restartedApproval: restarted });
   }
 
   /**
@@ -1056,6 +1187,7 @@ export class OvertimeService
   ): Promise<void> {
     const row = await this.prisma.overtimeSheet.findFirst({
       where: activeOnly({ approvalRequestId }),
+      include: { entries: true },
     });
     if (!row) {
       return;
@@ -1079,12 +1211,22 @@ export class OvertimeService
       nextStatus = OvertimeSheetStatus.RETURNED;
     }
 
+    const snapshot =
+      decision === 'APPROVED'
+        ? buildOvertimeApprovedSnapshot(row.entries, now)
+        : undefined;
+
     await this.prisma.overtimeSheet.update({
       where: { id: row.id },
       data: {
         status: nextStatus,
         completedAt: decision === 'RETURNED' ? null : now,
         updatedBy: row.employeeId,
+        ...(snapshot
+          ? {
+              lastApprovedSnapshot: snapshot as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
       },
     });
   }
@@ -1204,6 +1346,10 @@ export class OvertimeService
     employeeId: string;
     sheetNumber: string;
     attachmentFolderId: string | null;
+    status: OvertimeSheetStatus;
+    approvalRequestId: string | null;
+    lastApprovedSnapshot: Prisma.JsonValue | null;
+    restartApproval: boolean;
   }> {
     const sheet = await this.prisma.overtimeSheet.findFirst({
       where: activeOnly({ id: sheetId, companyId }),
@@ -1214,20 +1360,31 @@ export class OvertimeService
     if (!(await this.canActForEmployee(sheet.employeeId, companyId, userId))) {
       throw new ForbiddenException('Only the employee can edit this sheet');
     }
-    if (!EDITABLE_STATUSES.includes(sheet.status)) {
+    if (!MUTABLE_STATUSES.includes(sheet.status)) {
       throw new BadRequestException(
-        'Entries can only be changed on draft or returned sheets',
+        'Entries cannot be changed on cancelled or rejected sheets',
       );
     }
     await this.assertPayrollNotLocked(companyId, sheet.month, sheet.year);
-    return sheet;
+    return {
+      id: sheet.id,
+      month: sheet.month,
+      year: sheet.year,
+      employeeId: sheet.employeeId,
+      sheetNumber: sheet.sheetNumber,
+      attachmentFolderId: sheet.attachmentFolderId,
+      status: sheet.status,
+      approvalRequestId: sheet.approvalRequestId,
+      lastApprovedSnapshot: sheet.lastApprovedSnapshot,
+      restartApproval: POST_SUBMIT_EDITABLE_STATUSES.includes(sheet.status),
+    };
   }
 
-  private async assertPayrollNotLocked(
+  private async isPayrollLocked(
     companyId: string,
     month: number,
     year: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const lockedRun = await this.prisma.payrollRun.findFirst({
       where: activeOnly({
         companyId,
@@ -1237,9 +1394,99 @@ export class OvertimeService
       }),
       select: { id: true },
     });
-    if (lockedRun) {
+    return Boolean(lockedRun);
+  }
+
+  private async assertPayrollNotLocked(
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<void> {
+    if (await this.isPayrollLocked(companyId, month, year)) {
       throw new BadRequestException(PAYROLL_LOCKED_MESSAGE);
     }
+  }
+
+  /**
+   * When editing an APPROVED sheet, persist current entries as the last-approved
+   * snapshot before mutating so approvers can see a reliable diff.
+   */
+  private async captureApprovedSnapshotIfNeeded(sheet: {
+    id: string;
+    status: OvertimeSheetStatus;
+    lastApprovedSnapshot: Prisma.JsonValue | null;
+  }): Promise<void> {
+    if (sheet.status !== OvertimeSheetStatus.APPROVED) {
+      return;
+    }
+    const entries = await this.prisma.overtimeEntry.findMany({
+      where: { sheetId: sheet.id },
+    });
+    const snapshot = buildOvertimeApprovedSnapshot(entries);
+    await this.prisma.overtimeSheet.update({
+      where: { id: sheet.id },
+      data: {
+        lastApprovedSnapshot: snapshot as unknown as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  /**
+   * Restarts approval + writes audit when a post-submit/approved sheet is edited.
+   * Returns true when the approval chain was restarted.
+   */
+  private async maybeRestartApprovalAfterEdit(input: {
+    sheet: {
+      id: string;
+      sheetNumber: string;
+      employeeId: string;
+      approvalRequestId: string | null;
+      restartApproval: boolean;
+      status: OvertimeSheetStatus;
+    };
+    companyId: string;
+    userId: string;
+    action: string;
+    beforeValue: Prisma.InputJsonValue | null;
+    afterValue: Prisma.InputJsonValue | null;
+  }): Promise<boolean> {
+    if (!input.sheet.restartApproval) {
+      return false;
+    }
+
+    await this.auditService.create({
+      userId: input.userId,
+      companyId: input.companyId,
+      module: 'overtime',
+      action: input.action,
+      recordType: 'OvertimeSheet',
+      recordId: input.sheet.id,
+      recordReference: input.sheet.sheetNumber,
+      beforeValue: input.beforeValue ?? undefined,
+      afterValue: input.afterValue ?? undefined,
+    });
+
+    if (input.sheet.approvalRequestId) {
+      await this.approvalsService.restartChainAfterEdit(
+        input.sheet.approvalRequestId,
+        input.companyId,
+        input.userId,
+        'Overtime sheet edited — approval restarted from the first approver',
+      );
+      return true;
+    }
+
+    // Auto-approved sheets may have no approval request — open a fresh chain.
+    await this.prisma.overtimeSheet.update({
+      where: { id: input.sheet.id },
+      data: {
+        status: OvertimeSheetStatus.DRAFT,
+        completedAt: null,
+        updatedBy: input.userId,
+      },
+    });
+    await this.submitSheet(input.sheet.id, input.companyId, input.userId);
+    return true;
   }
 
   private assertClassifiedHasOvertimeHours(

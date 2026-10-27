@@ -4281,6 +4281,8 @@ model OvertimeSheet {
   totalHours         Decimal?            @default(dbgenerated("(((total_regular_hours + total_night_hours) + total_weekend_hours) + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
   approvalRequestId  String?             @unique @map("approval_request_id")
   attachmentFolderId String?             @map("attachment_folder_id")
+  /// Snapshot of entries at the last APPROVED decision — used for approver edit diffs.
+  lastApprovedSnapshot Json?             @map("last_approved_snapshot")
   submittedAt        DateTime?           @map("submitted_at")
   completedAt        DateTime?           @map("completed_at")
   createdAt          DateTime            @default(now()) @map("created_at")

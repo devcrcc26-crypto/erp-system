@@ -234,15 +234,24 @@ export default function OvertimeSheetDetailPageContent({
     sheet,
   ]);
 
+  const payrollLocked = Boolean(sheet?.payrollLocked);
   const canEdit =
     (canActForSheet || canViewHr) &&
-    (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
+    !payrollLocked &&
+    (sheet?.canEditEntries === true ||
+      sheet?.status === 'DRAFT' ||
+      sheet?.status === 'RETURNED' ||
+      sheet?.status === 'SUBMITTED' ||
+      sheet?.status === 'IN_REVIEW' ||
+      sheet?.status === 'APPROVED');
+  const isDraftOrReturned =
+    sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED';
   const canManage = canViewHr;
   const canCancel =
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
   const canSubmit =
-    canActForSheet && canEdit && (sheet?.entries?.length ?? 0) > 0;
+    canActForSheet && isDraftOrReturned && (sheet?.entries?.length ?? 0) > 0;
 
   function closeEntryDrawer(): void {
     setEntryDrawerOpen(false);
@@ -283,8 +292,12 @@ export default function OvertimeSheetDetailPageContent({
       return;
     }
     try {
-      await deleteMutation.mutateAsync(deleteEntryId);
-      messageApi.success(t('hr.messages.overtimeEntryDeleted'));
+      const result = await deleteMutation.mutateAsync(deleteEntryId);
+      messageApi.success(
+        result?.restartedApproval
+          ? t('hr.messages.overtimeEntryResubmitted')
+          : t('hr.messages.overtimeEntryDeleted'),
+      );
       setDeleteEntryId(null);
     } catch (error: unknown) {
       notifyApiError(
@@ -642,9 +655,9 @@ export default function OvertimeSheetDetailPageContent({
                 {isNarrow ? undefined : t('hr.buttons.cancelSheet')}
               </Button>
             ) : null}
-            {(canEdit || canManage) ? (
+            {(isDraftOrReturned || canManage) ? (
               <Space.Compact>
-                {canEdit ? (
+                {isDraftOrReturned && canActForSheet ? (
                   <Button
                     type="primary"
                     icon={<SendOutlined />}
@@ -678,6 +691,11 @@ export default function OvertimeSheetDetailPageContent({
                 label={formatOvertimeStatus(sheet.status, t)}
                 variant={overtimeStatusVariant(sheet.status)}
               />
+              {sheet.editedAfterApproval ? (
+                <span className="rounded-lg bg-[#FEF0E6] px-2 py-0.5 text-[12px] font-medium text-[#D4610A]">
+                  {t('pages.hr.overtime.resubmittedBadge')}
+                </span>
+              ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
               <h2 className="erp-users-name erp-employee-hero-name m-0">
@@ -691,6 +709,15 @@ export default function OvertimeSheetDetailPageContent({
           </div>
         </div>
       </div>
+
+      {payrollLocked ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="!rounded-xl"
+          title={t('pages.hr.overtime.payrollLockedBanner')}
+        />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
         {(

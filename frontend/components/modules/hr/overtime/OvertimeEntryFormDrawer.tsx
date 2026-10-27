@@ -10,6 +10,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   OvertimeEntry,
+  OvertimeSheetDetail,
   PreviewOvertimeEntryResult,
   SelectableOvertimeWindowsResult,
   UpsertOvertimeEntryPayload,
@@ -181,14 +182,24 @@ export default function OvertimeEntryFormDrawer({
 
     try {
       if (editingEntry) {
-        await updateMutation.mutateAsync({
+        const result = (await updateMutation.mutateAsync({
           entryId: editingEntry.id,
           payload,
-        });
-        messageApi.success(t('hr.messages.overtimeEntryUpdated'));
+        })) as OvertimeSheetDetail;
+        messageApi.success(
+          result.restartedApproval
+            ? t('hr.messages.overtimeEntryResubmitted')
+            : t('hr.messages.overtimeEntryUpdated'),
+        );
       } else {
-        await addMutation.mutateAsync(payload);
-        messageApi.success(t('hr.messages.overtimeEntryAdded'));
+        const result = (await addMutation.mutateAsync(
+          payload,
+        )) as OvertimeSheetDetail;
+        messageApi.success(
+          result.restartedApproval
+            ? t('hr.messages.overtimeEntryResubmitted')
+            : t('hr.messages.overtimeEntryAdded'),
+        );
       }
       onClose();
     } catch (error: unknown) {

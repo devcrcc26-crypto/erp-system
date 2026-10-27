@@ -6,7 +6,7 @@ export const FULL_DAY_LEAVE_MESSAGE =
   'Cannot record overtime during scheduled working hours on an approved leave day.';
 
 export const PAYROLL_LOCKED_MESSAGE =
-  "Overtime entries are locked because this month's payroll run is finalized.";
+  'This OT is locked in the current payroll run and cannot be edited';
 
 export const ATTENDANCE_NO_SCANS_MESSAGE =
   'Attendance has no scans for this day.';

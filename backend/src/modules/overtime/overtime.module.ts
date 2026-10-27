@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { AuditModule } from '../audit/audit.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { OvertimeImportService } from './application/services/overtime-import.service';
@@ -11,7 +12,7 @@ import { OvertimeController } from './presentation/controllers/overtime.controll
 
 @Global()
 @Module({
-  imports: [ApprovalsModule, HrSharedModule, WorkScheduleModule],
+  imports: [ApprovalsModule, AuditModule, HrSharedModule, WorkScheduleModule],
   controllers: [OvertimeImportController, OvertimeController],
   providers: [
     OvertimeService,

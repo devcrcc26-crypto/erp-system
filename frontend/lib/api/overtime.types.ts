@@ -77,6 +77,28 @@ export interface OvertimeEntry {
   documents?: OvertimeAttachmentDocument[];
 }
 
+export interface OvertimeEditDiffLine {
+  label: string;
+  from: string;
+  to: string;
+}
+
+export interface OvertimeEditDiff {
+  editedAfterApproval: boolean;
+  reasonOnly: boolean;
+  summaryLines: OvertimeEditDiffLine[];
+  entryChanges?: Array<{
+    entryId: string;
+    changes: Array<{
+      field: string;
+      from: string;
+      to: string;
+    }>;
+    added?: boolean;
+    removed?: boolean;
+  }>;
+}
+
 export interface OvertimeSheetListItem {
   id: string;
   companyId: string;
@@ -106,6 +128,16 @@ export interface OvertimeSheetDetail extends OvertimeSheetListItem {
   creator?: OvertimeUserSummary;
   entries: OvertimeEntry[];
   approvalRequest?: OvertimeApprovalSummary | null;
+  /** True when payroll for this month is GM_APPROVED or PAID. */
+  payrollLocked?: boolean;
+  /** Server-computed: mutable status and not payroll-locked. */
+  canEditEntries?: boolean;
+  /** Sheet was previously approved and later edited (pending re-approval). */
+  editedAfterApproval?: boolean;
+  /** Diff vs last approved snapshot for approver UI. */
+  editDiff?: OvertimeEditDiff | null;
+  /** Set on mutation responses when approval was restarted. */
+  restartedApproval?: boolean;
 }
 
 export interface ListOvertimeSheetsParams {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Alert, Button, Skeleton, Tooltip } from 'antd';
+import { Alert, Button, Skeleton, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   FieldTimeOutlined,
@@ -218,22 +218,42 @@ export default function OvertimeRequestDetail({
     );
   }
 
-  const canEdit =
-    sheet.status === 'RETURNED' &&
+  const isOwner =
     Boolean(currentUser.data?.id) &&
     sheet.employeeId === currentUser.data?.id;
+  const canEdit =
+    isOwner &&
+    !sheet.payrollLocked &&
+    (sheet.canEditEntries === true ||
+      sheet.status === 'DRAFT' ||
+      sheet.status === 'RETURNED' ||
+      sheet.status === 'SUBMITTED' ||
+      sheet.status === 'IN_REVIEW' ||
+      sheet.status === 'APPROVED');
+  const showEditedBadge =
+    Boolean(sheet.editedAfterApproval) ||
+    Boolean(sheet.editDiff?.editedAfterApproval);
 
   const employeeName = formatOvertimeEmployeeName(sheet.employee);
   const periodLabel = formatOvertimePeriod(sheet.month, sheet.year, t);
 
   return (
     <div className="flex flex-col gap-4">
-      {canEdit ? (
+      {sheet.status === 'RETURNED' && isOwner ? (
         <Alert
           type="info"
           showIcon
           className="!rounded-xl"
           title="This sheet was returned. Edit entries on the overtime sheet, then resubmit from this page."
+        />
+      ) : null}
+
+      {sheet.payrollLocked ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="!rounded-xl"
+          title={t('pages.hr.overtime.payrollLockedBanner')}
         />
       ) : null}
 
@@ -263,6 +283,11 @@ export default function OvertimeRequestDetail({
               label={formatOvertimeStatus(sheet.status, t)}
               variant={overtimeStatusVariant(sheet.status)}
             />
+            {showEditedBadge ? (
+              <Tag color="orange" className="!m-0 rounded-lg">
+                {t('pages.hr.overtime.resubmittedBadge')}
+              </Tag>
+            ) : null}
             {canEdit ? (
               <Link
                 href={overtimeSheetDetailHref(
@@ -271,7 +296,7 @@ export default function OvertimeRequestDetail({
                 )}
               >
                 <Button type="primary" size="small">
-                  Edit entries
+                  {t('common.update')}
                 </Button>
               </Link>
             ) : null}

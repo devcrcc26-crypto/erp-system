@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 /**
  * Lightweight markdown renderer (no react-markdown).
@@ -225,7 +225,24 @@ function Block({ block }: { block: Block }): ReactNode {
   }
 }
 
+/** Shows the screenshot file; falls back to the placeholder when it is missing. */
 function ScreenshotSlot({ src, alt }: { src: string; alt: string }): ReactNode {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <ScreenshotPlaceholder src={src} alt={alt} />;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt || 'Screenshot'}
+      loading="lazy"
+      className="my-4 w-full rounded-lg border border-slate-200"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function ScreenshotPlaceholder({ src, alt }: { src: string; alt: string }): ReactNode {
   const filename = src.split('/').pop() ?? src;
   return (
     <span

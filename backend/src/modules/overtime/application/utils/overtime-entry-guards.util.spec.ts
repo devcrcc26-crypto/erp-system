@@ -20,7 +20,9 @@ const WEEKDAY = {
 
 describe('overtime-entry-guards.util', () => {
   it('exports payroll lock message constant', () => {
-    expect(PAYROLL_LOCKED_MESSAGE).toContain('payroll run is finalized');
+    expect(PAYROLL_LOCKED_MESSAGE).toContain(
+      'locked in the current payroll run',
+    );
   });
 
   it('morning leave → morning excluded window from schedule', () => {

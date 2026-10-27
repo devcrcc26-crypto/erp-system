@@ -185,6 +185,9 @@ export function useAddOvertimeEntry(sheetId: string) {
     onSuccess: (updated) => {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+      if (updated.restartedApproval) {
+        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+      }
     },
   });
 }
@@ -209,6 +212,9 @@ export function useUpdateOvertimeEntry(sheetId: string) {
     onSuccess: (updated) => {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+      if (updated.restartedApproval) {
+        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+      }
     },
   });
 }
@@ -226,6 +232,9 @@ export function useDeleteOvertimeEntry(sheetId: string) {
     onSuccess: (updated) => {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+      if (updated.restartedApproval) {
+        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+      }
     },
   });
 }

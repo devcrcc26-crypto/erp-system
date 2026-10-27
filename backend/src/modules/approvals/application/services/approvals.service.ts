@@ -1857,6 +1857,119 @@ export class ApprovalsService {
   }
 
   /**
+   * Restarts the approval chain after the requester edits a submitted/approved
+   * source record (e.g. overtime). Prior tier decisions are cleared but kept in
+   * response history via a RESUBMIT response. Notifies the first approver.
+   */
+  async restartChainAfterEdit(
+    requestId: string,
+    companyId: string,
+    userId: string,
+    note?: string,
+  ): Promise<void> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      include: {
+        tiers: { orderBy: { tierOrder: 'asc' } },
+        overtimeSheet: true,
+        category: { select: { code: true } },
+      },
+    });
+    if (!request) {
+      throw new NotFoundException('Approval request not found');
+    }
+    // Requester or on-behalf creator (overtime service already authorized the actor).
+    if (request.requestedBy !== userId && request.createdBy !== userId) {
+      throw new ForbiddenException('Only the requester can restart approval');
+    }
+
+    const restartable: ApprovalRequestStatus[] = [
+      ApprovalRequestStatus.SUBMITTED,
+      ApprovalRequestStatus.IN_REVIEW,
+      ApprovalRequestStatus.PENDING,
+      ApprovalRequestStatus.APPROVED,
+      ApprovalRequestStatus.RETURNED,
+    ];
+    if (!restartable.includes(request.status)) {
+      throw new BadRequestException(
+        'This approval cannot be restarted from its current status',
+      );
+    }
+
+    const firstTier = request.tiers[0];
+    if (!firstTier) {
+      throw new BadRequestException('Approval chain has no tiers');
+    }
+
+    const responseId = randomUUID();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.approvalResponse.create({
+        data: {
+          id: responseId,
+          requestId: request.id,
+          responseType: RESPONSE_TYPE_RESUBMIT,
+          note:
+            note?.trim() ||
+            'Request edited by employee — approval chain restarted',
+          respondedBy: userId,
+        },
+      });
+
+      for (const tier of request.tiers) {
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            decision: ApprovalTierDecision.PENDING,
+            comment: null,
+            decidedAt: null,
+            conditions: [],
+          },
+        });
+      }
+
+      await tx.approvalRequest.update({
+        where: { id: request.id },
+        data: {
+          status: ApprovalRequestStatus.SUBMITTED,
+          currentTier: firstTier.tierOrder,
+          completedAt: null,
+          updatedBy: userId,
+        },
+      });
+
+      if (request.overtimeSheet) {
+        await tx.overtimeSheet.update({
+          where: { id: request.overtimeSheet.id },
+          data: {
+            status: OvertimeSheetStatus.SUBMITTED,
+            completedAt: null,
+            submittedAt: new Date(),
+            updatedBy: userId,
+          },
+        });
+      }
+    }, PRISMA_TX_OPTIONS);
+
+    await this.notifySafe(companyId, userId, {
+      recipientId: firstTier.approverId,
+      eventType: APPROVAL_PENDING_EVENT,
+      subject: `Edited overtime resubmitted - ${request.requestNumber}`,
+      body:
+        note?.trim() ||
+        `Overtime request ${request.requestNumber} was edited and awaits your review again.`,
+      link: `/approvals/${request.id}`,
+      variables: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+      },
+    });
+
+    if (request.category?.code) {
+      this.enqueueAutoApproveAll(request.id, companyId, request.category.code);
+    }
+  }
+
+  /**
    * Requester responds to a condition on a CONDITIONALLY_APPROVED tier.
    */
   async respondToCondition(
