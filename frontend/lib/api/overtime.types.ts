@@ -89,6 +89,8 @@ export interface OvertimeEditDiff {
   summaryLines: OvertimeEditDiffLine[];
   entryChanges?: Array<{
     entryId: string;
+    /** Entry date for grouping when multiple entries changed. */
+    entryDate?: string;
     changes: Array<{
       field: string;
       from: string;

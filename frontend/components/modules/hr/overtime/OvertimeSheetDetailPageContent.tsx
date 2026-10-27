@@ -31,6 +31,7 @@ import dayjs from 'dayjs';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
 import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
@@ -717,6 +718,10 @@ export default function OvertimeSheetDetailPageContent({
           className="!rounded-xl"
           title={t('pages.hr.overtime.payrollLockedBanner')}
         />
+      ) : null}
+
+      {sheet.editDiff?.editedAfterApproval ? (
+        <OvertimeEditDiffBanner editDiff={sheet.editDiff} />
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">

@@ -32,6 +32,8 @@ export type OvertimeFieldChange = {
 
 export type OvertimeEntryEditChange = {
   entryId: string;
+  /** Entry date used for grouping in the approver UI (before date if removed). */
+  entryDate: string;
   changes: OvertimeFieldChange[];
   added?: boolean;
   removed?: boolean;
@@ -122,7 +124,7 @@ export function describeOtType(entry: {
 
 function formatHoursLabel(hours: number): string {
   const rounded = Math.round(hours * 100) / 100;
-  return Number.isInteger(rounded) ? `${rounded}h` : `${rounded}h`;
+  return `${rounded}h`;
 }
 
 /**
@@ -260,6 +262,27 @@ function diffOneEntry(
   return changes;
 }
 
+/** Full field set for an added or removed entry (exact values). */
+function snapshotAsChanges(
+  entry: OvertimeEntrySnapshot,
+  direction: 'added' | 'removed',
+): OvertimeFieldChange[] {
+  const empty = '—';
+  const values: Array<[OvertimeFieldChange['field'], string]> = [
+    ['date', entry.date],
+    ['otType', describeOtType(entry)],
+    ['startTime', entry.startTime],
+    ['endTime', entry.endTime],
+    ['hours', formatHoursLabel(entry.totalHours)],
+    ['reason', entry.taskDescription || empty],
+  ];
+  return values.map(([field, value]) =>
+    direction === 'added'
+      ? { field, from: empty, to: value }
+      : { field, from: value, to: empty },
+  );
+}
+
 const FIELD_LABELS: Record<OvertimeFieldChange['field'], string> = {
   date: 'Date',
   otType: 'OT Type',
@@ -269,8 +292,27 @@ const FIELD_LABELS: Record<OvertimeFieldChange['field'], string> = {
   reason: 'Reason',
 };
 
+function summaryLabel(
+  field: OvertimeFieldChange['field'],
+  entryDate: string,
+  multiEntry: boolean,
+  kind?: 'added' | 'removed',
+): string {
+  const fieldLabel = FIELD_LABELS[field];
+  if (kind === 'added') {
+    return multiEntry ? `Added · ${entryDate} · ${fieldLabel}` : `Added · ${fieldLabel}`;
+  }
+  if (kind === 'removed') {
+    return multiEntry
+      ? `Removed · ${entryDate} · ${fieldLabel}`
+      : `Removed · ${fieldLabel}`;
+  }
+  return multiEntry ? `${entryDate} · ${fieldLabel}` : fieldLabel;
+}
+
 /**
  * Compares the last approved snapshot to current entries for approver UI.
+ * Every changed field is listed with exact before → after values.
  */
 export function buildOvertimeEditDiff(
   snapshot: OvertimeApprovedSnapshot | null,
@@ -290,14 +332,19 @@ export function buildOvertimeEditDiff(
     if (!before) {
       entryChanges.push({
         entryId: after.id,
-        changes: [],
+        entryDate: after.date,
+        changes: snapshotAsChanges(after, 'added'),
         added: true,
       });
       continue;
     }
     const changes = diffOneEntry(before, after);
     if (changes.length > 0) {
-      entryChanges.push({ entryId: after.id, changes });
+      entryChanges.push({
+        entryId: after.id,
+        entryDate: after.date,
+        changes,
+      });
     }
   }
 
@@ -305,7 +352,8 @@ export function buildOvertimeEditDiff(
     if (!afterById.has(before.id)) {
       entryChanges.push({
         entryId: before.id,
-        changes: [],
+        entryDate: before.date,
+        changes: snapshotAsChanges(before, 'removed'),
         removed: true,
       });
     }
@@ -320,13 +368,6 @@ export function buildOvertimeEditDiff(
     };
   }
 
-  const visibleFields = new Set<OvertimeFieldChange['field']>();
-  for (const row of entryChanges) {
-    for (const change of row.changes) {
-      visibleFields.add(change.field);
-    }
-  }
-
   const reasonOnly =
     entryChanges.every(
       (row) =>
@@ -336,84 +377,20 @@ export function buildOvertimeEditDiff(
     ) &&
     entryChanges.some((row) => row.changes.length > 0);
 
+  const multiEntry =
+    entryChanges.length > 1 ||
+    snapshot.entries.length > 1 ||
+    current.length > 1;
+
   const summaryLines: Array<{ label: string; from: string; to: string }> = [];
-  if (reasonOnly) {
-    summaryLines.push({
-      label: 'Note',
-      from: '',
-      to: 'Only the reason was updated.',
-    });
-  } else {
-    // Prefer a single-entry flat summary when only one entry changed visibly.
-    const single = entryChanges.find(
-      (row) => !row.added && !row.removed && row.changes.length > 0,
-    );
-    const onlyOneMutable =
-      entryChanges.filter((r) => !r.added && !r.removed).length === 1 &&
-      entryChanges.every((r) => !r.added && !r.removed);
-    if (onlyOneMutable && single) {
-      for (const change of single.changes) {
-        if (change.field === 'reason') {
-          continue;
-        }
-        summaryLines.push({
-          label: FIELD_LABELS[change.field],
-          from: change.from,
-          to: change.to,
-        });
-      }
-      if (single.changes.some((c) => c.field === 'reason') && summaryLines.length === 0) {
-        summaryLines.push({
-          label: 'Note',
-          from: '',
-          to: 'Only the reason was updated.',
-        });
-      } else if (single.changes.some((c) => c.field === 'reason')) {
-        summaryLines.push({
-          label: FIELD_LABELS.reason,
-          from: 'updated',
-          to: 'updated',
-        });
-      }
-    } else {
-      for (const row of entryChanges) {
-        if (row.added) {
-          summaryLines.push({
-            label: 'Entry',
-            from: '—',
-            to: `Added (${row.entryId.slice(0, 8)})`,
-          });
-          continue;
-        }
-        if (row.removed) {
-          summaryLines.push({
-            label: 'Entry',
-            from: `Removed (${row.entryId.slice(0, 8)})`,
-            to: '—',
-          });
-          continue;
-        }
-        for (const change of row.changes) {
-          if (change.field === 'reason') {
-            continue;
-          }
-          summaryLines.push({
-            label: FIELD_LABELS[change.field],
-            from: change.from,
-            to: change.to,
-          });
-        }
-      }
-      if (
-        summaryLines.length === 0 &&
-        visibleFields.has('reason')
-      ) {
-        summaryLines.push({
-          label: 'Note',
-          from: '',
-          to: 'Only the reason was updated.',
-        });
-      }
+  for (const row of entryChanges) {
+    const kind = row.added ? 'added' : row.removed ? 'removed' : undefined;
+    for (const change of row.changes) {
+      summaryLines.push({
+        label: summaryLabel(change.field, row.entryDate, multiEntry, kind),
+        from: change.from,
+        to: change.to,
+      });
     }
   }
 

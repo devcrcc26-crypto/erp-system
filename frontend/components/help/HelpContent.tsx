@@ -1,56 +1,121 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  ListChecks,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Lightweight markdown renderer (no react-markdown).
- * Supports headings, paragraphs, lists, tables, links, inline code, bold/italic,
- * and `[SCREENSHOT: file.png]` / `![alt](/guide/images/…)` screenshot slots.
+ * Lightweight markdown renderer for the user guide (no react-markdown).
+ *
+ * Guides stay plain markdown; this maps their conventions onto ERP-styled blocks:
+ * - `## Heading` sections, listed in an "On this page" index
+ * - `> **What happens next:** …` callouts, toned by their opening label
+ * - `1.` numbered steps and nested `-` lists
+ * - a line that is only `**Label**` becomes a section label
+ * - a line that is only `*(HR only)*` becomes an audience pill
+ * - tables, links, inline code, bold/italic and `[SCREENSHOT: file.png]` slots
  */
 export default function HelpContent({
   content,
 }: {
   content: string;
 }): ReactNode {
+  const { locale } = useEpcTranslation();
+
   const processed = content.replace(
     /\[SCREENSHOT:\s*([^\]]+)\]/gi,
     (_match, filename: string) =>
       `![screenshot](/guide/images/${filename.trim()})`,
   );
 
-  const blocks = splitBlocks(processed);
+  const blocks = parseBlocks(
+    processed.replace(/\r\n/g, '\n').split('\n'),
+    { next: 0 },
+  );
+  // The opening paragraph introduces the topic; give it more weight.
+  if (blocks[0]?.type === 'p') {
+    blocks[0] = { type: 'lead', text: blocks[0].text };
+  }
+
+  const sections = blocks.filter(
+    (block): block is HeadingBlock => block.type === 'h2',
+  );
+  const firstSectionIndex = blocks.findIndex((block) => block.type === 'h2');
 
   return (
-    <div
-      className={[
-        'help-prose max-w-none text-[14px] leading-relaxed text-[rgba(0,0,0,0.75)]',
-        '[&_h2]:mt-7 [&_h2]:mb-3 [&_h2]:text-[16px] [&_h2]:font-semibold [&_h2]:text-[rgba(0,0,0,0.88)]',
-        '[&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-[14px] [&_h3]:font-semibold [&_h3]:text-[rgba(0,0,0,0.88)]',
-        '[&_p]:mb-3 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5',
-        '[&_li]:mb-1 [&_strong]:font-semibold [&_strong]:text-[rgba(0,0,0,0.88)]',
-        '[&_a]:font-medium [&_a]:text-[#0F6E56] [&_a]:underline-offset-2 hover:[&_a]:underline',
-        '[&_code]:rounded [&_code]:bg-[#F1EFE8] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px]',
-        '[&_table]:my-4 [&_table]:w-full [&_table]:border-collapse',
-        '[&_th]:border [&_th]:border-[#E8EBEF] [&_th]:bg-[#FBFCFD] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:text-[rgba(0,0,0,0.75)]',
-        '[&_td]:border [&_td]:border-[#E8EBEF] [&_td]:px-3 [&_td]:py-2 [&_td]:text-[13px]',
-        '[&_hr]:my-7 [&_hr]:border-[#EEF1F4]',
-      ].join(' ')}
-    >
+    <div className="text-[14px] leading-7 text-[rgba(0,0,0,0.75)]">
       {blocks.map((block, index) => (
-        <Block key={index} block={block} />
+        <Fragment key={index}>
+          {index === firstSectionIndex && sections.length >= 3 ? (
+            <SectionIndex
+              sections={sections}
+              title={locale === 'zh' ? '本页内容' : 'On this page'}
+            />
+          ) : null}
+          <BlockView block={block} />
+        </Fragment>
       ))}
     </div>
   );
 }
 
+// ── Parsing ──────────────────────────────────────────────────────────────
+
+type Tone = 'success' | 'info' | 'warning' | 'neutral';
+
+interface HeadingBlock {
+  type: 'h1' | 'h2' | 'h3';
+  text: string;
+  id: string;
+}
+
+interface ListItem {
+  text: string;
+  children: Block[];
+}
+
 type Block =
-  | { type: 'h1' | 'h2' | 'h3' | 'p' | 'hr'; text: string }
-  | { type: 'ul' | 'ol'; items: string[] }
+  | HeadingBlock
+  | { type: 'p' | 'lead' | 'label' | 'audience'; text: string }
+  | { type: 'hr' }
+  | { type: 'list'; ordered: boolean; items: ListItem[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'callout'; tone: Tone; blocks: Block[] }
   | { type: 'image'; src: string; alt: string };
 
-function splitBlocks(markdown: string): Block[] {
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+const LIST_MARKER = /^(\s*)([-*]|\d+\.)\s+(.*)$/;
+
+function indentOf(line: string): number {
+  return line.length - line.trimStart().length;
+}
+
+function isOrderedMarker(marker: string): boolean {
+  return /\d/.test(marker);
+}
+
+/** Lines that end a paragraph because another block starts. */
+function startsBlock(trimmed: string): boolean {
+  return (
+    trimmed === '' ||
+    trimmed === '---' ||
+    trimmed === '***' ||
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('|') ||
+    trimmed.startsWith('>') ||
+    trimmed.startsWith('![') ||
+    LIST_MARKER.test(trimmed)
+  );
+}
+
+/** `ids` is shared across nested calls so heading anchors stay unique. */
+function parseBlocks(lines: string[], ids: { next: number }): Block[] {
   const blocks: Block[] = [];
   let i = 0;
 
@@ -64,35 +129,43 @@ function splitBlocks(markdown: string): Block[] {
     }
 
     if (trimmed === '---' || trimmed === '***') {
-      blocks.push({ type: 'hr', text: '' });
+      blocks.push({ type: 'hr' });
       i += 1;
       continue;
     }
 
-    const imageOnly = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
-    if (imageOnly) {
+    const image = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (image) {
+      blocks.push({ type: 'image', alt: image[1] ?? '', src: image[2] ?? '' });
+      i += 1;
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,3})\s+(.*)$/);
+    if (heading) {
+      const level = (heading[1] ?? '#').length;
+      ids.next += 1;
       blocks.push({
-        type: 'image',
-        alt: imageOnly[1] ?? '',
-        src: imageOnly[2] ?? '',
+        type: level === 1 ? 'h1' : level === 2 ? 'h2' : 'h3',
+        text: heading[2] ?? '',
+        id: `section-${ids.next}`,
       });
       i += 1;
       continue;
     }
 
-    if (trimmed.startsWith('# ')) {
-      blocks.push({ type: 'h1', text: trimmed.slice(2) });
-      i += 1;
-      continue;
-    }
-    if (trimmed.startsWith('## ')) {
-      blocks.push({ type: 'h2', text: trimmed.slice(3) });
-      i += 1;
-      continue;
-    }
-    if (trimmed.startsWith('### ')) {
-      blocks.push({ type: 'h3', text: trimmed.slice(4) });
-      i += 1;
+    if (trimmed.startsWith('>')) {
+      const inner: string[] = [];
+      while (i < lines.length && (lines[i] ?? '').trim().startsWith('>')) {
+        inner.push((lines[i] ?? '').trim().replace(/^>\s?/, ''));
+        i += 1;
+      }
+      const innerBlocks = parseBlocks(inner, ids);
+      blocks.push({
+        type: 'callout',
+        tone: calloutTone(innerBlocks),
+        blocks: innerBlocks,
+      });
       continue;
     }
 
@@ -102,55 +175,152 @@ function splitBlocks(markdown: string): Block[] {
         tableLines.push((lines[i] ?? '').trim());
         i += 1;
       }
-      const parsed = parseTable(tableLines);
-      if (parsed) {
-        blocks.push(parsed);
+      const table = parseTable(tableLines);
+      if (table) {
+        blocks.push(table);
       }
       continue;
     }
 
-    if (/^[-*]\s+/.test(trimmed)) {
-      const items: string[] = [];
-      while (i < lines.length && /^[-*]\s+/.test((lines[i] ?? '').trim())) {
-        items.push((lines[i] ?? '').trim().replace(/^[-*]\s+/, ''));
-        i += 1;
-      }
-      blocks.push({ type: 'ul', items });
-      continue;
-    }
-
-    if (/^\d+\.\s+/.test(trimmed)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\d+\.\s+/.test((lines[i] ?? '').trim())) {
-        items.push((lines[i] ?? '').trim().replace(/^\d+\.\s+/, ''));
-        i += 1;
-      }
-      blocks.push({ type: 'ol', items });
+    if (LIST_MARKER.test(line)) {
+      const { block, next } = parseList(lines, i, ids);
+      blocks.push(block);
+      i = next;
       continue;
     }
 
     const para: string[] = [trimmed];
     i += 1;
-    while (i < lines.length) {
-      const next = (lines[i] ?? '').trim();
-      if (
-        !next ||
-        next.startsWith('#') ||
-        next.startsWith('|') ||
-        next === '---' ||
-        /^[-*]\s+/.test(next) ||
-        /^\d+\.\s+/.test(next) ||
-        /^!\[/.test(next)
-      ) {
-        break;
-      }
-      para.push(next);
+    while (i < lines.length && !startsBlock((lines[i] ?? '').trim())) {
+      para.push((lines[i] ?? '').trim());
       i += 1;
     }
-    blocks.push({ type: 'p', text: para.join(' ') });
+    blocks.push(classifyParagraph(para.join(' ')));
   }
 
   return blocks;
+}
+
+/**
+ * One list at the indentation of `lines[start]`. More-indented lines belong to
+ * the previous item and are parsed as its own blocks (nested lists, notes).
+ */
+function parseList(
+  lines: string[],
+  start: number,
+  ids: { next: number },
+): { block: Block; next: number } {
+  const first = LIST_MARKER.exec(lines[start] ?? '');
+  const baseIndent = (first?.[1] ?? '').length;
+  const ordered = isOrderedMarker(first?.[2] ?? '');
+  const items: ListItem[] = [];
+  let i = start;
+
+  const nextNonBlank = (from: number): number => {
+    let j = from;
+    while (j < lines.length && !(lines[j] ?? '').trim()) {
+      j += 1;
+    }
+    return j;
+  };
+
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+
+    if (!line.trim()) {
+      // A blank line only continues the list if indented content or a sibling follows.
+      const j = nextNonBlank(i + 1);
+      const following = lines[j];
+      if (following === undefined) {
+        break;
+      }
+      const marker = LIST_MARKER.exec(following);
+      const sibling =
+        marker !== null &&
+        (marker[1] ?? '').length === baseIndent &&
+        isOrderedMarker(marker[2] ?? '') === ordered;
+      if (indentOf(following) <= baseIndent && !sibling) {
+        break;
+      }
+      i = j;
+      continue;
+    }
+
+    const marker = LIST_MARKER.exec(line);
+    if (marker && indentOf(line) === baseIndent) {
+      if (isOrderedMarker(marker[2] ?? '') !== ordered) {
+        break;
+      }
+      items.push({ text: marker[3] ?? '', children: [] });
+      i += 1;
+      continue;
+    }
+
+    const current = items[items.length - 1];
+    if (indentOf(line) > baseIndent && current) {
+      const child: string[] = [];
+      while (i < lines.length) {
+        const childLine = lines[i] ?? '';
+        if (childLine.trim() && indentOf(childLine) <= baseIndent) {
+          break;
+        }
+        if (!childLine.trim()) {
+          const j = nextNonBlank(i + 1);
+          if (j >= lines.length || indentOf(lines[j] ?? '') <= baseIndent) {
+            break;
+          }
+        }
+        child.push(childLine);
+        i += 1;
+      }
+      const minIndent = Math.min(
+        ...child.filter((l) => l.trim()).map(indentOf),
+      );
+      current.children.push(
+        ...parseBlocks(
+          child.map((l) => l.slice(Math.min(minIndent, indentOf(l)))),
+          ids,
+        ),
+      );
+      continue;
+    }
+
+    break;
+  }
+
+  return { block: { type: 'list', ordered, items }, next: i };
+}
+
+function classifyParagraph(text: string): Block {
+  const label = text.match(/^\*\*([^*]+)\*\*[:：]?$/);
+  if (label) {
+    return { type: 'label', text: label[1] ?? '' };
+  }
+  const audience = text.match(/^\*[(（](.+)[)）]\*$/);
+  if (audience) {
+    return { type: 'audience', text: audience[1] ?? '' };
+  }
+  return { type: 'p', text };
+}
+
+const TONE_BY_LABEL: ReadonlyArray<readonly [RegExp, Tone]> = [
+  [/^(what happens next|接下来会发生什么)/i, 'success'],
+  [/^(important|重要)/i, 'warning'],
+  [/^(note|注意)/i, 'info'],
+];
+
+/** Callout colour comes from its opening bold label. */
+function calloutTone(blocks: readonly Block[]): Tone {
+  const first = blocks[0];
+  if (!first || !('text' in first)) {
+    return 'neutral';
+  }
+  const label =
+    first.type === 'label'
+      ? first.text
+      : (first.text.match(/^\*\*([^*]+)\*\*/)?.[1] ?? '');
+  const match = TONE_BY_LABEL.find(([pattern]) => pattern.test(label.trim()));
+  return match ? match[1] : 'neutral';
 }
 
 function parseTable(lines: string[]): Block | null {
@@ -164,65 +334,217 @@ function parseTable(lines: string[]): Block | null {
       .split('|')
       .map((cell) => cell.trim());
 
-  const headers = splitRow(lines[0] ?? '');
-  const body = lines.slice(2).map(splitRow);
-  return { type: 'table', headers, rows: body };
+  return {
+    type: 'table',
+    headers: splitRow(lines[0] ?? ''),
+    rows: lines.slice(2).map(splitRow),
+  };
 }
 
-function Block({ block }: { block: Block }): ReactNode {
+// ── Rendering ────────────────────────────────────────────────────────────
+
+const TONE_STYLES: Record<Tone, { box: string; icon: string; Icon: LucideIcon }> = {
+  success: {
+    box: 'border-[#1D9E75] bg-[#F1FAF6]',
+    icon: 'text-[#0F6E56]',
+    Icon: CheckCircle2,
+  },
+  info: {
+    box: 'border-[#378ADD] bg-[#F2F7FD]',
+    icon: 'text-[#1A4A7A]',
+    Icon: Info,
+  },
+  warning: {
+    box: 'border-[#BA7517] bg-[#FDF6EA]',
+    icon: 'text-[#BA7517]',
+    Icon: AlertTriangle,
+  },
+  neutral: {
+    box: 'border-[#D3D1C7] bg-[#F8F8F6]',
+    icon: 'text-[#5F5E5A]',
+    Icon: ListChecks,
+  },
+};
+
+function SectionIndex({
+  sections,
+  title,
+}: {
+  sections: readonly HeadingBlock[];
+  title: string;
+}): ReactNode {
+  return (
+    <nav
+      aria-label={title}
+      className="mb-6 rounded-lg border border-[#E8EBEF] bg-[#FBFCFD] px-4 py-3"
+    >
+      <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
+        {title}
+      </p>
+      <ol className="m-0 grid list-none gap-x-6 gap-y-0.5 p-0 sm:grid-cols-2">
+        {sections.map((section) => (
+          <li key={section.id}>
+            <a
+              href={`#${section.id}`}
+              className="text-[13px] leading-6 !text-[#0F6E56] underline-offset-2 hover:underline"
+            >
+              {plainText(section.text)}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function BlockView({ block }: { block: Block }): ReactNode {
   switch (block.type) {
     case 'h1':
-      return <h1 className="mb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">{inline(block.text)}</h1>;
-    case 'h2':
-      return <h2>{inline(block.text)}</h2>;
-    case 'h3':
-      return <h3>{inline(block.text)}</h3>;
-    case 'p':
-      return <p>{inline(block.text)}</p>;
-    case 'hr':
-      return <hr />;
-    case 'ul':
       return (
-        <ul>
+        <h1 id={block.id} className="mb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">
+          {inline(block.text)}
+        </h1>
+      );
+    case 'h2':
+      return (
+        <h2
+          id={block.id}
+          className="mb-3 mt-2 flex scroll-mt-4 items-center gap-2.5 text-[17px] font-semibold leading-7 text-[rgba(0,0,0,0.88)]"
+        >
+          <span className="h-4 w-1 shrink-0 rounded-full bg-[#1D9E75]" aria-hidden />
+          <span>{inline(block.text)}</span>
+        </h2>
+      );
+    case 'h3':
+      return (
+        <h3
+          id={block.id}
+          className="mb-2 mt-5 scroll-mt-4 text-[14px] font-semibold text-[rgba(0,0,0,0.88)]"
+        >
+          {inline(block.text)}
+        </h3>
+      );
+    case 'lead':
+      return (
+        <p className="mb-5 text-[15px] leading-7 text-[rgba(0,0,0,0.65)]">
+          {inline(block.text)}
+        </p>
+      );
+    case 'p':
+      return <p className="mb-3">{inline(block.text)}</p>;
+    case 'label':
+      return (
+        <p className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
+          {inline(block.text)}
+        </p>
+      );
+    case 'audience':
+      return (
+        <p className="mb-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EFE8] px-2.5 py-0.5 text-[12px] font-medium leading-5 text-[#5F5E5A]">
+            <Users size={12} aria-hidden />
+            {inline(block.text)}
+          </span>
+        </p>
+      );
+    case 'hr':
+      return <hr className="my-8 border-[#EEF1F4]" />;
+    case 'list':
+      return block.ordered ? (
+        <ol className="mb-5 list-none space-y-3 p-0">
           {block.items.map((item, index) => (
-            <li key={index}>{inline(item)}</li>
+            <li key={index} className="flex gap-3">
+              <span
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E1F5EE] text-[12px] font-semibold text-[#0F6E56]"
+                aria-hidden
+              >
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                {inline(item.text)}
+                <ListChildren blocks={item.children} />
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="mb-4 list-disc space-y-1.5 pl-5 marker:text-[#B8B6AE]">
+          {block.items.map((item, index) => (
+            <li key={index} className="pl-1">
+              {inline(item.text)}
+              <ListChildren blocks={item.children} />
+            </li>
           ))}
         </ul>
       );
-    case 'ol':
-      return (
-        <ol>
-          {block.items.map((item, index) => (
-            <li key={index}>{inline(item)}</li>
-          ))}
-        </ol>
-      );
     case 'table':
       return (
-        <table>
-          <thead>
-            <tr>
-              {block.headers.map((header, index) => (
-                <th key={index}>{inline(header)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, cellIndex) => (
-                  <td key={cellIndex}>{inline(cell)}</td>
+        <div className="my-4 overflow-x-auto rounded-lg border border-[#E8EBEF]">
+          <table className="w-full border-collapse text-[13px] leading-6">
+            <thead>
+              <tr>
+                {block.headers.map((header, index) => (
+                  <th
+                    key={index}
+                    className="border-b border-[#E8EBEF] bg-[#FBFCFD] px-3 py-2 text-left font-semibold text-[rgba(0,0,0,0.65)]"
+                  >
+                    {inline(header)}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="[&_tr:last-child_td]:border-b-0">
+              {block.rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <td
+                      key={cellIndex}
+                      className={`border-b border-[#EEF1F4] px-3 py-2.5 align-top ${
+                        cellIndex === 0
+                          ? 'min-w-[140px] font-medium text-[rgba(0,0,0,0.88)]'
+                          : ''
+                      }`}
+                    >
+                      {inline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       );
+    case 'callout': {
+      const style = TONE_STYLES[block.tone];
+      return (
+        <div className={`my-4 flex gap-3 rounded-lg border-l-4 px-4 py-3 ${style.box}`}>
+          <style.Icon size={18} className={`mt-1 shrink-0 ${style.icon}`} aria-hidden />
+          <div className="min-w-0 flex-1 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            {block.blocks.map((inner, index) => (
+              <BlockView key={index} block={inner} />
+            ))}
+          </div>
+        </div>
+      );
+    }
     case 'image':
       return <ScreenshotSlot src={block.src} alt={block.alt} />;
     default:
       return null;
   }
+}
+
+function ListChildren({ blocks }: { blocks: readonly Block[] }): ReactNode {
+  if (blocks.length === 0) {
+    return null;
+  }
+  return (
+    <div className="mt-2 [&>*:last-child]:mb-0">
+      {blocks.map((block, index) => (
+        <BlockView key={index} block={block} />
+      ))}
+    </div>
+  );
 }
 
 /** Shows the screenshot file; falls back to the placeholder when it is missing. */
@@ -236,7 +558,7 @@ function ScreenshotSlot({ src, alt }: { src: string; alt: string }): ReactNode {
       src={src}
       alt={alt || 'Screenshot'}
       loading="lazy"
-      className="my-4 w-full rounded-lg border border-slate-200"
+      className="my-4 w-full rounded-lg border border-[#E8EBEF]"
       onError={() => setFailed(true)}
     />
   );
@@ -251,26 +573,6 @@ function ScreenshotPlaceholder({ src, alt }: { src: string; alt: string }): Reac
       aria-label={alt || 'Screenshot coming soon'}
     >
       <span className="p-6 text-center">
-        <svg
-          className="mx-auto mb-2 h-10 w-10 text-slate-300"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
         <span className="block text-xs text-slate-400">
           {alt || 'Screenshot coming soon'}
         </span>
@@ -278,6 +580,11 @@ function ScreenshotPlaceholder({ src, alt }: { src: string; alt: string }): Reac
       </span>
     </span>
   );
+}
+
+/** Heading text without markdown markers, for the section index. */
+function plainText(text: string): string {
+  return text.replace(/\*\*|`|\*/g, '');
 }
 
 /** Inline markdown: `code`, **bold**, *italic*, [label](url). */
@@ -295,14 +602,29 @@ function inline(text: string): ReactNode {
     }
     const token = match[0];
     if (token.startsWith('`')) {
-      nodes.push(<code key={key}>{token.slice(1, -1)}</code>);
+      nodes.push(
+        <code
+          key={key}
+          className="rounded bg-[#F1EFE8] px-1 py-0.5 text-[13px] text-[rgba(0,0,0,0.88)]"
+        >
+          {token.slice(1, -1)}
+        </code>,
+      );
     } else if (token.startsWith('**')) {
-      nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
+      nodes.push(
+        <strong key={key} className="font-semibold text-[rgba(0,0,0,0.88)]">
+          {token.slice(2, -2)}
+        </strong>,
+      );
     } else if (token.startsWith('*')) {
       nodes.push(<em key={key}>{token.slice(1, -1)}</em>);
     } else if (match[2] && match[3]) {
       nodes.push(
-        <a key={key} href={match[3]}>
+        <a
+          key={key}
+          href={match[3]}
+          className="font-medium !text-[#0F6E56] underline-offset-2 hover:underline"
+        >
           {match[2]}
         </a>,
       );

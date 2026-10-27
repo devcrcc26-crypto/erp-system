@@ -13,6 +13,7 @@ import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -255,6 +256,10 @@ export default function OvertimeRequestDetail({
           className="!rounded-xl"
           title={t('pages.hr.overtime.payrollLockedBanner')}
         />
+      ) : null}
+
+      {sheet.editDiff?.editedAfterApproval ? (
+        <OvertimeEditDiffBanner editDiff={sheet.editDiff} />
       ) : null}
 
       {unregisteredHolidayDates.length > 0 ? (

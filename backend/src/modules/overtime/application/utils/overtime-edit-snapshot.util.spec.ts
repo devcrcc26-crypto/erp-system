@@ -42,7 +42,7 @@ describe('overtime-edit-snapshot.util', () => {
     expect(buildOvertimeEditDiff(null, [baseEntry])).toBeNull();
   });
 
-  it('buildOvertimeEditDiff lists only changed fields', () => {
+  it('buildOvertimeEditDiff lists exact before/after for every changed field', () => {
     const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
     const after = {
       ...baseEntry,
@@ -52,6 +52,7 @@ describe('overtime-edit-snapshot.util', () => {
       regularHours: 0,
       weekendHours: 4.5,
       totalHours: 4.5,
+      taskDescription: 'Pour slab',
     };
     const diff = buildOvertimeEditDiff(snapshot, [after]);
     expect(diff?.editedAfterApproval).toBe(true);
@@ -67,11 +68,17 @@ describe('overtime-edit-snapshot.util', () => {
         { label: 'Start time', from: '18:00', to: '17:30' },
         { label: 'End time', from: '21:00', to: '22:00' },
         { label: 'Hours', from: '3h', to: '4.5h' },
+        { label: 'Reason', from: 'Pour concrete', to: 'Pour slab' },
+      ]),
+    );
+    expect(diff?.entryChanges?.[0]?.changes).toEqual(
+      expect.arrayContaining([
+        { field: 'reason', from: 'Pour concrete', to: 'Pour slab' },
       ]),
     );
   });
 
-  it('buildOvertimeEditDiff notes reason-only updates', () => {
+  it('buildOvertimeEditDiff shows exact reason text for reason-only updates', () => {
     const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
     const after = {
       ...baseEntry,
@@ -80,8 +87,38 @@ describe('overtime-edit-snapshot.util', () => {
     const diff = buildOvertimeEditDiff(snapshot, [after]);
     expect(diff?.reasonOnly).toBe(true);
     expect(diff?.summaryLines).toEqual([
-      { label: 'Note', from: '', to: 'Only the reason was updated.' },
+      {
+        label: 'Reason',
+        from: 'Pour concrete',
+        to: 'Pour slab and cure',
+      },
     ]);
+  });
+
+  it('buildOvertimeEditDiff includes exact values for added entries', () => {
+    const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
+    const added = {
+      ...baseEntry,
+      id: 'entry-2',
+      date: '2026-10-17',
+      taskDescription: 'Night pour',
+    };
+    const diff = buildOvertimeEditDiff(snapshot, [baseEntry, added]);
+    expect(diff?.entryChanges?.some((row) => row.added)).toBe(true);
+    expect(diff?.summaryLines).toEqual(
+      expect.arrayContaining([
+        {
+          label: 'Added · 2026-10-17 · Date',
+          from: '—',
+          to: '2026-10-17',
+        },
+        {
+          label: 'Added · 2026-10-17 · Reason',
+          from: '—',
+          to: 'Night pour',
+        },
+      ]),
+    );
   });
 
   it('parseOvertimeApprovedSnapshot round-trips', () => {
