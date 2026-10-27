@@ -1,190 +1,171 @@
 # Leave Requests
 
-This guide covers requesting leave, tracking it, editing or cancelling it, and how approval works. Leave balances are shown on the same screens.
+Use a leave request to take time off: annual, sick, unpaid and other leave types. The form checks your balance and your work schedule as you fill it in, so you know how many days a request will use before you submit it.
+
+**Who does what**
+
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Request leave, check your balance, follow your requests, and edit or cancel them while that is still allowed. |
+| Team Lead, Department Head, Discipline Lead | Approve leave for your team in **Approvals**. Department Heads and Discipline Leads can also submit leave for people in their own department or discipline. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See every leave request, adjust balances, cancel approved leave, and delete requests. |
+| General Manager, Managing Director, System Administrator | Your own leave is approved as soon as you submit it. |
 
 **Where to find it**
-- Sidebar → **Time & Attendance** → **Leave** → **Leave Requests** (company list; HR sees everyone, others see their own).
-- Sidebar → **New Request** → **Leave** (the form to create a request).
-- Your own balances and history: sidebar → **My Profile** → **Leave** tab. Use **View all** for the full history.
+- Request leave: **New Request** → **Leave**.
+- Your balance and history: **My Profile** → **Leave**. Click **View all** for your full history.
+- All requests and balances (HR only): **Time & Attendance** → **Leave** → **Leave Requests**.
 
 ---
 
-## How to submit a leave request
+## How to request leave
 
-*(All employees)*
-
-1. Go to **New Request** → **Leave**, or open **Time & Attendance** → **Leave** → **Leave Requests** and click **New Leave Request**.
-2. Fill in **Leave Type**: choose one of Annual, Sick, Unpaid, Maternity, Paternity, Emergency, Compassionate, Study Leave or Exam Leave. Maternity only appears for employees whose gender on record is female.
-3. Fill in **Leave periods**: pick a **date range** for each period. Set the **day portion** for each period to *Full day*, *Morning* or *Afternoon*. Use **Add period** to add more ranges (for example, a split leave). Periods may not overlap.
-4. Wait for **Remaining after request** to update. The system counts only working days from your work schedule. Weekends, public holidays and non-working days are not charged. The preview shows the total days and what was excluded.
-5. Optionally fill in **Reason**.
+1. Go to **New Request** → **Leave**.
+2. Choose the **Leave Type**: Annual, Sick, Unpaid, Maternity, Paternity, Emergency, Compassionate, Study Leave or Exam Leave. Maternity only appears for employees recorded as female.
+3. Add your **Leave periods**:
+   - Pick a **date range** for each period.
+   - Set the **day portion**: *Full day*, *Morning* or *Afternoon*.
+   - Click **Add period** to add another range, for example for a split leave. Periods cannot overlap.
+4. Check **Remaining after request**. Only working days from your work schedule are counted. Weekends, public holidays and non-working days are not charged, and the preview lists what was excluded.
+5. Add a **Reason** if you want to.
 6. Click **Next**.
-7. On **Supporting Documents**, optionally attach files (PDF, JPG, PNG, DOC, DOCX). Attach a medical certificate for sick leave if you have one.
-8. Click **Next** to reach **Review & Submit**. Check the summary.
-9. Click **Submit Request**.
+7. **Supporting Documents:** attach files if needed (PDF, JPG, PNG, DOC or DOCX). For sick leave, attach a medical certificate if you have one.
+8. Click **Next**, check the summary on **Review & Submit**, and click **Submit Request**.
 
+> **What happens next:** The request goes to your approvers (see *How approval works* below) and its detail page opens. If your role has no approvers, the leave is approved and recorded straight away.
 
+### Why a request might not submit
 
-> **What happens next:** If you have a line manager, the request enters the approval chain (see *How approval works* below). You are taken to the request's detail page. If the request is auto-approved (for example, an HR manager submitting for themselves), it is approved immediately and the leave is recorded straight away.
-
-### Things that stop a submission
-
-- **Insufficient balance.** If the days requested are more than the **Remaining** balance for the leave year, the form shows *"Insufficient leave balance for the selected dates"* (with the remaining and requested days) and will not submit. Unpaid leave has no balance and is not blocked by this.
-- **No working days.** If the periods contain only weekends or public holidays, the form says there are no working days to charge.
-- **Overlapping periods.** Two periods in the same request cannot overlap.
-- **Conflicting schedule.** A full day cannot already be covered by another approved or requested item: leave, site assignment, work from home, or a field movement. For a half day, only site assignment, work from home and field movement block it, so a half day can sit next to another half-day leave.
+- **Not enough balance.** If you ask for more days than your **Remaining** balance, the form shows *"Insufficient leave balance for the selected dates"* with the numbers. Unpaid leave has no balance, so it is never blocked for this reason.
+- **No working days.** The dates only cover weekends or public holidays.
+- **Overlapping periods.** Two periods in the same request overlap.
+- **Something else is already booked.** A full day cannot overlap approved or pending leave, a site assignment, work from home or a field movement. For a half day, only a site assignment, work from home or a field movement blocks it, so two half-day leaves can sit side by side.
 
 ---
 
 ## How to check your leave balance
 
-*(All employees)*
-
-1. Open the leave form (**New Request** → **Leave**). The **Leave Balance** panel on the right updates to match the dates you choose.
-2. The balance shows these figures for the leave type:
-   - **Entitled**: days you are allowed in this leave year.
-   - **Brought Forward**: days carried in from the previous year.
+1. Open **New Request** → **Leave**. The **Leave Balance** panel updates as you choose dates.
+2. The panel shows, for the selected leave type:
+   - **Entitled**: the days you are allowed in this leave year.
+   - **Brought Forward**: days carried over from last year.
    - **Used**: days already taken and approved.
-   - **Pending**: days in requests still waiting for approval.
+   - **Pending**: days in requests that are still waiting for approval.
    - **Remaining**: Entitled + Brought Forward − Used − Pending.
-3. Leave years follow your **employment anniversary**, not the calendar year. The panel shows which year it is using.
+3. Your leave year runs from your **employment anniversary**, not from January. The panel shows which year it is using.
 
-> **Note:** Unpaid leave has no balance row, so the balance panel says so.
+You can also see your balances at any time under **My Profile** → **Leave**.
+
+> **Note:** Unpaid leave has no balance, so the panel says so.
 
 ---
 
-## How to view your leave requests and history
+## How to follow your leave requests
 
-*(All employees)*
+1. Go to **My Profile** → **Leave** and click **View all**.
+2. Click a request to open it. The detail page shows the dates, days, periods, reason, attachments, the balance at the time, and the approval chain.
 
-1. Go to **Time & Attendance** → **Leave** → **Leave Requests**.
-2. Use the status cards at the top (Total, Draft, Pending, Approved, Rejected) to see how many requests are in each state.
-3. Use the search box or filters to find a request by number, leave type or status.
-4. Click a row to open its detail page. It shows the dates, days, periods, reason, attachments, balance at the time, and the approval chain.
+You can also follow any request in **Approvals** → **My Requests**.
 
 ---
 
 ## How to edit a leave request
 
-*(The requester while the request is Draft or Returned. HR may also edit.)*
+*(The requester, while the request is Draft or Returned. HR can also edit.)*
 
-1. Open the request from **Leave Requests** (or from **Approvals**).
-2. Click **Update** (the pencil button). The button is visible only when the request is **Draft** or **Returned**.
-3. The edit form is one page, not a stepper. Change the leave type, periods, day portions or reason. The same rules as submitting apply.
+1. Open the request.
+2. Click **Update** (the pencil button). It only appears while the request is **Draft** or **Returned**.
+3. Change the leave type, periods, day portions or reason. The same checks as a new request apply.
 4. Click **Save Changes**.
 
-> **What happens next:** The changes are saved and the request keeps its current status. A **Draft** stays a draft until you submit it. A **Returned** request is not sent again by saving; see *How to respond to a returned leave request* below. Requests that are **Submitted**, **In Review**, **Approved**, **Rejected** or **Cancelled** cannot be edited. To change those, cancel the request (if allowed) and submit a new one.
+> **What happens next:** Your changes are saved and the status stays the same. Saving a **Returned** request does not send it back for approval; see *How to respond to a returned request* below. A request that is **Submitted**, **In Review**, **Approved**, **Rejected** or **Cancelled** cannot be edited. To change it, cancel it if that is allowed, then submit a new one.
 
 ---
 
 ## How to cancel a leave request
 
-*(The requester, or HR)*
+*(The requester or HR)*
 
 1. Open the request.
 2. Click **Cancel Request**.
-3. Confirm in the dialog. The dialog states that the cancellation cannot be undone.
+3. Confirm. The dialog warns that this cannot be undone.
 
-> **What happens next:** The request becomes **Cancelled**, and any pending balance is released. The linked approval request is cancelled too.
+> **What happens next:** The request becomes **Cancelled**, any pending days return to your balance, and the linked approval is cancelled too.
 >
-> **Rules:**
-> - A **Draft**, **Submitted** or **In Review** request can be cancelled by the requester or HR.
-> - An **Approved** request can be cancelled **only by HR**. Cancelling it gives the days back to the balance and recalculates the attendance for those dates.
-> - **Rejected**, **Returned** and already **Cancelled** requests cannot be cancelled.
+> **Who can cancel what:**
+> - **Draft**, **Submitted** or **In Review**: the requester or HR.
+> - **Approved**: HR only. The days return to the balance and attendance for those dates is recalculated.
+> - **Rejected**, **Returned** or already **Cancelled**: cannot be cancelled.
 
 ---
 
-## How to delete a leave request (HR only)
+## How to respond to a returned request
 
-1. Open the request.
-2. Click **Delete** (the trash button). It appears only for HR.
-3. Confirm in the dialog.
+*(The requester)*
 
-> **What happens next:** The request is removed from the register (it is a soft delete) and its effect on the balance is reversed. This cannot be undone from the screen.
+1. You receive the notification *"Approval returned"*. The request shows **Returned** with the approver's note.
+2. Open the request, click **Update**, make the changes, and click **Save Changes**.
+3. Open **Approvals**, find the request, and use the **Resubmit** panel. Add a short note and any files, then click **Resubmit**.
+
+> **What happens next:** The request starts again at the first approver, who receives *"Resubmitted for approval"*. Saving alone does not resubmit it.
 
 ---
 
-## How to view and track all leave requests (HR)
+## How to submit leave for someone else
+
+*(HR Manager, General Manager, Managing Director, System Administrator; Department Heads for their own department; Discipline Leads for their own discipline)*
+
+1. Open **New Request** → **Leave**.
+2. In **Submission details**, switch on **Submit on behalf of another employee** and choose the employee.
+3. Fill in the form as usual and submit.
+
+> **What happens next:** The request belongs to the employee, and the approval chain is built from the employee's manager, not from you.
+
+---
+
+## How HR manages leave
 
 *(HR only)*
 
 1. Go to **Time & Attendance** → **Leave** → **Leave Requests**.
-2. Choose the **Requests** tab or the **Balances** tab.
-3. Filter by **Employee**, **Leave Type** or **Status**. Search by request number.
-4. Open the **Balances** tab to see every employee's balance per leave type and year. Use **Edit Balances** to adjust balances through the leave ledger (opening balance, adjustment or snapshot). Every change is recorded in the balance history.
-
----
-
-## How to submit leave on behalf of an employee
-
-*(HR Manager, General Manager, Managing Director, System Administrator, and Department Heads and Discipline Leads within their own scope)*
-
-1. Open **New Request** → **Leave** (or the leave form).
-2. In the **Submission details** section, switch on **Submit on behalf of another employee**, then choose the employee this request belongs to.
-3. Complete the form as normal.
-4. Submit.
-
-> **Rules:**
-> - A **Department Head** can submit only for employees in the same department.
-> - A **Discipline Lead** can submit only for employees in a discipline they lead.
-> - Others cannot submit for other people.
->
-> **What happens next:** The request belongs to the employee. The approval chain is built from the employee's manager, not from you.
+2. Use the **Requests** tab to see every request. Filter by **Employee**, **Leave Type** or **Status**, or search by request number.
+3. Use the **Balances** tab to see every employee's balance by leave type and year.
+4. Click **Edit Balances** to adjust a balance (opening balance, adjustment or snapshot). Every change is kept in the balance history.
+5. To remove a request, open it and click **Delete** (the trash button), then confirm. The effect on the balance is reversed.
 
 ---
 
 ## How approval works
 
-*(Read-only for everyone; approvers act from the **Approvals** inbox. See the Approvals guide.)*
+Approvers act from **Approvals**. See the **Approvals Inbox** topic for details.
 
-**Standard employee:**
-1. The employee's **Reports to** manager approves first.
-2. The **HR Manager** approves second.
-3. When the final approver approves, the request becomes **Approved** and the days move from *Pending* to *Used* in the balance.
+| Requester | Approvers, in order |
+| --- | --- |
+| Employee | Their **Reports to** manager, then the **HR Manager** |
+| Discipline Lead | The **Department Head** (if there is one), then the **HR Manager** |
+| Department Head | The **General Manager**, then the **HR Manager** |
+| HR staff | The **HR Manager** |
+| HR Manager | The **General Manager** |
+| General Manager, Managing Director, System Administrator | No approval: approved on submit |
 
-**Discipline Lead:** the **Department Head** (if assigned), then the **HR Manager**.
+When the last approver approves, the request becomes **Approved** and its days move from *Pending* to *Used*.
 
-**Department Head:** the **General Manager**, then the **HR Manager**.
-
-**HR staff:** the **HR Manager**.
-
-**HR Manager:** the **General Manager**.
-
-**General Manager, Managing Director and System Administrator:** no approval chain. The request is approved on submit.
-
-**Notifications the requester and approvers see:**
-- Approver: *"Approval required"* when a request arrives at their tier.
-- Requester: *"Approved"* when the request is fully approved, *"Rejected"* when rejected, and *"Approval returned"* when returned for revision. The approver's note (if any) is shown in the notification.
-
-**Statuses you will see:**
+**Statuses**
 
 | Status | Meaning |
-|---|---|
-| Draft | Saved, not sent. |
-| Submitted | Sent; waiting for the first approver. |
-| In Review | Being reviewed by an approver. |
-| Returned | An approver sent it back. Edit and resubmit. |
-| Approved | Fully approved. Days are used. |
-| Rejected | Refused. The request is closed. |
+| --- | --- |
+| Draft | Saved but not sent. |
+| Submitted | Sent and waiting for the first approver. |
+| In Review | An approver is reviewing it. |
+| Returned | Sent back to you for changes. |
+| Approved | Fully approved; the days are used. |
+| Rejected | Refused and closed. |
 | Cancelled | Cancelled by the requester or HR. |
-
----
-
-## How to respond to a returned leave request
-
-*(The requester)*
-
-1. You receive a notification *"Approval returned"*, and the request shows **Returned** with the approver's note.
-2. Open the request and click **Update** to change what was asked. Click **Save Changes**.
-3. Open **Approvals**, find the request, and in the **Resubmit** panel add a short note and attach files if needed. Click **Resubmit**.
-
-> **What happens next:** The request restarts at the first approver, who receives *"Resubmitted for approval"*. Saving the edit alone does not send the request back into the chain.
 
 ---
 
 ## Tips
 
-- Submit leave early so the approval chain has time to act.
-- Check **Remaining after request** before you submit. A request that exceeds the balance will not go through.
-- If you see *"Approval required"* for a leave request that is not yours, open it from **Approvals** to decide.
-- If your request is stuck, check the approval chain on the detail page to see which approver is waiting.
+- Submit leave early so your approvers have time to act.
+- Check **Remaining after request** before you submit.
+- If a request seems stuck, open it and check the approval chain to see who it is waiting for.

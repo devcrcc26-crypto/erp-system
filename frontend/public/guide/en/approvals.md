@@ -1,11 +1,19 @@
 # Approvals Inbox
 
-Every request that needs a decision (leave, overtime, per diem, purchases and more) goes through the **Approvals** inbox. This guide covers how to start a request, find requests waiting for you, and approve, reject, return or conditionally approve them.
+Every request that needs a decision (leave, overtime, per diem, purchases and more) goes through **Approvals**. Here you follow your own requests, and approvers approve, reject, return or conditionally approve the requests that are waiting for them.
+
+**Who does what**
+
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Start requests, follow them in **My Requests**, continue drafts, and resubmit returned requests. |
+| Approvers (managers, leads, HR, management) | Act on requests in **Pending My Action**: approve, reject, return or conditionally approve. |
+| HR and management | See every request in **All Requests**. |
+| HR Manager, System Administrator | Reassign a pending step to a different approver. |
 
 **Where to find it**
-- Sidebar → **Approvals** (the inbox). It shows a badge with the number of items waiting for you.
-- Sidebar → **New Request** (to start a new request).
-- Note: **Review Inbox** in Project Management is for engineering document review. It is not where HR requests are approved.
+- Sidebar → **Approvals**. The badge shows how many requests are waiting for you.
+- Sidebar → **New Request** to start a request.
 
 ---
 

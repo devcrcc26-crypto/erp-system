@@ -8,10 +8,10 @@ Use a business trip request for travel that needs approval as a trip: origin, de
 | --- | --- |
 | Employee (everyone) | Submit a business trip for yourself, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | See all business trips in the HR lists under **/hr** and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See all business trips under **Pay & Travel** → **Third-Country Business Trips** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Business Trip** (or open `/approvals/new/business-trip`).
+- Submit: **New Request** → **Business Trip**.
 - HR list: sidebar → **Pay & Travel** → **Third-Country Business Trips** (HR only).
 
 ---

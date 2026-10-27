@@ -11,7 +11,7 @@ A site assignment records the days you work at a project site away from your nor
 | HR and leave staff | See all site assignments at **Time & Attendance** → **Site Assignments** and file requests for other employees. |
 
 **Where to find it**
-- Request: **New Request** → **Site Assignment** (or open `/approvals/new/site-assignment`).
+- Request: **New Request** → **Site Assignment**.
 - Your assignments: sidebar → **My Profile** → **Leave**.
 - HR list: sidebar → **Time & Attendance** → **Site Assignments** (HR and leave staff only).
 

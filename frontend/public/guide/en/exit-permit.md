@@ -11,7 +11,7 @@ An exit permit records equipment and materials that leave or return to a site. Y
 | HR and administration staff | See all exit permits under **Operations** → **Administration** → **Exit Permit** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Exit Permit** (or open `/approvals/new/equipment-and-materials-exit-permit`).
+- Submit: **New Request** → **Exit Permit**.
 - HR list: sidebar → **Operations** → **Administration** → **Exit Permit** (HR and administration staff only).
 
 ---

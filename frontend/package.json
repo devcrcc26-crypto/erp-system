@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "patch-package",
     "typecheck": "tsc --noEmit -p .",
     "typecheck:baseline": "node scripts/typecheck-baseline.mjs",
     "test": "vitest run",
@@ -59,6 +60,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "jsdom": "^26.1.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4"

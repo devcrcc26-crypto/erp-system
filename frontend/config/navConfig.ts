@@ -306,6 +306,12 @@ export function resolveRouteMeta(
   projectName: string | null,
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): RouteMeta {
+  if (pathname === '/help' || pathname.startsWith('/help/')) {
+    return {
+      titleKey: 'nav.userGuide',
+      breadcrumbs: [{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.userGuide') }],
+    };
+  }
   const meta = resolveRouteMetaCore(pathname, projectName, t);
   return {
     ...meta,

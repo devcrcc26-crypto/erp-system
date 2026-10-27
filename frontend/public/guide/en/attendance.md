@@ -1,13 +1,19 @@
 # Attendance (HR)
 
-Attendance is built from the monthly export of the attendance machine (Deli e+). HR imports the file, matches each device identity to an employee, reviews the flagged days, and then approves the month. Once a month is approved it is locked. This guide is for HR users.
+Attendance comes from the monthly export of the attendance machine (Deli e+). HR imports the file, matches each machine record to an employee, reviews the flagged days, and approves the month. An approved month is locked and used for payroll.
+
+**Who does what**
+
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | See your own attendance under **My Profile** → **Attendance**, and explain flagged days (see the **Field Movement** topic). |
+| HR (HR Manager, HR Assistant, HR Specialist) | Import the monthly file, map machine records to employees, review and correct days, and approve or unlock months. |
 
 **Where to find it**
-- Sidebar → **Time & Attendance** → **Attendance** → **Attendance** (the monthly list for everyone; HR sees the whole company).
-- **Attendance** → **Attendance Identities** (the device-to-employee mapping).
-- **Attendance** → **Field Movement Logs** (employee explanations for flagged days). See the Field Movement guide.
-- **Attendance** → **Work From Home** (WFH days). See the Work From Home guide.
-- Monthly review: open a month from the Attendance list (**Review**). The review page URL is by month and year.
+- Your attendance: **My Profile** → **Attendance**.
+- Monthly attendance (HR): **Time & Attendance** → **Attendance** → **Attendance**. Open a month with its **Review** button.
+- Machine-to-employee mapping (HR): **Time & Attendance** → **Attendance** → **Attendance Identities**.
+- Explanations for flagged days (HR): **Time & Attendance** → **Attendance** → **Field Movement Logs**.
 
 ---
 
@@ -123,11 +129,20 @@ Some new employees are not yet enrolled on the attendance machine. They are coun
 
 ---
 
-## How to check the attendance of an employee
+## How to check your own attendance
 
-*(Employees see their own record; HR sees everyone)*
+*(Everyone)*
 
-1. Go to **Attendance** → **Attendance**. HR can search by employee and month. Employees see only their own month.
+1. Go to **My Profile** → **Attendance**.
+2. Choose the **Year**. The summary shows your payable hours, present days, absences and late days.
+3. Open a month to see each day: clock-in and clock-out times, hours, lateness and any flag.
+4. If a banner says some days need an explanation, click **Submit Explanation** (see the **Field Movement** topic).
+
+---
+
+## How to check an employee's attendance (HR)
+
+1. Go to **Time & Attendance** → **Attendance** → **Attendance**. Search by employee and month.
 2. Click a row to open the employee's year profile or daily logs.
 3. The columns show:
    - **Days attended**: the actual attendance days.

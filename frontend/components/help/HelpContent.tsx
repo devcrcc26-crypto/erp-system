@@ -23,17 +23,17 @@ export default function HelpContent({
   return (
     <div
       className={[
-        'help-prose max-w-none text-[15px] leading-relaxed text-slate-700',
-        '[&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-slate-900',
-        '[&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-slate-900',
+        'help-prose max-w-none text-[14px] leading-relaxed text-[rgba(0,0,0,0.75)]',
+        '[&_h2]:mt-7 [&_h2]:mb-3 [&_h2]:text-[16px] [&_h2]:font-semibold [&_h2]:text-[rgba(0,0,0,0.88)]',
+        '[&_h3]:mt-5 [&_h3]:mb-2 [&_h3]:text-[14px] [&_h3]:font-semibold [&_h3]:text-[rgba(0,0,0,0.88)]',
         '[&_p]:mb-3 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5',
-        '[&_li]:mb-1 [&_strong]:font-semibold [&_strong]:text-slate-900',
-        '[&_a]:font-medium [&_a]:text-emerald-700 [&_a]:underline-offset-2 hover:[&_a]:underline',
-        '[&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-sm',
+        '[&_li]:mb-1 [&_strong]:font-semibold [&_strong]:text-[rgba(0,0,0,0.88)]',
+        '[&_a]:font-medium [&_a]:text-[#0F6E56] [&_a]:underline-offset-2 hover:[&_a]:underline',
+        '[&_code]:rounded [&_code]:bg-[#F1EFE8] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px]',
         '[&_table]:my-4 [&_table]:w-full [&_table]:border-collapse',
-        '[&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-sm',
-        '[&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm',
-        '[&_hr]:my-8 [&_hr]:border-slate-200',
+        '[&_th]:border [&_th]:border-[#E8EBEF] [&_th]:bg-[#FBFCFD] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:text-[rgba(0,0,0,0.75)]',
+        '[&_td]:border [&_td]:border-[#E8EBEF] [&_td]:px-3 [&_td]:py-2 [&_td]:text-[13px]',
+        '[&_hr]:my-7 [&_hr]:border-[#EEF1F4]',
       ].join(' ')}
     >
       {blocks.map((block, index) => (
@@ -172,7 +172,7 @@ function parseTable(lines: string[]): Block | null {
 function Block({ block }: { block: Block }): ReactNode {
   switch (block.type) {
     case 'h1':
-      return <h1 className="mb-4 text-2xl font-bold text-slate-900">{inline(block.text)}</h1>;
+      return <h1 className="mb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">{inline(block.text)}</h1>;
     case 'h2':
       return <h2>{inline(block.text)}</h2>;
     case 'h3':

@@ -143,12 +143,12 @@ describe('sidebar permissions and filtering', () => {
     ]);
   });
 
-  it('opens the User Guide in a new tab', () => {
+  it('opens the User Guide in the same tab', () => {
     const link = modelFor({ canViewHr: true }).utility.find(
       (entry) => entry.kind === 'link' && entry.id === 'user-guide',
     );
-    expect(link?.kind === 'link' ? link.href : null).toBe('/help');
-    expect(link?.kind === 'link' ? link.openInNewTab : false).toBe(true);
+    expect(link?.kind === 'link' ? link.href : null).toBe('/help/getting-started');
+    expect(link?.kind === 'link' ? link.openInNewTab : true).toBe(false);
   });
 
   it('shows payroll under Pay & Travel when a payroll capability is granted', () => {

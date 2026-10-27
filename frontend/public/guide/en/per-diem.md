@@ -8,10 +8,10 @@ Per diem is the daily allowance for days you are away on business travel or depl
 | --- | --- |
 | Employee (everyone) | Submit your own per diem request and track it in **Approvals** and in the **Per Diem** list. |
 | Team Lead, Department Head, Discipline Lead | Approve per diem requests that reach you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | Set each employee's per diem rate, see the company-wide list at **/hr/per-diem**, and approve or process requests. |
+| HR (HR Manager, HR Assistant, HR Specialist) | Set each employee's per diem rate, see everyone's requests under **Pay & Travel** → **Per Diem**, and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Per Diem** (or open `/approvals/new/per-diem`).
+- Submit: **New Request** → **Per Diem**.
 - Track: sidebar → **Pay & Travel** → **Per Diem**. You see your own requests; HR sees everyone's.
 
 ---

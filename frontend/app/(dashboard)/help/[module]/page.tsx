@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { Alert, Spin } from 'antd';
 import HelpContent from '@/components/help/HelpContent';
-import { useHelpLang } from '@/components/help/HelpLangContext';
+import { HelpGettingStartedPage } from '@/components/help/HelpGettingStartedPage';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   getHelpModule,
   getVisibleModules,
@@ -13,14 +16,15 @@ import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useCurrentUser } from '@/lib/query/profile';
 
 /**
- * Fully client-side guide page. All hooks run unconditionally; invalid slugs
- * render a simple message (no notFound() between hooks).
+ * Fully client-side guide page. All hooks run unconditionally.
+ * Forbidden topics show Getting Started in place — never router.replace
+ * (avoids Next.js 16 App Router "Rendered more hooks" on soft redirects).
+ * Guide language follows the ERP header Language control.
  */
 export default function HelpModulePage(): ReactNode {
   const params = useParams<{ module: string }>();
   const slug = typeof params.module === 'string' ? params.module : '';
-  const { lang } = useHelpLang();
-  const router = useRouter();
+  const { locale } = useEpcTranslation();
   const { data: profile, isPending } = useCurrentUser();
   const canViewHr = useCanViewHr();
   const [content, setContent] = useState('');
@@ -35,17 +39,7 @@ export default function HelpModulePage(): ReactNode {
     getVisibleModules(roleNames, canViewHr).some((m) => m.slug === slug);
 
   useEffect(() => {
-    if (!mod) {
-      return;
-    }
-    if (waitingForProfile || allowed || slug === 'getting-started') {
-      return;
-    }
-    router.replace('/help/getting-started');
-  }, [allowed, waitingForProfile, router, slug, mod]);
-
-  useEffect(() => {
-    if (!mod) {
+    if (!mod || !allowed) {
       setContent('');
       setLoadingContent(false);
       return;
@@ -55,11 +49,11 @@ export default function HelpModulePage(): ReactNode {
     setLoadingContent(true);
 
     async function load(): Promise<void> {
-      const primary = `/guide/${lang}/${slug}.md`;
+      const primary = `/guide/${locale}/${slug}.md`;
       const fallback = `/guide/en/${slug}.md`;
       try {
         let res = await fetch(primary, { cache: 'force-cache' });
-        if (!res.ok && lang !== 'en') {
+        if (!res.ok && locale !== 'en') {
           res = await fetch(fallback, { cache: 'force-cache' });
         }
         if (!res.ok) {
@@ -82,34 +76,61 @@ export default function HelpModulePage(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [lang, slug, mod]);
+  }, [locale, slug, mod, allowed]);
 
   if (!mod) {
     return (
       <article>
         <h1 className="mb-6 border-b border-slate-200 pb-4 text-2xl font-bold text-slate-900">
-          {lang === 'zh' ? '未找到' : 'Not found'}
+          {locale === 'zh' ? '未找到' : 'Not found'}
         </h1>
         <p className="text-slate-600">
-          {lang === 'zh' ? '该手册章节不存在。' : 'This guide topic does not exist.'}
+          {locale === 'zh' ? '该手册章节不存在。' : 'This guide topic does not exist.'}
+        </p>
+        <p className="mt-4">
+          <Link
+            href="/help/getting-started"
+            className="font-medium text-[#0F6E56] underline-offset-2 hover:underline"
+          >
+            {locale === 'zh' ? '返回快速开始' : 'Back to Getting started'}
+          </Link>
         </p>
       </article>
     );
   }
 
-  const title = lang === 'zh' ? mod.titleZh : mod.titleEn;
+  if (!waitingForProfile && !allowed) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Alert
+          type="info"
+          showIcon
+          className="!rounded-xl"
+          title={
+            locale === 'zh'
+              ? '您没有权限查看该章节，已显示快速开始。'
+              : 'You do not have access to that topic. Showing Getting started instead.'
+          }
+        />
+        <HelpGettingStartedPage />
+      </div>
+    );
+  }
+
+  const title = locale === 'zh' ? mod.titleZh : mod.titleEn;
+  const body = content.replace(/^\s*#\s+[^\n]*\n*/, '');
 
   return (
     <article>
-      <h1 className="mb-6 border-b border-slate-200 pb-4 text-2xl font-bold text-slate-900">
+      <h1 className="mb-5 border-b border-[#EEF1F4] pb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">
         {title}
       </h1>
       {loadingContent || waitingForProfile ? (
-        <p className="text-sm text-slate-500">
-          {lang === 'zh' ? '加载中…' : 'Loading…'}
-        </p>
+        <div className="flex justify-center py-10">
+          <Spin />
+        </div>
       ) : (
-        <HelpContent content={content} />
+        <HelpContent content={body} />
       )}
     </article>
   );

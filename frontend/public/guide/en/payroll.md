@@ -1,13 +1,21 @@
 # Payroll (HR)
 
-Payroll is run once a month. HR creates a payroll run for the pay period, the system calculates each employee's pay from contracts, attendance, overtime and leave, HR reviews and submits it, and then HR and the General Manager approve it. Once the run is approved and paid, payslips are generated and released to employees. This guide is for HR users.
+Payroll runs once a month. HR creates the run, the ERP calculates each employee's pay from their contract, attendance, overtime and leave, and HR reviews and submits it. The HR Manager and the General Manager then approve it. After the salaries are paid, HR generates the payslips and releases them to employees.
+
+**Who does what**
+
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | See your own payslips under **My Profile** → **Payroll**. |
+| HR with payroll access | Create, check, recalculate and submit runs, add top-ups and freelancers, mark runs as paid, and generate and release payslips. |
+| HR Manager, System Administrator | Give the HR approval. |
+| General Manager, System Administrator | Give the final (GM) approval. |
 
 **Where to find it**
-- Sidebar → **Pay & Travel** → **Payroll & Expenses** → **Payroll** (the list of runs).
-- Each run opens a detail page with its entries, totals and steps.
-- Company payroll settings open from the **Payroll** page.
+- Your payslips: **My Profile** → **Payroll**.
+- Payroll runs (payroll access only): **Pay & Travel** → **Payroll & Expenses** → **Payroll**. Company payroll settings open from the same page.
 
-> **Important:** Salary figures are confidential. Only users with payroll access can open this module.
+> **Important:** Salary figures are confidential. Only people with payroll access can open this module.
 
 ---
 

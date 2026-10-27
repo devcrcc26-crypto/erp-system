@@ -30,9 +30,10 @@ import type {
   HrImportPreviewResult,
 } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
-import { approvalKeys } from '@/lib/query/approvals';
 
 const OVERTIME_PATH = '/hr/overtime';
+/** Avoid importing approvals.ts (circular) — matches approvalKeys.all. */
+const APPROVALS_QUERY_ROOT = ['approvals'] as const;
 
 export const overtimeKeys = {
   all: ['overtime'] as const,
@@ -186,7 +187,7 @@ export function useAddOvertimeEntry(sheetId: string) {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
       if (updated.restartedApproval) {
-        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+        void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_ROOT });
       }
     },
   });
@@ -213,7 +214,7 @@ export function useUpdateOvertimeEntry(sheetId: string) {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
       if (updated.restartedApproval) {
-        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+        void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_ROOT });
       }
     },
   });
@@ -233,7 +234,7 @@ export function useDeleteOvertimeEntry(sheetId: string) {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
       if (updated.restartedApproval) {
-        void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+        void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_ROOT });
       }
     },
   });

@@ -1,193 +1,139 @@
 # Overtime (OT)
 
-Overtime is recorded on a **monthly overtime sheet**. You open one sheet per month, add the overtime entries (date and start/end times), then submit the sheet for approval. Hours are split automatically into categories, and the sheet's totals update as you add entries.
+Overtime is recorded on a **monthly overtime sheet**. You open one sheet for the month, add an entry for each time you worked overtime, and submit the sheet for approval. The ERP sorts your hours into categories (normal, evening, weekend and holiday) and keeps the totals up to date.
+
+**Who does what**
+
+| Role | What you can do |
+| --- | --- |
+| Employee (everyone) | Open your monthly sheet, add entries, submit it, and follow it to approval. |
+| Approvers | Approve, return or reject overtime sheets in **Approvals**. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See every sheet, edit or delete entries, import overtime from Excel, and delete sheets. |
 
 **Where to find it**
-- Sidebar → **Time & Attendance** → **Schedules & Overtime** → **Overtime**. This is the sheet list (HR sees all sheets; everyone else sees their own).
-- Your own history: sidebar → **My Profile** → overtime history (**View all**).
+- Start a sheet: **New Request** → **Overtime**.
+- Your overtime and history: **My Profile** → **Overtime**. Click **View all** to open any of your sheets.
+- All sheets (HR only): **Time & Attendance** → **Schedules & Overtime** → **Overtime**.
 
 ---
 
-## Important rules
+## Rules to know first
 
-- **Overtime is outside scheduled working hours.** Time inside your scheduled morning and afternoon work hours does not count as overtime. Only time before or after your shift, on weekends and on public holidays is counted.
-- **Weekday lunch (12:30–13:30) is never overtime.** On Monday to Friday, the lunch break is excluded. An entry that runs into it is capped at 12:30 (the end) or starts at 13:30 (the start). The form shows *"Lunch break (12:30–13:30) is not counted as OT"*. Saturday has no lunch exclusion. Sundays, public holidays and site-assignment days are not affected by this rule.
-- **Approved leave removes its hours from overtime.** If you have approved leave on a day, the scheduled hours covered by that leave cannot be claimed as overtime. The form shows *"You're on approved leave this day."* A half-day leave excludes only its own half.
-- **Site-assignment days.** If you are on an approved site assignment, the normal scheduled hours that day are claimable as overtime. The form shows *"On site assignment — full day OT eligible (regular schedule does not apply)."*
-- **No future dates.** You cannot record overtime for a date that has not happened yet. You also cannot open a sheet for a future month.
-- **Entries must stay inside the sheet's month.** The entry date must fall in the sheet's month.
-- **No overlaps.** Two entries on the same day cannot overlap in time. An entry with the same date and the same start and end time as an existing one is rejected.
-- **Locked after payroll.** Once the payroll run for that month is finalized, overtime entries for that month are locked and cannot be changed.
+- **Only time outside your schedule counts.** Time inside your scheduled working hours is not overtime. Time before or after your shift, on weekends and on public holidays is.
+- **Weekday lunch is never overtime.** From Monday to Friday, 12:30–13:30 is excluded. The form shows *"Lunch break (12:30–13:30) is not counted as OT"*. Saturdays, Sundays, public holidays and site-assignment days are not affected.
+- **Approved leave removes those hours.** On a day with approved leave, the hours the leave covers cannot be claimed. A half-day leave only excludes its own half.
+- **Site-assignment days are different.** On an approved site assignment, your normal scheduled hours can be claimed as overtime.
+- **No future dates.** You cannot record overtime for a day that has not happened, or open a sheet for a future month.
+- **Stay inside the month.** Each entry's date must be in the sheet's month.
+- **No overlaps.** Two entries on the same day cannot overlap.
+- **Payroll locks the month.** Once the payroll run for the month is finalized, the sheet shows *"This OT is locked in the current payroll run and cannot be edited"*.
 
 ---
 
-## How to open an overtime sheet for the month
+## How to open your overtime sheet
 
-*(All employees)*
+1. Go to **New Request** → **Overtime**.
+2. Choose the **Month** you worked overtime in. You can choose previous months.
+3. Click **Open sheet**.
+   - If you already have a draft for that month, click **Continue draft**.
+   - If you already submitted a sheet for that month, click **Open it**.
 
-1. Go to **Time & Attendance** → **Schedules & Overtime** → **Overtime**.
-2. Click **Add Overtime Sheet**.
-3. Choose the **Month**. Pick the month you worked.
-4. Click **Open sheet**. If a sheet for that month already exists as a draft, the form offers **Continue draft** instead. If it has already been submitted, it offers **Open it**.
-
-> **What happens next:** The sheet opens in **Draft** status. You can now add entries.
-
+> **What happens next:** The sheet opens as a **Draft**, ready for entries.
 
 ---
 
 ## How to add an overtime entry
 
-*(The employee who owns the sheet, while it is Draft or Returned)*
+1. On your sheet, click **Add entry**. For a night shift that runs past midnight, click **Add next-day entry**.
+2. Choose the **Date**.
+3. Choose the **Start** and **End** times. The pickers only offer times that can count as overtime that day. If none are available, the form says *"No overtime times are available for this day."*
+4. Enter the **Task Description**: what you worked on. This is required.
+5. Attach supporting files if you have them, for example a signed time record (PDF, image, Word or Excel).
+6. Check the **Hours preview**:
+   - **Normal OT**: weekday hours outside your schedule (*Normal × 1.5*).
+   - **Evening OT**: 22:00–06:00 (*Evening × 1.75*).
+   - **Weekend** (*Weekend × 2.0*).
+   - **Holiday** (*Holiday × 2.5*).
+   - **Total**: all categories together.
+7. Click **Save**.
 
-1. Open the sheet from the **Overtime** list.
-2. Click **Add entry** (or **Add next-day entry** for an overnight shift that runs past midnight).
-3. Fill in **Date**. Choose a date in the sheet's month that is not in the future.
-4. Fill in **Start** and **End**. The time pickers show only the times that are available that day. If none are available, the form says *"No overtime times are available for this day."*
-5. Fill in **Task Description** (what you did during the overtime). This is required.
-6. Optionally attach supporting files (for example, a signed time record).
-7. Check the **Hours preview**. It shows the hours in each category:
-   - **Normal OT** (weekday hours outside scheduled work time), shown with the rate *Normal × 1.5*.
-   - **Evening OT** (22:00–06:00), shown with the rate *Evening × 1.75*.
-   - **Weekend**, shown with the rate *Weekend × 2.0*.
-   - **Holiday**, shown with the rate *Holiday × 2.5*.
-   - **Total**: the sum of all categories.
-
-   The rates are shown for reference on the form.
-8. Click **Save**.
-
-> **What happens next:** The entry is added and the sheet totals are recalculated. The entry may show an **Attendance check** flag if the times do not match your attendance scans for that day. The flag is a warning for review; it does not stop you saving.
-
+> **What happens next:** The entry is added and the totals update. If the times do not match your attendance scans, the entry shows an **Attendance check** flag. It is a warning for review and does not stop you saving.
 
 ---
 
-## How to edit an overtime entry
+## How to submit your sheet
 
-*(The employee who owns the sheet, or HR, while the sheet is Draft or Returned)*
+1. Open your sheet. It must be **Draft** or **Returned** and have at least one entry.
+2. Click **Submit Sheet** and confirm.
 
-1. Open the sheet.
-2. Click the entry (or its edit control) to open **Edit entry**.
-3. Change the date, times, task description or attachments.
-4. Click **Save**.
-
-> **What happens next:** The hour categories are recalculated, and the sheet totals update. Entries cannot be changed once the sheet is **Submitted**, **Approved**, **Rejected** or **Cancelled**, or once payroll for the month is final.
+> **What happens next:** The sheet becomes **Submitted** and goes to your approvers. If your role has no approvers, it is approved straight away. A **Returned** sheet that you resubmit goes back to the first approver.
 
 ---
 
-## How to delete an overtime entry
+## How to change a sheet
 
-*(Requires delete permission: HR)*
-
-1. Open the sheet.
-2. Click **Delete** on the entry.
-3. Confirm in the dialog. It says the entry will be removed and the sheet totals recalculated.
-
-> **What happens next:** The entry is removed and the sheet totals update.
+- **Draft or Returned:** open the entry, change the date, times, task description or files, and click **Save**. Approval is not affected.
+- **Submitted or Approved:** you can still edit entries until payroll locks the month. When you save, the approval **starts again from the first approver**, and you receive *"Your overtime request has been updated and sent for approval again"*. Approvers see what changed since the last approval.
+- **Locked by payroll:** no changes are possible.
 
 ---
 
-## How to attach files to an entry
+## How to cancel a sheet
 
-1. Open the entry in **Edit entry**.
-2. Click **Attach files** and choose PDF, image, Word or Excel files.
-3. Confirm the upload. You can remove an attachment later with its remove control.
+1. Open the sheet while it is **Draft** or **Submitted**.
+2. Click **Cancel Sheet** and confirm. Any linked approval is cancelled too.
 
-> **Note:** Attachments are checked for file type. Files of an unsupported type are rejected.
+You cannot cancel a sheet that is **Approved**, **Rejected** or **Returned**.
 
 ---
 
-## How to import overtime from Excel
+## How HR manages overtime
 
 *(HR only)*
 
-1. Go to **Time & Attendance** → **Schedules & Overtime** → **Overtime**. Click **Import from Excel** to import across sheets, or open a specific sheet and click **Import from Excel** to import into that sheet.
-2. In the import drawer, step **Upload**: click **Download template** first so the column names match. Keep the header row as it is.
-3. Each row needs an employee email or employee ID, a date, a start time, an end time and a task description. Rows with blanks in those fields are marked invalid.
-4. Drop your `.xlsx` file into the drop area (or click to browse). The file must be no larger than 5 MB and contain no more than 500 data rows.
-5. Step **Review**: check the rows marked **Ready** and **Invalid**. Fix the invalid rows in your file and upload again if needed.
-6. Step **Done**: the **Import complete** message confirms what was written.
+- **See all sheets:** **Time & Attendance** → **Schedules & Overtime** → **Overtime**. Use the counters (**Total**, **Pending**, **Approved**, **Rejected**) and search by sheet number.
+- **Delete an entry:** open the sheet, click **Delete** on the entry and confirm. The totals are recalculated.
+- **Delete a sheet:** open it, click **Delete** and confirm. This removes it permanently and cancels its approval.
+- **Import from Excel:**
+  1. Click **Import from Excel** on the list (for many sheets) or inside a sheet (for that sheet only).
+  2. Click **Download template** and keep its header row.
+  3. Fill one row per entry: employee email or ID, date, start time, end time and task description.
+  4. Upload the `.xlsx` file (up to 5 MB and 500 rows).
+  5. Check the **Ready** and **Invalid** rows, fix any invalid rows, and confirm.
 
-> **Rules:** Rows can be imported only into sheets that are **Draft** or **Returned**. Only `.xlsx` files are accepted. A missing required column stops the import, and the error names the column.
-
----
-
-## How to submit an overtime sheet for approval
-
-*(The employee who owns the sheet)*
-
-1. Open the sheet while it is **Draft** or **Returned**.
-2. Check that at least one entry is on the sheet. The button needs at least one entry.
-3. Click **Submit Sheet**.
-4. Confirm. The dialog says the approval workflow starts and that you cannot edit entries until the sheet is returned.
-
-> **What happens next:**
-> - The sheet becomes **Submitted**, and the approval chain starts (see below).
-> - If you have no approver above you (for example, General Manager or Managing Director), the sheet is **Approved** immediately.
-> - If you resubmit a **Returned** sheet, it goes back to the first approver with the same approval request. You do not start a new one.
-
----
-
-## How to cancel an overtime sheet
-
-*(The employee who owns the sheet)*
-
-1. Open the sheet while it is **Draft** or **Submitted**.
-2. Click **Cancel Sheet**.
-3. Confirm. The dialog says the cancellation also cancels any linked approval request.
-
-> **What happens next:** The sheet becomes **Cancelled**. You cannot cancel a sheet that is **Approved**, **Rejected** or **Returned**.
-
----
-
-## How to delete an overtime sheet (HR only)
-
-1. Open the sheet.
-2. Click **Delete**.
-3. Confirm. This permanently removes the sheet and cancels any linked approval request.
-
----
-
-## How to check your sheet's status
-
-1. Go to the **Overtime** list. Use the stats (**Total**, **Pending**, **Approved**, **Rejected**) and search by sheet number.
-2. Click a sheet to see its status, totals per category, entries and approval chain.
-3. Open **Approvals** to see the approval steps and any notes.
+  Entries can only be imported into sheets that are **Draft** or **Returned**.
 
 ---
 
 ## How approval works
 
-*(Read-only for everyone; approvers act from the **Approvals** inbox. See the Approvals guide.)*
+Overtime follows the same approval order as leave:
 
-The overtime approval chain is the same as leave:
+| Requester | Approvers, in order |
+| --- | --- |
+| Employee | Their **Reports to** manager, then the **HR Manager** |
+| Discipline Lead | The **Department Head** (if there is one), then the **HR Manager** |
+| Department Head | The **General Manager**, then the **HR Manager** |
+| HR staff | The **HR Manager** |
+| HR Manager | The **General Manager** |
+| General Manager, Managing Director, System Administrator | No approval: approved on submit |
 
-1. **Standard employee:** the **Reports to** manager, then the **HR Manager**.
-2. **Discipline Lead:** the **Department Head** (if assigned), then the **HR Manager**.
-3. **Department Head:** the **General Manager**, then the **HR Manager**.
-4. **HR staff:** the **HR Manager**.
-5. **HR Manager:** the **General Manager**.
-6. **General Manager, Managing Director and System Administrator:** no approval; the sheet is approved on submit.
-
-**Statuses:**
+**Statuses**
 
 | Status | Meaning |
-|---|---|
-| Draft | Being prepared. You can edit it. |
-| Submitted | Sent for approval. Entries are locked. |
-| Returned | An approver sent it back. Edit it, then **Submit Sheet** again. |
-| Approved | Fully approved. |
-| Rejected | Refused. The sheet is closed. |
-| Cancelled | Cancelled by the owner or HR. |
-
-**Notifications:**
-- Approver: *"Approval required"* when a sheet reaches their tier.
-- Owner: *"Approved"* when fully approved, *"Rejected"* when rejected, and *"Approval returned"* when returned, with the approver's note.
+| --- | --- |
+| Draft | Being prepared. |
+| Submitted | Sent for approval. Editing restarts the approval. |
+| Returned | Sent back to you. Make the changes, then **Submit Sheet** again. |
+| Approved | Fully approved. Editing restarts the approval until payroll locks the month. |
+| Rejected | Refused and closed. |
+| Cancelled | Cancelled by you or HR. |
 
 ---
 
 ## Tips
 
-- Enter overtime on the same day or the following day, while the times are fresh.
-- Check the **Hours preview** before you save, so the categories are what you expect.
-- Attach a note or record for overtime that is outside the normal pattern.
-- Submit the sheet once, at the end of the month, after all entries are added.
-- If the **Attendance check** flag appears, compare the times with your attendance record before you submit.
+- Add entries on the day or the day after, while the times are fresh.
+- Check the **Hours preview** before you save.
+- If an **Attendance check** flag appears, compare the times with your attendance before you submit.
+- Submit the sheet once, at the end of the month, after all entries are in.

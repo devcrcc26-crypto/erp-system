@@ -8,10 +8,10 @@ Use a flight application to request an air ticket for business travel. You fill 
 | --- | --- |
 | Employee (everyone) | Submit a flight application for yourself, or for someone else if you are allowed to submit on behalf. Track it in **Approvals**. |
 | Approvers | Approve the request when it reaches you in **Approvals**. |
-| HR (HR Manager, HR Assistant, HR Specialist) | See all flight applications at **/hr/flight-applications** and process them. |
+| HR (HR Manager, HR Assistant, HR Specialist) | See all flight applications under **Pay & Travel** → **Flight Applications** and process them. |
 
 **Where to find it**
-- Submit: **New Request** → **Flight** (or open `/approvals/new/flight-application`).
+- Submit: **New Request** → **Flight**.
 - HR list: sidebar → **Pay & Travel** → **Flight Applications** (HR only).
 
 ---

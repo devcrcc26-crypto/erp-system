@@ -11,7 +11,7 @@ Use a work-from-home request to ask for one or more days working from home. You 
 | HR (HR Manager, HR Assistant, HR Specialist) | Assign work-from-home days directly (no approval) and see all days at **Time & Attendance** → **Work From Home**. |
 
 **Where to find it**
-- Request: **New Request** → **Work From Home** (or open `/approvals/new/work-from-home`).
+- Request: **New Request** → **Work From Home**.
 - HR calendar: sidebar → **Time & Attendance** → **Work From Home** (HR only).
 
 ---
