@@ -33,10 +33,10 @@ You record overtime on one sheet per month. You add an entry each time you work 
 
 1. In the left menu, go to **New Request**.
 2. Click **Overtime Application**. The **Add Overtime Sheet** page opens.
-3. **Month** (required): choose the month you worked overtime in. You can choose a previous month.
+3. The page shows the **current month** only. Employees cannot open a sheet for a previous month. (HR and supervisors who file on behalf of others can still choose a past month.)
 4. Click **Open sheet**.
-   - If you already have a draft for that month, the page says so. Click **Continue draft**.
-   - If you already submitted a sheet for that month, click **Open it**.
+   - If you already have a draft for this month, the page says so. Click **Continue draft**.
+   - If you already submitted a sheet for this month, click **Open it**.
 
 
 > **After you open it:** Your sheet opens with the status **Draft**. Add your entries next.

@@ -24,11 +24,21 @@ import {
   notifyFormValidationErrors,
 } from '@/lib/utils/travel-form-validation';
 import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
-import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
+import dayjs from 'dayjs';
+import type {
+  BusinessTripDetail,
+  UpdateBusinessTripPayload,
+} from '@/lib/api/business-trip.types';
 import {
   useBusinessTripSelectablePassengers,
   useSubmitBusinessTrip,
+  useUpdateBusinessTrip,
 } from '@/lib/query/business-trip';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
+import { formatUserName } from '@/lib/utils/user-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -37,6 +47,50 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export interface BusinessTripFormProps {
   onSuccess?: (created: BusinessTripDetail) => void;
   submitLabel?: string;
+  /** Edit mode: the employee's own DRAFT / RETURNED trip, prefilled. */
+  initialRecord?: BusinessTripDetail;
+}
+
+/** Step values from a saved trip. */
+function businessTripValuesFrom(record: BusinessTripDetail): {
+  tripDetails: BusinessTripDetailsValues;
+  purposeBudget: BusinessTripPurposeBudgetValues;
+  passengers: BusinessTripPassengerValues[];
+  additional: BusinessTripAdditionalValues;
+} {
+  return {
+    tripDetails: {
+      tripType: record.tripType,
+      originCountry: record.originCountry,
+      originCity: record.originCity,
+      destinationCountry: record.destinationCountry,
+      destinationCity: record.destinationCity,
+      departureDate: dayjs(record.departureDate),
+      returnDate: record.returnDate ? dayjs(record.returnDate) : null,
+    },
+    purposeBudget: {
+      purpose: record.purpose,
+      hostOrganization: record.hostOrganization ?? '',
+      hostContactName: record.hostContactName ?? '',
+      hostContactPhone: record.hostContactPhone ?? '',
+      hostContactEmail: record.hostContactEmail ?? '',
+      expectedOutcomes: record.expectedOutcomes ?? '',
+      itinerary: record.itinerary ?? '',
+      estimatedAccommodationCost: record.estimatedAccommodationCost ?? null,
+      estimatedPerDiem: record.estimatedPerDiem ?? null,
+      estimatedOtherCost: record.estimatedOtherCost ?? null,
+    },
+    passengers: record.passengers.map((passenger) => ({
+      employeeId: passenger.employeeId,
+      name: passenger.employee
+        ? formatUserName(passenger.employee)
+        : passenger.employeeId,
+      passportNumber: passenger.passportNumber ?? undefined,
+      visaRequired: passenger.visaRequired,
+      visaStatus: passenger.visaStatus ?? undefined,
+    })),
+    additional: { notes: record.notes ?? '', files: [] },
+  };
 }
 
 const INITIAL_TRIP: BusinessTripDetailsValues = {
@@ -73,24 +127,35 @@ const INITIAL_ADDITIONAL: BusinessTripAdditionalValues = {
 export function BusinessTripForm({
   onSuccess,
   submitLabel,
+  initialRecord,
 }: BusinessTripFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('BUSINESS_TRIP');
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useBusinessTripSelectablePassengers();
-  const submitMutation = useSubmitBusinessTrip();
-
-  const [tripDetails, setTripDetails] =
-    useState<BusinessTripDetailsValues>(INITIAL_TRIP);
-  const [purposeBudget, setPurposeBudget] =
-    useState<BusinessTripPurposeBudgetValues>(INITIAL_PURPOSE);
-  const [passengers, setPassengers] = useState<BusinessTripPassengerValues[]>(
-    [],
+  const createMutation = useSubmitBusinessTrip();
+  const updateMutation = useUpdateBusinessTrip(initialRecord?.id ?? '');
+  const submitMutation = initialRecord ? updateMutation : createMutation;
+  const [initial] = useState(() =>
+    initialRecord ? businessTripValuesFrom(initialRecord) : null,
   );
-  const [additional, setAdditional] =
-    useState<BusinessTripAdditionalValues>(INITIAL_ADDITIONAL);
-  const [seededSelf, setSeededSelf] = useState(false);
+
+  const [tripDetails, setTripDetails] = useState<BusinessTripDetailsValues>(
+    initial?.tripDetails ?? INITIAL_TRIP,
+  );
+  const [purposeBudget, setPurposeBudget] =
+    useState<BusinessTripPurposeBudgetValues>(
+      initial?.purposeBudget ?? INITIAL_PURPOSE,
+    );
+  const [passengers, setPassengers] = useState<BusinessTripPassengerValues[]>(
+    initial?.passengers ?? [],
+  );
+  const [additional, setAdditional] = useState<BusinessTripAdditionalValues>(
+    initial?.additional ?? INITIAL_ADDITIONAL,
+  );
+  // Edit mode keeps the saved passengers instead of seeding the user.
+  const [seededSelf, setSeededSelf] = useState(Boolean(initial));
 
   useEffect(() => {
     if (seededSelf || !currentUser.data?.id || !passengersQuery.data) {
@@ -110,8 +175,9 @@ export function BusinessTripForm({
   }, [currentUser.data, passengersQuery.data, seededSelf]);
 
   const selectablePassengers = passengersQuery.data ?? [];
-  const resolvedSubmitLabel =
-    submitLabel ?? t('hr.buttons.submitBusinessTrip');
+  const resolvedSubmitLabel = initialRecord
+    ? t(requestSaveLabelKey(initialRecord.status))
+    : submitLabel ?? t('hr.buttons.submitBusinessTrip');
 
   const steps = useMemo(
     () => [
@@ -119,7 +185,7 @@ export function BusinessTripForm({
         title: t('hr.form.tripDetails'),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <BusinessTripDetailsStep
               values={tripDetails}
               onChange={setTripDetails}
@@ -240,6 +306,7 @@ export function BusinessTripForm({
               values={additional}
               onChange={setAdditional}
               disabled={submitMutation.isPending}
+              hideAttachments={Boolean(initialRecord)}
             />
             <BusinessTripSummary
               tripDetails={tripDetails}
@@ -275,6 +342,7 @@ export function BusinessTripForm({
       },
     ],
     [
+      initialRecord,
       onBehalf,
       tripDetails,
       purposeBudget,
@@ -294,8 +362,7 @@ export function BusinessTripForm({
       return;
     }
     try {
-      const created = await submitMutation.mutateAsync({
-        ...onBehalf.payload,
+      const payload = {
         tripType: tripDetails.tripType,
         originCountry: tripDetails.originCountry.trim(),
         originCity: tripDetails.originCity.trim(),
@@ -332,6 +399,16 @@ export function BusinessTripForm({
           visaRequired: p.visaRequired,
           visaStatus: p.visaRequired ? p.visaStatus : undefined,
         })),
+      } satisfies UpdateBusinessTripPayload;
+      if (initialRecord) {
+        const saved = await updateMutation.mutateAsync(payload);
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess?.(saved);
+        return;
+      }
+      const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
+        ...payload,
         files: additional.files,
       });
       messageApi.success(t('hr.messages.businessTripSubmitted'));
@@ -339,7 +416,9 @@ export function BusinessTripForm({
     } catch (error: unknown) {
       notifyApiError(
         error,
-        t('hr.messages.failedToSubmitBusinessTrip'),
+        initialRecord
+          ? t('pages.approvals.edit.failed')
+          : t('hr.messages.failedToSubmitBusinessTrip'),
         messageApi,
       );
     }

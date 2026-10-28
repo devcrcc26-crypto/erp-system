@@ -23,6 +23,7 @@ import {
   PreviewWorkFromHomeRangeDto,
   RequestWorkFromHomeDayDto,
   UpdateWorkFromHomeDayDto,
+  UpdateWorkFromHomeRequestDto,
 } from '../application/dtos/work-from-home-day.dto';
 import { WorkFromHomeDayService } from '../application/services/work-from-home-day.service';
 
@@ -88,6 +89,26 @@ export class WorkFromHomeDayController {
     @Body() dto: CancelWorkFromHomeRequestDto,
   ): Promise<unknown> {
     return this.service.cancelRequest(
+      approvalRequestId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Patch('requests/:approvalRequestId')
+  @RequireAnyPermission({ module: 'wfh', action: 'create' })
+  @ApiOperation({
+    summary:
+      'Edit your own returned work-from-home request; saving resubmits it (chain restarts)',
+  })
+  updateRequest(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('approvalRequestId') approvalRequestId: string,
+    @Body() dto: UpdateWorkFromHomeRequestDto,
+  ): Promise<unknown> {
+    return this.service.updateRequest(
       approvalRequestId,
       dto,
       companyId,

@@ -22,7 +22,13 @@ import type {
   FlightSelectablePassenger,
   ListFlightApplicationsParams,
   SubmitFlightApplicationPayload,
+  UpdateFlightApplicationPayload,
 } from '@/lib/api/flight.types';
+import {
+  applyOptimisticRequestEdit,
+  invalidateAfterRequestEdit,
+  rollbackRequestEdit,
+} from '@/lib/query/request-edit';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
@@ -206,6 +212,27 @@ export function useSubmitFlightApplication() {
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
       void queryClient.setQueryData(flightKeys.detail(created.id), created);
+    },
+  });
+}
+
+/**
+ * Employee edit of a DRAFT / RETURNED application (RETURNED is resubmitted).
+ */
+export function useUpdateFlightApplication(id: string) {
+  const queryClient = useQueryClient();
+  const detailKey = flightKeys.detail(id);
+  return useMutation({
+    mutationFn: (payload: UpdateFlightApplicationPayload) =>
+      apiPatch<FlightApplicationDetail>(`${FLIGHT_PATH}/${id}`, payload),
+    onMutate: () =>
+      applyOptimisticRequestEdit<FlightApplicationDetail>(queryClient, detailKey),
+    onError: (_error, _payload, context) =>
+      rollbackRequestEdit(queryClient, detailKey, context),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      queryClient.setQueryData(detailKey, updated);
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

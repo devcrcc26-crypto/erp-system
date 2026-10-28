@@ -145,6 +145,31 @@ export class RequestWorkFromHomeDayDto {
   lateReason?: string;
 }
 
+/** Employee edit of their own RETURNED work-from-home request. */
+export class UpdateWorkFromHomeRequestDto {
+  @ApiProperty({ example: '2026-08-11' })
+  @IsDateString()
+  startDate!: string;
+
+  @ApiProperty({ example: '2026-08-15', description: 'Last day (inclusive)' })
+  @IsDateString()
+  endDate!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Required when a date falls before the current calendar month',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
+}
+
 export class ListWorkFromHomeDaysDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -169,6 +194,14 @@ export class PreviewWorkFromHomeRangeDto {
   @IsOptional()
   @IsUUID('4')
   onBehalfOfEmployeeId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Your own open request being edited - its days are not counted as already requested',
+  })
+  @IsOptional()
+  @IsUUID()
+  editingRequestId?: string;
 }
 
 /** Cancel a pending (requester / HR) or approved (HR) work-from-home request. */

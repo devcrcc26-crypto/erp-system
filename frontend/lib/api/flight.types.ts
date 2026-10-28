@@ -122,6 +122,12 @@ export interface SubmitFlightApplicationPayload extends OnBehalfPayload {
   files?: File[];
 }
 
+/** PATCH body when the employee edits a DRAFT / RETURNED application (JSON, no files). */
+export type UpdateFlightApplicationPayload = Omit<
+  SubmitFlightApplicationPayload,
+  keyof OnBehalfPayload | 'files'
+>;
+
 export interface ListFlightApplicationsParams {
   page?: number;
   limit?: number;

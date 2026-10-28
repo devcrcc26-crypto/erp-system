@@ -571,6 +571,7 @@ export class ExpenseClaimService
   ): Promise<unknown> {
     const claim = await this.prisma.expenseClaim.findFirst({
       where: activeOnly({ id, companyId }),
+      include: { items: true },
     });
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
@@ -580,24 +581,69 @@ export class ExpenseClaimService
       claim.status !== ExpenseClaimStatus.DRAFT &&
       claim.status !== ExpenseClaimStatus.RETURNED
     ) {
-      throw new BadRequestException(
-        'Claim cannot be edited in its current status',
-      );
+      throw new ForbiddenException('This request can no longer be edited.');
     }
-    if (dto.title === undefined && dto.description === undefined) {
+    // requestedBy is the claim owner (see submitClaim).
+    const resubmit =
+      claim.status === ExpenseClaimStatus.RETURNED &&
+      Boolean(claim.approvalRequestId) &&
+      claim.employeeId === userId;
+    if (
+      !resubmit &&
+      dto.title === undefined &&
+      dto.description === undefined
+    ) {
       throw new BadRequestException('No fields to update');
     }
+    if (resubmit) {
+      // Same item rules as the first submit.
+      if (claim.items.length === 0) {
+        throw new BadRequestException(
+          'Add at least one expense item before submitting',
+        );
+      }
+      if (claim.items.some((item) => !item.documentId)) {
+        throw new BadRequestException(
+          'Every expense item requires a receipt before submitting',
+        );
+      }
+    }
 
-    await this.prisma.expenseClaim.update({
-      where: { id: claim.id },
-      data: {
-        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-        ...(dto.description !== undefined
-          ? { description: dto.description.trim() || null }
-          : {}),
-        updatedBy: userId,
-      },
+    const title =
+      dto.title !== undefined ? dto.title.trim() : claim.title;
+    const description =
+      dto.description !== undefined
+        ? dto.description.trim() || null
+        : claim.description;
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.expenseClaim.update({
+        where: { id: claim.id },
+        data: { title, description, updatedBy: userId },
+      });
+      if (claim.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: claim.approvalRequestId },
+          data: {
+            title,
+            formData: {
+              description,
+              itemCount: claim.items.length,
+              totalAmountEtb: Number(claim.totalAmountEtb),
+            },
+            updatedBy: userId,
+          },
+        });
+      }
     });
+
+    if (resubmit && claim.approvalRequestId) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        claim.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
 
     return this.getClaim(id, companyId, userId);
   }
@@ -836,8 +882,11 @@ export class ExpenseClaimService
       throw new NotFoundException('Expense claim not found');
     }
     await this.assertCanManageClaim(claim, companyId, userId);
-    if (claim.status !== ExpenseClaimStatus.DRAFT) {
-      throw new BadRequestException('Only draft claims can be edited');
+    if (
+      claim.status !== ExpenseClaimStatus.DRAFT &&
+      claim.status !== ExpenseClaimStatus.RETURNED
+    ) {
+      throw new ForbiddenException('This request can no longer be edited.');
     }
     return claim;
   }

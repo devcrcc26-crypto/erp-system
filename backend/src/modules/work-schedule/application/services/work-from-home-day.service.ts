@@ -43,6 +43,7 @@ import type {
   PreviewWorkFromHomeRangeDto,
   RequestWorkFromHomeDayDto,
   UpdateWorkFromHomeDayDto,
+  UpdateWorkFromHomeRequestDto,
 } from '../dtos/work-from-home-day.dto';
 import { iterateUtcDays, parseDateOnly } from './work-schedule.dates';
 import { WFH_MAX_RANGE_DAYS } from './work-from-home-range.util';
@@ -535,11 +536,24 @@ export class WorkFromHomeDayService
       dto.onBehalfOfEmployeeId,
       { hrProcess: true },
     );
+    // Only the requester's own WFH request can be excluded from coverage.
+    const editing = dto.editingRequestId
+      ? await this.prisma.approvalRequest.findFirst({
+          where: activeOnly({
+            id: dto.editingRequestId,
+            companyId,
+            requestedBy: employeeId,
+            category: { code: 'WORK_FROM_HOME' },
+          }),
+          select: { requestNumber: true },
+        })
+      : null;
     const plan = await this.buildRangePlan(
       companyId,
       employeeId,
       parseDateOnly(dto.startDate),
       parseDateOnly(dto.endDate),
+      editing?.requestNumber,
     );
     return {
       ...plan,
@@ -678,6 +692,99 @@ export class WorkFromHomeDayService
     });
 
     return approval;
+  }
+
+  /**
+   * Employee edits their own RETURNED work-from-home request (the request
+   * lives entirely in the approval's formData). The range is re-planned
+   * exactly as on submit, then the request is resubmitted and the approval
+   * chain restarts.
+   */
+  async updateRequest(
+    approvalRequestId: string,
+    dto: UpdateWorkFromHomeRequestDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const approval = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({
+        id: approvalRequestId,
+        companyId,
+        category: { code: 'WORK_FROM_HOME' },
+      }),
+      select: {
+        id: true,
+        requestNumber: true,
+        requestedBy: true,
+        status: true,
+        formData: true,
+      },
+    });
+    if (!approval) {
+      throw new NotFoundException('Work-from-home request not found');
+    }
+    if (approval.requestedBy !== userId) {
+      throw new ForbiddenException('You can only edit your own requests.');
+    }
+    if (approval.status !== ApprovalRequestStatus.RETURNED) {
+      throw new ForbiddenException('This request can no longer be edited.');
+    }
+
+    const previous = (approval.formData ?? {}) as Partial<WorkFromHomeFormData>;
+    const reason = dto.reason.trim();
+    const plan = await this.buildRangePlan(
+      companyId,
+      userId,
+      parseDateOnly(dto.startDate),
+      parseDateOnly(dto.endDate),
+      approval.requestNumber,
+    );
+    if (plan.dates.length === 0) {
+      throw new BadRequestException(
+        'None of the selected days can be work from home (Sundays, holidays, leave, site assignments or existing work from home)',
+      );
+    }
+
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
+      companyId,
+      actorUserId: userId,
+      targetEmployeeId: userId,
+      dates: plan.dates.map((key) => parseDateOnly(key)),
+      lateReason: dto.lateReason,
+    });
+
+    const formData: WorkFromHomeFormData = {
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      dates: plan.dates,
+      skipped: plan.skipped,
+      reason,
+      employeeId: userId,
+      createdFromAttendanceImport: previous.createdFromAttendanceImport === true,
+    };
+
+    await this.prisma.approvalRequest.update({
+      where: { id: approval.id },
+      data: {
+        title: `Work from home - ${formatWorkFromHomeRangeLabel(
+          plan.startDate,
+          plan.endDate,
+          plan.workingDays,
+        )}`,
+        formData: formData as Prisma.InputJsonObject,
+        isLateSubmission: backdating.isLateSubmission,
+        lateReason: backdating.lateReason,
+        updatedBy: userId,
+      },
+    });
+
+    await this.approvalsService.resubmitAfterOwnerEdit(
+      approval.id,
+      companyId,
+      userId,
+    );
+
+    return this.approvalsService.getRequest(approval.id, companyId, userId);
   }
 
   /**
@@ -888,11 +995,16 @@ export class WorkFromHomeDayService
     return removed;
   }
 
+  /**
+   * `excludeRequestNumber`: an open WFH request being edited, whose own days
+   * must not count as "already requested".
+   */
   private async buildRangePlan(
     companyId: string,
     employeeId: string,
     start: Date,
     end: Date,
+    excludeRequestNumber?: string,
   ): Promise<WorkFromHomeRangePlan> {
     // Validates order and the 31-day cap before any lookups.
     planWorkFromHomeRange({ start, end, schedule: [], covers: [] });
@@ -921,7 +1033,22 @@ export class WorkFromHomeDayService
       // Attendance arrives after month-end — do not skip WFH days for scans at request time.
       ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
-    return planWorkFromHomeRange({ start, end, schedule: scheduleDays, covers });
+    const relevantCovers = excludeRequestNumber
+      ? covers.filter(
+          (cover) =>
+            !(
+              cover.module === 'WORK_FROM_HOME' &&
+              cover.state === 'REQUESTED' &&
+              cover.reference === excludeRequestNumber
+            ),
+        )
+      : covers;
+    return planWorkFromHomeRange({
+      start,
+      end,
+      schedule: scheduleDays,
+      covers: relevantCovers,
+    });
   }
 
   private async recalculateDates(

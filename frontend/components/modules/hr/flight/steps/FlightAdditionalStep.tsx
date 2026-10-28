@@ -18,11 +18,14 @@ export default function FlightAdditionalStep({
   onChange,
   disabled = false,
   effectiveEmployeeId,
+  hideAttachments = false,
 }: {
   values: FlightAdditionalValues;
   onChange: (next: FlightAdditionalValues) => void;
   disabled?: boolean;
   effectiveEmployeeId?: string;
+  /** Edit mode: attachments are added from the request page, not the form. */
+  hideAttachments?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const tripsQuery = useBusinessTrips({ status: 'APPROVED', limit: 50 }, true);
@@ -141,20 +144,22 @@ export default function FlightAdditionalStep({
         </div>
       </FormLayout>
 
-      <FormLayout
-        variant="pro"
-        dense
-        title={t('hr.labels.supportingAttachments')}
-        description={t('hr.form.supportingDocuments')}
-      >
-        <FileUploadInput
-          files={values.files}
-          onChange={(files) => patch({ files })}
-          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-          multiple
-          disabled={disabled}
-        />
-      </FormLayout>
+      {hideAttachments ? null : (
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('hr.labels.supportingAttachments')}
+          description={t('hr.form.supportingDocuments')}
+        >
+          <FileUploadInput
+            files={values.files}
+            onChange={(files) => patch({ files })}
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            multiple
+            disabled={disabled}
+          />
+        </FormLayout>
+      )}
     </div>
   );
 }

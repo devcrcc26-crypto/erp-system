@@ -32,6 +32,11 @@ import type {
 } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
+import {
+  applyOptimisticRequestEdit,
+  invalidateAfterRequestEdit,
+  rollbackRequestEdit,
+} from '@/lib/query/request-edit';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -235,9 +240,18 @@ export function useUpdateExpenseClaim(claimId: string) {
         `${EXPENSE_CLAIM_PATH}/${claimId}`,
         payload,
       ),
+    // A returned claim saved by its owner is resubmitted.
+    onMutate: () =>
+      applyOptimisticRequestEdit<ExpenseClaimDetail>(
+        queryClient,
+        expenseClaimKeys.detail(claimId),
+      ),
+    onError: (_error, _payload, context) =>
+      rollbackRequestEdit(queryClient, expenseClaimKeys.detail(claimId), context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
       void queryClient.setQueryData(expenseClaimKeys.detail(claimId), updated);
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

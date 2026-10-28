@@ -151,6 +151,8 @@ export async function previewWorkFromHomeRange(dto: {
   startDate: string;
   endDate: string;
   onBehalfOfEmployeeId?: string;
+  /** Own request being edited: its days are not "already requested". */
+  editingRequestId?: string;
 }): Promise<WorkFromHomeRangePreview> {
   return apiPost<WorkFromHomeRangePreview>(
     '/hr/attendance/work-from-home/preview',
@@ -165,5 +167,23 @@ export async function cancelWorkFromHomeRequest(
   return apiPost(
     `/hr/attendance/work-from-home/requests/${approvalRequestId}/cancel`,
     { reason },
+  );
+}
+
+/** Employee edit of their own RETURNED request; saving resubmits it. */
+export interface UpdateWorkFromHomeRequestDto {
+  startDate: string;
+  endDate: string;
+  reason: string;
+  lateReason?: string;
+}
+
+export async function updateWorkFromHomeRequest(
+  approvalRequestId: string,
+  dto: UpdateWorkFromHomeRequestDto,
+): Promise<unknown> {
+  return apiPatch(
+    `/hr/attendance/work-from-home/requests/${approvalRequestId}`,
+    dto,
   );
 }

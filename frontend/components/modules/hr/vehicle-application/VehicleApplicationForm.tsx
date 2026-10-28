@@ -30,10 +30,18 @@ import { getDisabledDepartureDate } from '@/lib/utils/date-validation';
 import type { AvailableVehicle } from '@/lib/api/company-vehicle.types';
 import type {
   DriveType,
+  UpdateVehicleApplicationPayload,
   VehicleApplicationDetail,
 } from '@/lib/api/vehicle-application.types';
 import { useAvailableVehicles } from '@/lib/query/company-vehicle';
-import { useSubmitVehicleApplication } from '@/lib/query/vehicle-application';
+import {
+  useSubmitVehicleApplication,
+  useUpdateVehicleApplication,
+} from '@/lib/query/vehicle-application';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -55,6 +63,30 @@ interface VehicleApplicationFormValues {
 
 interface VehicleApplicationFormProps {
   onSuccess: (result: VehicleApplicationDetail) => void;
+  /** Edit mode: the employee's own DRAFT / RETURNED application, prefilled. */
+  initialRecord?: VehicleApplicationDetail;
+}
+
+const CREATE_INITIAL_VALUES: Partial<VehicleApplicationFormValues> = {
+  driveType: 'COMPANY_DRIVER',
+  passengerCount: 1,
+};
+
+function vehicleFormValuesFrom(
+  record: VehicleApplicationDetail,
+): Partial<VehicleApplicationFormValues> {
+  return {
+    departureDatetime: dayjs(record.departureDatetime),
+    returnDatetime: dayjs(record.returnDatetime),
+    vehicleId: record.vehicleId,
+    driveType: record.driveType,
+    driverId: record.driverId ?? undefined,
+    destination: record.destination,
+    purpose: record.purpose,
+    passengerCount: record.passengerCount,
+    passengerNames: record.passengerNames ?? undefined,
+    notes: record.notes ?? undefined,
+  };
 }
 
 const DETAILS_FIELDS = [
@@ -78,6 +110,7 @@ function resolveVehicleDriverId(
  */
 export default function VehicleApplicationForm({
   onSuccess,
+  initialRecord,
 }: VehicleApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   // HR / full access may record past trips; everyone else books ahead.
@@ -87,14 +120,30 @@ export default function VehicleApplicationForm({
   const [form] = Form.useForm<VehicleApplicationFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<AvailableVehicle | null>(
+  const [pickedVehicle, setSelectedVehicle] = useState<AvailableVehicle | null>(
     null,
   );
   /** Kept in React state so dates survive schedule-step unmount (useWatch goes empty). */
-  const [departureAt, setDepartureAt] = useState<dayjs.Dayjs | null>(null);
-  const [returnAt, setReturnAt] = useState<dayjs.Dayjs | null>(null);
+  const [departureAt, setDepartureAt] = useState<dayjs.Dayjs | null>(() =>
+    initialRecord ? dayjs(initialRecord.departureDatetime) : null,
+  );
+  const [returnAt, setReturnAt] = useState<dayjs.Dayjs | null>(() =>
+    initialRecord ? dayjs(initialRecord.returnDatetime) : null,
+  );
+  /** Edit mode: the saved vehicle stays selected until the user changes it. */
+  const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(
+    initialRecord?.vehicleId ?? null,
+  );
+  const initialValues = useMemo(
+    () =>
+      initialRecord
+        ? vehicleFormValuesFrom(initialRecord)
+        : CREATE_INITIAL_VALUES,
+    [initialRecord],
+  );
 
   const submitMutation = useSubmitVehicleApplication();
+  const updateMutation = useUpdateVehicleApplication(initialRecord?.id ?? '');
 
   const driveType = Form.useWatch('driveType', form) ?? 'COMPANY_DRIVER';
   const formValues = Form.useWatch([], form) as
@@ -117,8 +166,14 @@ export default function VehicleApplicationForm({
 
   const availableQuery = useAvailableVehicles(availableParams);
   const vehicles = availableQuery.data ?? [];
+  const savedVehicle = pendingVehicleId
+    ? vehicles.find((row) => row.id === pendingVehicleId && row.isAvailable) ??
+      null
+    : null;
+  const selectedVehicle = pickedVehicle ?? savedVehicle;
 
   function clearVehicleSelection(): void {
+    setPendingVehicleId(null);
     setSelectedVehicle(null);
     form.setFieldsValue({
       vehicleId: undefined,
@@ -166,10 +221,13 @@ export default function VehicleApplicationForm({
   function resetForm(): void {
     onBehalf.reset();
     form.resetFields();
-    form.setFieldsValue({ driveType: 'COMPANY_DRIVER', passengerCount: 1 });
-    setDepartureAt(null);
-    setReturnAt(null);
+    form.setFieldsValue(initialValues);
+    setDepartureAt(
+      initialRecord ? dayjs(initialRecord.departureDatetime) : null,
+    );
+    setReturnAt(initialRecord ? dayjs(initialRecord.returnDatetime) : null);
     setSelectedVehicle(null);
+    setPendingVehicleId(initialRecord?.vehicleId ?? null);
     setFormError(null);
   }
 
@@ -287,8 +345,7 @@ export default function VehicleApplicationForm({
 
     setSubmitting(true);
     try {
-      const result = await submitMutation.mutateAsync({
-        ...onBehalf.payload,
+      const payload = {
         vehicleId: selectedVehicle.id,
         driveType: driveTypeValue,
         driverId,
@@ -299,6 +356,20 @@ export default function VehicleApplicationForm({
         passengerCount: stored.passengerCount ?? 1,
         passengerNames: stored.passengerNames?.trim() || undefined,
         notes: stored.notes?.trim() || undefined,
+      } satisfies UpdateVehicleApplicationPayload;
+      if (initialRecord) {
+        const saved = await updateMutation.mutateAsync({
+          ...payload,
+          // Not on the form; keep the saved project link.
+          projectId: initialRecord.projectId ?? undefined,
+        });
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess(saved);
+        return;
+      }
+      const result = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
+        ...payload,
       });
 
       messageApi.success(
@@ -309,7 +380,9 @@ export default function VehicleApplicationForm({
       );
       onSuccess(result);
     } catch (error: unknown) {
-      const fallback = t('hr.messages.vehicleApplicationSubmitFailed');
+      const fallback = initialRecord
+        ? t('pages.approvals.edit.failed')
+        : t('hr.messages.vehicleApplicationSubmitFailed');
       const friendly = getFriendlyApiErrorMessage(error, fallback, t);
       notifyApiError(error, fallback, messageApi, t);
       setFormError(friendly);
@@ -325,7 +398,7 @@ export default function VehicleApplicationForm({
         validate: () => validateScheduleStep(),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <FormLayout
               variant="pro"
               title={t('hr.form.tripSchedule')}
@@ -684,6 +757,7 @@ export default function VehicleApplicationForm({
       },
     ],
     [
+      initialRecord,
       onBehalf,
       t,
       form,
@@ -708,7 +782,7 @@ export default function VehicleApplicationForm({
       requiredMark={false}
       preserve
       className="flex min-h-0 flex-1 flex-col"
-      initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}
+      initialValues={initialValues}
     >
       {formError ? (
         <ErpNotice
@@ -726,7 +800,11 @@ export default function VehicleApplicationForm({
         onReset={resetForm}
         isSubmitting={submitting}
         contentVariant="sections"
-        submitLabel={t('hr.buttons.submitApplication')}
+        submitLabel={
+          initialRecord
+            ? t(requestSaveLabelKey(initialRecord.status))
+            : t('hr.buttons.submitApplication')
+        }
       />
     </Form>
   );

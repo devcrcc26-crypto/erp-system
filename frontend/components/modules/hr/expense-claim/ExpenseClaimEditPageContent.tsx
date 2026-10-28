@@ -2,19 +2,36 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
-import { useEffect } from 'react';
-import { Alert, Button, Form, Input, Skeleton } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Button, Form, Input, Skeleton, Space, Table } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+import ReturnedRequestCallout from '@/components/modules/approvals/ReturnedRequestCallout';
+import ExpenseClaimItemModal from '@/components/modules/hr/expense-claim/ExpenseClaimItemModal';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useExpenseClaim, useUpdateExpenseClaim } from '@/lib/query/expense-claim';
+import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
+import {
+  useDeleteExpenseClaimItem,
+  useExpenseClaim,
+  useUpdateExpenseClaim,
+} from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 
 interface ClaimFormValues {
   title: string;
@@ -22,7 +39,9 @@ interface ClaimFormValues {
 }
 
 /**
- * Edit expense claim header (title/description) when DRAFT or RETURNED.
+ * Edit an expense claim (header and line items) when DRAFT or RETURNED.
+ * Item changes save immediately; Save writes the header and, for the owner of
+ * a RETURNED claim, resubmits it (approval chain restarts).
  */
 export default function ExpenseClaimEditPageContent({
   claimId,
@@ -46,24 +65,44 @@ export default function ExpenseClaimEditPageContent({
       (Boolean(currentUser.data?.id) &&
         claim?.employeeId === currentUser.data?.id));
 
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ExpenseClaimItem | null>(null);
+  const deleteItemMutation = useDeleteExpenseClaimItem(claimId);
+  // Seed the header once: item edits refresh the claim cache and must not
+  // overwrite what the user is typing.
+  const seededRef = useRef(false);
+  const backHref = claim?.approvalRequestId
+    ? `/approvals/${claim.approvalRequestId}`
+    : `/hr/expense-claims/${claimId}`;
+
   useEffect(() => {
-    if (!claim) {
+    if (!claim || seededRef.current) {
       return;
     }
+    seededRef.current = true;
     form.setFieldsValue({
       title: claim.title,
       description: claim.description ?? undefined,
     });
   }, [claim, form]);
 
+  async function handleDeleteItem(itemId: string): Promise<void> {
+    try {
+      await deleteItemMutation.mutateAsync(itemId);
+    } catch (error: unknown) {
+      notifyApiError(error, t('pages.approvals.edit.failed'), messageApi);
+    }
+  }
+
   async function handleSubmit(values: ClaimFormValues): Promise<void> {
+    const previousStatus = claim?.status;
     try {
       await updateMutation.mutateAsync({
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
       });
-      messageApi.success(t('hr.messages.expenseClaimUpdated'));
-      router.push(`/hr/expense-claims/${claimId}`);
+      messageApi.success(t(requestSaveSuccessKey(previousStatus)));
+      router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -129,7 +168,7 @@ export default function ExpenseClaimEditPageContent({
         title={t('pages.hr.expenseClaim.edit')}
         description={t('pages.hr.expenseClaim.editDescription')}
         cancelLabel={t('hr.buttons.cancel')}
-        cancelHref={`/hr/expense-claims/${claimId}`}
+        cancelHref={backHref}
         backLabel={t('hr.buttons.back')}
         headerExtra={
           <Button
@@ -137,10 +176,13 @@ export default function ExpenseClaimEditPageContent({
             loading={updateMutation.isPending}
             onClick={() => form.submit()}
           >
-            {t('hr.buttons.save')}
+            {t(requestSaveLabelKey(claim.status))}
           </Button>
         }
       >
+        {claim.status === 'RETURNED' ? (
+          <ReturnedRequestCallout approvalRequestId={claim.approvalRequestId} />
+        ) : null}
         <FormLayout
           variant="pro"
           title={t('hr.section.requestDetails')}
@@ -188,7 +230,96 @@ export default function ExpenseClaimEditPageContent({
             </Form.Item>
           </Form>
         </FormLayout>
+
+        <FormLayout
+          variant="pro"
+          title={t('hr.section.items')}
+          description={t('hr.form.itemCount', { count: claim.items.length })}
+        >
+          <Table<ExpenseClaimItem>
+            rowKey="id"
+            size="small"
+            pagination={false}
+            dataSource={claim.items}
+            locale={{ emptyText: t('hr.empty.noItems') }}
+            columns={[
+              {
+                title: t('hr.table.category'),
+                dataIndex: 'category',
+                key: 'category',
+                width: 140,
+              },
+              {
+                title: t('hr.table.description'),
+                dataIndex: 'description',
+                key: 'description',
+                ellipsis: true,
+              },
+              {
+                title: t('hr.table.amount'),
+                key: 'amount',
+                width: 130,
+                align: 'right',
+                render: (_: unknown, row) => formatEtbAmount(row.amountEtb),
+              },
+              {
+                title: t('hr.table.receipt'),
+                key: 'receipt',
+                width: 90,
+                render: (_: unknown, row) => (row.receipt ? '✓' : '-'),
+              },
+              {
+                title: <span className="sr-only">{t('common.edit')}</span>,
+                key: 'actions',
+                width: 88,
+                render: (_: unknown, row) => (
+                  <Space size={4}>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<EditOutlined />}
+                      aria-label={`${t('common.edit')} ${row.description}`}
+                      onClick={() => {
+                        setEditingItem(row);
+                        setItemModalOpen(true);
+                      }}
+                    />
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      aria-label={`${t('common.delete')} ${row.description}`}
+                      loading={deleteItemMutation.isPending}
+                      onClick={() => void handleDeleteItem(row.id)}
+                    />
+                  </Space>
+                ),
+              },
+            ]}
+          />
+          <Button
+            className="mt-3"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingItem(null);
+              setItemModalOpen(true);
+            }}
+          >
+            {t('hr.buttons.addItem')}
+          </Button>
+        </FormLayout>
       </HrFormPageShell>
+
+      <ExpenseClaimItemModal
+        open={itemModalOpen}
+        claimId={claimId}
+        editingItem={editingItem}
+        onClose={() => {
+          setItemModalOpen(false);
+          setEditingItem(null);
+        }}
+      />
     </div>
   );
 }

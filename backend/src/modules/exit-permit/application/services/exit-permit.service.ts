@@ -201,6 +201,18 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       await this.resolveTargetEmployeeId(dto.employeeId, companyId, userId);
     }
 
+    const existing = await this.prisma.exitPermit.findFirstOrThrow({
+      where: activeOnly({ id, companyId }),
+      select: { status: true, approvalRequestId: true },
+    });
+    if (
+      existing.status === ExitPermitStatus.RETURNED &&
+      dto.items !== undefined &&
+      dto.items.length === 0
+    ) {
+      throw new BadRequestException('Add at least one item before submitting');
+    }
+
     await this.prisma.$transaction(async (tx) => {
       await tx.exitPermit.update({
         where: { id },
@@ -241,6 +253,37 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         }
       }
     });
+
+    if (
+      existing.status === ExitPermitStatus.RETURNED &&
+      existing.approvalRequestId
+    ) {
+      const updated = await this.prisma.exitPermit.findFirstOrThrow({
+        where: { id },
+        include: { items: { select: { id: true } } },
+      });
+      await this.prisma.approvalRequest.update({
+        where: { id: existing.approvalRequestId },
+        data: {
+          formData: {
+            itemCount: updated.items.length,
+            direction: updated.direction,
+            date: updated.date,
+            departmentId: updated.departmentId,
+            employeeId: updated.employeeId,
+            submittedBy: updated.submittedBy,
+            isOnBehalf: updated.isOnBehalf,
+          },
+          updatedBy: userId,
+        },
+      });
+      // Requester's save resubmits the returned permit (chain restarts).
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        existing.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
 
     return this.getRequest(id, companyId, userId);
   }
@@ -750,9 +793,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       request.status !== ExitPermitStatus.DRAFT &&
       request.status !== ExitPermitStatus.RETURNED
     ) {
-      throw new BadRequestException(
-        "Only draft or returned exit permits can be edited",
-      );
+      throw new ForbiddenException("This request can no longer be edited.");
     }
   }
 

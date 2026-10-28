@@ -11,6 +11,7 @@ import {
   Space,
   Typography,
 } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import LeavePeriodsEditor, {
   createEmptyLeavePeriod,
@@ -40,6 +41,10 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import '@/components/modules/hr/leave/leave-v2.css';
@@ -182,12 +187,13 @@ export default function LeaveRequestDetail({
         messageApi.error(t('hr.form.periodNoWorkingDays'));
         return;
       }
+      // Saving a returned request resubmits it (chain restarts at tier 1).
       await updateMutation.mutateAsync({
         leaveType: values.leaveType,
         periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
-      messageApi.success(t('hr.messages.leaveRequestUpdated'));
+      messageApi.success(t(requestSaveSuccessKey(leave?.status)));
       setEditing(false);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -205,8 +211,13 @@ export default function LeaveRequestDetail({
     <div className="erp-leave-v2 flex flex-col gap-3">
       {canEdit && !editing ? (
         <div className="flex justify-end">
-          <Button size="small" onClick={startEditing} style={{ borderRadius: 0 }}>
-            {t('common.edit')}
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={startEditing}
+            style={{ borderRadius: 0 }}
+          >
+            {t('pages.approvals.edit.button')}
           </Button>
         </div>
       ) : null}
@@ -247,7 +258,7 @@ export default function LeaveRequestDetail({
                 loading={updateMutation.isPending}
                 onClick={() => void handleSave()}
               >
-                {t('hr.buttons.saveLeaveRequest')}
+                {t(requestSaveLabelKey(leave.status))}
               </Button>
               <Button onClick={() => setEditing(false)}>
                 {t('hr.buttons.cancel')}

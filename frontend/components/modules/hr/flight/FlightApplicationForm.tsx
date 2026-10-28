@@ -22,11 +22,21 @@ import {
   notifyFormValidationErrors,
 } from '@/lib/utils/travel-form-validation';
 import { isRoundTripDurationValid } from '@/lib/utils/travel-trip-dates';
-import type { FlightApplicationDetail } from '@/lib/api/flight.types';
+import dayjs from 'dayjs';
+import type {
+  FlightApplicationDetail,
+  UpdateFlightApplicationPayload,
+} from '@/lib/api/flight.types';
 import {
   useSelectablePassengers,
   useSubmitFlightApplication,
+  useUpdateFlightApplication,
 } from '@/lib/query/flight';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
+import { formatUserName } from '@/lib/utils/user-display';
 import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -37,6 +47,50 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export interface FlightApplicationFormProps {
   onSuccess?: (created: FlightApplicationDetail) => void;
   submitLabel?: string;
+  /** Edit mode: the employee's own DRAFT / RETURNED application, prefilled. */
+  initialRecord?: FlightApplicationDetail;
+}
+
+/** Step values from a saved application (international destination is "City, Country"). */
+function flightValuesFrom(record: FlightApplicationDetail): {
+  tripDetails: FlightTripDetailsValues;
+  passengers: FlightPassengerValues[];
+  additional: FlightAdditionalValues;
+} {
+  const parts = record.destination.split(',').map((part) => part.trim());
+  const destinationCountry =
+    record.isInternational && parts.length > 1 ? parts.pop() : 'Ethiopia';
+  const destinationCity = parts.join(', ');
+  return {
+    tripDetails: {
+      tripType: record.tripType,
+      isInternational: record.isInternational,
+      originCountry: record.originCountry,
+      originCity: record.originCity,
+      destination: destinationCity,
+      destinationCity,
+      destinationCountry,
+      departureDate: dayjs(record.departureDate),
+      returnDate: record.returnDate ? dayjs(record.returnDate) : null,
+      purpose: record.purpose,
+      ticketClass: record.ticketClass,
+    },
+    passengers: record.passengers.map((passenger) => ({
+      employeeId: passenger.employeeId,
+      name: passenger.employee
+        ? formatUserName(passenger.employee)
+        : passenger.employeeId,
+      passportNumber: passenger.passportNumber ?? undefined,
+      visaRequired: passenger.visaRequired,
+      visaStatus: passenger.visaStatus ?? undefined,
+    })),
+    additional: {
+      notes: record.notes ?? '',
+      linkedBusinessTripId: record.linkedBusinessTripId ?? undefined,
+      siteAssignmentId: record.siteAssignmentId ?? undefined,
+      files: [],
+    },
+  };
 }
 
 const INITIAL_TRIP: FlightTripDetailsValues = {
@@ -64,13 +118,19 @@ const INITIAL_ADDITIONAL: FlightAdditionalValues = {
 export function FlightApplicationForm({
   onSuccess,
   submitLabel,
+  initialRecord,
 }: FlightApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('FLIGHT_APPLICATION');
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useSelectablePassengers();
-  const submitMutation = useSubmitFlightApplication();
+  const createMutation = useSubmitFlightApplication();
+  const updateMutation = useUpdateFlightApplication(initialRecord?.id ?? '');
+  const submitMutation = initialRecord ? updateMutation : createMutation;
+  const [initial] = useState(() =>
+    initialRecord ? flightValuesFrom(initialRecord) : null,
+  );
   const approvedTripsQuery = useBusinessTrips(
     { status: 'APPROVED', limit: 50 },
     true,
@@ -80,12 +140,17 @@ export function FlightApplicationForm({
     Boolean(onBehalf.effectiveEmployeeId),
   );
 
-  const [tripDetails, setTripDetails] =
-    useState<FlightTripDetailsValues>(INITIAL_TRIP);
-  const [passengers, setPassengers] = useState<FlightPassengerValues[]>([]);
-  const [additional, setAdditional] =
-    useState<FlightAdditionalValues>(INITIAL_ADDITIONAL);
-  const [seededSelf, setSeededSelf] = useState(false);
+  const [tripDetails, setTripDetails] = useState<FlightTripDetailsValues>(
+    initial?.tripDetails ?? INITIAL_TRIP,
+  );
+  const [passengers, setPassengers] = useState<FlightPassengerValues[]>(
+    initial?.passengers ?? [],
+  );
+  const [additional, setAdditional] = useState<FlightAdditionalValues>(
+    initial?.additional ?? INITIAL_ADDITIONAL,
+  );
+  // Edit mode keeps the saved passengers instead of seeding the user.
+  const [seededSelf, setSeededSelf] = useState(Boolean(initial));
 
   const linkedBusinessTripLabel = useMemo(() => {
     if (!additional.linkedBusinessTripId) {
@@ -129,8 +194,9 @@ export function FlightApplicationForm({
   }, [currentUser.data, passengersQuery.data, seededSelf]);
 
   const selectablePassengers = passengersQuery.data ?? [];
-  const resolvedSubmitLabel =
-    submitLabel ?? t('hr.buttons.submitApplication');
+  const resolvedSubmitLabel = initialRecord
+    ? t(requestSaveLabelKey(initialRecord.status))
+    : submitLabel ?? t('hr.buttons.submitApplication');
 
   const steps = useMemo(
     () => [
@@ -138,7 +204,7 @@ export function FlightApplicationForm({
         title: t('hr.form.tripDetails'),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <FlightTripDetailsStep
               values={tripDetails}
               onChange={setTripDetails}
@@ -258,6 +324,7 @@ export function FlightApplicationForm({
               onChange={setAdditional}
               disabled={submitMutation.isPending}
               effectiveEmployeeId={onBehalf.effectiveEmployeeId}
+              hideAttachments={Boolean(initialRecord)}
             />
             <FlightSummary
               tripDetails={tripDetails}
@@ -294,6 +361,7 @@ export function FlightApplicationForm({
       },
     ],
     [
+      initialRecord,
       onBehalf,
       tripDetails,
       passengers,
@@ -325,8 +393,7 @@ export function FlightApplicationForm({
           ? `${destinationCity}, ${destinationCountry}`
           : destinationCity;
 
-      const created = await submitMutation.mutateAsync({
-        ...onBehalf.payload,
+      const payload = {
         tripType: tripDetails.tripType,
         isInternational: tripDetails.isInternational,
         originCountry: tripDetails.isInternational
@@ -355,6 +422,16 @@ export function FlightApplicationForm({
               ? p.visaStatus
               : undefined,
         })),
+      } satisfies UpdateFlightApplicationPayload;
+      if (initialRecord) {
+        const saved = await updateMutation.mutateAsync(payload);
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess?.(saved);
+        return;
+      }
+      const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
+        ...payload,
         files: additional.files,
       });
       messageApi.success(t('hr.messages.flightApplicationSubmitted'));
@@ -362,7 +439,9 @@ export function FlightApplicationForm({
     } catch (error: unknown) {
       notifyApiError(
         error,
-        t('hr.messages.failedToSubmitFlightApplication'),
+        initialRecord
+          ? t('pages.approvals.edit.failed')
+          : t('hr.messages.failedToSubmitFlightApplication'),
         messageApi,
       );
     }

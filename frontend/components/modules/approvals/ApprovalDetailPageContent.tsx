@@ -9,6 +9,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   DownOutlined,
+  EditOutlined,
   RollbackOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -77,6 +78,10 @@ import { formatApprovalCategoryName } from '@/lib/utils/approval-category-displa
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import {
+  canEditOwnRequest,
+  editRequestHref,
+} from '@/lib/utils/request-edit';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 
@@ -600,6 +605,13 @@ export default function ApprovalDetailPageContent({
       request.category?.name,
     ) || null;
   const currentTierLabel = currentTier?.label?.trim() || null;
+  const categoryCode = resolveCategoryCode(request);
+  // Leave edits inline in LeaveRequestDetail; other modules open their edit form.
+  const editHref =
+    categoryCode !== 'LEAVE_REQUEST' &&
+    canEditOwnRequest(request.status, request.requestedBy, currentUserId)
+      ? editRequestHref(categoryCode, request.sourceId, request.id)
+      : null;
 
   return (
     <div className={DETAIL_ROOT}>
@@ -615,6 +627,20 @@ export default function ApprovalDetailPageContent({
               {isNarrow ? undefined : t('pages.approvals.backToList')}
             </Button>
           </div>
+          {editHref ? (
+            <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => router.push(editHref)}
+                aria-label={t('pages.approvals.edit.buttonAria', {
+                  number: request.requestNumber,
+                })}
+              >
+                {t('pages.approvals.edit.button')}
+              </Button>
+            </div>
+          ) : null}
           {canApproveOnBehalf && currentTier ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
               <Button

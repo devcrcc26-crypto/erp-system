@@ -31,8 +31,14 @@ import type {
   RecordCashReturnedPayload,
   SubmitPerDiemRequestPayload,
   SubmitPerDiemSettlementPayload,
+  UpdatePerDiemRequestPayload,
   UpsertEmployeePerDiemRatePayload,
 } from '@/lib/api/per-diem.types';
+import {
+  applyOptimisticRequestEdit,
+  invalidateAfterRequestEdit,
+  rollbackRequestEdit,
+} from '@/lib/query/request-edit';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
@@ -325,6 +331,25 @@ export function useSubmitPerDiemRequest() {
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
       void queryClient.setQueryData(perDiemKeys.detail(created.id), created);
+    },
+  });
+}
+
+/** Employee edit of a DRAFT / RETURNED request (RETURNED is resubmitted). */
+export function useUpdatePerDiemRequest(id: string) {
+  const queryClient = useQueryClient();
+  const detailKey = perDiemKeys.detail(id);
+  return useMutation({
+    mutationFn: (payload: UpdatePerDiemRequestPayload) =>
+      apiPatch<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}`, payload),
+    onMutate: () =>
+      applyOptimisticRequestEdit<PerDiemRequestDetail>(queryClient, detailKey),
+    onError: (_error, _payload, context) =>
+      rollbackRequestEdit(queryClient, detailKey, context),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      queryClient.setQueryData(detailKey, updated);
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

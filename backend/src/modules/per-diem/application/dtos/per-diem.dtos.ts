@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { PerDiemTripType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -113,6 +113,16 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @IsString()
   rateOverrideReason?: string;
 }
+
+/**
+ * Employee edit of a DRAFT / RETURNED request. Full replacement of the submit
+ * fields: dates, days and rate are interdependent, so they are re-validated
+ * together. On-behalf / auto-approve fields only apply at creation.
+ */
+export class UpdatePerDiemRequestDto extends OmitType(SubmitPerDiemRequestDto, [
+  'onBehalfOfEmployeeId',
+  'autoApproveTier',
+] as const) {}
 
 export class CreatePerDiemDisbursementDto {
   @ApiProperty()

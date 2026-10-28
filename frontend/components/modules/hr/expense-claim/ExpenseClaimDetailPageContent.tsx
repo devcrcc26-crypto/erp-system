@@ -174,7 +174,11 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(claim) &&
     (claim?.status === 'DRAFT' || claim?.status === 'RETURNED') &&
     (canManage || isOwner);
-  const canEditItems = Boolean((isOwner || canViewHr) && isDraft);
+  // Returned claims can fix items too; saving the edit page resubmits.
+  const canEditItems = Boolean(
+    (isOwner || canViewHr) &&
+      (claim?.status === 'DRAFT' || claim?.status === 'RETURNED'),
+  );
   const canCancel =
     Boolean(isOwner) &&
     (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');

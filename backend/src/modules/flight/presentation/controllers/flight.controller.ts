@@ -37,6 +37,7 @@ import { FlightImportPreviewResponseDto } from '../../application/dtos/flight-im
 import {
   ListFlightApplicationsDto,
   SubmitFlightApplicationDto,
+  UpdateFlightApplicationDto,
 } from '../../application/dtos/flight.dtos';
 import { FlightApplicationPdfService } from '../../application/services/flight-application-pdf.service';
 import { FlightImportService } from '../../application/services/flight-import.service';
@@ -331,6 +332,20 @@ export class FlightController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.flightService.getApplication(id, companyId, user.userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary:
+      'Edit your own draft or returned flight application (a returned application is resubmitted)',
+  })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateFlightApplicationDto,
+  ): Promise<unknown> {
+    return this.flightService.updateApplication(id, dto, companyId, user.userId);
   }
 
   @Patch(':id/cancel')

@@ -13,10 +13,13 @@ export default function BusinessTripAdditionalStep({
   values,
   onChange,
   disabled = false,
+  hideAttachments = false,
 }: {
   values: BusinessTripAdditionalValues;
   onChange: (next: BusinessTripAdditionalValues) => void;
   disabled?: boolean;
+  /** Edit mode: attachments are added from the request page, not the form. */
+  hideAttachments?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -48,20 +51,22 @@ export default function BusinessTripAdditionalStep({
         </div>
       </FormLayout>
 
-      <FormLayout
-        variant="pro"
-        dense
-        title={t('hr.labels.supportingAttachments')}
-        description={t('hr.form.supportingDocuments')}
-      >
-        <FileUploadInput
-          files={values.files}
-          onChange={(files) => patch({ files })}
-          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-          multiple
-          disabled={disabled}
-        />
-      </FormLayout>
+      {hideAttachments ? null : (
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('hr.labels.supportingAttachments')}
+          description={t('hr.form.supportingDocuments')}
+        >
+          <FileUploadInput
+            files={values.files}
+            onChange={(files) => patch({ files })}
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            multiple
+            disabled={disabled}
+          />
+        </FormLayout>
+      )}
     </div>
   );
 }

@@ -53,6 +53,7 @@ import {
   FormalizeRequestSettlementBalanceDto,
   ListPerDiemRequestsDto,
   SubmitPerDiemRequestDto,
+  UpdatePerDiemRequestDto,
 } from '../dtos/per-diem.dtos';
 
 type UploadedFile = {
@@ -194,14 +195,15 @@ export class PerDiemService
   }
 
   /**
-   * Shared submit path for self-service and on-behalf flows.
+   * Validates per diem input and derives dates, days, rate and totals.
+   * Shared by submit and edit so both apply the same rules.
    */
-  private async submitForEmployee(
+  private async resolveSubmission(
     employeeId: string,
-    dto: SubmitPerDiemRequestDto,
+    dto: UpdatePerDiemRequestDto,
     companyId: string,
     actorUserId: string,
-  ): Promise<unknown> {
+  ) {
     // Per diem is day-based: only the calendar date portion of each value is used.
     const startDate = this.parseDateOnly(dto.startDate);
     const endDate = this.parseDateOnly(dto.endDate);
@@ -291,6 +293,46 @@ export class PerDiemService
     const exchangeRate = 1;
     const totalAmountEtb = totalAmount;
 
+    return {
+      startDate,
+      endDate,
+      days,
+      totalDays,
+      tripType,
+      destinationCategory,
+      resolvedRate,
+      siteAssignmentId,
+      dailyRate,
+      totalAmount,
+      exchangeRate,
+      totalAmountEtb,
+    };
+  }
+
+  /**
+   * Shared submit path for self-service and on-behalf flows.
+   */
+  private async submitForEmployee(
+    employeeId: string,
+    dto: SubmitPerDiemRequestDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<unknown> {
+    const {
+      startDate,
+      endDate,
+      days,
+      totalDays,
+      tripType,
+      destinationCategory,
+      resolvedRate,
+      siteAssignmentId,
+      dailyRate,
+      totalAmount,
+      exchangeRate,
+      totalAmountEtb,
+    } = await this.resolveSubmission(employeeId, dto, companyId, actorUserId);
+
     const resolvedTiers =
       await this.hrApprovalChain.buildDisciplineLeadSingleTierChain(
         employeeId,
@@ -300,20 +342,14 @@ export class PerDiemService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'PER_DIEM',
-        title: `Per diem - ${dto.destination} (${dto.startDate} to ${dto.endDate})`,
-        formData: {
+        ...this.approvalSnapshot(dto, {
           tripType,
           destinationCategory,
-          destination: dto.destination,
-          startDate: dto.startDate,
-          endDate: dto.endDate,
-          departureTime: dto.departureTime ?? null,
-          returnTime: dto.returnTime ?? null,
           days,
           totalDays,
           totalAmountEtb,
           siteAssignmentId,
-        },
+        }),
       },
       companyId,
       employeeId,
@@ -402,6 +438,126 @@ export class PerDiemService
     });
 
     return this.getRequest(requestId, companyId, actorUserId);
+  }
+
+  /**
+   * Employee edits their own DRAFT or RETURNED per diem request. Inputs are
+   * re-validated and the rate re-resolved exactly as on submit. Saving a
+   * RETURNED request resubmits it and restarts the approval chain.
+   */
+  async updateRequest(
+    id: string,
+    dto: UpdatePerDiemRequestDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    if (request.employeeId !== userId) {
+      throw new ForbiddenException('You can only edit your own requests.');
+    }
+    if (
+      (request.status !== PerDiemStatus.DRAFT &&
+        request.status !== PerDiemStatus.RETURNED) ||
+      request.settlementId
+    ) {
+      throw new ForbiddenException('This request can no longer be edited.');
+    }
+
+    const resolved = await this.resolveSubmission(
+      request.employeeId,
+      dto,
+      companyId,
+      userId,
+    );
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.perDiemRequest.update({
+        where: { id },
+        data: {
+          employeePerDiemRateId: resolved.resolvedRate.employeePerDiemRateId,
+          destinationCategory: resolved.destinationCategory,
+          destination: dto.destination.trim(),
+          tripType: resolved.tripType,
+          startDate: resolved.startDate,
+          endDate: resolved.endDate,
+          departureTime: dto.departureTime ?? null,
+          returnTime: dto.returnTime ?? null,
+          days: resolved.days,
+          totalDays: resolved.totalDays,
+          dailyRate: new Prisma.Decimal(resolved.dailyRate),
+          requestedDailyRate:
+            dto.requestedDailyRate != null
+              ? new Prisma.Decimal(dto.requestedDailyRate)
+              : null,
+          rateOverrideReason: dto.rateOverrideReason?.trim() || null,
+          totalAmount: new Prisma.Decimal(resolved.totalAmount),
+          totalAmountEtb: new Prisma.Decimal(resolved.totalAmountEtb),
+          exchangeRate: new Prisma.Decimal(resolved.exchangeRate),
+          linkedFlightId: dto.linkedFlightId ?? null,
+          linkedBusinessTripId: dto.linkedBusinessTripId ?? null,
+          siteAssignmentId: resolved.siteAssignmentId,
+          notes: dto.notes?.trim() || null,
+          updatedBy: userId,
+        },
+      });
+      if (request.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: request.approvalRequestId },
+          data: {
+            ...this.approvalSnapshot(dto, resolved),
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+
+    if (
+      request.status === PerDiemStatus.RETURNED &&
+      request.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        request.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
+
+    return this.getRequest(id, companyId, userId);
+  }
+
+  /** Approval title + formData mirrored from the per diem request. */
+  private approvalSnapshot(
+    dto: UpdatePerDiemRequestDto,
+    resolved: {
+      tripType: PerDiemTripType;
+      destinationCategory: string;
+      days: number;
+      totalDays: number;
+      totalAmountEtb: number;
+      siteAssignmentId: string | null;
+    },
+  ) {
+    return {
+      title: `Per diem - ${dto.destination} (${dto.startDate} to ${dto.endDate})`,
+      formData: {
+        tripType: resolved.tripType,
+        destinationCategory: resolved.destinationCategory,
+        destination: dto.destination,
+        startDate: dto.startDate,
+        endDate: dto.endDate,
+        departureTime: dto.departureTime ?? null,
+        returnTime: dto.returnTime ?? null,
+        days: resolved.days,
+        totalDays: resolved.totalDays,
+        totalAmountEtb: resolved.totalAmountEtb,
+        siteAssignmentId: resolved.siteAssignmentId,
+      },
+    };
   }
 
   async getRequest(

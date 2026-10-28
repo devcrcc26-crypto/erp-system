@@ -602,9 +602,7 @@ export class LeaveService
       leave.status !== LeaveRequestStatus.DRAFT &&
       leave.status !== LeaveRequestStatus.RETURNED
     ) {
-      throw new BadRequestException(
-        'Request cannot be edited in its current status',
-      );
+      throw new ForbiddenException('This request can no longer be edited.');
     }
 
     const leaveType = dto.leaveType ?? leave.leaveType;
@@ -614,6 +612,9 @@ export class LeaveService
       companyId,
       periodInputs,
     );
+
+    const reason =
+      dto.reason !== undefined ? dto.reason.trim() || null : leave.reason;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.leaveRequestPeriod.deleteMany({
@@ -626,10 +627,7 @@ export class LeaveService
           startDate: resolved.startDate,
           endDate: resolved.endDate,
           days: new Prisma.Decimal(resolved.days),
-          reason:
-            dto.reason !== undefined
-              ? dto.reason.trim() || null
-              : leave.reason,
+          reason,
           updatedBy: userId,
           periods: {
             create: resolved.periodRows.map((period) => ({
@@ -642,7 +640,43 @@ export class LeaveService
           },
         },
       });
+      if (leave.approvalRequestId) {
+        // Keep the approval card in step with the edited leave.
+        await tx.approvalRequest.update({
+          where: { id: leave.approvalRequestId },
+          data: {
+            title: `${this.formatLeaveType(leaveType)} leave - ${formatDateOnly(resolved.startDate)} to ${formatDateOnly(resolved.endDate)}`,
+            formData: {
+              leaveType,
+              startDate: formatDateOnly(resolved.startDate),
+              endDate: formatDateOnly(resolved.endDate),
+              days: resolved.days,
+              periods: resolved.periodRows.map((period) => ({
+                startDate: formatDateOnly(period.startDate),
+                endDate: formatDateOnly(period.endDate),
+                days: period.days,
+                dayPortion: period.dayPortion,
+              })),
+              reason,
+            },
+            updatedBy: userId,
+          },
+        });
+      }
     });
+
+    // Requester saving a returned request resubmits it (chain restarts at
+    // tier 1). HR edits leave it RETURNED for the employee to resubmit.
+    if (
+      leave.status === LeaveRequestStatus.RETURNED &&
+      leave.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        leave.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
 
     return this.getRequest(id, companyId, userId);
   }

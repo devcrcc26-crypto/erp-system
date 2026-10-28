@@ -10,6 +10,7 @@ import LeavePeriodsEditor, {
   toLeavePeriodInputs,
   type LeavePeriodRow,
 } from '@/components/modules/hr/leave/LeavePeriodsEditor';
+import ReturnedRequestCallout from '@/components/modules/approvals/ReturnedRequestCallout';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
@@ -27,6 +28,10 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 
 import './leave-v2.css';
 
@@ -80,12 +85,16 @@ export default function LeaveRequestEditPageContent({
     [t],
   );
 
+  const isOwner =
+    Boolean(currentUser.data?.id) &&
+    request?.employeeId === currentUser.data?.id;
   const canEdit =
     Boolean(request) &&
     (request?.status === 'DRAFT' || request?.status === 'RETURNED') &&
-    (canManage ||
-      (Boolean(currentUser.data?.id) &&
-        request?.employeeId === currentUser.data?.id));
+    (canManage || isOwner);
+  const backHref = request?.approvalRequestId
+    ? `/approvals/${request.approvalRequestId}`
+    : `/hr/leave-requests/${requestId}`;
 
   useEffect(() => {
     if (!request) {
@@ -164,14 +173,20 @@ export default function LeaveRequestEditPageContent({
       messageApi.error(t('hr.form.periodNoWorkingDays'));
       return;
     }
+    const previousStatus = request?.status;
     try {
       await updateMutation.mutateAsync({
         leaveType: values.leaveType,
         periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
-      messageApi.success(t('hr.messages.leaveRequestUpdated'));
-      router.push(`/hr/leave-requests/${requestId}`);
+      // Only the owner's save resubmits; HR edits keep it RETURNED.
+      messageApi.success(
+        isOwner
+          ? t(requestSaveSuccessKey(previousStatus))
+          : t('hr.messages.leaveRequestUpdated'),
+      );
+      router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -224,10 +239,15 @@ export default function LeaveRequestEditPageContent({
       title={t('pages.hr.leave.edit')}
       description={t('pages.hr.leave.detailsStepDescription')}
       cancelLabel={t('hr.buttons.cancel')}
-      cancelHref={`/hr/leave-requests/${requestId}`}
+      cancelHref={backHref}
       backLabel={t('hr.buttons.back')}
     >
       <div className="erp-leave-v2 flex flex-col gap-4">
+        {request.status === 'RETURNED' ? (
+          <ReturnedRequestCallout
+            approvalRequestId={request.approvalRequestId}
+          />
+        ) : null}
         {updateMutation.isError ? (
           <Alert
             type="error"
@@ -275,7 +295,11 @@ export default function LeaveRequestEditPageContent({
         </Form>
 
         <FormPageFooter
-          submitLabel={t('hr.buttons.saveLeaveRequest')}
+          submitLabel={
+            isOwner
+              ? t(requestSaveLabelKey(request.status))
+              : t('hr.buttons.saveLeaveRequest')
+          }
           formId="leave-request-edit-form"
           useFormAttribute
           isSubmitting={updateMutation.isPending}

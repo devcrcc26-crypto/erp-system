@@ -37,6 +37,7 @@ import { BusinessTripImportPreviewResponseDto } from '../../application/dtos/bus
 import {
   ListBusinessTripsDto,
   SubmitBusinessTripDto,
+  UpdateBusinessTripDto,
 } from '../../application/dtos/business-trip.dtos';
 import { BusinessTripPdfService } from '../../application/services/business-trip-pdf.service';
 import { BusinessTripImportService } from '../../application/services/business-trip-import.service';
@@ -344,6 +345,20 @@ export class BusinessTripController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.businessTripService.getTrip(id, companyId, user.userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary:
+      'Edit your own draft or returned business trip (a returned trip is resubmitted)',
+  })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateBusinessTripDto,
+  ): Promise<unknown> {
+    return this.businessTripService.updateTrip(id, dto, companyId, user.userId);
   }
 
   @Patch(':id/cancel')

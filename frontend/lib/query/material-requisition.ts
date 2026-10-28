@@ -30,6 +30,11 @@ import type {
   PaginationMeta,
 } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
+import {
+  applyOptimisticRequestEdit,
+  invalidateAfterRequestEdit,
+  rollbackRequestEdit,
+} from '@/lib/query/request-edit';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
@@ -160,6 +165,18 @@ export function useUpdateMaterialRequisition(requisitionId: string) {
         `${MATERIAL_REQUISITION_PATH}/${requisitionId}`,
         payload,
       ),
+    // A returned requisition saved by its owner is resubmitted.
+    onMutate: () =>
+      applyOptimisticRequestEdit<MaterialRequisitionDetail>(
+        queryClient,
+        materialRequisitionKeys.detail(requisitionId),
+      ),
+    onError: (_error, _payload, context) =>
+      rollbackRequestEdit(
+        queryClient,
+        materialRequisitionKeys.detail(requisitionId),
+        context,
+      ),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: materialRequisitionKeys.lists(),
@@ -168,6 +185,7 @@ export function useUpdateMaterialRequisition(requisitionId: string) {
         materialRequisitionKeys.detail(requisitionId),
         updated,
       );
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

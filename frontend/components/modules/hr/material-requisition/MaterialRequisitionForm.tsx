@@ -29,12 +29,19 @@ import {
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { apiPost, apiPostForm } from '@/lib/api/client';
+import { apiDelete, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AddMaterialRequisitionItemPayload,
   MaterialRequisitionDetail,
 } from '@/lib/api/material-requisition.types';
-import { useCreateMaterialRequisition } from '@/lib/query/material-requisition';
+import {
+  useCreateMaterialRequisition,
+  useUpdateMaterialRequisition,
+} from '@/lib/query/material-requisition';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -57,11 +64,18 @@ type ItemFormValues = Omit<
 
 interface ClientItem extends AddMaterialRequisitionItemPayload {
   _key: string;
+  /** Edit mode: id of the saved item this row came from. */
+  serverId?: string;
 }
 
 interface MaterialRequisitionFormProps {
   onSuccess: (result: MaterialRequisitionDetail) => void;
+  /** Edit mode: the employee's own DRAFT / RETURNED requisition, prefilled. */
+  initialRecord?: MaterialRequisitionDetail;
 }
+
+const ITEMS_PATH = (requisitionId: string): string =>
+  `/hr/material-requisition/${requisitionId}/items`;
 
 const DETAILS_FIELDS = ['title', 'purpose'] as const;
 
@@ -71,19 +85,49 @@ function nextKey(): string {
   return `item-${keyCounter}`;
 }
 
+function detailsFrom(record: MaterialRequisitionDetail): Step1Values {
+  return {
+    title: record.title,
+    purpose: record.purpose,
+    requiredByDate: record.requiredByDate ? dayjs(record.requiredByDate) : null,
+    warehouseLocation: record.warehouseLocation ?? undefined,
+  };
+}
+
+function clientItemsFrom(record: MaterialRequisitionDetail): ClientItem[] {
+  return record.items.map((item) => ({
+    _key: nextKey(),
+    serverId: item.id,
+    itemName: item.itemName,
+    itemCode: item.itemCode ?? undefined,
+    description: item.description ?? undefined,
+    quantity: Number(item.quantity),
+    unit: item.unit,
+  }));
+}
+
 /**
  * Material requisition create form - same StepperForm chrome as Add Employee.
  */
 export default function MaterialRequisitionForm({
   onSuccess,
+  initialRecord,
 }: MaterialRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('MATERIAL_REQUISITION');
   const messageApi = useAppMessage();
+  const initialDetails = useMemo<Step1Values>(
+    () => (initialRecord ? detailsFrom(initialRecord) : {}),
+    [initialRecord],
+  );
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
-  const [items, setItems] = useState<ClientItem[]>([]);
-  const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({});
+  const [items, setItems] = useState<ClientItem[]>(() =>
+    initialRecord ? clientItemsFrom(initialRecord) : [],
+  );
+  const [detailsSnapshot, setDetailsSnapshot] =
+    useState<Step1Values>(initialDetails);
+  const updateMutation = useUpdateMaterialRequisition(initialRecord?.id ?? '');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -96,8 +140,8 @@ export default function MaterialRequisitionForm({
     onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
-    setItems([]);
-    setDetailsSnapshot({});
+    setItems(initialRecord ? clientItemsFrom(initialRecord) : []);
+    setDetailsSnapshot(initialDetails);
     setEditingKey(null);
     setShowItemForm(false);
     setFiles([]);
@@ -158,6 +202,7 @@ export default function MaterialRequisitionForm({
       const values = await itemForm.validateFields();
       const entry: ClientItem = {
         _key: editingKey ?? nextKey(),
+        serverId: items.find((row) => row._key === editingKey)?.serverId,
         itemName: values.itemName,
         itemCode: values.itemCode || undefined,
         description: values.description || undefined,
@@ -200,6 +245,45 @@ export default function MaterialRequisitionForm({
     }
 
     setSubmitting(true);
+    if (initialRecord) {
+      try {
+        // Sync items first (allowed while DRAFT / RETURNED); the header PATCH
+        // comes last because for a RETURNED requisition it resubmits.
+        const keptIds = new Set(
+          items.map((row) => row.serverId).filter(Boolean),
+        );
+        for (const saved of initialRecord.items) {
+          if (!keptIds.has(saved.id)) {
+            await apiDelete(`${ITEMS_PATH(initialRecord.id)}/${saved.id}`);
+          }
+        }
+        for (const item of items) {
+          const { _key: _unused, serverId, ...payload } = item;
+          if (serverId) {
+            await apiPatch(`${ITEMS_PATH(initialRecord.id)}/${serverId}`, payload);
+          } else {
+            await apiPost(ITEMS_PATH(initialRecord.id), payload);
+          }
+        }
+        const saved = await updateMutation.mutateAsync({
+          title: values.title.trim(),
+          purpose: values.purpose.trim(),
+          requiredByDate: values.requiredByDate
+            ? values.requiredByDate.format('YYYY-MM-DD')
+            : undefined,
+          warehouseLocation: values.warehouseLocation?.trim() || undefined,
+        });
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess(saved);
+      } catch (error: unknown) {
+        const fallback = t('pages.approvals.edit.failed');
+        notifyApiError(error, fallback, messageApi, t);
+        setFormError(getFriendlyApiErrorMessage(error, fallback, t));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     try {
       const created = await createMutation.mutateAsync({
         ...onBehalf.payload,
@@ -304,7 +388,7 @@ export default function MaterialRequisitionForm({
         validate: () => validateDetailsStep(),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <FormLayout
               variant="pro"
               title={t('hr.section.requestDetails')}
@@ -488,28 +572,32 @@ export default function MaterialRequisitionForm({
               />
             </FormLayout>
 
-            <FormLayout
-              variant="pro"
-              title={t('hr.form.supportingDocuments')}
-              description={t(
-                'pages.hr.materialRequisition.attachmentsStepDescription',
-              )}
-            >
-              <FileUploadInput
-                files={files}
-                onChange={setFiles}
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
-                placeholder={t(
-                  'hr.placeholder.chooseSupportingDocuments',
+            {initialRecord ? null : (
+              // Edit saves are JSON; supporting documents stay as submitted.
+              <FormLayout
+                variant="pro"
+                title={t('hr.form.supportingDocuments')}
+                description={t(
+                  'pages.hr.materialRequisition.attachmentsStepDescription',
                 )}
-              />
-            </FormLayout>
+              >
+                <FileUploadInput
+                  files={files}
+                  onChange={setFiles}
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
+                  placeholder={t(
+                    'hr.placeholder.chooseSupportingDocuments',
+                  )}
+                />
+              </FormLayout>
+            )}
           </div>
         ),
       },
     ],
     [
+      initialRecord,
       onBehalf,
       t,
       itemColumns,
@@ -533,6 +621,7 @@ export default function MaterialRequisitionForm({
       layout="vertical"
       requiredMark={false}
       preserve
+      initialValues={initialDetails}
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
@@ -551,7 +640,11 @@ export default function MaterialRequisitionForm({
         onReset={resetForm}
         isSubmitting={submitting}
         contentVariant="sections"
-        submitLabel={t('hr.buttons.submitRequest')}
+        submitLabel={
+          initialRecord
+            ? t(requestSaveLabelKey(initialRecord.status))
+            : t('hr.buttons.submitRequest')
+        }
       />
       <HrItemFormDrawer
         open={showItemForm}

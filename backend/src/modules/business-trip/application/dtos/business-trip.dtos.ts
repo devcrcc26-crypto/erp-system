@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -219,6 +219,16 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @Type(() => BusinessTripPassengerDto)
   passengers!: BusinessTripPassengerDto[];
 }
+
+/**
+ * Employee edit of a DRAFT / RETURNED trip: full replacement of the submit
+ * fields (dates and passengers are validated together). On-behalf /
+ * auto-approve fields only apply at creation.
+ */
+export class UpdateBusinessTripDto extends OmitType(SubmitBusinessTripDto, [
+  'onBehalfOfEmployeeId',
+  'autoApproveTier',
+] as const) {}
 
 /**
  * Header fields for creating a DRAFT business trip (no passengers, no submit).

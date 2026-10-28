@@ -27,6 +27,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   ListVehicleApplicationsDto,
   SubmitVehicleApplicationDto,
+  UpdateVehicleApplicationDto,
 } from '../../application/dtos/vehicle-application.dtos';
 import { VehicleApplicationService } from '../../application/services/vehicle-application.service';
 import { VehicleApplicationPdfService } from '../../application/services/vehicle-application-pdf.service';
@@ -113,6 +114,28 @@ export class VehicleApplicationController {
   ): Promise<unknown> {
     return this.vehicleApplicationService.getApplication(
       id,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Patch(':id')
+  // Ownership and DRAFT/RETURNED status are enforced in the service.
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Edit your own draft or returned vehicle application (a returned application is resubmitted)',
+  })
+  async update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(UpdateVehicleApplicationDto, body);
+    return this.vehicleApplicationService.updateApplication(
+      id,
+      dto,
       companyId,
       user.userId,
     );

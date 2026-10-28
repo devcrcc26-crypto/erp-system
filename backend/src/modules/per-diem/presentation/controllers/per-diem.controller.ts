@@ -26,6 +26,7 @@ import {
   ListPerDiemRequestsDto,
   SetApprovedRateDto,
   SubmitPerDiemRequestDto,
+  UpdatePerDiemRequestDto,
 } from '../../application/dtos/per-diem.dtos';
 import { PerDiemService } from '../../application/services/per-diem.service';
 
@@ -91,6 +92,22 @@ export class PerDiemController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.perDiemService.getRequest(id, companyId, user.userId);
+  }
+
+  @Patch(':id')
+  // Ownership and DRAFT/RETURNED status are enforced in the service.
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Edit your own draft or returned per diem request (a returned request is resubmitted)',
+  })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdatePerDiemRequestDto,
+  ): Promise<unknown> {
+    return this.perDiemService.updateRequest(id, dto, companyId, user.userId);
   }
 
   @Patch(':id/cancel')

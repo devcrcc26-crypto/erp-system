@@ -73,13 +73,18 @@ If your request is returned, you receive the notification **Approval returned**.
 
 1. In the left menu, go to **Approvals** → **Pending My Action** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. If the request has its own page (for example leave or overtime), change it there first. See that request type's topic in this guide.
-4. Back on the request in **Approvals**, find the **Resubmit** panel. The **Return note** shows what the approver asked for.
-5. **Note to approver (optional)**: explain what you changed. Click **Attach files** to add files if needed.
-6. Click **Resubmit**. The request goes back through the approval chain from the beginning.
+3. To change the request, click **Edit** at the top of the request (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save and resubmit**.
+   - For leave, click **Edit** in the request details on the same page.
+   - For overtime, **Edit** opens the overtime sheet. Change the entries there, then submit the sheet again.
+4. If nothing needs to change (for example, you only want to answer the approver), use the **Resubmit** panel instead. **Note to approver (optional)**: explain your answer. Click **Attach files** to add files if needed, then click **Resubmit**.
 
+Either way, the request goes back through the approval chain from the beginning.
 
-> **After you resubmit:** You see *"Request resubmitted"*. Earlier notes stay in **Resubmission / response history**.
+> **After you resubmit:** You see *"Request resubmitted for approval."* (after editing) or *"Request resubmitted"* (from the panel). Earlier notes stay in **Resubmission / response history**.
+
+> **Drafts:** a request you saved but never submitted is a draft. Go to **Approvals** → **My Drafts** and click **Edit** next to it. Saving a draft keeps it as a draft (*"Changes saved."*).
+
+> You can only edit your own requests, and only while they are a draft or returned. Once a request is pending, approved or completed, **Edit** is not shown.
 
 ---
 

@@ -96,6 +96,12 @@ export interface SubmitVehicleApplicationPayload extends OnBehalfPayload {
   notes?: string;
 }
 
+/** PATCH body when the employee edits a DRAFT / RETURNED application. */
+export type UpdateVehicleApplicationPayload = Omit<
+  SubmitVehicleApplicationPayload,
+  keyof OnBehalfPayload
+>;
+
 export interface ListVehicleApplicationsParams {
   page?: number;
   limit?: number;

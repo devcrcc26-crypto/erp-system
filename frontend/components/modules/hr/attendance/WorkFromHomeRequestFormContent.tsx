@@ -18,15 +18,25 @@ import {
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import WorkFromHomeRangeDays from '@/components/modules/hr/attendance/WorkFromHomeRangeDays';
+import ReturnedRequestCallout from '@/components/modules/approvals/ReturnedRequestCallout';
+import type { ApprovalRequestDetail } from '@/lib/api/approvals.types';
 import {
   previewWorkFromHomeRange,
   requestWorkFromHomeDay,
+  updateWorkFromHomeRequest,
   WFH_MAX_RANGE_DAYS,
+  type UpdateWorkFromHomeRequestDto,
+  type WorkFromHomeRequestForm,
 } from '@/lib/api/work-from-home.api';
 import { useEarliestAllowedDate } from '@/lib/query/backdating';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 import { formatUserName } from '@/lib/utils/user-display';
 
 interface WfhRequestFormValues {
@@ -51,14 +61,34 @@ function ReviewItem({
   );
 }
 
+/** Range + reason of an existing request (edit mode). */
+function initialRangeOf(
+  editRequest: ApprovalRequestDetail | undefined,
+): [Dayjs, Dayjs] | null {
+  const formData = editRequest?.formData as WorkFromHomeRequestForm | undefined;
+  const start = formData?.startDate ?? formData?.date;
+  const end = formData?.endDate ?? formData?.date;
+  return start && end ? [dayjs(start), dayjs(end)] : null;
+}
+
 /**
  * Employee work-from-home request for a date range - one request, Employee →
  * Discipline Lead approval; approval creates a WFH day per working day.
+ *
+ * With `editRequest`, edits the employee's own RETURNED request (prefilled);
+ * saving resubmits it and restarts the approval chain.
  */
-export default function WorkFromHomeRequestFormContent(): React.ReactNode {
+export default function WorkFromHomeRequestFormContent({
+  editRequest,
+}: {
+  editRequest?: ApprovalRequestDetail;
+} = {}): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const isEdit = Boolean(editRequest);
+  const initialReason =
+    (editRequest?.formData as WorkFromHomeRequestForm | undefined)?.reason ?? '';
   const [form] = Form.useForm<WfhRequestFormValues>();
   const onBehalf = useOnBehalf('WORK_FROM_HOME');
   const earliestQuery = useEarliestAllowedDate(onBehalf.effectiveEmployeeId);
@@ -67,7 +97,9 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
     : null;
   const requiresLateReason =
     earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true;
-  const [range, setRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [range, setRange] = useState<[Dayjs, Dayjs] | null>(() =>
+    initialRangeOf(editRequest),
+  );
   /** First day clicked while choosing a range (limits the 31-day window). */
   const [rangeAnchor, setRangeAnchor] = useState<Dayjs | null>(null);
   const [snapshot, setSnapshot] = useState<{
@@ -83,6 +115,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
       startKey,
       endKey,
       onBehalf.effectiveEmployeeId ?? null,
+      editRequest?.id ?? null,
     ],
     queryFn: () =>
       previewWorkFromHomeRange({
@@ -91,14 +124,21 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
         ...(onBehalf.payload.onBehalfOfEmployeeId
           ? { onBehalfOfEmployeeId: onBehalf.payload.onBehalfOfEmployeeId }
           : {}),
+        ...(editRequest ? { editingRequestId: editRequest.id } : {}),
       }),
     enabled: Boolean(startKey && endKey),
     retry: false,
   });
   const preview = previewQuery.data;
 
+  const queryClient = useQueryClient();
   const submitMutation = useMutation({
     mutationFn: requestWorkFromHomeDay,
+  });
+  const updateMutation = useMutation({
+    mutationFn: (dto: UpdateWorkFromHomeRequestDto) =>
+      updateWorkFromHomeRequest(editRequest?.id ?? '', dto),
+    onSuccess: () => invalidateAfterRequestEdit(queryClient),
   });
 
   function captureSnapshot(): typeof snapshot {
@@ -113,7 +153,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
 
   function resetForm(): void {
     form.resetFields();
-    setRange(null);
+    setRange(initialRangeOf(editRequest));
     setRangeAnchor(null);
     setSnapshot({ label: null, reason: '' });
     onBehalf.reset();
@@ -146,6 +186,21 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
       return;
     }
     const values = captureSnapshot();
+    if (editRequest) {
+      try {
+        await updateMutation.mutateAsync({
+          startDate: startKey,
+          endDate: endKey,
+          reason: values.reason,
+          lateReason: form.getFieldValue('lateReason')?.trim() || undefined,
+        });
+        messageApi.success(t(requestSaveSuccessKey(editRequest.status)));
+        router.push(`/approvals/${editRequest.id}`);
+      } catch (error) {
+        notifyApiError(error, t('pages.approvals.edit.failed'), messageApi, t);
+      }
+      return;
+    }
     try {
       await submitMutation.mutateAsync({
         startDate: startKey,
@@ -181,7 +236,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
             title={t('pages.hr.workFromHome.request.steps.details')}
             description={t('pages.hr.workFromHome.request.detailsStepDescription')}
           >
-            <OnBehalfSection state={onBehalf} />
+            {isEdit ? null : <OnBehalfSection state={onBehalf} />}
             <div className="erp-form-grid-2">
               <Form.Item
                 label={t('pages.hr.workFromHome.range.dateRange')}
@@ -224,13 +279,17 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
                   }}
                 />
               </Form.Item>
-              <DayCoverageNotice
-                className="md:col-span-2"
-                employeeId={onBehalf.effectiveEmployeeId}
-                from={startKey}
-                to={endKey}
-                focus="WORK_FROM_HOME"
-              />
+              {isEdit ? null : (
+                // In edit mode this request itself would show as covering
+                // its days; the preview below already excludes it.
+                <DayCoverageNotice
+                  className="md:col-span-2"
+                  employeeId={onBehalf.effectiveEmployeeId}
+                  from={startKey}
+                  to={endKey}
+                  focus="WORK_FROM_HOME"
+                />
+              )}
               {range ? (
                 <div className="md:col-span-2">
                   {previewQuery.isLoading ? (
@@ -330,6 +389,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
     ],
     [
       t,
+      isEdit,
       onBehalf,
       onBehalfLabel,
       range,
@@ -347,26 +407,48 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-sa-form-page erp-wfh-v2 flex flex-col">
       <HrFormPageShell
-        title={t('pages.hr.workFromHome.request.title')}
-        description={t('pages.hr.workFromHome.request.description')}
+        title={
+          isEdit
+            ? t('pages.approvals.edit.pageTitle')
+            : t('pages.hr.workFromHome.request.title')
+        }
+        description={
+          isEdit
+            ? t('pages.approvals.edit.pageDescription')
+            : t('pages.hr.workFromHome.request.description')
+        }
         cancelLabel={t('common.cancel')}
-        cancelHref="/approvals/new"
-        backLabel={t('pages.hr.workFromHome.request.backToPicker')}
+        cancelHref={
+          editRequest ? `/approvals/${editRequest.id}` : '/approvals/new'
+        }
+        backLabel={
+          isEdit
+            ? t('hr.buttons.back')
+            : t('pages.hr.workFromHome.request.backToPicker')
+        }
       >
+      {editRequest?.status === 'RETURNED' ? (
+        <ReturnedRequestCallout approvalRequestId={editRequest.id} />
+      ) : null}
       <Form<WfhRequestFormValues>
         form={form}
         layout="vertical"
         requiredMark={false}
         preserve
+        initialValues={isEdit ? { reason: initialReason } : undefined}
         className="flex min-h-0 flex-1 flex-col"
       >
         <StepperForm
           steps={steps}
           onSubmit={handleSubmit}
           onReset={resetForm}
-          isSubmitting={submitMutation.isPending}
+          isSubmitting={submitMutation.isPending || updateMutation.isPending}
           contentVariant="sections"
-          submitLabel={t('pages.hr.workFromHome.request.submit')}
+          submitLabel={
+            editRequest
+              ? t(requestSaveLabelKey(editRequest.status))
+              : t('pages.hr.workFromHome.request.submit')
+          }
         />
       </Form>
       </HrFormPageShell>

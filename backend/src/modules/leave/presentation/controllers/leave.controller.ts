@@ -366,10 +366,12 @@ export class LeaveController {
   }
 
   @Patch(':id')
-  @RequireAnyPermission({ module: 'leave', action: 'edit' })
+  // Ownership (owner or leave.manage) is enforced in the service so employees
+  // without leave.edit can still fix their own draft / returned requests.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Update a draft or returned leave request (owner or HR)',
+      'Update a draft or returned leave request (owner or HR). An owner saving a returned request resubmits it.',
   })
   update(
     @CurrentUser() user: AuthenticatedUser,

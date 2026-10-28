@@ -14,7 +14,11 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { PerDiemRequestDetail, PerDiemTripType } from '@/lib/api/per-diem.types';
+import type {
+  PerDiemRequestDetail,
+  PerDiemTripType,
+  UpdatePerDiemRequestPayload,
+} from '@/lib/api/per-diem.types';
 import type { PerDiemDestinationCategory } from '@/lib/constants/per-diem-destination-categories';
 import { PER_DIEM_CATEGORY_FIELDS } from '@/lib/constants/per-diem-destination-categories';
 import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
@@ -23,12 +27,17 @@ import { useFlightApplications } from '@/lib/query/flight';
 import {
   useActiveEmployeePerDiemCategories,
   useSubmitPerDiemRequest,
+  useUpdatePerDiemRequest,
 } from '@/lib/query/per-diem';
 import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 
 interface PerDiemFormValues {
   tripType?: PerDiemTripType;
@@ -48,6 +57,45 @@ interface PerDiemFormValues {
 
 interface PerDiemRequestFormProps {
   onSuccess: (result: PerDiemRequestDetail) => void;
+  /** Edit mode: the employee's own DRAFT / RETURNED request, prefilled. */
+  initialRecord?: PerDiemRequestDetail;
+}
+
+/** "HH:mm" → today at that time (TimePicker value). */
+function timeOfDay(value: string | null | undefined): dayjs.Dayjs | undefined {
+  const match = value ? /^(\d{1,2}):(\d{2})/.exec(value) : null;
+  return match
+    ? dayjs().hour(Number(match[1])).minute(Number(match[2])).second(0)
+    : undefined;
+}
+
+/** Form values from a saved request (destination is stored as "City, Country"). */
+function perDiemFormValuesFrom(record: PerDiemRequestDetail): PerDiemFormValues {
+  const parts = record.destination.split(',').map((part) => part.trim());
+  const country = parts.length > 1 ? parts.pop() : undefined;
+  const linkedTravel = record.linkedFlight?.id
+    ? `flight:${record.linkedFlight.id}`
+    : record.linkedTrip?.id
+      ? `trip:${record.linkedTrip.id}`
+      : undefined;
+  return {
+    tripType: record.tripType ?? 'TRAVEL',
+    destinationCountry: country,
+    destinationCity: parts.join(', ') || undefined,
+    destinationCategory: record.destinationCategory,
+    dateRange: [dayjs(record.startDate), dayjs(record.endDate)],
+    departureTime: timeOfDay(record.departureTime),
+    returnTime: timeOfDay(record.returnTime),
+    days: record.days,
+    linkedTravel,
+    siteAssignmentId: record.siteAssignmentId ?? undefined,
+    notes: record.notes ?? undefined,
+    requestedDailyRate:
+      record.requestedDailyRate != null
+        ? Number(record.requestedDailyRate)
+        : undefined,
+    rateOverrideReason: record.rateOverrideReason ?? undefined,
+  };
 }
 
 const DESTINATION_FIELDS = ['tripType', 'destinationCountry', 'destinationCity', 'destinationCategory'] as const;
@@ -65,6 +113,7 @@ function calcInclusiveCalendarDays(
  */
 export default function PerDiemRequestForm({
   onSuccess,
+  initialRecord,
 }: PerDiemRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('PER_DIEM');
@@ -72,7 +121,14 @@ export default function PerDiemRequestForm({
   const [form] = Form.useForm<PerDiemFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [rateOverride, setRateOverride] = useState(false);
+  const [rateOverride, setRateOverride] = useState(
+    initialRecord?.requestedDailyRate != null,
+  );
+  const initialValues = useMemo(
+    () => (initialRecord ? perDiemFormValuesFrom(initialRecord) : undefined),
+    [initialRecord],
+  );
+  const updateMutation = useUpdatePerDiemRequest(initialRecord?.id ?? '');
 
   const ratesQuery = useActiveEmployeePerDiemCategories(onBehalf.employeeId);
   const flightsQuery = useFlightApplications(
@@ -385,8 +441,7 @@ export default function PerDiemRequestForm({
         );
         return;
       }
-      const created = await submitMutation.mutateAsync({
-        ...onBehalf.payload,
+      const payload = {
         tripType: values.tripType ?? 'TRAVEL',
         destinationCategory: values.destinationCategory,
         destination: [values.destinationCity?.trim(), values.destinationCountry?.trim()]
@@ -406,11 +461,23 @@ export default function PerDiemRequestForm({
         notes: values.notes?.trim() || undefined,
         requestedDailyRate: overrideRate,
         rateOverrideReason: overrideRate != null ? values.rateOverrideReason?.trim() || undefined : undefined,
+      } satisfies UpdatePerDiemRequestPayload;
+      if (initialRecord) {
+        const saved = await updateMutation.mutateAsync(payload);
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess(saved);
+        return;
+      }
+      const created = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
+        ...payload,
       });
       messageApi.success(t('hr.messages.perDiemSubmitted'));
       onSuccess(created);
     } catch (error: unknown) {
-      const message = t('hr.messages.perDiemSubmitFailed');
+      const message = initialRecord
+        ? t('pages.approvals.edit.failed')
+        : t('hr.messages.perDiemSubmitFailed');
       notifyApiError(error, message, messageApi);
       setFormError(
         error instanceof ApiRequestError ? error.message : message,
@@ -453,7 +520,7 @@ export default function PerDiemRequestForm({
         validate: () => validateFields(DESTINATION_FIELDS),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <FormLayout
               variant="pro"
               title={t('hr.form.destinationCategory')}
@@ -834,6 +901,7 @@ export default function PerDiemRequestForm({
       },
     ],
     [
+      initialRecord,
       onBehalf,
       t,
       ratesQuery.isLoading,
@@ -879,6 +947,7 @@ export default function PerDiemRequestForm({
       layout="vertical"
       requiredMark={false}
       preserve
+      initialValues={initialValues}
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
@@ -908,7 +977,11 @@ export default function PerDiemRequestForm({
         onReset={resetForm}
         isSubmitting={submitting}
         contentVariant="sections"
-        submitLabel={t('hr.buttons.submitRequest')}
+        submitLabel={
+          initialRecord
+            ? t(requestSaveLabelKey(initialRecord.status))
+            : t('hr.buttons.submitRequest')
+        }
       />
     </Form>
   );

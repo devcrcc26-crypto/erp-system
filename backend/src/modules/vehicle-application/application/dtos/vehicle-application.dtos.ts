@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
@@ -72,6 +72,16 @@ export class SubmitVehicleApplicationDto extends OnBehalfSubmissionDto {
   @MaxLength(2000)
   notes?: string;
 }
+
+/**
+ * Employee edit of a DRAFT / RETURNED application: full replacement of the
+ * submit fields (dates, vehicle and driver are validated together).
+ * On-behalf / auto-approve fields only apply at creation.
+ */
+export class UpdateVehicleApplicationDto extends OmitType(
+  SubmitVehicleApplicationDto,
+  ['onBehalfOfEmployeeId', 'autoApproveTier'] as const,
+) {}
 
 export class ListVehicleApplicationsDto {
   @ApiPropertyOptional({ default: 1 })

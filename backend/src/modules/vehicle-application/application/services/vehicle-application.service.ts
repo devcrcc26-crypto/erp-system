@@ -35,6 +35,7 @@ import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   ListVehicleApplicationsDto,
   SubmitVehicleApplicationDto,
+  UpdateVehicleApplicationDto,
 } from '../dtos/vehicle-application.dtos';
 
 const USER_SELECT = {
@@ -106,40 +107,8 @@ export class VehicleApplicationService
       companyId,
       dto.onBehalfOfEmployeeId,
     );
-    const departure = new Date(dto.departureDatetime);
-    const returnDt = new Date(dto.returnDatetime);
-
-    if (returnDt <= departure) {
-      throw new BadRequestException(
-        'Return date/time must be after departure date/time',
-      );
-    }
-    await this.assertDepartureNotBackdated(departure, companyId, userId);
-
-    const vehicle = await this.prisma.companyVehicle.findFirst({
-      where: activeOnly({ id: dto.vehicleId, companyId }),
-    });
-    if (!vehicle) {
-      throw new NotFoundException('Vehicle not found');
-    }
-
-    const driverId =
-      dto.driveType === DriveType.COMPANY_DRIVER
-        ? dto.driverId || vehicle.assignedDriverId || null
-        : null;
-
-    if (dto.driveType === DriveType.COMPANY_DRIVER && !driverId) {
-      throw new BadRequestException(
-        'driverId is required when driveType is COMPANY_DRIVER',
-      );
-    }
-
-    await this.assertVehicleAvailable(
-      dto.vehicleId,
-      companyId,
-      departure,
-      returnDt,
-    );
+    const { departure, returnDt, vehicle, driverId } =
+      await this.resolveApplicationInput(dto, companyId, userId);
 
     const applicationNumber = await this.nextApplicationNumber();
 
@@ -204,16 +173,7 @@ export class VehicleApplicationService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'VEHICLE_APPLICATION',
-        title: `Vehicle Application - ${vehicle.plateNumber}`,
-        formData: {
-          vehiclePlate: vehicle.plateNumber,
-          driveType: dto.driveType,
-          destination: dto.destination,
-          departureDatetime: dto.departureDatetime,
-          returnDatetime: dto.returnDatetime,
-          purpose: dto.purpose,
-          passengerCount: dto.passengerCount,
-        },
+        ...this.approvalSnapshot(dto, vehicle.plateNumber),
       },
       companyId,
       employeeId,
@@ -270,6 +230,145 @@ export class VehicleApplicationService
     });
 
     return this.getApplication(id, companyId, userId);
+  }
+
+  /**
+   * Employee edits their own DRAFT or RETURNED vehicle application. Same
+   * validation (dates, driver, availability) as submit. Saving a RETURNED
+   * application resubmits it and restarts the approval chain.
+   */
+  async updateApplication(
+    id: string,
+    dto: UpdateVehicleApplicationDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const application = await this.prisma.vehicleApplication.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!application) {
+      throw new NotFoundException('Vehicle application not found');
+    }
+    if (application.employeeId !== userId) {
+      throw new ForbiddenException('You can only edit your own requests.');
+    }
+    if (
+      application.status !== VehicleApplicationStatus.DRAFT &&
+      application.status !== VehicleApplicationStatus.RETURNED
+    ) {
+      throw new ForbiddenException('This request can no longer be edited.');
+    }
+
+    const { departure, returnDt, vehicle, driverId } =
+      await this.resolveApplicationInput(dto, companyId, userId);
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.vehicleApplication.update({
+        where: { id },
+        data: {
+          vehicleId: dto.vehicleId,
+          driveType: dto.driveType,
+          driverId,
+          departureDatetime: departure,
+          returnDatetime: returnDt,
+          destination: dto.destination.trim(),
+          purpose: dto.purpose.trim(),
+          passengerCount: dto.passengerCount ?? 1,
+          passengerNames: dto.passengerNames?.trim() || null,
+          projectId: dto.projectId || null,
+          notes: dto.notes?.trim() || null,
+          updatedBy: userId,
+        },
+      });
+      if (application.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: application.approvalRequestId },
+          data: {
+            ...this.approvalSnapshot(dto, vehicle.plateNumber),
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+
+    if (
+      application.status === VehicleApplicationStatus.RETURNED &&
+      application.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        application.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
+
+    return this.getApplication(id, companyId, userId);
+  }
+
+  /**
+   * Validates dates, vehicle, driver and availability. Shared by submit and
+   * edit (the edited row is DRAFT/RETURNED, so it never blocks itself).
+   */
+  private async resolveApplicationInput(
+    dto: UpdateVehicleApplicationDto,
+    companyId: string,
+    userId: string,
+  ) {
+    const departure = new Date(dto.departureDatetime);
+    const returnDt = new Date(dto.returnDatetime);
+
+    if (returnDt <= departure) {
+      throw new BadRequestException(
+        'Return date/time must be after departure date/time',
+      );
+    }
+    await this.assertDepartureNotBackdated(departure, companyId, userId);
+
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: dto.vehicleId, companyId }),
+    });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    const driverId =
+      dto.driveType === DriveType.COMPANY_DRIVER
+        ? dto.driverId || vehicle.assignedDriverId || null
+        : null;
+
+    if (dto.driveType === DriveType.COMPANY_DRIVER && !driverId) {
+      throw new BadRequestException(
+        'driverId is required when driveType is COMPANY_DRIVER',
+      );
+    }
+
+    await this.assertVehicleAvailable(
+      dto.vehicleId,
+      companyId,
+      departure,
+      returnDt,
+    );
+
+    return { departure, returnDt, vehicle, driverId };
+  }
+
+  /** Approval title + formData mirrored from the vehicle application. */
+  private approvalSnapshot(
+    dto: UpdateVehicleApplicationDto,
+    vehiclePlate: string,
+  ) {
+    return {
+      title: `Vehicle Application - ${vehiclePlate}`,
+      formData: {
+        vehiclePlate,
+        driveType: dto.driveType,
+        destination: dto.destination,
+        departureDatetime: dto.departureDatetime,
+        returnDatetime: dto.returnDatetime,
+        purpose: dto.purpose,
+        passengerCount: dto.passengerCount,
+      },
+    };
   }
 
   /**

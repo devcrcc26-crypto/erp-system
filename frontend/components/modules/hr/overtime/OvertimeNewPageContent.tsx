@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, DatePicker, Spin, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
@@ -32,9 +32,14 @@ const SUBMITTED_SHEET_STATUSES: OvertimeSheetStatus[] = [
   'REJECTED',
 ];
 
+function currentMonthStart(): dayjs.Dayjs {
+  return dayjs().startOf('month');
+}
+
 /**
  * Opens (or creates) an overtime sheet, then redirects to detail.
- * All users pick a month (past months allowed). On-behalf filers also pick an employee.
+ * Plain employees always get the current month (no picker). HR / on-behalf
+ * filers can choose a past month.
  */
 export default function OvertimeNewPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -48,13 +53,25 @@ export default function OvertimeNewPageContent(): React.ReactNode {
   );
   const eligibleResolved = Boolean(currentUser.data?.id) && !eligibleQuery.isLoading;
   const hasOnBehalfAccess = (eligibleQuery.data?.length ?? 0) > 0;
+  const canPickPastMonths = hasOnBehalfAccess;
 
   const openMutation = useOpenOvertimeSheet();
-  const [month, setMonth] = useState<dayjs.Dayjs | null>(null);
+  const [month, setMonth] = useState<dayjs.Dayjs | null>(() =>
+    currentMonthStart(),
+  );
   // Set once "Open sheet" has created the sheet. Creating it refreshes the
   // sheet lists, so without this the page would find its own new draft and
   // show "you have a draft" while the entries page is still loading.
   const [openedSheetId, setOpenedSheetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!eligibleResolved) {
+      return;
+    }
+    if (!canPickPastMonths) {
+      setMonth(currentMonthStart());
+    }
+  }, [eligibleResolved, canPickPastMonths]);
 
   const selectedMonth = month ? month.month() + 1 : undefined;
   const selectedYear = month ? month.year() : undefined;
@@ -147,7 +164,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
       description={
         hasOnBehalfAccess
           ? t('hr.onBehalf.overtimeDescription')
-          : t('pages.hr.overtime.newDescription')
+          : t('pages.hr.overtime.newDescriptionEmployee')
       }
       cancelLabel={t('hr.buttons.cancel')}
       cancelHref="/approvals/new"
@@ -171,23 +188,37 @@ export default function OvertimeNewPageContent(): React.ReactNode {
 
           <FormLayout
             variant="pro"
-            title={t('pages.hr.overtime.selectMonth')}
-            description={t('pages.hr.overtime.selectMonthDescription')}
+            title={
+              canPickPastMonths
+                ? t('pages.hr.overtime.selectMonth')
+                : t('pages.hr.overtime.currentMonth')
+            }
+            description={
+              canPickPastMonths
+                ? t('pages.hr.overtime.selectMonthDescription')
+                : t('pages.hr.overtime.currentMonthDescription')
+            }
           >
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <Typography.Text className="mb-1 block text-sm font-medium">
                   {t('hr.onBehalf.month')}
                 </Typography.Text>
-                <DatePicker
-                  picker="month"
-                  allowClear
-                  disabledDate={disableFutureMonths}
-                  value={month}
-                  onChange={(value) => {
-                    setMonth(value ? value.startOf('month') : null);
-                  }}
-                />
+                {canPickPastMonths ? (
+                  <DatePicker
+                    picker="month"
+                    allowClear={false}
+                    disabledDate={disableFutureMonths}
+                    value={month}
+                    onChange={(value) => {
+                      setMonth(value ? value.startOf('month') : currentMonthStart());
+                    }}
+                  />
+                ) : (
+                  <Typography.Text className="block text-[15px] font-semibold text-[rgba(0,0,0,0.88)]">
+                    {periodLabel}
+                  </Typography.Text>
+                )}
               </div>
               {existingKind === 'submitted' ? (
                 <Button type="primary" onClick={goToExistingSheet}>

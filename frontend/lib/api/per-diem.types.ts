@@ -174,6 +174,12 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   rateOverrideReason?: string;
 }
 
+/** PATCH body when the employee edits a DRAFT / RETURNED request. */
+export type UpdatePerDiemRequestPayload = Omit<
+  SubmitPerDiemRequestPayload,
+  keyof OnBehalfPayload
+>;
+
 export interface PerDiemDisbursementAttachment {
   id: string;
   disbursementId: string;

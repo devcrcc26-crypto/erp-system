@@ -27,6 +27,8 @@ import {
   VehicleApplicationStatus,
   VehicleRefuelingStatus,
   SealStatus,
+  ExitPermitStatus,
+  SiteAssignmentStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -1594,6 +1596,8 @@ export class ApprovalsService {
         vehicleApplication: true,
         vehicleRefueling: true,
         officialSeal: true,
+        exitPermit: true,
+        siteAssignment: true,
       },
     });
     if (!request) {
@@ -1809,6 +1813,28 @@ export class ApprovalsService {
             },
           });
         }
+
+        if (request.exitPermit) {
+          await tx.exitPermit.update({
+            where: { id: request.exitPermit.id },
+            data: {
+              status: ExitPermitStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.siteAssignment) {
+          await tx.siteAssignment.update({
+            where: { id: request.siteAssignment.id },
+            data: {
+              status: SiteAssignmentStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
       },
       PRISMA_TX_OPTIONS,
     );
@@ -1854,6 +1880,41 @@ export class ApprovalsService {
     }
 
     return this.getRequest(request.id, companyId, userId);
+  }
+
+  /**
+   * Resubmits a RETURNED request right after its requester saved edits to the
+   * source record (edit form). Same effect as the Approvals resubmit panel:
+   * tiers reset and the chain restarts from tier 1.
+   *
+   * No-op (returns false) when the editor is not the requester (e.g. HR fixing
+   * a returned request) or the request is no longer RETURNED, so callers can
+   * invoke it after any edit of a returned record.
+   */
+  async resubmitAfterOwnerEdit(
+    requestId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      select: { requestedBy: true, status: true },
+    });
+    if (
+      !request ||
+      request.requestedBy !== userId ||
+      request.status !== ApprovalRequestStatus.RETURNED
+    ) {
+      return false;
+    }
+    await this.resubmitRequest(
+      requestId,
+      companyId,
+      userId,
+      'Request edited and resubmitted by the requester',
+      [],
+    );
+    return true;
   }
 
   /**

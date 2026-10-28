@@ -24,6 +24,7 @@ import HrFormItemsSection, {
 } from '@/components/modules/hr/shared/HrFormItemsSection';
 import HrItemFormDrawer from '@/components/modules/hr/shared/HrItemFormDrawer';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import DocumentImageThumb from '@/components/ui/DocumentImageThumb/DocumentImageThumb';
 import LocalFileImageThumb from '@/components/ui/DocumentImageThumb/LocalFileImageThumb';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -41,6 +42,7 @@ import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { apiPostForm } from '@/lib/api/client';
 import type {
   AddExitPermitItemPayload,
+  CreateExitPermitItemPayload,
   ExitPermitDetail,
   ExitPermitDirection,
 } from '@/lib/api/exit-permit.types';
@@ -50,7 +52,12 @@ import {
   buildExitPermitItemFormData,
   exitPermitKeys,
   useCreateExitPermit,
+  useUpdateExitPermit,
 } from '@/lib/query/exit-permit';
+import {
+  requestSaveLabelKey,
+  requestSaveSuccessKey,
+} from '@/lib/utils/request-edit';
 import { useDepartments } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
@@ -79,6 +86,8 @@ interface ClientItem extends AddExitPermitItemPayload {
 
 interface ExitPermitFormProps {
   onSuccess: (result: ExitPermitDetail) => void;
+  /** Edit mode: the employee's own DRAFT / RETURNED permit, prefilled. */
+  initialRecord?: ExitPermitDetail;
 }
 
 const DETAILS_FIELDS = ['direction', 'date'] as const;
@@ -90,11 +99,36 @@ function nextKey(): string {
   return `item-${keyCounter}`;
 }
 
+/** Saved items as client rows; existing images stay linked by documentId. */
+function clientItemsFrom(record: ExitPermitDetail): ClientItem[] {
+  return record.items.map((item) => ({
+    _key: nextKey(),
+    itemName: item.itemName,
+    issue: item.issue ?? undefined,
+    quantity: Number(item.quantity) || 1,
+    unit: item.unit ?? undefined,
+    documentId: item.documentId ?? undefined,
+  }));
+}
+
+function toItemPayload(
+  item: Pick<ClientItem, 'itemName' | 'issue' | 'quantity' | 'unit' | 'documentId'>,
+): CreateExitPermitItemPayload {
+  return {
+    itemName: item.itemName,
+    issue: item.issue ?? undefined,
+    quantity: Number(item.quantity) || 1,
+    unit: item.unit ?? undefined,
+    documentId: item.documentId ?? undefined,
+  };
+}
+
 /**
  * Exit permit create form - same StepperForm chrome as Add Employee.
  */
 export default function ExitPermitForm({
   onSuccess,
+  initialRecord,
 }: ExitPermitFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('EXIT_PERMIT');
@@ -102,14 +136,27 @@ export default function ExitPermitForm({
   const canViewHr = useCanViewHr();
   const lookupUserName = useUserNameLookup();
   const createMutation = useCreateExitPermit();
+  const updateMutation = useUpdateExitPermit(initialRecord?.id ?? '');
   const queryClient = useQueryClient();
 
+  const initialDetails = useMemo<Step1Values>(
+    () =>
+      initialRecord
+        ? {
+            direction: initialRecord.direction,
+            date: dayjs(initialRecord.date),
+            departmentId: initialRecord.departmentId ?? null,
+          }
+        : { direction: 'EXIT', date: dayjs() },
+    [initialRecord],
+  );
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
-  const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({
-    direction: 'EXIT',
-  });
-  const [items, setItems] = useState<ClientItem[]>([]);
+  const [detailsSnapshot, setDetailsSnapshot] =
+    useState<Step1Values>(initialDetails);
+  const [items, setItems] = useState<ClientItem[]>(() =>
+    initialRecord ? clientItemsFrom(initialRecord) : [],
+  );
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
@@ -144,8 +191,8 @@ export default function ExitPermitForm({
     onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
-    setDetailsSnapshot({ direction: 'EXIT' });
-    setItems([]);
+    setDetailsSnapshot(initialDetails);
+    setItems(initialRecord ? clientItemsFrom(initialRecord) : []);
     setEditingKey(null);
     setShowItemForm(false);
     setItemImageFile(null);
@@ -227,6 +274,10 @@ export default function ExitPermitForm({
         quantity: Number(values.quantity) || 1,
         unit: values.unit?.trim() || undefined,
         file: itemImageFile ?? undefined,
+        // Keep a saved image unless a new one was chosen.
+        documentId: itemImageFile
+          ? undefined
+          : items.find((row) => row._key === editingKey)?.documentId,
       };
       if (editingKey) {
         setItems((prev) =>
@@ -264,6 +315,52 @@ export default function ExitPermitForm({
     }
 
     setSubmitting(true);
+    if (initialRecord) {
+      try {
+        // New images upload through the item endpoint first (still DRAFT /
+        // RETURNED); the PATCH then sets the full item list. For a RETURNED
+        // permit that PATCH also resubmits it, so it must come last.
+        const originalItemIds = new Set(initialRecord.items.map((row) => row.id));
+        let latest: ExitPermitDetail | null = null;
+        for (const item of items.filter((row) => row.file)) {
+          const { _key: _unused, documentId: _replaced, ...payload } = item;
+          latest = await apiPostForm<ExitPermitDetail>(
+            `${EXIT_PERMIT_PATH}/${initialRecord.id}/items`,
+            buildExitPermitItemFormData(payload),
+          );
+        }
+        const uploaded = (latest?.items ?? []).filter(
+          (row) => !originalItemIds.has(row.id),
+        );
+        const saved = await updateMutation.mutateAsync({
+          direction: values.direction,
+          date: values.date ? values.date.format('YYYY-MM-DD') : undefined,
+          departmentId: values.departmentId || null,
+          items: [
+            ...items.filter((row) => !row.file).map(toItemPayload),
+            ...uploaded.map((row) =>
+              toItemPayload({
+                itemName: row.itemName,
+                issue: row.issue ?? undefined,
+                quantity: Number(row.quantity),
+                unit: row.unit ?? undefined,
+                documentId: row.documentId ?? undefined,
+              }),
+            ),
+          ],
+        });
+        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        onSuccess(saved);
+      } catch (error: unknown) {
+        void queryClient.invalidateQueries({ queryKey: exitPermitKeys.all });
+        const message = t('pages.approvals.edit.failed');
+        notifyApiError(error, message, messageApi);
+        setFormError(message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     try {
       const created = await createMutation.mutateAsync({
         ...onBehalf.payload,
@@ -313,13 +410,20 @@ export default function ExitPermitForm({
       dataIndex: 'file',
       key: 'file',
       width: 56,
-      render: (value: File | undefined) => (
-        <LocalFileImageThumb
-          file={value}
-          size={40}
-          emptyLabel={t('hr.labels.noItemImage')}
-        />
-      ),
+      render: (value: File | undefined, row: ClientItem) =>
+        !value && row.documentId ? (
+          <DocumentImageThumb
+            documentId={row.documentId}
+            size={40}
+            emptyLabel={t('hr.labels.noItemImage')}
+          />
+        ) : (
+          <LocalFileImageThumb
+            file={value}
+            size={40}
+            emptyLabel={t('hr.labels.noItemImage')}
+          />
+        ),
     },
     {
       title: t('hr.table.itemName'),
@@ -379,7 +483,7 @@ export default function ExitPermitForm({
         validate: () => validateDetailsStep(),
         content: (
           <div className="flex flex-col gap-4">
-            <OnBehalfSection state={onBehalf} />
+            {initialRecord ? null : <OnBehalfSection state={onBehalf} />}
             <FormLayout
               variant="pro"
               title={t('hr.section.requestDetails')}
@@ -557,26 +661,30 @@ export default function ExitPermitForm({
               />
             </FormLayout>
 
-            <FormLayout
-              variant="pro"
-              title={t('hr.form.supportingDocuments')}
-              description={t(
-                'pages.hr.exitPermit.attachmentsStepDescription',
-              )}
-            >
-              <FileUploadInput
-                files={files}
-                onChange={setFiles}
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
-                placeholder={t('hr.placeholder.chooseSupportingDocuments')}
-              />
-            </FormLayout>
+            {initialRecord ? null : (
+              // Edit saves are JSON; supporting documents stay as submitted.
+              <FormLayout
+                variant="pro"
+                title={t('hr.form.supportingDocuments')}
+                description={t(
+                  'pages.hr.exitPermit.attachmentsStepDescription',
+                )}
+              >
+                <FileUploadInput
+                  files={files}
+                  onChange={setFiles}
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg"
+                  placeholder={t('hr.placeholder.chooseSupportingDocuments')}
+                />
+              </FormLayout>
+            )}
           </div>
         ),
       },
     ],
     [
+      initialRecord,
       onBehalf,
       t,
       itemColumns,
@@ -605,7 +713,7 @@ export default function ExitPermitForm({
       layout="vertical"
       requiredMark={false}
       preserve
-      initialValues={{ direction: 'EXIT', date: dayjs() }}
+      initialValues={initialDetails}
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
@@ -623,7 +731,11 @@ export default function ExitPermitForm({
         onReset={resetForm}
         isSubmitting={submitting}
         contentVariant="sections"
-        submitLabel={t('hr.buttons.submitRequest')}
+        submitLabel={
+          initialRecord
+            ? t(requestSaveLabelKey(initialRecord.status))
+            : t('hr.buttons.submitRequest')
+        }
       />
       <HrItemFormDrawer
         open={showItemForm}

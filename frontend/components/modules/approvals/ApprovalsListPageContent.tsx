@@ -17,6 +17,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  EditOutlined,
   FormOutlined,
   InboxOutlined,
   PlusOutlined,
@@ -63,6 +64,10 @@ import {
 } from '@/lib/utils/approvals-list-filter';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import {
+  EDITABLE_REQUEST_CATEGORIES,
+  canEditOwnRequest,
+} from '@/lib/utils/request-edit';
 import type { DraftModule } from '@/lib/api/drafts.types';
 import { useMyDrafts } from '@/lib/query/drafts';
 
@@ -428,8 +433,41 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           );
         },
       },
+      {
+        title: (
+          <span className="sr-only">{t('pages.approvals.edit.button')}</span>
+        ),
+        key: 'edit',
+        width: isNarrow ? 56 : 96,
+        align: 'right',
+        render: (_: unknown, row: ApprovalRequestListItem) => {
+          const code = row.categoryCode ?? row.category?.code ?? '';
+          if (
+            !EDITABLE_REQUEST_CATEGORIES.has(code) ||
+            !canEditOwnRequest(row.status, row.requestedBy, currentUserId)
+          ) {
+            return null;
+          }
+          return (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              aria-label={t('pages.approvals.edit.buttonAria', {
+                number: row.requestNumber,
+              })}
+              onClick={(event) => {
+                // Row click opens the detail page.
+                event.stopPropagation();
+                router.push(`${LIST_PATH}/${row.id}/edit`);
+              }}
+            >
+              {isNarrow ? undefined : t('pages.approvals.edit.button')}
+            </Button>
+          );
+        },
+      },
     ],
-    [currentUserId, inbox, isNarrow, t],
+    [currentUserId, inbox, isNarrow, router, t],
   );
 
   if (!isDraftsInbox && listQuery.isLoading && !listQuery.data) {

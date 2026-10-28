@@ -51,6 +51,7 @@ import {
   CreateBusinessTripDraftDto,
   ListBusinessTripsDto,
   SubmitBusinessTripDto,
+  UpdateBusinessTripDto,
 } from '../dtos/business-trip.dtos';
 
 type UploadedFile = {
@@ -159,44 +160,8 @@ export class BusinessTripService
       dto.onBehalfOfEmployeeId,
     );
 
-    // --- Validation ---
-    const departureDate = this.parseDateTime(dto.departureDate);
-    const returnDate = dto.returnDate
-      ? this.parseDateTime(dto.returnDate)
-      : null;
-    await this.assertDepartureNotBackdated(departureDate, companyId, userId);
-
-    assertRoundTripTravelDates(dto.tripType, departureDate, returnDate);
-
-    const passengerIds = dto.passengers.map((p) => p.employeeId);
-    const uniqueIds = new Set(passengerIds);
-    if (uniqueIds.size !== passengerIds.length) {
-      throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
-    }
-    const tripDays = datesInRange(departureDate, returnDate);
-    for (const travellerId of new Set([employeeId, ...passengerIds])) {
-      await assertWithinEmploymentWindow(this.prisma, travellerId, tripDays);
-    }
-
-    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
-        userId,
-        companyId,
-        'BUSINESS_TRIP',
-      );
-    const selectableSet = new Set(selectablePassengers.map((p) => p.id));
-    const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
-    if (invalidIds.length > 0) {
-      throw new BadRequestException(
-        `Passengers not in selectable set: ${invalidIds.join(', ')}`,
-      );
-    }
-
-    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
-      employeeIds: [...new Set([employeeId, ...passengerIds])],
-      departureDate,
-      returnDate,
-      skipFlightConflicts: true,
-    });
+    const { departureDate, returnDate, passengerIds } =
+      await this.validateTripInput(dto, employeeId, companyId, userId);
 
     // --- Resolve approval chain ---
     let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
@@ -306,22 +271,7 @@ export class BusinessTripService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'BUSINESS_TRIP',
-        title: `Business trip ${dto.originCity}, ${dto.originCountry} to ${dto.destinationCity}, ${dto.destinationCountry} - ${dto.departureDate}`,
-        formData: {
-          tripType: dto.tripType,
-          originCountry: dto.originCountry,
-          originCity: dto.originCity,
-          destinationCountry: dto.destinationCountry,
-          destinationCity: dto.destinationCity,
-          departureDate: dto.departureDate,
-          returnDate: dto.returnDate ?? null,
-          purpose: dto.purpose,
-          hostOrganization: dto.hostOrganization ?? null,
-          estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
-          estimatedPerDiem: dto.estimatedPerDiem ?? null,
-          estimatedOtherCost: dto.estimatedOtherCost ?? null,
-          passengerCount: dto.passengers.length,
-        },
+        ...this.approvalSnapshot(dto),
       },
       companyId,
       employeeId,
@@ -427,6 +377,180 @@ export class BusinessTripService
     });
 
     return this.getTrip(appId, companyId, userId);
+  }
+
+  /**
+   * Employee edits their own DRAFT or RETURNED business trip. Same validation
+   * as submit; passengers are replaced. Saving a RETURNED trip resubmits it
+   * and restarts the approval chain.
+   */
+  async updateTrip(
+    id: string,
+    dto: UpdateBusinessTripDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const trip = await this.prisma.businessTrip.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!trip) {
+      throw new NotFoundException('Business trip not found');
+    }
+    if (trip.submittedBy !== userId) {
+      throw new ForbiddenException('You can only edit your own requests.');
+    }
+    if (
+      trip.status !== BusinessTripStatus.DRAFT &&
+      trip.status !== BusinessTripStatus.RETURNED
+    ) {
+      throw new ForbiddenException('This request can no longer be edited.');
+    }
+
+    const { departureDate, returnDate } = await this.validateTripInput(
+      dto,
+      trip.submittedBy,
+      companyId,
+      userId,
+      id,
+    );
+
+    await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.businessTrip.update({
+          where: { id },
+          data: {
+            tripType: dto.tripType,
+            originCountry: dto.originCountry.trim(),
+            originCity: dto.originCity.trim(),
+            destinationCountry: dto.destinationCountry.trim(),
+            destinationCity: dto.destinationCity.trim(),
+            departureDate,
+            returnDate,
+            purpose: dto.purpose.trim(),
+            hostOrganization: dto.hostOrganization?.trim() || null,
+            hostContactName: dto.hostContactName?.trim() || null,
+            hostContactPhone: dto.hostContactPhone?.trim() || null,
+            hostContactEmail: dto.hostContactEmail?.trim() || null,
+            expectedOutcomes: dto.expectedOutcomes?.trim() || null,
+            itinerary: dto.itinerary?.trim() || null,
+            estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
+            estimatedPerDiem: dto.estimatedPerDiem ?? null,
+            estimatedOtherCost: dto.estimatedOtherCost ?? null,
+            notes: dto.notes?.trim() || null,
+            updatedBy: userId,
+          },
+        });
+        await tx.businessTripPassenger.deleteMany({ where: { tripId: id } });
+        for (const passenger of dto.passengers) {
+          await tx.businessTripPassenger.create({
+            data: {
+              id: randomUUID(),
+              tripId: id,
+              employeeId: passenger.employeeId,
+              passportNumber: passenger.passportNumber ?? null,
+              visaRequired: passenger.visaRequired ?? true,
+              visaStatus: passenger.visaStatus ?? null,
+            },
+          });
+        }
+        if (trip.approvalRequestId) {
+          await tx.approvalRequest.update({
+            where: { id: trip.approvalRequestId },
+            data: { ...this.approvalSnapshot(dto), updatedBy: userId },
+          });
+        }
+      },
+      { maxWait: 10_000, timeout: 30_000 },
+    );
+
+    if (
+      trip.status === BusinessTripStatus.RETURNED &&
+      trip.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        trip.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
+
+    return this.getTrip(id, companyId, userId);
+  }
+
+  /**
+   * Validates dates, employment windows, passengers and travel conflicts.
+   * Shared by submit and edit; `excludeTripId` skips the edited trip in the
+   * passenger conflict check.
+   */
+  private async validateTripInput(
+    dto: UpdateBusinessTripDto,
+    employeeId: string,
+    companyId: string,
+    userId: string,
+    excludeTripId?: string,
+  ) {
+    const departureDate = this.parseDateTime(dto.departureDate);
+    const returnDate = dto.returnDate
+      ? this.parseDateTime(dto.returnDate)
+      : null;
+    await this.assertDepartureNotBackdated(departureDate, companyId, userId);
+
+    assertRoundTripTravelDates(dto.tripType, departureDate, returnDate);
+
+    const passengerIds = dto.passengers.map((p) => p.employeeId);
+    const uniqueIds = new Set(passengerIds);
+    if (uniqueIds.size !== passengerIds.length) {
+      throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
+    }
+    const tripDays = datesInRange(departureDate, returnDate);
+    for (const travellerId of new Set([employeeId, ...passengerIds])) {
+      await assertWithinEmploymentWindow(this.prisma, travellerId, tripDays);
+    }
+
+    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'BUSINESS_TRIP',
+      );
+    const selectableSet = new Set(selectablePassengers.map((p) => p.id));
+    const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
+    if (invalidIds.length > 0) {
+      throw new BadRequestException(
+        `Passengers not in selectable set: ${invalidIds.join(', ')}`,
+      );
+    }
+
+    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
+      employeeIds: [...new Set([employeeId, ...passengerIds])],
+      departureDate,
+      returnDate,
+      skipFlightConflicts: true,
+      excludeBusinessTripId: excludeTripId,
+    });
+
+    return { departureDate, returnDate, passengerIds };
+  }
+
+  /** Approval title + formData mirrored from the business trip. */
+  private approvalSnapshot(dto: UpdateBusinessTripDto) {
+    return {
+      title: `Business trip ${dto.originCity}, ${dto.originCountry} to ${dto.destinationCity}, ${dto.destinationCountry} - ${dto.departureDate}`,
+      formData: {
+        tripType: dto.tripType,
+        originCountry: dto.originCountry,
+        originCity: dto.originCity,
+        destinationCountry: dto.destinationCountry,
+        destinationCity: dto.destinationCity,
+        departureDate: dto.departureDate,
+        returnDate: dto.returnDate ?? null,
+        purpose: dto.purpose,
+        hostOrganization: dto.hostOrganization ?? null,
+        estimatedAccommodationCost: dto.estimatedAccommodationCost ?? null,
+        estimatedPerDiem: dto.estimatedPerDiem ?? null,
+        estimatedOtherCost: dto.estimatedOtherCost ?? null,
+        passengerCount: dto.passengers.length,
+      },
+    };
   }
 
   /**

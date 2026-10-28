@@ -263,6 +263,39 @@ export class MaterialRequisitionService
       },
     });
 
+    const updated = await this.prisma.materialRequisition.findFirstOrThrow({
+      where: { id },
+      include: { items: { select: { id: true } } },
+    });
+    if (
+      updated.status === MaterialRequisitionStatus.RETURNED &&
+      updated.approvalRequestId
+    ) {
+      if (updated.items.length === 0) {
+        throw new BadRequestException(
+          'Add at least one item before submitting',
+        );
+      }
+      await this.prisma.approvalRequest.update({
+        where: { id: updated.approvalRequestId },
+        data: {
+          title: updated.title,
+          formData: {
+            purpose: updated.purpose,
+            itemCount: updated.items.length,
+            warehouseLocation: updated.warehouseLocation,
+          },
+          updatedBy: userId,
+        },
+      });
+      // Requester's save resubmits the returned requisition (chain restarts).
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        updated.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
+
     return this.getRequisition(id, companyId, userId);
   }
 
@@ -360,7 +393,8 @@ export class MaterialRequisitionService
   /**
    * Submits a DRAFT material requisition for approval.
    * Always opens Discipline Lead → HR → GM (duplicates collapsed).
-   * Returned requisitions must be resubmitted via the Approvals inbox.
+   * Returned requisitions are resubmitted by the requester saving the edit
+   * form (updateDraft) or via the Approvals inbox.
    */
   async submitRequisition(
     id: string,
@@ -749,9 +783,7 @@ export class MaterialRequisitionService
       requisition.status !== MaterialRequisitionStatus.DRAFT &&
       requisition.status !== MaterialRequisitionStatus.RETURNED
     ) {
-      throw new BadRequestException(
-        'Only draft or returned requisitions can be edited',
-      );
+      throw new ForbiddenException('This request can no longer be edited.');
     }
   }
 

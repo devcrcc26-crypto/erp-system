@@ -3,7 +3,12 @@
 import { useMemo } from 'react';
 import { Button, Grid, Select, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FormOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  EditOutlined,
+  FormOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -13,6 +18,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { DraftItem, DraftModule } from '@/lib/api/drafts.types';
 import type { PaginationMeta } from '@/lib/api/types';
+import { editRequestHref } from '@/lib/utils/request-edit';
 
 const DRAFT_MODULES: DraftModule[] = [
   'leave',
@@ -63,6 +69,19 @@ const MODULE_HREF: Record<DraftModule, (id: string) => string> = {
   flight: (id) => `/hr/flight-applications/${id}`,
   'business-trip': (id) => `/hr/business-trips/${id}`,
   overtime: (id) => `/hr/overtime/${id}`,
+};
+
+/** Draft module → approval category, for the employee edit page. */
+const MODULE_CATEGORY: Partial<Record<DraftModule, string>> = {
+  leave: 'LEAVE_REQUEST',
+  'expense-claim': 'EXPENSE_CLAIM',
+  'per-diem': 'PER_DIEM',
+  'exit-permit': 'EXIT_PERMIT',
+  'material-requisition': 'MATERIAL_REQUISITION',
+  'vehicle-application': 'VEHICLE_APPLICATION',
+  flight: 'FLIGHT_APPLICATION',
+  'business-trip': 'BUSINESS_TRIP',
+  overtime: 'OVERTIME_APPLICATION',
 };
 
 interface DraftsPanelProps {
@@ -188,8 +207,39 @@ export function DraftsPanel({
           <StatusBadge label={t('pages.approvals.drafts.statusDraft')} variant="default" />
         ),
       },
+      {
+        title: (
+          <span className="sr-only">{t('pages.approvals.edit.button')}</span>
+        ),
+        key: 'edit',
+        width: isNarrow ? 56 : 96,
+        align: 'right',
+        render: (_: unknown, row: DraftItem) => {
+          // Drafts listed here are always the current user's own.
+          const href = editRequestHref(MODULE_CATEGORY[row.module], row.id, row.id);
+          if (!href) {
+            return null;
+          }
+          return (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              aria-label={t('pages.approvals.edit.buttonAria', {
+                number: row.number,
+              })}
+              onClick={(event) => {
+                // Row click opens the detail page.
+                event.stopPropagation();
+                router.push(href);
+              }}
+            >
+              {isNarrow ? undefined : t('pages.approvals.edit.button')}
+            </Button>
+          );
+        },
+      },
     ],
-    [isNarrow, t],
+    [isNarrow, router, t],
   );
 
   return (

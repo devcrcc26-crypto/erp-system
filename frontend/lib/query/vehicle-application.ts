@@ -15,9 +15,15 @@ import {
 import type {
   ListVehicleApplicationsParams,
   SubmitVehicleApplicationPayload,
+  UpdateVehicleApplicationPayload,
   VehicleApplicationDetail,
   VehicleApplicationListItem,
 } from '@/lib/api/vehicle-application.types';
+import {
+  applyOptimisticRequestEdit,
+  invalidateAfterRequestEdit,
+  rollbackRequestEdit,
+} from '@/lib/query/request-edit';
 import type { PaginationMeta } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
@@ -138,6 +144,33 @@ export function useSubmitVehicleApplication() {
         vehicleApplicationKeys.detail(created.id),
         created,
       );
+    },
+  });
+}
+
+/** Employee edit of a DRAFT / RETURNED application (RETURNED is resubmitted). */
+export function useUpdateVehicleApplication(applicationId: string) {
+  const queryClient = useQueryClient();
+  const detailKey = vehicleApplicationKeys.detail(applicationId);
+  return useMutation({
+    mutationFn: (payload: UpdateVehicleApplicationPayload) =>
+      apiPatch<VehicleApplicationDetail>(
+        `${APPLICATIONS_PATH}/${applicationId}`,
+        payload,
+      ),
+    onMutate: () =>
+      applyOptimisticRequestEdit<VehicleApplicationDetail>(
+        queryClient,
+        detailKey,
+      ),
+    onError: (_error, _payload, context) =>
+      rollbackRequestEdit(queryClient, detailKey, context),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: vehicleApplicationKeys.lists(),
+      });
+      queryClient.setQueryData(detailKey, updated);
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

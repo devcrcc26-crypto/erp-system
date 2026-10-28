@@ -134,6 +134,12 @@ export interface SubmitBusinessTripPayload extends OnBehalfPayload {
   files?: File[];
 }
 
+/** PATCH body when the employee edits a DRAFT / RETURNED trip (JSON, no files). */
+export type UpdateBusinessTripPayload = Omit<
+  SubmitBusinessTripPayload,
+  keyof OnBehalfPayload | 'files'
+>;
+
 export interface ListBusinessTripsParams {
   page?: number;
   limit?: number;

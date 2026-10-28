@@ -52,6 +52,7 @@ import {
   FlightPassengerDto,
   ListFlightApplicationsDto,
   SubmitFlightApplicationDto,
+  UpdateFlightApplicationDto,
 } from '../dtos/flight.dtos';
 
 type UploadedFile = {
@@ -162,43 +163,13 @@ export class FlightService
       dto.onBehalfOfEmployeeId,
     );
 
-    // --- Validation ---
-    const departureDate = this.parseDateTime(dto.departureDate);
-    const returnDate = dto.returnDate
-      ? this.parseDateTime(dto.returnDate)
-      : null;
-    await this.assertDepartureNotBackdated(departureDate, companyId, userId);
-
-    assertRoundTripTravelDates(dto.tripType, departureDate, returnDate);
-
-    const passengerIds = dto.passengers.map((p) => p.employeeId);
-    const uniqueIds = new Set(passengerIds);
-    if (uniqueIds.size !== passengerIds.length) {
-      throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
-    }
-
-    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
-        userId,
-        companyId,
-        'FLIGHT_APPLICATION',
-      );
-    const selectableSet = new Set(selectablePassengers.map((p) => p.id));
-    const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
-    if (invalidIds.length > 0) {
-      throw new BadRequestException(
-        `Passengers not in selectable set: ${invalidIds.join(', ')}`,
-      );
-    }
-
-    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
-      employeeIds: [...new Set([employeeId, ...passengerIds])],
+    const {
       departureDate,
       returnDate,
-      skipBusinessTripConflicts: true,
-    });
-
-    const { linkedBusinessTripId, siteAssignmentId } =
-      await this.resolveOptionalFlightLinks(dto, companyId, employeeId);
+      passengerIds,
+      linkedBusinessTripId,
+      siteAssignmentId,
+    } = await this.validateApplicationInput(dto, employeeId, companyId, userId);
 
     // --- Resolve approval chain ---
     let resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
@@ -302,19 +273,7 @@ export class FlightService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'FLIGHT_APPLICATION',
-        title: `Flight ${dto.originCity}, ${dto.originCountry} to ${dto.destination} - ${dto.departureDate}`,
-        formData: {
-          tripType: dto.tripType,
-          isInternational: dto.isInternational,
-          originCountry: dto.originCountry,
-          originCity: dto.originCity,
-          destination: dto.destination,
-          departureDate: dto.departureDate,
-          returnDate: dto.returnDate ?? null,
-          purpose: dto.purpose,
-          ticketClass: dto.ticketClass,
-          passengerCount: dto.passengers.length,
-        },
+        ...this.approvalSnapshot(dto),
       },
       companyId,
       employeeId,
@@ -414,6 +373,171 @@ export class FlightService
     });
 
     return this.getApplication(appId, companyId, userId);
+  }
+
+  /**
+   * Employee edits their own DRAFT or RETURNED flight application. Same
+   * validation as submit; passengers are replaced. Saving a RETURNED
+   * application resubmits it and restarts the approval chain.
+   */
+  async updateApplication(
+    id: string,
+    dto: UpdateFlightApplicationDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const app = await this.prisma.flightApplication.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!app) {
+      throw new NotFoundException('Flight application not found');
+    }
+    if (app.submittedBy !== userId) {
+      throw new ForbiddenException('You can only edit your own requests.');
+    }
+    if (
+      app.status !== FlightApplicationStatus.DRAFT &&
+      app.status !== FlightApplicationStatus.RETURNED
+    ) {
+      throw new ForbiddenException('This request can no longer be edited.');
+    }
+
+    const { departureDate, returnDate, linkedBusinessTripId, siteAssignmentId } =
+      await this.validateApplicationInput(dto, app.submittedBy, companyId, userId, id);
+
+    await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.flightApplication.update({
+          where: { id },
+          data: {
+            tripType: dto.tripType,
+            isInternational: dto.isInternational,
+            originCountry: dto.originCountry.trim(),
+            originCity: dto.originCity.trim(),
+            destination: dto.destination.trim(),
+            departureDate,
+            returnDate,
+            purpose: dto.purpose.trim(),
+            ticketClass: dto.ticketClass,
+            notes: dto.notes?.trim() || null,
+            linkedBusinessTripId,
+            siteAssignmentId,
+            updatedBy: userId,
+          },
+        });
+        await tx.flightPassenger.deleteMany({ where: { applicationId: id } });
+        for (const passenger of dto.passengers) {
+          await tx.flightPassenger.create({
+            data: {
+              id: randomUUID(),
+              applicationId: id,
+              employeeId: passenger.employeeId,
+              passportNumber: passenger.passportNumber ?? null,
+              visaRequired: passenger.visaRequired ?? false,
+              visaStatus: passenger.visaStatus ?? null,
+            },
+          });
+        }
+        if (app.approvalRequestId) {
+          await tx.approvalRequest.update({
+            where: { id: app.approvalRequestId },
+            data: { ...this.approvalSnapshot(dto), updatedBy: userId },
+          });
+        }
+      },
+      { maxWait: 10_000, timeout: 30_000 },
+    );
+
+    if (
+      app.status === FlightApplicationStatus.RETURNED &&
+      app.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitAfterOwnerEdit(
+        app.approvalRequestId,
+        companyId,
+        userId,
+      );
+    }
+
+    return this.getApplication(id, companyId, userId);
+  }
+
+  /**
+   * Validates dates, passengers, travel conflicts and optional links.
+   * Shared by submit and edit; `excludeApplicationId` skips the edited row in
+   * the passenger conflict check.
+   */
+  private async validateApplicationInput(
+    dto: UpdateFlightApplicationDto,
+    employeeId: string,
+    companyId: string,
+    userId: string,
+    excludeApplicationId?: string,
+  ) {
+    const departureDate = this.parseDateTime(dto.departureDate);
+    const returnDate = dto.returnDate
+      ? this.parseDateTime(dto.returnDate)
+      : null;
+    await this.assertDepartureNotBackdated(departureDate, companyId, userId);
+
+    assertRoundTripTravelDates(dto.tripType, departureDate, returnDate);
+
+    const passengerIds = dto.passengers.map((p) => p.employeeId);
+    const uniqueIds = new Set(passengerIds);
+    if (uniqueIds.size !== passengerIds.length) {
+      throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
+    }
+
+    const selectablePassengers = await this.onBehalfService.getSelectablePassengers(
+        userId,
+        companyId,
+        'FLIGHT_APPLICATION',
+      );
+    const selectableSet = new Set(selectablePassengers.map((p) => p.id));
+    const invalidIds = passengerIds.filter((id) => !selectableSet.has(id));
+    if (invalidIds.length > 0) {
+      throw new BadRequestException(
+        `Passengers not in selectable set: ${invalidIds.join(', ')}`,
+      );
+    }
+
+    await assertNoTravelPassengerConflicts(this.prisma, companyId, {
+      employeeIds: [...new Set([employeeId, ...passengerIds])],
+      departureDate,
+      returnDate,
+      skipBusinessTripConflicts: true,
+      excludeFlightApplicationId: excludeApplicationId,
+    });
+
+    const { linkedBusinessTripId, siteAssignmentId } =
+      await this.resolveOptionalFlightLinks(dto, companyId, employeeId);
+
+    return {
+      departureDate,
+      returnDate,
+      passengerIds,
+      linkedBusinessTripId,
+      siteAssignmentId,
+    };
+  }
+
+  /** Approval title + formData mirrored from the flight application. */
+  private approvalSnapshot(dto: UpdateFlightApplicationDto) {
+    return {
+      title: `Flight ${dto.originCity}, ${dto.originCountry} to ${dto.destination} - ${dto.departureDate}`,
+      formData: {
+        tripType: dto.tripType,
+        isInternational: dto.isInternational,
+        originCountry: dto.originCountry,
+        originCity: dto.originCity,
+        destination: dto.destination,
+        departureDate: dto.departureDate,
+        returnDate: dto.returnDate ?? null,
+        purpose: dto.purpose,
+        ticketClass: dto.ticketClass,
+        passengerCount: dto.passengers.length,
+      },
+    };
   }
 
   /**

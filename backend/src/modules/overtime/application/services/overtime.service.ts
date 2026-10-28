@@ -330,8 +330,18 @@ export class OvertimeService
     const [todayYear, todayMonth] = getTodayInTimezone()
       .split('-')
       .map(Number);
-    if (dto.year * 12 + dto.month > todayYear * 12 + todayMonth) {
+    const requestedIndex = dto.year * 12 + dto.month;
+    const currentIndex = todayYear * 12 + todayMonth;
+    if (requestedIndex > currentIndex) {
       throw new BadRequestException('Cannot open a sheet for a future month');
+    }
+    if (
+      requestedIndex < currentIndex &&
+      !(await this.canOpenPastMonthSheet(userId, companyId))
+    ) {
+      throw new BadRequestException(
+        'Employees can only open an overtime sheet for the current month',
+      );
     }
 
     const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
@@ -1274,6 +1284,33 @@ export class OvertimeService
         ),
       },
     });
+  }
+
+  /**
+   * Past-month sheets are for HR / overtime managers / on-behalf filers only.
+   * Plain employees are limited to the current calendar month (Addis Ababa).
+   */
+  private async canOpenPastMonthSheet(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const [canManageOvertime, canViewHr] = await Promise.all([
+      this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'overtime',
+        'manage',
+      ),
+      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+    ]);
+    if (canManageOvertime || canViewHr) {
+      return true;
+    }
+    const eligible = await this.onBehalfService.getEligibleEmployees(
+      userId,
+      companyId,
+    );
+    return eligible.length > 0;
   }
 
   private async assertCanViewSheet(
