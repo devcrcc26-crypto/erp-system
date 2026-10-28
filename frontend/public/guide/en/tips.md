@@ -18,7 +18,7 @@ Click **New Request** in the left menu, then click the request type you need. Ev
 
 ## Why is my left menu shorter than a colleague's?
 
-The left menu only shows what your role can use. Most staff see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
+The left menu only shows what your role can use. Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **Expense Claims**, **Per Diem**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
 
 ---
 
@@ -36,19 +36,19 @@ From Monday to Friday, **12:30–13:30** is lunch and never counts as overtime. 
 
 ## My request is stuck. What can I do?
 
-Open the request and look at the **Approval chain**. It shows which approver the request is waiting for. If that person is away or has left, ask HR. The HR Manager can reassign the step to someone else.
+Open the request and look at the **Approval Chain**. It shows which approver the request is waiting for. If that person is away or has left, ask HR. HR can reassign the step to someone else.
 
 ---
 
 ## An approver returned my request. What now?
 
-Read the approver's note, change what they asked for, and resubmit the request from **Approvals**. The request starts again at the first approver.
+Open the request from **Approvals** → **My Requests** and read the approver's note. In the **Resubmit** panel, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**. The request starts again from the beginning of the approval chain.
 
 ---
 
 ## How do I switch the guide language?
 
-Use the language switch (globe icon) in the top bar. It changes both the ERP interface and this User Guide.
+Use the language control at the top of the screen. It changes both the ERP interface and this User Guide.
 
 ---
 

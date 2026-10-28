@@ -1,67 +1,88 @@
 # Getting Started
 
-Welcome to the Construction ERP. This page shows you how to sign in, find your way around, and how requests and approvals work. The other topics in this guide explain each part of the system step by step.
-
-**Who this is for:** everyone.
+Welcome to the Construction ERP. This page shows you how to sign in, find your way around, and send your first request. The other topics in this guide explain each part of the system step by step.
 
 ---
 
 ## How to sign in
 
+*(Everyone)*
+
 1. Open the ERP sign-in page.
-2. Enter your **Full name** (not your email address) and your **Password**.
-3. Click **Sign in**.
+2. **Full name**: enter your full name, not your email address.
+3. **Password**: enter your password.
+4. Click **Sign in**.
 
-**New account?** Open the activation link HR sent to your email, set your password, then sign in.
+[SCREENSHOT: getting-started-sign-in.png]
 
-**Forgot your password?** Use the forgotten-password link on the sign-in page and follow the instructions in the email.
+> **New account?** Open the activation link HR sent to your email, choose your password, then sign in. You see *"Your account is ready. Sign in with your new password."*
 
-**Email not verified?** The sign-in message offers **Resend activation**. Click it and open the new email.
+> **Note:** If HR gave you a temporary password, you are asked to choose a new one before you can continue.
+
+### If you cannot sign in
+
+- **Forgot your password?** Click **Forgot password?** on the sign-in page and follow the link in the email you receive.
+- **Account not activated?** The sign-in page shows **Resend activation email**. Click it and use the link in the new email.
 
 ---
 
-## Your first sign-in
+## How to find your way around
 
-If HR gave you a temporary password, the ERP asks you to choose a new password before you can continue. After that you arrive at the **Dashboard**.
+*(Everyone)*
 
----
-
-## Finding your way around
-
-| Area | What it is for |
+| Where | What it is for |
 | --- | --- |
 | **Left menu** | The parts of the system you can use. You only see what your job needs. |
 | **New Request** | Start any request: leave, overtime, travel, expenses, seals and more. |
-| **Approvals** | Follow your own requests, and act on requests that are waiting for you. |
+| **Approvals** | Follow your own requests, and act on requests waiting for you. |
 | **My Profile** | Your own record: leave balance, overtime, attendance, payslips, assets and more. |
-| **Bell icon** (top right) | Your notifications, such as approval updates and announcements. |
-| **User Guide** | This guide. It opens in a new tab. |
+| **Bell** (top of the screen) | Your notifications. |
+| **Language control** (top of the screen) | Switch between English and Chinese. This guide switches too. |
+| **User Guide** | This guide, in the left menu. |
 
-**What you see in the left menu depends on your role:**
-- **Most staff** see Dashboard, New Request, Approvals, My Evaluation Inbox, Announcements, Expense Claims, Per Diem, My Profile and User Guide.
-- **HR staff** also see these folders: **People**, **Time & Attendance**, **Pay & Travel** and **Operations**.
+Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **Expense Claims**, **Per Diem**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. HR staff also see the folders **People**, **Time & Attendance**, **Pay & Travel** and **Operations**.
+
+[SCREENSHOT: getting-started-left-menu.png]
 
 ---
 
-## How requests work
+## How to send a request
 
-Almost everything you ask for follows the same four steps.
+*(Employees)*
 
-1. **Start:** click **New Request** in the left menu, then click the request type you need.
-2. **Fill in:** complete each step of the form. Check the summary on **Review & Submit**, then submit.
-3. **Approval:** the request goes to your approvers in order, usually your manager first and then HR. Follow it by clicking **Approvals** in the left menu, then **My Requests**.
-4. **Result:** you get a notification when the request is approved, rejected or returned. If it is returned, change what the approver asked for and resubmit.
+Almost every request works the same way.
+
+1. In the left menu, go to **New Request**.
+2. Click the request you need. You can search for it or filter by group.
+3. Fill in each step of the form, and click **Next** to move on.
+4. On **Review & Submit**, check everything, then submit.
+
+> **After you submit:** Your request has been sent for approval. You will receive a notification when it is approved or returned.
+
+---
+
+## How to follow your request
+
+*(Employees)*
+
+1. In the left menu, go to **Approvals** → **My Requests**.
+2. Open the request to see its status: **Submitted**, **In Review**, **Approved**, **Returned** or **Rejected**.
+
+---
+
+## What to do if your request is returned
+
+*(Employees)*
+
+1. Open the notification **Approval returned**, or find the request under **Approvals** → **My Requests** with status **Returned**.
+2. Read the approver's note in the banner **This request was returned**.
+3. In the **Resubmit** panel, write a **Note to approver (optional)** and attach files if needed.
+4. Click **Resubmit**.
 
 See the **Approvals Inbox** topic for the full approval process.
 
 ---
 
-## Language
-
-Use the language switch (globe icon) in the top bar. It changes both the ERP interface and this User Guide.
-
----
-
 ## Need help?
 
-Contact HR for questions about your account, leave balance, payroll or contract.
+Contact HR about your account, leave balance, payroll or contract.

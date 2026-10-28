@@ -90,7 +90,7 @@ The company asset register lists the equipment the company owns, such as laptops
 1. Open the asset from **Company Assets**.
 2. Under **Current Assignment**, click **Issue Asset**. The asset must be **Available**. Otherwise you see *"Change the asset status to Available before issuing it."*
 3. In **Issue asset**, choose the **Employee** and add **Notes** if needed.
-4. Click **Save**.
+4. Click **Issue Asset**.
 
 [SCREENSHOT: company-assets-issue.png]
 
@@ -105,9 +105,10 @@ The company asset register lists the equipment the company owns, such as laptops
 1. Open the asset.
 2. Click **Return Asset**.
 3. In **Return asset**, enter where it was **Returned To** (for example *"Main Store"*) and any **Notes**.
-4. Click **Save**.
+4. Click **Return Asset**. You see *"Asset returned successfully"*, and the return is now waiting to be acknowledged.
+5. When you have the item in hand, click **Acknowledge Return**. Check **Returned To** and the **Notes**, then click **Acknowledge Return** again.
 
-> **After you save:** You see *"Asset returned successfully"*. The asset is **Available** again, and the handover is kept under **Assignment History**.
+> **After you acknowledge:** You see *"Asset return acknowledged"*. The asset is **Available** again, and the handover is kept under **Assignment History**.
 
 ---
 
