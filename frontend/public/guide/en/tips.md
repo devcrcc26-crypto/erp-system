@@ -18,19 +18,13 @@ Click **New Request** in the left menu, then click the request type you need. Ev
 
 ## Why is my left menu shorter than a colleague's?
 
-The left menu only shows what your role can use. Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **Expense Claims**, **Per Diem**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
+The left menu only shows what your role can use. Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **My Evaluation Inbox**, and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
 
 ---
 
 ## Where do I see my leave balance, overtime or payslips?
 
 Open **My Profile**. Each tab shows one part of your record: **Leave**, **Overtime**, **Attendance**, **Payroll**, and so on.
-
----
-
-## Why were my overtime hours around lunch cut?
-
-From Monday to Friday, **12:30–13:30** is lunch and never counts as overtime. Split your entry into a part before lunch and a part after lunch. This rule does not apply on Saturdays, Sundays, public holidays or site-assignment days.
 
 ---
 
@@ -42,7 +36,7 @@ Open the request and look at the **Approval Chain**. It shows which approver the
 
 ## An approver returned my request. What now?
 
-Open the request from **Approvals** → **My Requests** and read the approver's note. In the **Resubmit** panel, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**. The request starts again from the beginning of the approval chain.
+Open the request from **Approvals** → **Pending My Action** and read the approver's note. In the **Resubmit** panel, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**. The request starts again from the beginning of the approval chain.
 
 ---
 

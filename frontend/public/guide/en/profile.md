@@ -8,7 +8,7 @@
 
 *(Everyone)*
 
-1. In the left menu, click **My Profile**. It is at the bottom and shows your name.
+1. In the top left, click **My Profile**. It is at the bottom and shows your name. 
 2. Click a tab to see that part of your record.
 
 
