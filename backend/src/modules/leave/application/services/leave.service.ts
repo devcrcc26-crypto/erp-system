@@ -493,6 +493,12 @@ export class LeaveService
   ): Promise<unknown> {
     const leave = await this.prisma.leaveRequest.findFirst({
       where: activeOnly({ id, companyId }),
+      include: {
+        periods: {
+          select: { startDate: true, endDate: true, days: true },
+          orderBy: { startDate: 'asc' },
+        },
+      },
     });
     if (!leave) {
       throw new NotFoundException('Leave request not found');
@@ -549,24 +555,26 @@ export class LeaveService
       previousStatus === LeaveRequestStatus.SUBMITTED ||
       previousStatus === LeaveRequestStatus.IN_REVIEW
     ) {
-      await this.leaveBalanceService.adjustPendingForDate(
+      await this.leaveBalanceService.adjustPendingForLeavePeriods(
         leave.employeeId,
-        leave.leaveType,
-        leave.startDate ?? new Date(),
-        -Number(leave.days ?? 0),
         companyId,
+        leave.leaveType,
+        leave.periods.map((period) => ({
+          startDate: period.startDate,
+          endDate: period.endDate,
+          days: Number(period.days),
+        })),
+        -1,
+        leave.startDate ?? now,
+        Number(leave.days ?? 0),
       );
     }
     if (isApproved) {
       await this.leaveLedger.reverseLeaveUsed(leave.id, userId);
-      const periods = await this.prisma.leaveRequestPeriod.findMany({
-        where: { leaveRequestId: leave.id },
-        select: { startDate: true, endDate: true },
-      });
       await this.recalculateAttendanceForLeavePeriods(
         companyId,
         leave.employeeId,
-        periods,
+        leave.periods,
       );
     }
 
@@ -649,6 +657,12 @@ export class LeaveService
   ): Promise<void> {
     const leave = await this.prisma.leaveRequest.findFirst({
       where: activeOnly({ id, companyId }),
+      include: {
+        periods: {
+          select: { startDate: true, endDate: true, days: true },
+          orderBy: { startDate: 'asc' },
+        },
+      },
     });
     if (!leave) {
       throw new NotFoundException('Leave request not found');
@@ -695,23 +709,25 @@ export class LeaveService
       leave.status === LeaveRequestStatus.SUBMITTED ||
       leave.status === LeaveRequestStatus.IN_REVIEW
     ) {
-      await this.leaveBalanceService.adjustPendingForDate(
+      await this.leaveBalanceService.adjustPendingForLeavePeriods(
         leave.employeeId,
-        leave.leaveType,
-        leave.startDate ?? new Date(),
-        -days,
         companyId,
+        leave.leaveType,
+        leave.periods.map((period) => ({
+          startDate: period.startDate,
+          endDate: period.endDate,
+          days: Number(period.days),
+        })),
+        -1,
+        leave.startDate ?? now,
+        days,
       );
     } else if (leave.status === LeaveRequestStatus.APPROVED) {
       await this.leaveLedger.reverseLeaveUsed(leave.id, userId);
-      const periods = await this.prisma.leaveRequestPeriod.findMany({
-        where: { leaveRequestId: leave.id },
-        select: { startDate: true, endDate: true },
-      });
       await this.recalculateAttendanceForLeavePeriods(
         companyId,
         leave.employeeId,
-        periods,
+        leave.periods,
       );
     }
   }
@@ -1055,7 +1071,10 @@ export class LeaveService
     const leave = await this.prisma.leaveRequest.findFirst({
       where: activeOnly({ approvalRequestId }),
       include: {
-        periods: { select: { startDate: true, endDate: true } },
+        periods: {
+          select: { startDate: true, endDate: true, days: true },
+          orderBy: { startDate: 'asc' },
+        },
       },
     });
     if (!leave) {
@@ -1092,16 +1111,26 @@ export class LeaveService
       },
     });
 
-    await this.leaveBalanceService.adjustPendingForDate(
-      leave.employeeId,
-      leave.leaveType,
-      leave.startDate ?? now,
-      -days,
-      leave.companyId,
-    );
+    // Record USED first so a pending-release failure cannot leave approved
+    // leave without ledger usage (anniversary-split requests were affected).
     if (decision === 'APPROVED') {
       await this.leaveLedger.recordLeaveUsed(leave.id);
     }
+
+    // Release pending by leave-year segments (same split used when reserving).
+    await this.leaveBalanceService.adjustPendingForLeavePeriods(
+      leave.employeeId,
+      leave.companyId,
+      leave.leaveType,
+      leave.periods.map((period) => ({
+        startDate: period.startDate,
+        endDate: period.endDate,
+        days: Number(period.days),
+      })),
+      -1,
+      leave.startDate ?? now,
+      days,
+    );
 
     await this.recalculateAttendanceForLeavePeriods(
       leave.companyId,

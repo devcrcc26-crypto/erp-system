@@ -5641,6 +5641,9 @@
       "noHistory": "暂无请假申请。",
       "profileLoadError": "无法加载假期信息。",
       "usedPending": "已用 {{used}} · 待批 {{pending}}",
+      "contractPeriod": "假期期间",
+      "contractPeriodPlaceholder": "选择假期期间",
+      "leaveYearOption": "{{label}}（{{range}}）",
       "ledger": {
         "title": "余额记录",
         "currentLeaveYear": "当前假期年度：{{start}} – {{end}}（按入职周年计算）",
@@ -5668,10 +5671,11 @@
         "empty": "暂无余额记录。",
         "colWhen": "日期",
         "colLeaveYear": "假期年度",
+        "colPeriod": "请假期间",
         "colKind": "类型",
         "colDays": "天数",
         "colReason": "原因",
-        "colBy": "操作人",
+        "colBy": "申请人",
         "system": "系统",
         "kinds": {
           "ENTITLEMENT": "应享",

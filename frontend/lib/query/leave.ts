@@ -24,6 +24,7 @@ import type {
   LeaveBalanceSnapshotResult,
   LeaveRequestDetail,
   LeaveRequestListItem,
+  LeaveYearsResponse,
   EmployeeLeaveBalanceSummary,
   ListLeaveBalancesParams,
   ListLeaveRequestsParams,
@@ -70,6 +71,8 @@ export const leaveKeys = {
     [...leaveKeys.balances(), 'company', params] as const,
   ledger: (employeeId: string | undefined, year: number | undefined) =>
     [...leaveKeys.balances(), 'ledger', employeeId ?? 'me', year ?? 'all'] as const,
+  years: (employeeId: string | undefined) =>
+    [...leaveKeys.balances(), 'years', employeeId ?? 'me'] as const,
 };
 
 function buildListQuery(params: ListLeaveRequestsParams): string {
@@ -282,6 +285,32 @@ export function useMyLeaveBalances(
     }),
     queryFn: () => apiGet<LeaveBalance[]>(buildMyLeaveBalancesQuery(params)),
     enabled: queryEnabled,
+    retry: false,
+  });
+}
+
+/**
+ * Leave-year periods for the profile year dropdown (newest first).
+ */
+export function useLeaveYears(
+  employeeId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: leaveKeys.years(employeeId),
+    queryFn: () => {
+      const search = new URLSearchParams();
+      if (employeeId) {
+        search.set('employeeId', employeeId);
+      }
+      const qs = search.toString();
+      return apiGet<LeaveYearsResponse>(
+        qs
+          ? `${LEAVE_PATH}/leave-years?${qs}`
+          : `${LEAVE_PATH}/leave-years`,
+      );
+    },
+    enabled,
     retry: false,
   });
 }

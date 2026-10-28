@@ -60,10 +60,46 @@ export default function LeaveBalanceLedgerSection({
       {
         title: t(`${KEY}.colLeaveYear`),
         key: 'leaveYear',
-        width: 190,
+        width: 90,
         responsive: ['md'],
-        render: (_: unknown, row) =>
-          `${formatProjectDate(row.leaveYearStart)} – ${formatProjectDate(row.leaveYearEnd)}`,
+        render: (_: unknown, row) => {
+          if (row.leaveYearLabel != null) {
+            return String(row.leaveYearLabel);
+          }
+          const fromStart = Number(String(row.leaveYearStart).slice(0, 4));
+          return Number.isFinite(fromStart) && fromStart > 0
+            ? String(fromStart)
+            : '—';
+        },
+      },
+      {
+        title: t(`${KEY}.colPeriod`),
+        key: 'period',
+        width: 200,
+        responsive: ['md'],
+        render: (_: unknown, row) => {
+          const periods = row.requestedPeriods ?? [];
+          if (periods.length === 0) {
+            return '—';
+          }
+          return (
+            <div className="flex flex-col gap-0.5">
+              {periods.map((period) => {
+                const start = formatProjectDate(period.startDate);
+                const end = formatProjectDate(period.endDate);
+                const label =
+                  period.startDate === period.endDate
+                    ? start
+                    : `${start} – ${end}`;
+                return (
+                  <span key={`${period.startDate}-${period.endDate}`}>
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          );
+        },
       },
       {
         title: t('hr.table.leaveType'),
@@ -108,9 +144,12 @@ export default function LeaveBalanceLedgerSection({
       {
         title: t(`${KEY}.colBy`),
         key: 'by',
-        width: 150,
+        width: 180,
         responsive: ['md'],
-        render: (_: unknown, row) => row.createdBy?.name ?? t(`${KEY}.system`),
+        render: (_: unknown, row) => {
+          const name = row.createdBy?.name?.trim();
+          return name && name.length > 0 ? name : t(`${KEY}.system`);
+        },
       },
     ],
     [t],

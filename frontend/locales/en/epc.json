@@ -5642,6 +5642,9 @@
       "noHistory": "No leave requests yet.",
       "profileLoadError": "Unable to load leave information.",
       "usedPending": "{{used}} used · {{pending}} pending",
+      "contractPeriod": "Leave period",
+      "contractPeriodPlaceholder": "Select leave period",
+      "leaveYearOption": "{{label}} ({{range}})",
       "ledger": {
         "title": "Balance history",
         "currentLeaveYear": "Current leave year: {{start}} – {{end}} (from the employment anniversary)",
@@ -5669,6 +5672,7 @@
         "empty": "No balance entries yet.",
         "colWhen": "Date",
         "colLeaveYear": "Leave year",
+        "colPeriod": "Period",
         "colKind": "Type",
         "colDays": "Days",
         "colReason": "Reason",

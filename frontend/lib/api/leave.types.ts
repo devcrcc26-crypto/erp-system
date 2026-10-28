@@ -107,15 +107,29 @@ export interface LeaveAttachmentDocument {
 
 export interface LeaveBalance {
   id: string;
-  companyId: string;
+  companyId?: string;
   employeeId: string;
   year: number;
   leaveType: LeaveType;
+  leaveYearStart?: string;
+  leaveYearEnd?: string;
   entitled: number;
   broughtForward: number;
   used: number;
   pending: number;
   remaining: number;
+}
+
+/** Employment-anniversary leave year option for the profile year dropdown. */
+export interface LeaveYearOption {
+  label: number;
+  start: string;
+  end: string;
+}
+
+export interface LeaveYearsResponse {
+  current: LeaveYearOption;
+  years: LeaveYearOption[];
 }
 
 export interface EmployeeLeaveBalanceSummary {
@@ -180,9 +194,16 @@ export interface LeaveYearView {
   end: string;
 }
 
+export interface LeaveBalanceEntryPeriod {
+  startDate: string;
+  endDate: string;
+}
+
 export interface LeaveBalanceEntry {
   id: string;
   leaveType: LeaveType;
+  /** Calendar year the leave year starts in (display-only). */
+  leaveYearLabel?: number;
   leaveYearStart: string;
   leaveYearEnd: string;
   kind: LeaveBalanceEntryKind;
@@ -191,6 +212,9 @@ export interface LeaveBalanceEntry {
   reason: string | null;
   sourceContractId: string | null;
   sourceLeaveRequestId: string | null;
+  /** Leave request date ranges when this entry came from an approved request. */
+  requestedPeriods?: LeaveBalanceEntryPeriod[];
+  /** Leave requester when linked; otherwise the ledger actor. */
   createdBy: { id: string; name: string } | null;
   createdAt: string;
 }

@@ -164,6 +164,39 @@ export class LeaveController {
     return this.leaveService.getMyRequests(user.userId, companyId, query);
   }
 
+  @Get('leave-years')
+  @RequireAnyPermission(
+    { module: 'leave', action: 'view' },
+    { module: 'leave', action: 'create' },
+    { module: 'leave', action: 'manage' },
+  )
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Leave-year periods for the year dropdown (employment anniversary ranges)',
+  })
+  async listLeaveYears(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: LeaveBalanceQueryDto,
+  ): Promise<unknown> {
+    const canManage = await this.permissionService.hasPermission(
+      user.userId,
+      companyId,
+      'leave',
+      'manage',
+    );
+    const employeeId =
+      canManage && query.employeeId
+        ? query.employeeId
+        : await this.onBehalfService.resolveTargetEmployeeId(
+            user.userId,
+            companyId,
+            query.employeeId,
+          );
+    return this.leaveBalanceService.listLeaveYears(employeeId, companyId);
+  }
+
   @Get('balance')
   @RequireAnyPermission(
     { module: 'leave', action: 'view' },
@@ -180,11 +213,20 @@ export class LeaveController {
     @CurrentCompany() companyId: string,
     @Query() query: LeaveBalanceQueryDto,
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const canManage = await this.permissionService.hasPermission(
       user.userId,
       companyId,
-      query.employeeId,
+      'leave',
+      'manage',
     );
+    const employeeId =
+      canManage && query.employeeId
+        ? query.employeeId
+        : await this.onBehalfService.resolveTargetEmployeeId(
+            user.userId,
+            companyId,
+            query.employeeId,
+          );
     let year = query.year;
     if (query.forDate) {
       year = await this.leaveBalanceService.yearLabelForDate(

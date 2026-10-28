@@ -12,11 +12,11 @@ import {
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
 import {
-  formatLeaveYearRange,
   leaveYearByLabel,
   leaveYearFor,
   roundDays,
   splitRangeByLeaveYears,
+  toDateOnlyKey,
   toDateOnlyUtc,
   type LeaveYear,
 } from '../../../leave-policy/application/utils/leave-year.util';
@@ -244,6 +244,11 @@ export class LeaveBalanceService {
     year: number | undefined,
     companyId: string,
   ): Promise<unknown[]> {
+    // Backfill USED for approved leave that never posted (e.g. anniversary-split
+    // approvals that failed while releasing pending), then rebuild pending.
+    await this.leaveLedger.ensureApprovedLeaveRecorded(employeeId, companyId);
+    await this.recomputePendingFromOpenRequests(employeeId, companyId);
+
     const label =
       year ?? (await this.leaveLedger.currentYearLabel(employeeId, companyId));
     const employee = await this.prisma.user.findFirst({
@@ -267,6 +272,138 @@ export class LeaveBalanceService {
     return rows.sort((a, b) =>
       String(a.leaveType).localeCompare(String(b.leaveType)),
     );
+  }
+
+  /**
+   * Leave-year options for the profile year dropdown (newest first).
+   * Includes every year from employment through the current leave year.
+   */
+  async listLeaveYears(
+    employeeId: string,
+    companyId: string,
+  ): Promise<{
+    current: { label: number; start: string; end: string };
+    years: Array<{ label: number; start: string; end: string }>;
+  }> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const anchor = employee?.employmentDate ?? null;
+    const current = leaveYearFor(anchor, new Date());
+    const labels = new Set<number>([current.label]);
+    if (anchor) {
+      const first = leaveYearFor(anchor, anchor).label;
+      for (let label = first; label <= current.label + 1; label += 1) {
+        labels.add(label);
+      }
+    }
+    const stored = await this.prisma.leaveBalance.findMany({
+      where: { companyId, employeeId },
+      select: { year: true },
+      distinct: ['year'],
+    });
+    for (const row of stored) {
+      labels.add(row.year);
+    }
+    const years = [...labels]
+      .sort((a, b) => b - a)
+      .map((label) => {
+        const year = leaveYearByLabel(anchor, label);
+        return {
+          label: year.label,
+          start: toDateOnlyKey(year.start),
+          end: toDateOnlyKey(year.end),
+        };
+      });
+    return {
+      current: {
+        label: current.label,
+        start: toDateOnlyKey(current.start),
+        end: toDateOnlyKey(current.end),
+      },
+      years,
+    };
+  }
+
+  /**
+   * Rebuilds leave_balance.pending from SUBMITTED / IN_REVIEW requests only.
+   * Clears stale pending left behind when approval released the wrong year.
+   */
+  async recomputePendingFromOpenRequests(
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const open = await this.prisma.leaveRequest.findMany({
+      where: {
+        companyId,
+        employeeId,
+        deletedAt: null,
+        status: { in: ['SUBMITTED', 'IN_REVIEW'] },
+        leaveType: { in: [...OWN_BALANCE_LEAVE_TYPES] },
+      },
+      select: {
+        leaveType: true,
+        startDate: true,
+        days: true,
+        periods: {
+          select: { startDate: true, endDate: true, days: true },
+          orderBy: { startDate: 'asc' },
+        },
+      },
+    });
+
+    const pendingByKey = new Map<string, number>();
+    for (const leave of open) {
+      if (!leaveTypeAffectsBalance(leave.leaveType)) {
+        continue;
+      }
+      const leaveType = resolveBalanceLeaveType(leave.leaveType);
+      const charges = await this.chargeDaysByLeaveYear(
+        employeeId,
+        companyId,
+        this.periodDaysAsBreakdown(
+          employee?.employmentDate ?? null,
+          leave.periods.map((period) => ({
+            startDate: period.startDate,
+            endDate: period.endDate,
+            days: Number(period.days),
+          })),
+          leave.startDate ?? undefined,
+          leave.days != null ? Number(leave.days) : undefined,
+        ),
+      );
+      for (const charge of charges) {
+        const key = `${leaveType}:${charge.year.label}`;
+        pendingByKey.set(
+          key,
+          roundDays((pendingByKey.get(key) ?? 0) + charge.days),
+        );
+      }
+    }
+
+    const rows = await this.prisma.leaveBalance.findMany({
+      where: {
+        companyId,
+        employeeId,
+        leaveType: { in: [...OWN_BALANCE_LEAVE_TYPES] },
+      },
+      select: { id: true, leaveType: true, year: true, pending: true },
+    });
+    for (const row of rows) {
+      const next = pendingByKey.get(`${row.leaveType}:${row.year}`) ?? 0;
+      if (Number(row.pending) === next) {
+        continue;
+      }
+      await this.prisma.leaveBalance.update({
+        where: { id: row.id },
+        data: { pending: new Prisma.Decimal(next) },
+      });
+    }
   }
 
   /** Kept for callers: same as ensureBalance. */
@@ -311,7 +448,14 @@ export class LeaveBalanceService {
     }
 
     const current = Number(row[field]);
-    const next = Math.round((current + amount) * 10) / 10;
+    const rawNext = Math.round((current + amount) * 10) / 10;
+    // Pending release must clamp at 0: anniversary-split approvals used to
+    // subtract the full request from one year and leave leftover pending on
+    // another; a hard throw then blocked recordLeaveUsed.
+    const next =
+      field === 'pending' && rawNext < 0
+        ? 0
+        : rawNext;
     if (next < 0) {
       throw new BadRequestException(
         `Leave balance ${field} cannot go below zero`,

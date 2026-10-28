@@ -37,6 +37,7 @@ import {
   POLICY_BALANCE_LEAVE_TYPES,
   type PolicyRuleRow,
 } from '../utils/leave-entitlement.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 
 /** Entitlement when the employee has no leave policy (legacy defaults). */
 export const DEFAULT_ENTITLEMENTS: Partial<Record<LeaveType, number>> = {
@@ -60,9 +61,16 @@ interface LedgerEmployee {
   rules: Map<LeaveType, PolicyRuleRow>;
 }
 
+export interface LedgerEntryPeriodView {
+  startDate: string;
+  endDate: string;
+}
+
 export interface LedgerEntryView {
   id: string;
   leaveType: LeaveType;
+  /** Leave-year label (calendar year the leave year starts in). */
+  leaveYearLabel: number;
   leaveYearStart: string;
   leaveYearEnd: string;
   kind: LeaveBalanceEntryKind;
@@ -70,6 +78,12 @@ export interface LedgerEntryView {
   reason: string | null;
   sourceContractId: string | null;
   sourceLeaveRequestId: string | null;
+  /** Leave request date ranges when this entry came from an approved request. */
+  requestedPeriods: LedgerEntryPeriodView[];
+  /**
+   * Person who submitted the leave request (when linked); otherwise the ledger
+   * actor. Null for system-generated entries with no request.
+   */
   createdBy: { id: string; name: string } | null;
   createdAt: Date;
 }
@@ -397,6 +411,43 @@ export class LeaveLedgerService {
   }
 
   // ─── Used days (approved leave) ───────────────────────────────────────────
+
+  /**
+   * Backfills USED ledger rows for approved leave that never posted
+   * (e.g. when pending release threw before recordLeaveUsed ran).
+   */
+  async ensureApprovedLeaveRecorded(
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    const approved = await this.prisma.leaveRequest.findMany({
+      where: {
+        companyId,
+        employeeId,
+        deletedAt: null,
+        status: 'APPROVED',
+      },
+      select: { id: true, leaveType: true },
+    });
+    for (const leave of approved) {
+      if (!leaveTypeAffectsBalance(leave.leaveType)) {
+        continue;
+      }
+      const recorded = await this.prisma.leaveBalanceEntry.count({
+        where: {
+          sourceLeaveRequestId: leave.id,
+          kind: LeaveBalanceEntryKind.USED,
+          OR: [
+            { dedupeKey: `USED:${leave.id}` },
+            { dedupeKey: { startsWith: `USED:${leave.id}:` } },
+          ],
+        },
+      });
+      if (recorded === 0) {
+        await this.recordLeaveUsed(leave.id);
+      }
+    }
+  }
 
   /**
    * Approved leave → USED (−days) per leave year touched by the request
@@ -1009,7 +1060,37 @@ export class LeaveLedgerService {
       },
       orderBy: [{ leaveYearStart: 'desc' }, { createdAt: 'desc' }],
       include: {
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+        sourceLeaveRequest: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            creator: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                chineseName: true,
+                email: true,
+              },
+            },
+            periods: {
+              select: { startDate: true, endDate: true },
+              orderBy: { startDate: 'asc' },
+            },
+          },
+        },
       },
     });
     const totals = new Map<LeaveType, number>();
@@ -1371,7 +1452,37 @@ export class LeaveLedgerService {
     const row = await this.prisma.leaveBalanceEntry.findUniqueOrThrow({
       where: { id: created.id },
       include: {
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+        sourceLeaveRequest: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            creator: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                chineseName: true,
+                email: true,
+              },
+            },
+            periods: {
+              select: { startDate: true, endDate: true },
+              orderBy: { startDate: 'asc' },
+            },
+          },
+        },
       },
     });
     return this.mapEntry(row);
@@ -1575,26 +1686,73 @@ export class LeaveLedgerService {
     sourceContractId: string | null;
     sourceLeaveRequestId: string | null;
     createdAt: Date;
-    createdBy: { id: string; firstName: string | null; lastName: string | null } | null;
+    createdBy: {
+      id: string;
+      firstName: string | null;
+      middleName: string | null;
+      lastName: string | null;
+      chineseName: string | null;
+      email: string | null;
+    } | null;
+    sourceLeaveRequest?: {
+      id: string;
+      startDate: Date | null;
+      endDate: Date | null;
+      creator: {
+        id: string;
+        firstName: string | null;
+        middleName: string | null;
+        lastName: string | null;
+        chineseName: string | null;
+        email: string | null;
+      } | null;
+      periods: Array<{ startDate: Date; endDate: Date }>;
+    } | null;
   }): LedgerEntryView {
+    const leaveYearStart = dateOnlyKey(row.leaveYearStart);
+    const leave = row.sourceLeaveRequest ?? null;
+    const requestedPeriods: LedgerEntryPeriodView[] =
+      leave?.periods && leave.periods.length > 0
+        ? leave.periods.map((period) => ({
+            startDate: dateOnlyKey(period.startDate),
+            endDate: dateOnlyKey(period.endDate),
+          }))
+        : leave?.startDate
+          ? [
+              {
+                startDate: dateOnlyKey(leave.startDate),
+                endDate: dateOnlyKey(leave.endDate ?? leave.startDate),
+              },
+            ]
+          : [];
+
+    const requester = leave?.creator
+      ? {
+          id: leave.creator.id,
+          name: formatUserDisplayName(leave.creator),
+        }
+      : null;
+    const actor = row.createdBy
+      ? {
+          id: row.createdBy.id,
+          name: formatUserDisplayName(row.createdBy),
+        }
+      : null;
+
     return {
       id: row.id,
       leaveType: row.leaveType,
-      leaveYearStart: dateOnlyKey(row.leaveYearStart),
+      leaveYearLabel: Number(leaveYearStart.slice(0, 4)),
+      leaveYearStart,
       leaveYearEnd: dateOnlyKey(row.leaveYearEnd),
       kind: row.kind,
       days: Number(row.days),
       reason: row.reason,
       sourceContractId: row.sourceContractId,
       sourceLeaveRequestId: row.sourceLeaveRequestId,
-      createdBy: row.createdBy
-        ? {
-            id: row.createdBy.id,
-            name: [row.createdBy.firstName, row.createdBy.lastName]
-              .filter((part) => Boolean(part && part.trim()))
-              .join(' '),
-          }
-        : null,
+      requestedPeriods,
+      // Prefer the leave requester when this entry came from a request.
+      createdBy: requester ?? actor,
       createdAt: row.createdAt,
     };
   }
