@@ -5641,8 +5641,11 @@
       "noHistory": "暂无请假申请。",
       "profileLoadError": "无法加载假期信息。",
       "usedPending": "已用 {{used}} · 待批 {{pending}}",
-      "contractPeriod": "假期期间",
-      "contractPeriodPlaceholder": "选择假期期间",
+      "daysRemaining": "剩余天数",
+      "noBalance": "暂无余额",
+      "contractPeriod": "合同期间",
+      "contractPeriodPlaceholder": "选择合同期间",
+      "noContractPeriods": "暂无合同记录",
       "leaveYearOption": "{{label}}（{{range}}）",
       "ledger": {
         "title": "余额记录",

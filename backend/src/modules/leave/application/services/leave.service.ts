@@ -994,6 +994,9 @@ export class LeaveService
         orderBy: { createdAt: 'desc' },
         include: {
           employee: { select: USER_SELECT },
+          // Period segments are required so profile history can show days
+          // charged inside a selected contract window (anniversary splits).
+          periods: { orderBy: { startDate: 'asc' as const } },
           approvalRequest: {
             select: { id: true, status: true, currentTier: true },
           },

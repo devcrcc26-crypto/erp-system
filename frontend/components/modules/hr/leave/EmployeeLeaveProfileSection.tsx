@@ -1,30 +1,35 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Select, Spin } from 'antd';
+import { Alert, Button, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { CalendarDays } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileContractPeriodSelect';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   LeaveBalance,
   LeaveRequestListItem,
   LeaveType,
-  LeaveYearOption,
 } from '@/lib/api/leave.types';
 import {
   useLeaveRequestsAll,
-  useLeaveYears,
   useMyLeaveBalances,
   useMyLeaveRequestsAll,
 } from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
 import { leaveBalanceTypesForGender } from '@/lib/utils/leave-balance-access';
+import {
+  leaveDaysInContractPeriod,
+  requestOverlapsContractPeriod,
+  type ProfileContractPeriod,
+} from '@/lib/utils/contract-period';
 import { leaveRequestDetailHref } from '@/lib/utils/hr-self-service-nav';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 import {
@@ -46,6 +51,16 @@ interface EmployeeLeaveProfileSectionProps {
   employeeId?: string;
   /** Hide the "New Leave Request" button (read-only My Profile). */
   hideCreateAction?: boolean;
+  /**
+   * When provided by the parent profile shell, reuse that contract period
+   * instead of rendering a local period control.
+   */
+  contractPeriod?: ProfileContractPeriod | null;
+  contractPeriods?: ProfileContractPeriod[];
+  contractPeriodLoading?: boolean;
+  onContractPeriodChange?: (contractId: string) => void;
+  /** Hide the local period select when the parent already shows one. */
+  hidePeriodControl?: boolean;
 }
 
 const BALANCE_ACCENT: Record<string, string> = {
@@ -59,29 +74,6 @@ function pickBalance(
   leaveType: LeaveType,
 ): LeaveBalance | null {
   return balances.find((row) => row.leaveType === leaveType) ?? null;
-}
-
-function leaveYearLabel(
-  year: LeaveYearOption,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string {
-  return t('hr.leave.leaveYearOption', {
-    label: year.label,
-    range: `${formatProjectDate(year.start)} – ${formatProjectDate(year.end)}`,
-  });
-}
-
-/** True when a leave request overlaps the selected leave-year window. */
-function requestOverlapsLeaveYear(
-  row: LeaveRequestListItem,
-  year: LeaveYearOption,
-): boolean {
-  const start = (row.startDate ?? '').slice(0, 10);
-  const end = (row.endDate ?? row.startDate ?? '').slice(0, 10);
-  if (!start || !end) {
-    return false;
-  }
-  return start <= year.end && end >= year.start;
 }
 
 function LeaveProfileSection({
@@ -119,40 +111,15 @@ function BalanceTile({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const accent = BALANCE_ACCENT[leaveType] ?? '#64748b';
-
-  if (!balance) {
-    return (
-      <article className="erp-leave-balance-card erp-leave-balance-card--empty">
-        <div className="erp-leave-balance-card-head">
-          <span
-            className="erp-leave-balance-dot"
-            style={{ background: accent }}
-            aria-hidden
-          />
-          <p className="erp-leave-balance-label">{label}</p>
-        </div>
-        <p className="erp-leave-balance-empty">-</p>
-      </article>
-    );
-  }
-
-  const pool = balance.entitled + balance.broughtForward;
-  const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
-  const consumed = balance.used + balance.pending;
-  // Bar shows leave used (not remaining), so 0 used → empty track.
-  const usedPct =
-    pool > 0
-      ? Math.max(0, Math.min(100, Math.round((consumed / pool) * 100)))
-      : 0;
+  const remaining = balance?.remaining ?? 0;
+  const isLow = balance != null && remaining <= LOW_BALANCE_THRESHOLD;
 
   return (
-    <article
-      className={`erp-leave-balance-card${isLow ? ' erp-leave-balance-card--low' : ''}`}
-    >
+    <article className="erp-leave-balance-card">
       <div className="erp-leave-balance-card-head">
         <span
           className="erp-leave-balance-dot"
-          style={{ background: isLow ? '#ba7517' : accent }}
+          style={{ background: accent }}
           aria-hidden
         />
         <p className="erp-leave-balance-label">{label}</p>
@@ -160,52 +127,67 @@ function BalanceTile({
       <p className="erp-leave-balance-value">
         <span
           className="erp-leave-balance-remaining"
-          style={{ color: isLow ? '#ba7517' : '#0f172a' }}
+          style={{ color: isLow ? '#b42318' : accent }}
         >
-          {balance.remaining}
+          {balance != null ? remaining : '—'}
         </span>
-        <span className="erp-leave-balance-pool">/ {pool}</span>
+        {balance != null ? (
+          <span className="erp-leave-balance-unit">
+            {t('hr.leave.daysRemaining')}
+          </span>
+        ) : null}
       </p>
-      <div className="erp-leave-balance-track" aria-hidden>
-        <div
-          className="erp-leave-balance-fill"
-          style={{
-            width: `${usedPct}%`,
-            background: isLow ? '#ba7517' : accent,
-          }}
-        />
-      </div>
       <p className="erp-leave-balance-meta">
-        {t('hr.leave.usedPending', {
-          used: balance.used,
-          pending: balance.pending,
-        })}
+        {balance == null
+          ? t('hr.leave.noBalance')
+          : t('hr.leave.usedPending', {
+              used: balance.used,
+              pending: balance.pending,
+            })}
       </p>
     </article>
   );
 }
 
 /**
- * Leave balances (selected leave year) and leave request history for a profile.
+ * Leave balances (selected contract period) and leave request history for a profile.
  * Use `self` on My Profile; use `employee` on HR employee detail.
  */
 export default function EmployeeLeaveProfileSection({
   mode,
   employeeId,
   hideCreateAction = false,
+  contractPeriod: contractPeriodProp,
+  contractPeriods: contractPeriodsProp,
+  contractPeriodLoading: contractPeriodLoadingProp,
+  onContractPeriodChange,
+  hidePeriodControl = false,
 }: EmployeeLeaveProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
-  /** null until leave-years loads → then defaults to the active leave year. */
-  const [pickedYear, setPickedYear] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
   const targetEmployeeId = isSelf ? undefined : employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
   const sectionEnabled = isSelf || employeeEnabled;
+
+  const localPeriod = useProfileContractPeriod({
+    mode,
+    employeeId: targetEmployeeId,
+    enabled: sectionEnabled && contractPeriodProp === undefined,
+  });
+
+  const selectedPeriod =
+    contractPeriodProp !== undefined
+      ? contractPeriodProp
+      : localPeriod.selected;
+  const periodOptions =
+    contractPeriodsProp ?? localPeriod.periods;
+  const periodsLoading =
+    contractPeriodLoadingProp ?? localPeriod.isLoading;
 
   const detailReturnTo = useMemo((): string => {
     if (isSelf) {
@@ -217,35 +199,14 @@ export default function EmployeeLeaveProfileSection({
     return '/profile?tab=leave';
   }, [isSelf, targetEmployeeId]);
 
-  const yearsQuery = useLeaveYears(targetEmployeeId, sectionEnabled);
-  const currentLeaveYear = yearsQuery.data?.current ?? null;
-  const yearOptions = yearsQuery.data?.years ?? [];
-
-  useEffect(() => {
-    setPickedYear(null);
-    setHistoryPage(1);
-  }, [targetEmployeeId]);
-
-  useEffect(() => {
-    if (pickedYear != null) {
-      return;
-    }
-    if (currentLeaveYear?.label != null) {
-      setPickedYear(currentLeaveYear.label);
-    }
-  }, [pickedYear, currentLeaveYear?.label]);
-
-  const year = pickedYear ?? currentLeaveYear?.label ?? null;
-  const selectedYearOption =
-    yearOptions.find((option) => option.label === year) ??
-    currentLeaveYear;
-
   const balancesQuery = useMyLeaveBalances(
     {
-      ...(year != null ? { year } : {}),
+      ...(selectedPeriod
+        ? { forDate: selectedPeriod.startDate }
+        : {}),
       employeeId: targetEmployeeId,
     },
-    sectionEnabled && (year != null || !yearsQuery.isLoading),
+    sectionEnabled && (selectedPeriod != null || !periodsLoading),
   );
 
   const myHistoryQuery = useMyLeaveRequestsAll({}, isSelf);
@@ -254,8 +215,8 @@ export default function EmployeeLeaveProfileSection({
     !isSelf && employeeEnabled,
   );
 
-  const balancesLoading = balancesQuery.isLoading || yearsQuery.isLoading;
-  const balancesError = balancesQuery.error ?? yearsQuery.error;
+  const balancesLoading = balancesQuery.isLoading || periodsLoading;
+  const balancesError = balancesQuery.error;
 
   const historyLoading = isSelf
     ? myHistoryQuery.isLoading
@@ -288,25 +249,41 @@ export default function EmployeeLeaveProfileSection({
       ? (myHistoryQuery.data ?? [])
       : (employeeHistoryQuery.data ?? []);
     const filtered =
-      selectedYearOption != null
-        ? rows.filter((row) =>
-            requestOverlapsLeaveYear(row, selectedYearOption),
-          )
-        : rows;
-    return [...filtered].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+      selectedPeriod != null
+        ? rows
+            .map((row) => {
+              const daysInPeriod = leaveDaysInContractPeriod(
+                row,
+                selectedPeriod,
+              );
+              return { row, daysInPeriod };
+            })
+            .filter(
+              ({ row, daysInPeriod }) =>
+                daysInPeriod > 0 &&
+                requestOverlapsContractPeriod(row, selectedPeriod),
+            )
+        : rows.map((row) => ({ row, daysInPeriod: row.days }));
+    return filtered
+      .sort(
+        (a, b) =>
+          new Date(b.row.createdAt).getTime() -
+          new Date(a.row.createdAt).getTime(),
+      )
+      .map(({ row, daysInPeriod }) => ({
+        ...row,
+        days: daysInPeriod,
+      }));
   }, [
     isSelf,
     myHistoryQuery.data,
     employeeHistoryQuery.data,
-    selectedYearOption,
+    selectedPeriod,
   ]);
 
   useEffect(() => {
     setHistoryPage(1);
-  }, [year]);
+  }, [selectedPeriod?.id]);
 
   const historyMeta = useMemo(() => {
     const total = allHistory.length;
@@ -405,6 +382,22 @@ export default function EmployeeLeaveProfileSection({
     router.push('/approvals/new/leave-request');
   }
 
+  const periodControl =
+    hidePeriodControl ? null : (
+      <ProfileContractPeriodSelect
+        periods={periodOptions}
+        value={selectedPeriod?.id ?? null}
+        loading={periodsLoading}
+        onChange={(id) => {
+          if (onContractPeriodChange) {
+            onContractPeriodChange(id);
+          } else {
+            localPeriod.setSelectedId(id);
+          }
+        }}
+      />
+    );
+
   const historyAction = isSelf ? (
     hideCreateAction ? null : (
       <Button type="primary" size="small" onClick={handleNewLeaveRequest}>
@@ -425,27 +418,7 @@ export default function EmployeeLeaveProfileSection({
     <div className="erp-leave-profile">
       <LeaveProfileSection
         title={t('hr.section.leaveBalance')}
-        action={
-          <div className="erp-leave-year-control">
-            <span className="erp-leave-year-label">
-              {t('hr.leave.contractPeriod')}
-            </span>
-            <Select
-              size="small"
-              className="erp-leave-year-select min-w-[240px]"
-              loading={yearsQuery.isLoading}
-              value={year ?? undefined}
-              placeholder={t('hr.leave.contractPeriodPlaceholder')}
-              options={yearOptions.map((option) => ({
-                value: option.label,
-                label: leaveYearLabel(option, t),
-              }))}
-              onChange={(value: number) => {
-                setPickedYear(value);
-              }}
-            />
-          </div>
-        }
+        action={periodControl}
       >
         {balancesError ? (
           <Alert type="error" showIcon title={errorMessage(balancesError)} />
@@ -453,6 +426,12 @@ export default function EmployeeLeaveProfileSection({
           <div className="flex justify-center py-10">
             <Spin />
           </div>
+        ) : periodOptions.length === 0 && !periodsLoading ? (
+          <Alert
+            type="info"
+            showIcon
+            title={t('hr.leave.noContractPeriods')}
+          />
         ) : (
           <div className="erp-leave-balance-grid">
             {displayBalances.map(({ leaveType, balance }) => (

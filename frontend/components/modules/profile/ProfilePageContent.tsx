@@ -36,6 +36,7 @@ import ProfileAccountDetails, {
 } from '@/components/modules/profile/ProfileAccountDetails';
 import ProfileAssetsTab from '@/components/modules/profile/ProfileAssetsTab';
 import ProfileContractTab from '@/components/modules/profile/ProfileContractTab';
+import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileContractPeriodSelect';
 import ProfileWorkScheduleTab from '@/components/modules/profile/ProfileWorkScheduleTab';
 import {
   ProfileSection,
@@ -44,6 +45,7 @@ import {
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -84,6 +86,15 @@ const PROFILE_TABS = [
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
+
+const PERIOD_FILTER_TABS: ReadonlySet<ProfileTab> = new Set([
+  'leave',
+  'overtime',
+  'attendance',
+  'payroll',
+  'evaluations',
+  'contract',
+]);
 
 /** One cell of the employee meta bar under the hero. */
 function MetaStat({
@@ -131,6 +142,10 @@ export default function ProfilePageContent(): React.ReactNode {
   const resendActivation = useResendActivation();
 
   const profile = profileQuery.data;
+  const contractPeriod = useProfileContractPeriod({
+    mode: 'self',
+    enabled: Boolean(profile),
+  });
 
   const tabFromUrl = searchParams.get('tab');
   const initialTab: ProfileTab =
@@ -578,12 +593,24 @@ export default function ProfilePageContent(): React.ReactNode {
     </div>
   );
 
+  const periodProps = {
+    contractPeriod: contractPeriod.selected,
+    contractPeriods: contractPeriod.periods,
+    contractPeriodLoading: contractPeriod.isLoading,
+    onContractPeriodChange: contractPeriod.setSelectedId,
+    hidePeriodControl: true as const,
+  };
+
   function renderTab(tab: ProfileTab, currentProfile: UserProfile): React.ReactNode {
     switch (tab) {
       case 'leave':
         return (
           <>
-            <EmployeeLeaveProfileSection mode="self" hideCreateAction />
+            <EmployeeLeaveProfileSection
+              mode="self"
+              hideCreateAction
+              {...periodProps}
+            />
             <EmployeeSiteAssignmentsSection employeeId={currentProfile.id} />
           </>
         );
@@ -594,6 +621,7 @@ export default function ProfilePageContent(): React.ReactNode {
             employeeId={currentProfile.id}
             hideCreateAction
             showCategoryColumns
+            {...periodProps}
           />
         );
       case 'attendance':
@@ -603,6 +631,7 @@ export default function ProfilePageContent(): React.ReactNode {
             isOwnProfile
             initialMonth={attendanceInitialMonth}
             initialYear={attendanceInitialYear}
+            {...periodProps}
           />
         );
       case 'workSchedule':
@@ -629,7 +658,12 @@ export default function ProfilePageContent(): React.ReactNode {
           <ProfileContractTab dateFormat={currentProfile.preferredDateFormat} />
         );
       case 'payroll':
-        return <EmployeePayslipsSection mode="self" />;
+        return (
+          <EmployeePayslipsSection
+            mode="self"
+            contractPeriod={contractPeriod.selected}
+          />
+        );
       case 'assets':
         return (
           <ProfileAssetsTab dateFormat={currentProfile.preferredDateFormat} />
@@ -643,7 +677,11 @@ export default function ProfilePageContent(): React.ReactNode {
           />
         );
       case 'evaluations':
-        return <MyEvaluationsPageContent />;
+        return (
+          <MyEvaluationsPageContent
+            contractPeriod={contractPeriod.selected}
+          />
+        );
       case 'account':
       default:
         return accountTab;
@@ -775,6 +813,16 @@ export default function ProfilePageContent(): React.ReactNode {
           aria-labelledby={`profile-tab-${activeTab}`}
           className="erp-employee-tab-panel"
         >
+          {PERIOD_FILTER_TABS.has(activeTab) ? (
+            <div className="erp-profile-period-bar mb-4 flex justify-end">
+              <ProfileContractPeriodSelect
+                periods={contractPeriod.periods}
+                value={contractPeriod.selectedId}
+                loading={contractPeriod.isLoading}
+                onChange={contractPeriod.setSelectedId}
+              />
+            </div>
+          ) : null}
           {renderTab(activeTab, profile)}
         </div>
       </div>

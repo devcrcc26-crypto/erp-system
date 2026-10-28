@@ -1,7 +1,7 @@
 'use client';
 
 import './payroll-v2.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Drawer, Spin, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined } from '@ant-design/icons';
@@ -12,6 +12,10 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { openPayslipPdf } from '@/lib/api/payroll';
 import type { EmployeePayslip } from '@/lib/api/payroll.types';
 import { useEmployeePayslips, useMyPayslips } from '@/lib/query/payroll';
+import {
+  monthOverlapsContractPeriod,
+  type ProfileContractPeriod,
+} from '@/lib/utils/contract-period';
 import {
   formatPayrollMoney,
   formatPayrollPeriod,
@@ -43,9 +47,11 @@ function BreakdownRow({
 export default function EmployeePayslipsSection({
   mode,
   employeeId,
+  contractPeriod = null,
 }: {
   mode: 'self' | 'employee';
   employeeId?: string;
+  contractPeriod?: ProfileContractPeriod | null;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -54,6 +60,16 @@ export default function EmployeePayslipsSection({
   const query = mode === 'self' ? mine : theirs;
   const [selected, setSelected] = useState<EmployeePayslip | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const rows = useMemo(() => {
+    const all = query.data ?? [];
+    if (!contractPeriod) {
+      return all;
+    }
+    return all.filter((row) =>
+      monthOverlapsContractPeriod(row.year, row.month, contractPeriod),
+    );
+  }, [query.data, contractPeriod]);
 
   async function download(payslipId: string): Promise<void> {
     setDownloadingId(payslipId);
@@ -78,7 +94,6 @@ export default function EmployeePayslipsSection({
     return <p className="m-0 text-sm">{t('profile.payroll.loadError')}</p>;
   }
 
-  const rows = query.data ?? [];
   if (rows.length === 0) {
     return (
       <div className="erp-payslips-v2">

@@ -5642,8 +5642,11 @@
       "noHistory": "No leave requests yet.",
       "profileLoadError": "Unable to load leave information.",
       "usedPending": "{{used}} used · {{pending}} pending",
-      "contractPeriod": "Leave period",
-      "contractPeriodPlaceholder": "Select leave period",
+      "daysRemaining": "days left",
+      "noBalance": "No balance on file",
+      "contractPeriod": "Contract period",
+      "contractPeriodPlaceholder": "Select contract period",
+      "noContractPeriods": "No contracts on file",
       "leaveYearOption": "{{label}} ({{range}})",
       "ledger": {
         "title": "Balance history",

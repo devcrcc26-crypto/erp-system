@@ -34,6 +34,8 @@ import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/E
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeePayslipsSection from '@/components/modules/hr/payroll/EmployeePayslipsSection';
 import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
+import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileContractPeriodSelect';
+import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import EmployeeAccountAccessFields from '@/components/modules/users/EmployeeAccountAccessFields';
 import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
@@ -125,6 +127,13 @@ const PROFILE_TABS = [
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
+
+const PERIOD_FILTER_TABS: ReadonlySet<ProfileTab> = new Set([
+  'leave',
+  'attendance',
+  'payroll',
+  'evaluations',
+]);
 
 const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
   overview: <UserOutlined />,
@@ -255,6 +264,18 @@ export default function EmployeeDetailPageContent({
   const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
 
   const isOwnProfile = currentUserQuery.data?.id === userId;
+  const contractPeriod = useProfileContractPeriod({
+    mode: isOwnProfile ? 'self' : 'employee',
+    employeeId: userId,
+    enabled: Boolean(userId),
+  });
+  const periodProps = {
+    contractPeriod: contractPeriod.selected,
+    contractPeriods: contractPeriod.periods,
+    contractPeriodLoading: contractPeriod.isLoading,
+    onContractPeriodChange: contractPeriod.setSelectedId,
+    hidePeriodControl: true as const,
+  };
   const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
   const showPayrollTab = isOwnProfile || canCreatePayroll;
   const visibleTabs = PROFILE_TABS.filter(
@@ -648,23 +669,39 @@ export default function EmployeeDetailPageContent({
           aria-labelledby={`employee-tab-${activeTab}`}
           className="erp-employee-tab-panel"
         >
+          {PERIOD_FILTER_TABS.has(activeTab) ? (
+            <div className="erp-profile-period-bar mb-4 flex justify-end">
+              <ProfileContractPeriodSelect
+                periods={contractPeriod.periods}
+                value={contractPeriod.selectedId}
+                loading={contractPeriod.isLoading}
+                onChange={contractPeriod.setSelectedId}
+              />
+            </div>
+          ) : null}
           {activeTab === 'leave' ? (
             <div className="flex flex-col gap-4">
               {canViewHr ? (
                 <EmployeeLeaveProfileSection
                   mode="employee"
                   employeeId={user.id}
+                  {...periodProps}
                 />
               ) : (
-                <EmployeeLeaveProfileSection mode="self" />
+                <EmployeeLeaveProfileSection mode="self" {...periodProps} />
               )}
               {canViewHr ? (
                 <EmployeeOvertimeProfileSection
                   mode="employee"
                   employeeId={user.id}
+                  {...periodProps}
                 />
               ) : (
-                <EmployeeOvertimeProfileSection mode="self" />
+                <EmployeeOvertimeProfileSection
+                  mode="self"
+                  employeeId={user.id}
+                  {...periodProps}
+                />
               )}
               <EmployeeSiteAssignmentsSection employeeId={user.id} />
             </div>
@@ -672,6 +709,7 @@ export default function EmployeeDetailPageContent({
             <EmployeeAttendanceProfileSection
               employeeId={user.id}
               isOwnProfile={isOwnProfile}
+              {...periodProps}
             />
           ) : activeTab === 'workSchedule' ? (
             <EmployeeWorkScheduleSection employeeId={user.id} />
@@ -684,10 +722,12 @@ export default function EmployeeDetailPageContent({
             <EmployeePayslipsSection
               mode={isOwnProfile ? 'self' : 'employee'}
               employeeId={user.id}
+              contractPeriod={contractPeriod.selected}
             />
           ) : activeTab === 'evaluations' ? (
             <MyEvaluationsPageContent
               employeeId={isOwnProfile ? undefined : user.id}
+              contractPeriod={contractPeriod.selected}
             />
           ) : (
             <div className="flex flex-col gap-4">

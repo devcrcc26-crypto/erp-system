@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
@@ -55,10 +56,10 @@ export class PublicHolidayController {
   }
 
   @Get('my/upcoming')
-  @VIEW_PUBLIC_HOLIDAY
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Upcoming active holidays that apply to the current user (filtered by own nationality)',
+      'Upcoming active holidays that apply to the current user (filtered by own nationality). Any signed-in employee may load their own.',
   })
   myUpcoming(
     @CurrentUser() user: AuthenticatedUser,

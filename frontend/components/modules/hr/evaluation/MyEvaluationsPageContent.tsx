@@ -32,6 +32,10 @@ import {
   useMyEvaluations,
 } from '@/lib/query/evaluation';
 import {
+  calendarYearsInContractPeriod,
+  type ProfileContractPeriod,
+} from '@/lib/utils/contract-period';
+import {
   EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
@@ -60,6 +64,8 @@ const STAGE_LABELS = ['Self', 'Team Lead', 'DL'] as const;
 interface MyEvaluationsPageContentProps {
   /** When viewing another employee (HR), pass their user id. */
   employeeId?: string;
+  /** When set, only evaluations whose cycle year overlaps this contract. */
+  contractPeriod?: ProfileContractPeriod | null;
 }
 
 function StageProgress({
@@ -96,6 +102,7 @@ function StageProgress({
 
 export default function MyEvaluationsPageContent({
   employeeId,
+  contractPeriod = null,
 }: MyEvaluationsPageContentProps = {}): React.ReactNode {
   const router = useRouter();
   const screens = Grid.useBreakpoint();
@@ -110,10 +117,21 @@ export default function MyEvaluationsPageContent({
 
   const evaluationsQuery = employeeId ? employeeQuery : myQuery;
 
-  const evaluations = useMemo(
-    () => evaluationsQuery.data ?? [],
-    [evaluationsQuery.data],
+  const contractYears = useMemo(
+    () =>
+      contractPeriod
+        ? new Set(calendarYearsInContractPeriod(contractPeriod))
+        : null,
+    [contractPeriod],
   );
+
+  const evaluations = useMemo(() => {
+    const rows = evaluationsQuery.data ?? [];
+    if (!contractYears) {
+      return rows;
+    }
+    return rows.filter((row) => contractYears.has(row.cycle.year));
+  }, [evaluationsQuery.data, contractYears]);
 
   const years = useMemo(
     () =>

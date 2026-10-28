@@ -1,24 +1,30 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Alert, Button, InputNumber, Spin } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileContractPeriodSelect';
 import {
   useCanCreateOvertime,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   OvertimeSheetListItem,
   OvertimeSheetStatus,
 } from '@/lib/api/overtime.types';
 import { useOvertimeSheetsAll } from '@/lib/query/overtime';
+import {
+  monthOverlapsContractPeriod,
+  type ProfileContractPeriod,
+} from '@/lib/utils/contract-period';
 import {
   formatOvertimeHours,
   formatOvertimePeriod,
@@ -47,6 +53,11 @@ interface EmployeeOvertimeProfileSectionProps {
    * Sheet #, Period, Regular, Night, Weekend, Holiday, Total, Status.
    */
   showCategoryColumns?: boolean;
+  contractPeriod?: ProfileContractPeriod | null;
+  contractPeriods?: ProfileContractPeriod[];
+  contractPeriodLoading?: boolean;
+  onContractPeriodChange?: (contractId: string) => void;
+  hidePeriodControl?: boolean;
 }
 
 type YearTotals = {
@@ -69,12 +80,9 @@ function emptyTotals(): YearTotals {
   };
 }
 
-function sumYearTotals(sheets: OvertimeSheetListItem[], year: number): YearTotals {
+function sumSheetTotals(sheets: OvertimeSheetListItem[]): YearTotals {
   const totals = emptyTotals();
   for (const sheet of sheets) {
-    if (sheet.year !== year) {
-      continue;
-    }
     if (sheet.status === 'CANCELLED') {
       continue;
     }
@@ -156,18 +164,34 @@ export default function EmployeeOvertimeProfileSection({
   employeeId,
   hideCreateAction = false,
   showCategoryColumns = false,
+  contractPeriod: contractPeriodProp,
+  contractPeriods: contractPeriodsProp,
+  contractPeriodLoading: contractPeriodLoadingProp,
+  onContractPeriodChange,
+  hidePeriodControl = false,
 }: EmployeeOvertimeProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const canCreateOvertime = useCanCreateOvertime();
-  const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
   const targetEmployeeId = employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
+
+  const localPeriod = useProfileContractPeriod({
+    mode,
+    employeeId: targetEmployeeId,
+    enabled: employeeEnabled && contractPeriodProp === undefined,
+  });
+  const selectedPeriod =
+    contractPeriodProp !== undefined
+      ? contractPeriodProp
+      : localPeriod.selected;
+  const periodOptions = contractPeriodsProp ?? localPeriod.periods;
+  const periodsLoading =
+    contractPeriodLoadingProp ?? localPeriod.isLoading;
 
   const detailReturnTo = useMemo((): string => {
     if (isSelf) {
@@ -184,12 +208,22 @@ export default function EmployeeOvertimeProfileSection({
     employeeEnabled,
   );
 
-  const historyLoading = sheetsQuery.isLoading;
+  const historyLoading = sheetsQuery.isLoading || periodsLoading;
   const historyError = sheetsQuery.error;
 
   const allHistory = useMemo(() => {
     const rows = sheetsQuery.data ?? [];
-    return [...rows].sort((a, b) => {
+    const filtered =
+      selectedPeriod != null
+        ? rows.filter((sheet) =>
+            monthOverlapsContractPeriod(
+              sheet.year,
+              sheet.month,
+              selectedPeriod,
+            ),
+          )
+        : rows;
+    return [...filtered].sort((a, b) => {
       if (a.year !== b.year) {
         return b.year - a.year;
       }
@@ -200,12 +234,13 @@ export default function EmployeeOvertimeProfileSection({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
-  }, [sheetsQuery.data]);
+  }, [sheetsQuery.data, selectedPeriod]);
 
-  const yearTotals = useMemo(
-    () => sumYearTotals(allHistory, year),
-    [allHistory, year],
-  );
+  const yearTotals = useMemo(() => sumSheetTotals(allHistory), [allHistory]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selectedPeriod?.id]);
 
   const historyMeta = useMemo(() => {
     const total = allHistory.length;
@@ -377,27 +412,26 @@ export default function EmployeeOvertimeProfileSection({
     return null;
   }
 
+  const periodControl = hidePeriodControl ? null : (
+    <ProfileContractPeriodSelect
+      periods={periodOptions}
+      value={selectedPeriod?.id ?? null}
+      loading={periodsLoading}
+      onChange={(id) => {
+        if (onContractPeriodChange) {
+          onContractPeriodChange(id);
+        } else {
+          localPeriod.setSelectedId(id);
+        }
+      }}
+    />
+  );
+
   return (
     <div className="erp-leave-profile erp-overtime-profile">
       <OvertimeProfileSection
         title={t('hr.overtime.yearSummaryTitle')}
-        action={
-          <div className="erp-leave-year-control">
-            <span className="erp-leave-year-label">{t('hr.table.year')}</span>
-            <InputNumber
-              min={2000}
-              max={2100}
-              value={year}
-              onChange={(value) => {
-                if (typeof value === 'number') {
-                  setYear(value);
-                }
-              }}
-              size="small"
-              className="erp-leave-year-input"
-            />
-          </div>
-        }
+        action={periodControl}
       >
         {historyError ? (
           <Alert type="error" showIcon title={errorMessage(historyError)} />

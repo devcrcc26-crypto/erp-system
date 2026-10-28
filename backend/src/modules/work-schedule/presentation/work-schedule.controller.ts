@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
@@ -50,10 +51,10 @@ export class WorkScheduleController {
   }
 
   @Get('my')
-  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      "Current user's active work schedule (assignment, else company default); null when none exists.",
+      "Current user's active work schedule (assignment, else company default); null when none exists. Any signed-in employee may load their own.",
   })
   mySchedule(
     @CurrentUser() user: AuthenticatedUser,

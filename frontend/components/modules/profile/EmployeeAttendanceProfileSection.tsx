@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, InputNumber, Skeleton, Table, Tag } from 'antd';
+import { Button, Select, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined } from '@ant-design/icons';
 import FieldMovementForm from '@/components/modules/profile/FieldMovementForm';
+import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileContractPeriodSelect';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import type {
   AttendanceDailyLog,
   AttendanceRecord,
@@ -20,6 +22,11 @@ import {
   attendanceFlagTagColor,
   formatAttendanceDayFlag,
 } from '@/lib/utils/attendance-flag-display';
+import {
+  calendarYearsInContractPeriod,
+  monthOverlapsContractPeriod,
+  type ProfileContractPeriod,
+} from '@/lib/utils/contract-period';
 
 type AttendanceYearRecord = AttendanceRecord & { monthName: string };
 
@@ -33,6 +40,11 @@ export interface EmployeeAttendanceProfileSectionProps {
   initialMonth?: number;
   /** Optional year from notification deep-link (`?year=`). */
   initialYear?: number;
+  contractPeriod?: ProfileContractPeriod | null;
+  contractPeriods?: ProfileContractPeriod[];
+  contractPeriodLoading?: boolean;
+  onContractPeriodChange?: (contractId: string) => void;
+  hidePeriodControl?: boolean;
 }
 
 function formatNumber(value: number | string | null | undefined): string {
@@ -265,6 +277,11 @@ export default function EmployeeAttendanceProfileSection({
   isOwnProfile,
   initialMonth,
   initialYear,
+  contractPeriod: contractPeriodProp,
+  contractPeriods: contractPeriodsProp,
+  contractPeriodLoading: contractPeriodLoadingProp,
+  onContractPeriodChange,
+  hidePeriodControl = false,
 }: EmployeeAttendanceProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const currentYear = new Date().getFullYear();
@@ -277,6 +294,40 @@ export default function EmployeeAttendanceProfileSection({
       : null,
   );
 
+  const localPeriod = useProfileContractPeriod({
+    mode: isOwnProfile ? 'self' : 'employee',
+    employeeId,
+    enabled: Boolean(employeeId) && contractPeriodProp === undefined,
+  });
+  const selectedPeriod =
+    contractPeriodProp !== undefined
+      ? contractPeriodProp
+      : localPeriod.selected;
+  const periodOptions = contractPeriodsProp ?? localPeriod.periods;
+  const periodsLoading =
+    contractPeriodLoadingProp ?? localPeriod.isLoading;
+
+  const yearsInPeriod = useMemo(
+    () =>
+      selectedPeriod
+        ? calendarYearsInContractPeriod(selectedPeriod)
+        : [currentYear],
+    [selectedPeriod, currentYear],
+  );
+
+  useEffect(() => {
+    if (yearsInPeriod.length === 0) {
+      return;
+    }
+    if (yearsInPeriod.includes(year)) {
+      return;
+    }
+    const preferred = yearsInPeriod.includes(currentYear)
+      ? currentYear
+      : yearsInPeriod[yearsInPeriod.length - 1]!;
+    setYear(preferred);
+  }, [yearsInPeriod, year, currentYear]);
+
   const myQuery = useMyAttendance(year, isOwnProfile);
   const employeeQuery = useEmployeeAttendance(
     employeeId,
@@ -285,14 +336,20 @@ export default function EmployeeAttendanceProfileSection({
   );
 
   const query = isOwnProfile ? myQuery : employeeQuery;
-  const loading = query.isLoading;
+  const loading = query.isLoading || periodsLoading;
   const error = query.isError;
   const data = query.data ?? null;
 
   const records = useMemo((): AttendanceYearRecord[] => {
     const rows = data?.records ?? [];
-    return [...rows].sort((a, b) => a.month - b.month);
-  }, [data?.records]);
+    const filtered =
+      selectedPeriod != null
+        ? rows.filter((row) =>
+            monthOverlapsContractPeriod(year, row.month, selectedPeriod),
+          )
+        : rows;
+    return [...filtered].sort((a, b) => a.month - b.month);
+  }, [data?.records, selectedPeriod, year]);
 
   useEffect(() => {
     if (!isOwnProfile || bannerMonth != null || records.length === 0) {
@@ -394,21 +451,39 @@ export default function EmployeeAttendanceProfileSection({
     [t],
   );
 
-  const yearControl = (
-    <div className="erp-leave-year-control">
-      <span className="erp-leave-year-label">{t('hr.table.year')}</span>
-      <InputNumber
-        min={2020}
-        max={currentYear}
-        value={year}
-        onChange={(value) => {
-          if (typeof value === 'number') {
-            setYear(value);
-          }
-        }}
-        size="small"
-        className="erp-leave-year-input"
-      />
+  const periodControl = (
+    <div className="flex flex-wrap items-center gap-3">
+      {hidePeriodControl ? null : (
+        <ProfileContractPeriodSelect
+          periods={periodOptions}
+          value={selectedPeriod?.id ?? null}
+          loading={periodsLoading}
+          onChange={(id) => {
+            if (onContractPeriodChange) {
+              onContractPeriodChange(id);
+            } else {
+              localPeriod.setSelectedId(id);
+            }
+          }}
+        />
+      )}
+      {yearsInPeriod.length > 1 ? (
+        <div className="erp-leave-year-control">
+          <span className="erp-leave-year-label">{t('hr.table.year')}</span>
+          <Select
+            size="small"
+            className="min-w-[96px]"
+            value={year}
+            options={yearsInPeriod.map((value) => ({
+              value,
+              label: String(value),
+            }))}
+            onChange={(value: number) => {
+              setYear(value);
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 
@@ -468,7 +543,7 @@ export default function EmployeeAttendanceProfileSection({
 
       <AttendanceProfileSection
         title={t('pages.hr.attendance.profileYearTitle')}
-        action={yearControl}
+        action={periodControl}
       >
         {error ? (
           <div className="erp-notice erp-notice--error">
