@@ -92,6 +92,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a business trip
 
 *(Anyone who approves business trips)*
@@ -105,7 +106,10 @@ When a request reaches you, you receive the notification **Approval required**.
 See the **Approvals Inbox** topic for the full steps.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all business trips
 
 *(HR)*
@@ -115,7 +119,10 @@ See the **Approvals Inbox** topic for the full steps.
 3. Search, or filter by employee, and click a trip to open it.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to attach tickets
 
 *(HR Manager — approved trips only)*
@@ -126,7 +133,10 @@ See the **Approvals Inbox** topic for the full steps.
 4. The **Acknowledged** column shows **Pending** until each passenger confirms.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
@@ -134,3 +144,5 @@ See the **Approvals Inbox** topic for the full steps.
 - **Past departure dates.** Only HR officers can enter a departure date in the past.
 - **Passenger import.** On a **Draft** trip, **Import from Excel** adds many passengers at once.
 - **Cancelling.** Only the person who submitted a trip can cancel it, while it is **Draft** or **Submitted**.
+<!-- /role -->
+

@@ -49,6 +49,7 @@ If you do see tabs at the top, click **My Work** to open the same summary. Click
 
 ---
 
+<!-- role: SUPERVISOR, HR -->
 ## What My Team shows
 
 *(Anyone with people reporting to them)*
@@ -58,7 +59,10 @@ Click **My Team**. You see your **Direct reports**, the requests **Pending my ap
 > **Note:** You see **My Team** only if at least one person reports to you.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## What the company views show
 
 *(HR, General Manager, Managing Director, System Administrator)*
@@ -68,3 +72,5 @@ Click **My Team**. You see your **Direct reports**, the requests **Pending my ap
 - **Operations**: company-wide requests and per diem activity.
 
 > **Note:** The Dashboard remembers which view you had open, even after you reload the page. Figures always match what your role can open elsewhere.
+<!-- /role -->
+

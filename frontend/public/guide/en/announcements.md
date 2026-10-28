@@ -41,6 +41,7 @@ Some announcements show **Acknowledgement required**.
 
 ---
 
+<!-- role: HR -->
 ## How to write a draft
 
 *(Staff who can write announcements)*
@@ -52,7 +53,10 @@ Some announcements show **Acknowledgement required**.
 > **After you save:** An HR Manager reviews and publishes your draft. You can save drafts, but you cannot publish them yourself.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to publish an announcement
 
 *(HR Manager and System Administrator)*
@@ -76,7 +80,10 @@ Some announcements show **Acknowledgement required**.
 > **After you publish:** You see *"Published. Recipients: N."* A scheduled announcement shows *"Scheduled for [date]."* Click **Unschedule** to stop it.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see who has read an announcement
 
 *(HR Manager and System Administrator)*
@@ -86,7 +93,10 @@ Some announcements show **Acknowledgement required**.
 3. Filter by **Not read** or **Not acknowledged**, or search by name or employee ID.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to edit a published announcement
 
 *(HR Manager and System Administrator)*
@@ -97,7 +107,10 @@ Some announcements show **Acknowledgement required**.
 > **Important:** The audience and delivery options cannot change after publishing. Changing the title, pin or expiry keeps everyone's acknowledgements. Changing the message, even a typo, clears them and asks everyone to read it again.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to post a system update
 
 *(System Administrator)*
@@ -106,3 +119,5 @@ Some announcements show **Acknowledgement required**.
 2. Write the update and publish it.
 
 > **Note:** System updates go to everyone. They appear once in the **What's new** window after sign-in, with no email and no acknowledgement.
+<!-- /role -->
+

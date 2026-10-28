@@ -126,6 +126,7 @@ If your claim is returned, you receive the notification **Approval returned**. O
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve an expense claim
 
 *(Anyone who approves expense claims)*
@@ -139,7 +140,10 @@ When a claim reaches you, you receive the notification **Approval required**.
 See the **Approvals Inbox** topic for the full steps.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all expense claims
 
 *(HR)*
@@ -150,7 +154,10 @@ See the **Approvals Inbox** topic for the full steps.
 4. Click a claim to open it.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to mark a claim as paid
 
 *(HR — approved claims only)*
@@ -163,7 +170,10 @@ See the **Approvals Inbox** topic for the full steps.
 > **After you confirm:** You see *"Expense claim marked as paid."* The claim shows **Paid**, **Paid on** and **Recorded by**. The employee sees that it was paid.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to delete an expense claim
 
 *(HR)*
@@ -172,7 +182,10 @@ See the **Approvals Inbox** topic for the full steps.
 2. Confirm **Delete expense claim?**. The claim is removed and its approval request is cancelled. This cannot be undone.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to import or export expense claims
 
 *(HR)*
@@ -180,3 +193,5 @@ See the **Approvals Inbox** topic for the full steps.
 - **Export:** on **Expense Claims**, click **Export Excel**. The rows matching your search and filters are exported.
 - **Import claims:** click **Import from Excel**, then **Download template**. Each row needs **employeeEmail** or **employeeId** and a **title**, and adds one item to a **Draft** claim. Rows with the same employee and title go into the same claim. Receipts are not imported, and claims are not submitted automatically: the receipts must be uploaded before the claim is submitted.
 - **Import items into a draft:** open a **Draft** claim and click **Import from Excel** to add many items at once.
+<!-- /role -->
+

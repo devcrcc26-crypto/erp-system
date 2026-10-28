@@ -72,6 +72,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a work-from-home request
 
 *(Discipline Leads)*
@@ -83,7 +84,10 @@ When a request from your discipline reaches you, you receive the notification **
 3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The employee is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to assign work-from-home days directly
 
 *(HR)*
@@ -105,7 +109,10 @@ Use this for office closures or planned remote days. No approval request is sent
 > **After you save:** Attendance for the people covered shows **Work from home** for those days.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to change or remove an assigned day
 
 *(HR)*
@@ -114,7 +121,10 @@ Use this for office closures or planned remote days. No approval request is sent
 2. On a day, click **Update** to change it, or **Delete** to remove it and confirm **Delete work-from-home day**. Attendance for that date may change.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to cancel an approved request
 
 *(HR)*
@@ -123,3 +133,5 @@ Use this for office closures or planned remote days. No approval request is sent
 2. Click **Cancel request**, add a **Reason (optional)**, and confirm.
 
 > **After you confirm:** You see *"Request cancelled - N work-from-home day(s) removed."* Attendance for those days is recalculated.
+<!-- /role -->
+

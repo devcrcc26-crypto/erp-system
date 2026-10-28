@@ -149,6 +149,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve, return or reject a leave request
 
 *(Team Lead, Department Head, Discipline Lead, HR Manager, General Manager)*
@@ -168,7 +169,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 > **After you decide:** If there is another approver, the request moves to them. If you are the last approver, the leave is approved and the days are taken from the employee's balance.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to request leave for someone in your team
 
 *(Department Head for their own department, Discipline Lead for their own discipline, HR Manager, General Manager, Managing Director)*
@@ -182,7 +186,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 > **After you submit:** The request belongs to the employee and follows their own approvers. You appear as the creator in the audit log.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all leave requests
 
 *(HR)*
@@ -196,7 +203,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 [SCREENSHOT: leave-hr-requests-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to edit or delete a leave request
 
 *(HR)*
@@ -206,7 +216,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 - **Delete:** open the request and click **Delete**, then confirm **Delete leave request?**. The request is removed from the register, and its effect on the balance is reversed. If it was approved, attendance for those dates is recalculated. This cannot be undone.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to view and adjust leave balances
 
 *(HR)*
@@ -222,7 +235,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 [SCREENSHOT: leave-hr-edit-balances.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to import leave requests from Excel
 
 *(HR)*
@@ -236,7 +252,10 @@ When a leave request reaches you, you receive the notification **Approval requir
 > **After you import:** Each row is submitted as a leave request for that employee, using the same rules and approvers as a request they made themselves.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
@@ -245,3 +264,5 @@ When a leave request reaches you, you receive the notification **Approval requir
 - **No balance record.** If the form says *"No balance record - contact HR"*, create or adjust the employee's balance in the **Balances** tab.
 - **Dates outside employment.** Leave cannot be requested for days before the employee started or after they left.
 - **Attendance is not checked when leave is requested.** Attendance scans are imported after the month ends, so they never block a leave request.
+<!-- /role -->
+

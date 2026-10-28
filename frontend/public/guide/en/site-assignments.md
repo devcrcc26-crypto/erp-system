@@ -28,6 +28,7 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 
 ---
 
+<!-- role: SUPERVISOR, HR -->
 ## How to create a site assignment for your team
 
 *(Supervisors — for people who report directly to you)*
@@ -71,7 +72,10 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 - The dates overlap another site assignment, leave or work from home for the same employee.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to create a site assignment for a supervisor's team
 
 *(HR)*
@@ -83,7 +87,10 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 5. Click **Next**, check the **Review**, and click **Create assignment**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all site assignments
 
 *(HR)*
@@ -97,7 +104,10 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 [SCREENSHOT: site-assignments-hr-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to shorten a site assignment
 
 *(HR — approved assignments only)*
@@ -113,7 +123,10 @@ Use this when the employee came back from site early.
 > **After you confirm:** You see *"End date updated and attendance recalculated."*
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to cancel a site assignment
 
 *(HR — approved assignments only)*
@@ -126,7 +139,10 @@ Use this when the employee came back from site early.
 > **After you confirm:** You see *"Site assignment updated."* The status becomes **Cancelled**, and attendance for those days is recalculated.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
@@ -135,3 +151,5 @@ Use this when the employee came back from site early.
 - **Supervisors only file for direct reports.** A supervisor cannot file a site assignment for themselves or for someone outside their team. HR can file for any supervisor's team.
 - **Attendance and overtime.** Site assignment days count as attended. On those days the whole day can be claimed as overtime, and the weekday lunch rule does not apply.
 - **Unlock attendance.** If you add or change a site assignment for a month whose attendance is already approved, unlock and re-approve that month so the figures update.
+<!-- /role -->
+

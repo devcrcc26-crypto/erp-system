@@ -151,6 +151,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a per diem request
 
 *(Anyone who approves per diem)*
@@ -168,7 +169,10 @@ To return or reject the request instead, see the **Approvals Inbox** topic.
 [SCREENSHOT: per-diem-approve-rate.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to set an employee's per diem rates
 
 *(HR)*
@@ -182,7 +186,10 @@ To return or reject the request instead, see the **Approvals Inbox** topic.
 > **Note:** *"This rate looks low for ETB - please verify."* warns you about a rate that may have been entered in the wrong currency.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all per diem requests
 
 *(HR)*
@@ -193,7 +200,10 @@ To return or reject the request instead, see the **Approvals Inbox** topic.
 4. Click a request to open it.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to record a disbursement
 
 *(HR — when the request is **Approved** or **Active**)*
@@ -207,7 +217,10 @@ To return or reject the request instead, see the **Approvals Inbox** topic.
 > **After you save:** You see *"Disbursement recorded"*. The request becomes **Active** and shows **Disbursed**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to settle a request and record the balance
 
 *(HR — when the request is **Active**)*
@@ -218,3 +231,5 @@ To return or reject the request instead, see the **Approvals Inbox** topic.
 4. When the balance is paid, click **Record payment to employee** (or **Record cash returned**). Enter the **Payment reference** or **Receipt number** and the date, and click **Save**.
 
 For an employee's **Per Diem Settlement**, open it under the **Settlements** tab. If the balance is in favor of the company, click **Record cash returned**, enter the **Receipt number** and **Date cash returned**, and click **Save**.
+<!-- /role -->
+

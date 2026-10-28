@@ -79,6 +79,7 @@ If your permit is returned, you receive the notification **Approval returned**. 
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve an exit permit
 
 *(Anyone who approves exit permits)*
@@ -90,7 +91,10 @@ When a permit reaches you, you receive the notification **Approval required**.
 3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The submitter is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all exit permits
 
 *(HR and administration staff)*
@@ -102,7 +106,10 @@ When a permit reaches you, you receive the notification **Approval required**.
 5. Click a permit to open it.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to print a gate pass or the gate register
 
 *(HR and administration staff)*
@@ -115,7 +122,10 @@ When a permit reaches you, you receive the notification **Approval required**.
 > **After you download:** You see *"Gate pass register PDF downloaded."* Post it at the gate.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR and administration staff)*
@@ -123,3 +133,5 @@ When a permit reaches you, you receive the notification **Approval required**.
 - **Permits filed on behalf of someone** always need at least one approver.
 - **Cancelling.** The employee, HR or a full-access role can cancel a permit while it is **Draft** or **Submitted**: open it and click **Cancel Request**, then confirm **Cancel exit permit?**.
 - **Approved directly.** A permit with *"Approved directly - no approval required"* had no approvers.
+<!-- /role -->
+

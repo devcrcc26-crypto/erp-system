@@ -63,6 +63,7 @@ The status shows where an evaluation is: **Pending** → **Self-Assessed** → *
 
 ---
 
+<!-- role: SUPERVISOR, HR -->
 ## How to assess a team member
 
 *(Team Leads)*
@@ -80,7 +81,10 @@ The status shows where an evaluation is: **Pending** → **Self-Assessed** → *
 The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escalated to HR** and **Completed**. Search by name or employee ID.
 
 ---
+<!-- /role -->
 
+
+<!-- role: SUPERVISOR, HR -->
 ## How to assess and share a result
 
 *(Discipline Leads)*
@@ -93,7 +97,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 > **After you share:** You see *"Result shared with employee"*. The employee has 5 days to accept or dispute.
 
 ---
+<!-- /role -->
 
+
+<!-- role: SUPERVISOR, HR -->
 ## How to respond to a dispute
 
 *(Discipline Leads)*
@@ -107,7 +114,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 > **Important:** You have 5 days to respond. If you do not, the original score is upheld automatically.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to set up an evaluation template
 
 *(HR)*
@@ -121,7 +131,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 > **Note:** To change a template that is already in use, click **New Version** on it. Evaluations that were already created keep the old version.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to run an evaluation cycle
 
 *(HR)*
@@ -135,7 +148,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 [SCREENSHOT: evaluations-cycles.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to follow all evaluations
 
 *(HR)*
@@ -146,7 +162,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 4. Click **Run Auto-Resolve** to apply the 5-day rules now instead of waiting for the daily run.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to decide an escalated dispute
 
 *(HR)*
@@ -157,7 +176,10 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 4. Write the explanation and submit. You see *"Decision submitted"*. The status becomes **HR Decided**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to file a finished evaluation
 
 *(HR)*
@@ -166,3 +188,5 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 2. Click **Lock & File**.
 
 > **After you lock it:** You see *"Evaluation locked and filed"*. The status becomes **Locked**, and nothing more can change.
+<!-- /role -->
+

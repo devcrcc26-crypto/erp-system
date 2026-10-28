@@ -99,6 +99,7 @@ An approver can approve your request on a condition. You then receive a notifica
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to find requests waiting for you
 
 *(Anyone who approves)*
@@ -113,7 +114,10 @@ When a request reaches your step, you receive the notification **Approval requir
 [SCREENSHOT: approvals-pending-my-action.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to check a request before you decide
 
 *(Anyone who approves)*
@@ -125,7 +129,10 @@ When a request reaches your step, you receive the notification **Approval requir
 > **Note:** You can only decide while the request is at your step. You see the decision buttons under **Decide**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a request
 
 *(Anyone who approves)*
@@ -137,7 +144,10 @@ When a request reaches your step, you receive the notification **Approval requir
 > **After you approve:** You see *"Tier approved"*. If there is another approver, the request moves to them. If you were the last approver, the request is **Approved** and the employee is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to return a request
 
 *(Anyone who approves)*
@@ -151,7 +161,10 @@ Return a request when the employee can fix it.
 > **After you return it:** You see *"Request returned to submitter"*. The employee is notified, changes the request and resubmits it. It then starts again at the first approver.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to reject a request
 
 *(Anyone who approves)*
@@ -165,7 +178,10 @@ Reject a request only when it should not go ahead at all.
 > **After you reject it:** You see *"Request rejected"*. The request is closed and the employee is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to approve on a condition
 
 *(Anyone who approves)*
@@ -181,7 +197,10 @@ Use this when you agree in principle but something must be confirmed first.
 > **Note:** While a condition is open, you see *"Resolve all conditions before taking action."* and cannot approve, return or reject.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to reassign a waiting step
 
 *(HR Manager, System Administrator)*
@@ -197,7 +216,10 @@ Use this when an approver is away or has left.
 [SCREENSHOT: approvals-reassign.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to approve or return on behalf of another approver
 
 *(General Manager, Managing Director, HR Manager, System Administrator)*
@@ -211,7 +233,10 @@ If a request is waiting at someone else's step, you see **Approve on behalf of â
 The original approver is notified, and the step records that you acted for them. You cannot act on behalf on your own request or on a request you filed for someone.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see every request and company reports
 
 *(General Manager, Managing Director, HR)*
@@ -221,3 +246,5 @@ The original approver is notified, and the step records that you acted for them.
 - **HR reports:** in the left menu, go to **People** â†’ **HR Reports**. The tabs are **Overview**, **Leave & OT**, **Payroll & spend** and **Contracts & attendance**.
 
 [SCREENSHOT: approvals-all-requests.png]
+<!-- /role -->
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -9,8 +9,15 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { filterGuideByRole } from '@/lib/help/filter-guide-by-role';
+import {
+  resolveHelpRoleGroup,
+  type RoleGroup,
+} from '@/lib/help/modules';
 import { getNavIcon } from '@/lib/navigation/nav-icons';
+import { useCurrentUser } from '@/lib/query/profile';
 
 /**
  * Lightweight markdown renderer for the user guide (no react-markdown).
@@ -26,21 +33,37 @@ import { getNavIcon } from '@/lib/navigation/nav-icons';
  * - a line that is only `**Label**` becomes a section label
  * - a line that is only `*(HR only)*` becomes an audience pill
  * - tables, links, inline code, bold/italic and `[SCREENSHOT: file.png]` slots
+ * - `<!-- role: HR -->…<!-- /role -->` blocks are kept only for matching roles
  */
 export default function HelpContent({
   content,
   title,
   iconKey,
+  roleGroup: roleGroupProp,
 }: {
   content: string;
   /** Article title for the header card. */
   title?: string;
   /** Sidebar icon key of the topic, shown beside the title. */
   iconKey?: string;
+  /**
+   * Override the viewer’s help role group (tests). When omitted, resolved from
+   * the signed-in user’s roles / HR capability.
+   */
+  roleGroup?: RoleGroup;
 }): ReactNode {
   const { locale } = useEpcTranslation();
+  const canViewHr = useCanViewHr();
+  const profileQuery = useCurrentUser();
+  const roleGroup = useMemo((): RoleGroup => {
+    if (roleGroupProp) {
+      return roleGroupProp;
+    }
+    const roleNames = (profileQuery.data?.roles ?? []).map((role) => role.name);
+    return resolveHelpRoleGroup(roleNames, canViewHr);
+  }, [roleGroupProp, profileQuery.data?.roles, canViewHr]);
 
-  const processed = content
+  const processed = filterGuideByRole(content, roleGroup)
     .replace(
       /\[SCREENSHOT:\s*([^\]]+)\]/gi,
       (_match, filename: string) =>

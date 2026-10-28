@@ -8,6 +8,16 @@ vi.mock('@/hooks/use-epc-translation', () => ({
   useEpcTranslation: () => ({ t: (key: string) => key, locale: 'en' }),
 }));
 
+vi.mock('@/hooks/use-auth-capabilities', () => ({
+  useCanViewHr: () => false,
+}));
+
+vi.mock('@/lib/query/profile', () => ({
+  useCurrentUser: () => ({
+    data: { roles: [{ name: 'Employee' }] },
+  }),
+}));
+
 const SAMPLE = `Intro paragraph for the topic.
 
 **Who does what**
@@ -82,13 +92,52 @@ describe('HelpContent', () => {
     const dir = path.join(process.cwd(), 'public', 'guide', lang);
     for (const file of readdirSync(dir).filter((name) => name.endsWith('.md'))) {
       const { container, unmount } = render(
-        <HelpContent content={readFileSync(path.join(dir, file), 'utf8')} />,
+        <HelpContent
+          content={readFileSync(path.join(dir, file), 'utf8')}
+          roleGroup="HR"
+        />,
       );
       const text = container.textContent ?? '';
       expect(text, file).not.toMatch(/(^|\s)> /);
       expect(text, file).not.toContain('**');
       expect(text, file).not.toMatch(/\|\s*---/);
+      expect(text, file).not.toMatch(/<!--\s*role:/i);
       unmount();
     }
+  });
+
+  it('hides role-tagged sections that do not match the viewer', () => {
+    const markdown = `Shared intro.
+
+## For everyone
+
+Anyone can read this.
+
+<!-- role: HR -->
+## HR import
+
+Only HR sees this.
+<!-- /role -->
+
+<!-- role: HR, SUPERVISOR -->
+## Approve a request
+
+Approvers see this.
+<!-- /role -->
+`;
+
+    const { unmount } = render(
+      <HelpContent content={markdown} title="Leave" roleGroup="EMPLOYEE" />,
+    );
+    expect(screen.getByRole('heading', { name: 'For everyone' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'HR import' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Approve a request' })).toBeNull();
+    unmount();
+
+    render(
+      <HelpContent content={markdown} title="Leave" roleGroup="SUPERVISOR" />,
+    );
+    expect(screen.queryByRole('heading', { name: 'HR import' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Approve a request' })).toBeTruthy();
   });
 });

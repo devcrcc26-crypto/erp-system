@@ -177,6 +177,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a materials or purchase request
 
 *(Anyone who approves these requests)*
@@ -188,7 +189,10 @@ When a request reaches you, you receive the notification **Approval required**.
 3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The submitter is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all requests
 
 *(Procurement, store and HR staff)*
@@ -201,7 +205,10 @@ When a request reaches you, you receive the notification **Approval required**.
 [SCREENSHOT: materials-hr-purchase-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to correct items on a draft or returned request
 
 *(Procurement, store and HR staff)*
@@ -212,7 +219,10 @@ When a request reaches you, you receive the notification **Approval required**.
 4. The employee then resubmits from **Approvals**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(Procurement, store and HR staff)*
@@ -224,3 +234,5 @@ When a request reaches you, you receive the notification **Approval required**.
 - **Cancelling.** Only the person who made a request can cancel it, while it is **Draft** or **Submitted**: open it, click **Cancel Request**, and confirm. Any open approval is cancelled too.
 - **Approved directly.** A request with *"Approved directly - no approval required"* had no approvers.
 - **Importing purchase requests.** **Import from Excel** on **Purchase Requests** adds item lines to **Draft** requests. Item images are not imported, and nothing is submitted automatically.
+<!-- /role -->
+

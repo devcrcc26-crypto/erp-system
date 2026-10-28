@@ -91,6 +91,7 @@ If your application is returned, you receive the notification **Approval returne
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a flight application
 
 *(Anyone who approves flights)*
@@ -104,7 +105,10 @@ When an application reaches you, you receive the notification **Approval require
 See the **Approvals Inbox** topic for the full steps.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all flight applications
 
 *(HR)*
@@ -118,7 +122,10 @@ See the **Approvals Inbox** topic for the full steps.
 [SCREENSHOT: flight-hr-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to attach tickets
 
 *(HR Manager — approved applications only)*
@@ -135,7 +142,10 @@ When an application is approved, its page shows **Tickets required**.
 [SCREENSHOT: flight-hr-tickets.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
@@ -143,3 +153,5 @@ When an application is approved, its page shows **Tickets required**.
 - **Past departure dates.** Only HR officers can enter a departure date in the past.
 - **Passenger import.** On a **Draft** application, **Import from Excel** in the passengers section adds many passengers at once.
 - **Cancelling.** Only the person who submitted an application can cancel it, while it is **Draft** or **Submitted**.
+<!-- /role -->
+

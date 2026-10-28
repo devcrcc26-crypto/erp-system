@@ -74,6 +74,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a seal request
 
 *(Anyone who approves seal requests)*
@@ -85,7 +86,10 @@ When a request reaches you, you receive the notification **Approval required**.
 3. Choose **Approve**, **Return** (write a **Note for submitter**), or **Reject** (write the **Rejection reason**). The submitter is notified.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all seal requests
 
 *(HR and administration staff)*
@@ -99,7 +103,10 @@ When a request reaches you, you receive the notification **Approval required**.
 [SCREENSHOT: seals-hr-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to issue the seal
 
 *(HR — approved requests only)*
@@ -112,7 +119,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **After you issue it:** The status becomes **Seal Issued**. The request shows **Issued by** and **Completed at**, and the sealed copy appears under **Sealed Document (Proof)**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to export or import seal requests
 
 *(HR and administration staff)*
@@ -121,10 +131,15 @@ When a request reaches you, you receive the notification **Approval required**.
 - **Import:** click **Import from Excel** and **Download template**. Imported requests are created as **Draft**. Attachments are not imported, so the document must be added before the request is submitted.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR and administration staff)*
 
 - **Cancelling.** Only the person who made the request can cancel it, while it is **Draft** or **Submitted**.
 - **Approved directly.** A request marked **Direct approval** had no approvers.
+<!-- /role -->
+

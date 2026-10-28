@@ -178,6 +178,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve a vehicle or refueling request
 
 *(Anyone who approves vehicle requests)*
@@ -191,7 +192,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **Note:** From the moment a vehicle application is submitted, that vehicle is held for the trip dates and nobody else can book it. If you return or reject the application, the vehicle becomes free again.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all vehicle requests
 
 *(Fleet and HR staff)*
@@ -204,7 +208,10 @@ When a request reaches you, you receive the notification **Approval required**.
 [SCREENSHOT: vehicles-hr-applications-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to release a vehicle after the trip
 
 *(Fleet and HR staff — approved vehicle applications only)*
@@ -215,7 +222,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **After you release it:** You see *"Vehicle released successfully"*. The application shows **Released** and **Released At**, and the vehicle is **Available** again.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to upload a fuel receipt
 
 *(Fleet and HR staff — approved refueling requests only)*
@@ -226,7 +236,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **After you upload:** You see *"Receipt uploaded successfully"*. The request shows **Receipt attached**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to update an inspection or repair
 
 *(Fleet and HR staff)*
@@ -241,7 +254,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **After you update:** You see *"Inspection and repair request updated"*. When it is **Repaired** or **Rejected**, you see *"No further status changes are available for this request."*
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to add a company vehicle
 
 *(HR)*
@@ -260,7 +276,10 @@ When a request reaches you, you receive the notification **Approval required**.
 > **Note:** Only vehicles with an **Assigned Driver** can be booked with **Company Driver**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to change, update or remove a company vehicle
 
 *(HR)*
@@ -273,7 +292,10 @@ When a request reaches you, you receive the notification **Approval required**.
 3. Click **Export vehicles** to download the register, or **Import from Excel** to add many vehicles at once. Imported vehicles are **Available**, and plate numbers must be unique.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(Fleet and HR staff)*
@@ -281,3 +303,5 @@ When a request reaches you, you receive the notification **Approval required**.
 - **Past departure dates.** Only HR staff can book a vehicle with a departure date in the past.
 - **Cancelling.** Only the person who made a request can cancel it, while it is **Draft** or **Submitted**. They click **Cancel Request** and confirm.
 - **Approved directly.** A request with *"Approved directly - no approval required"* had no approvers.
+<!-- /role -->
+

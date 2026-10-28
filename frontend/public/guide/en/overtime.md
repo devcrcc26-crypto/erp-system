@@ -151,6 +151,7 @@ If your sheet is returned, you receive the notification **Approval returned**. O
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve, return or reject an overtime sheet
 
 *(Team Lead, Department Head, Discipline Lead, HR Manager, General Manager)*
@@ -172,7 +173,10 @@ When an overtime sheet reaches you, you receive the notification **Approval requ
 [SCREENSHOT: overtime-approval-review.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR, SUPERVISOR -->
 ## How to file overtime for someone in your team
 
 *(Department Head, Discipline Lead, HR)*
@@ -184,7 +188,10 @@ When an overtime sheet reaches you, you receive the notification **Approval requ
 The sheet belongs to the employee and follows their own approvers.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to see all overtime sheets
 
 *(HR)*
@@ -198,7 +205,10 @@ The sheet belongs to the employee and follows their own approvers.
 [SCREENSHOT: overtime-hr-list.png]
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to change or delete overtime
 
 *(HR Manager)*
@@ -208,7 +218,10 @@ The sheet belongs to the employee and follows their own approvers.
 - **Delete a sheet:** open the sheet, click **Delete**, and confirm **Delete overtime sheet?**. The sheet is removed and its approval request is cancelled. This cannot be undone.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## How to import overtime from Excel
 
 *(HR Manager, General Manager, Managing Director)*
@@ -222,7 +235,10 @@ The sheet belongs to the employee and follows their own approvers.
 > **Note:** Entries can only be imported into sheets that are **Draft** or **Returned**.
 
 ---
+<!-- /role -->
 
+
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
@@ -230,3 +246,5 @@ The sheet belongs to the employee and follows their own approvers.
 - **Payroll lock.** After the month's payroll is finalized, overtime for that month cannot be changed by anyone.
 - **Manually flagged holidays.** If an imported or entered day is marked as a holiday but is not in the public holiday calendar, approvers see a warning. Add the holiday under **Time & Attendance** → **Public Holidays** if it is real.
 - **Changes after approval.** If an employee changes an approved sheet, it goes through approval again. Approvers see exactly what changed.
+<!-- /role -->
+
