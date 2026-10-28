@@ -655,7 +655,10 @@ export default function ProfilePageContent(): React.ReactNode {
         );
       case 'contract':
         return (
-          <ProfileContractTab dateFormat={currentProfile.preferredDateFormat} />
+          <ProfileContractTab
+            dateFormat={currentProfile.preferredDateFormat}
+            contractPeriod={contractPeriod.selected}
+          />
         );
       case 'payroll':
         return (

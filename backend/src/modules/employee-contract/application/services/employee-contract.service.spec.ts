@@ -1,4 +1,8 @@
-import { EmployeeContractStatus, EmployeeContractType } from '@prisma/client';
+import {
+  EmployeeContractStatus,
+  EmployeeContractType,
+  Prisma,
+} from '@prisma/client';
 import { EmployeeContractService } from './employee-contract.service';
 import type { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 
@@ -67,7 +71,7 @@ describe('EmployeeContractService.getMyActiveContract', () => {
     ).resolves.toEqual({ contract: null });
   });
 
-  it('scopes to the current user and ACTIVE status, and never selects pay fields', async () => {
+  it('scopes to the current user and ACTIVE status, and selects pay fields', async () => {
     findFirst.mockResolvedValue(null);
 
     await service.getMyActiveContract('company-1', 'user-1');
@@ -82,11 +86,11 @@ describe('EmployeeContractService.getMyActiveContract', () => {
       status: EmployeeContractStatus.ACTIVE,
     });
     for (const field of PAY_FIELDS) {
-      expect(args.select).not.toHaveProperty(field);
+      expect(args.select).toHaveProperty(field);
     }
   });
 
-  it('returns date-only strings and no pay fields even if the row had them', async () => {
+  it('returns date-only strings and pay amounts for the active contract', async () => {
     findFirst.mockResolvedValue({
       id: 'contract-1',
       contractNumber: 'EC-2026-0001',
@@ -97,8 +101,13 @@ describe('EmployeeContractService.getMyActiveContract', () => {
       endDate: null,
       probationEndDate: new Date('2026-04-10T00:00:00.000Z'),
       governedBy: 'Ethiopian Labour Proclamation 1156/2019',
-      basicSalary: 50000,
-      monthlyBonus: 2000,
+      currency: 'ETB',
+      basicSalary: new Prisma.Decimal(50000),
+      transportationAllowance: new Prisma.Decimal(1500),
+      monthlyBonus: new Prisma.Decimal(2000),
+      monthlyNetBonus: new Prisma.Decimal(0),
+      pensionApplicable: true,
+      taxApplicable: true,
     });
 
     const result = await service.getMyActiveContract('company-1', 'user-1');
@@ -113,10 +122,30 @@ describe('EmployeeContractService.getMyActiveContract', () => {
       endDate: null,
       probationEndDate: '2026-04-10',
       governedBy: 'Ethiopian Labour Proclamation 1156/2019',
+      currency: 'ETB',
+      basicSalary: 50000,
+      transportationAllowance: 1500,
+      monthlyBonus: 2000,
+      monthlyNetBonus: 0,
+      pensionApplicable: true,
+      taxApplicable: true,
     });
-    for (const field of PAY_FIELDS) {
-      expect(result.contract).not.toHaveProperty(field);
-    }
+  });
+
+  it('loads a specific own contract when contractId is provided', async () => {
+    findFirst.mockResolvedValue(null);
+
+    await service.getMyActiveContract('company-1', 'user-1', 'contract-2');
+
+    const args = findFirst.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    };
+    expect(args.where).toMatchObject({
+      companyId: 'company-1',
+      employeeId: 'user-1',
+      id: 'contract-2',
+    });
+    expect(args.where).not.toHaveProperty('status');
   });
 });
 

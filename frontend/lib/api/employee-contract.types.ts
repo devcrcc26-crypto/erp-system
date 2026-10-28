@@ -68,7 +68,7 @@ export interface EmployeeContractDetail extends EmployeeContractListItem {
   } | null;
 }
 
-/** GET /hr/employee-contracts/my/active - pay fields are never returned. */
+/** GET /hr/employee-contracts/my/active — own contract including pay amounts. */
 export interface MyActiveContract {
   id: string;
   contractNumber: string;
@@ -79,6 +79,13 @@ export interface MyActiveContract {
   endDate: string | null;
   probationEndDate: string | null;
   governedBy: string | null;
+  currency: EmployeeContractCurrency;
+  basicSalary: number | null;
+  transportationAllowance: number | null;
+  monthlyBonus: number | null;
+  monthlyNetBonus: number | null;
+  pensionApplicable: boolean;
+  taxApplicable: boolean;
 }
 
 export interface CreateEmployeeContractPayload {

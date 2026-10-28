@@ -196,15 +196,18 @@ export class EmployeeContractController {
         { module: 'employee-contract', action: 'view' },
     )
     @ApiOperation({
-        summary: 'My active contract without salary fields (any authenticated user)',
+        summary:
+            'My contract for profile (pay amounts included). Optional contractId for a past own contract.',
     })
     async myActive(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
+        @Query('contractId') contractId?: string,
     ): Promise<unknown> {
         return this.employeeContractService.getMyActiveContract(
             companyId,
             user.userId,
+            contractId?.trim() || undefined,
         );
     }
 

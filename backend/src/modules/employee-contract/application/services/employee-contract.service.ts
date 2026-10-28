@@ -75,9 +75,8 @@ const CONTRACT_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Self-service contract view. Whitelists display fields only - pay columns
- * (basicSalary, transportationAllowance, monthlyBonus) are never selected,
- * so they cannot reach the client.
+ * Self-service contract view for the signed-in employee. Includes their own
+ * pay amounts (basic, transport, bonus) so My Profile → Contract can show them.
  */
 const MY_CONTRACT_SELECT = {
     id: true,
@@ -89,6 +88,13 @@ const MY_CONTRACT_SELECT = {
     endDate: true,
     probationEndDate: true,
     governedBy: true,
+    currency: true,
+    basicSalary: true,
+    transportationAllowance: true,
+    monthlyBonus: true,
+    monthlyNetBonus: true,
+    pensionApplicable: true,
+    taxApplicable: true,
 } satisfies Prisma.EmployeeContractSelect;
 
 export interface MyActiveContract {
@@ -101,6 +107,13 @@ export interface MyActiveContract {
     endDate: string | null;
     probationEndDate: string | null;
     governedBy: string | null;
+    currency: string;
+    basicSalary: number | null;
+    transportationAllowance: number | null;
+    monthlyBonus: number | null;
+    monthlyNetBonus: number | null;
+    pensionApplicable: boolean;
+    taxApplicable: boolean;
 }
 
 function toDateOnly(value: Date): string {
@@ -461,18 +474,22 @@ export class EmployeeContractService {
     }
 
     /**
-     * The signed-in employee's current ACTIVE contract (any authenticated user).
-     * Returns `{ contract: null }` when there is none. Never includes pay data.
+     * The signed-in employee's contract for My Profile (any authenticated user).
+     * Defaults to the ACTIVE contract; pass `contractId` to load another of
+     * their own contracts (e.g. from the contract-period filter).
      */
     async getMyActiveContract(
         companyId: string,
         userId: string,
+        contractId?: string,
     ): Promise<{ contract: MyActiveContract | null }> {
         const contract = await this.prisma.employeeContract.findFirst({
             where: activeOnly({
                 companyId,
                 employeeId: userId,
-                status: EmployeeContractStatus.ACTIVE,
+                ...(contractId
+                    ? { id: contractId }
+                    : { status: EmployeeContractStatus.ACTIVE }),
             }),
             orderBy: { startDate: 'desc' },
             select: MY_CONTRACT_SELECT,
@@ -483,19 +500,51 @@ export class EmployeeContractService {
         }
 
         return {
-            contract: {
-                id: contract.id,
-                contractNumber: contract.contractNumber,
-                contractType: contract.contractType,
-                status: contract.status,
-                signedAt: toDateOnly(contract.signedAt),
-                startDate: toDateOnly(contract.startDate),
-                endDate: contract.endDate ? toDateOnly(contract.endDate) : null,
-                probationEndDate: contract.probationEndDate
-                    ? toDateOnly(contract.probationEndDate)
-                    : null,
-                governedBy: contract.governedBy,
-            },
+            contract: this.mapMyContract(contract),
+        };
+    }
+
+    private mapMyContract(
+        contract: {
+            id: string;
+            contractNumber: string;
+            contractType: EmployeeContractType;
+            status: EmployeeContractStatus;
+            signedAt: Date;
+            startDate: Date;
+            endDate: Date | null;
+            probationEndDate: Date | null;
+            governedBy: string | null;
+            currency: string;
+            basicSalary: Prisma.Decimal | null;
+            transportationAllowance: Prisma.Decimal | null;
+            monthlyBonus: Prisma.Decimal | null;
+            monthlyNetBonus: Prisma.Decimal | null;
+            pensionApplicable: boolean;
+            taxApplicable: boolean;
+        },
+    ): MyActiveContract {
+        const money = (value: Prisma.Decimal | null): number | null =>
+            value == null ? null : Number(value);
+        return {
+            id: contract.id,
+            contractNumber: contract.contractNumber,
+            contractType: contract.contractType,
+            status: contract.status,
+            signedAt: toDateOnly(contract.signedAt),
+            startDate: toDateOnly(contract.startDate),
+            endDate: contract.endDate ? toDateOnly(contract.endDate) : null,
+            probationEndDate: contract.probationEndDate
+                ? toDateOnly(contract.probationEndDate)
+                : null,
+            governedBy: contract.governedBy,
+            currency: contract.currency,
+            basicSalary: money(contract.basicSalary),
+            transportationAllowance: money(contract.transportationAllowance),
+            monthlyBonus: money(contract.monthlyBonus),
+            monthlyNetBonus: money(contract.monthlyNetBonus),
+            pensionApplicable: contract.pensionApplicable,
+            taxApplicable: contract.taxApplicable,
         };
     }
 

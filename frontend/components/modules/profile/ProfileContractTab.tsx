@@ -6,11 +6,13 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useMyActiveContract } from '@/lib/query/employee-contract';
 import { formatDateWithPattern } from '@/lib/utils/date-format';
+import type { ProfileContractPeriod } from '@/lib/utils/contract-period';
 import {
   employeeContractStatusVariant,
   formatEmployeeContractStatus,
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import {
   PROFILE_FIELD_GRID,
   ProfileEmptyState,
@@ -20,17 +22,26 @@ import {
 } from '@/components/modules/profile/profile-display';
 
 /**
- * My Profile → Contract: the employee's current ACTIVE contract, read-only.
- * The endpoint never returns pay fields, so none can render here.
+ * My Profile → Contract: selected (or active) own contract with pay amounts.
  */
 export default function ProfileContractTab({
   dateFormat,
+  contractPeriod = null,
 }: {
   dateFormat: string | null | undefined;
+  contractPeriod?: ProfileContractPeriod | null;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const contractQuery = useMyActiveContract();
+  const contractQuery = useMyActiveContract(contractPeriod?.id ?? null);
   const contract = contractQuery.data?.contract ?? null;
+  const currency = contract?.currency ?? 'ETB';
+
+  function money(value: number | null | undefined): string {
+    if (value == null) {
+      return '—';
+    }
+    return formatCurrencyAmount(value, currency);
+  }
 
   return (
     <ProfileSection title={t('profile.contractTitle')}>
@@ -75,6 +86,22 @@ export default function ProfileContractTab({
           </ProfileField>
           <ProfileField label={t('profile.contractGovernedBy')}>
             {displayText(contract.governedBy)}
+          </ProfileField>
+          <ProfileField label={t('hr.labels.basicSalary')}>
+            <span className="tabular-nums">{money(contract.basicSalary)}</span>
+          </ProfileField>
+          <ProfileField label={t('hr.labels.transportationAllowance')}>
+            <span className="tabular-nums">
+              {money(contract.transportationAllowance)}
+            </span>
+          </ProfileField>
+          <ProfileField label={t('hr.labels.monthlyBonus')}>
+            <span className="tabular-nums">{money(contract.monthlyBonus)}</span>
+          </ProfileField>
+          <ProfileField label={t('hr.labels.monthlyNetBonus')}>
+            <span className="tabular-nums">
+              {money(contract.monthlyNetBonus)}
+            </span>
           </ProfileField>
         </div>
       )}

@@ -40,7 +40,8 @@ export const employeeContractKeys = {
     [...employeeContractKeys.myLists(), params] as const,
   details: () => [...employeeContractKeys.all, "detail"] as const,
   detail: (id: string) => [...employeeContractKeys.details(), id] as const,
-  myActive: () => [...employeeContractKeys.all, "my-active"] as const,
+  myActive: (contractId?: string) =>
+    [...employeeContractKeys.all, "my-active", contractId ?? "active"] as const,
 };
 
 function buildListQuery(params: ListEmployeeContractsParams): string {
@@ -163,11 +164,21 @@ export function useEmployeeContract(id: string, enabled = true) {
 }
 
 /** The signed-in employee's active contract (no pay data), or null. */
-export function useMyActiveContract(enabled = true) {
+export function useMyActiveContract(
+  contractId?: string | null,
+  enabled = true,
+) {
+  const id = contractId?.trim() || undefined;
   return useQuery({
-    queryKey: employeeContractKeys.myActive(),
-    queryFn: () =>
-      apiGet<{ contract: MyActiveContract | null }>(`${CONTRACT_PATH}/my/active`),
+    queryKey: employeeContractKeys.myActive(id),
+    queryFn: () => {
+      const qs = id
+        ? `?contractId=${encodeURIComponent(id)}`
+        : '';
+      return apiGet<{ contract: MyActiveContract | null }>(
+        `${CONTRACT_PATH}/my/active${qs}`,
+      );
+    },
     enabled,
     retry: false,
   });
