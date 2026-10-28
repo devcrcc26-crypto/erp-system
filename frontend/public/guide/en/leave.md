@@ -134,11 +134,11 @@ You can also follow any request in **Approvals** → **My Requests**.
 
 If your request is returned, you receive the notification **Approval returned**. Open the request to see the reason.
 
-1. In the left menu, go to **Approvals** → **My Requests** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
+1. In the left menu, go to **Approvals** → **My Requests** (or **Pending My Action**) and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. Change the leave: go to **My Profile** → **Leave**, click **View all**, open the request, and click **Update**.
-4. Make the changes and click **Save Changes**.
-5. Go back to the request in **Approvals** → **My Requests**. In the **Resubmit** panel, write a **Note to approver (optional)** that explains what you changed, and attach files if needed.
+3. On the same page, click **Edit**. Change the **Leave type**, **Leave periods** (you can add or remove periods) or **Reason**. The days update from the work schedule, the same way as a new request. Click **Save Changes**.
+4. You can also open the request from **My Profile** → **Leave** → **View all** and click **Update** if you prefer — you do not have to leave Approvals to edit.
+5. Still on the Approvals request, in the **Resubmit** panel, write a **Note to approver (optional)** that explains what you changed, and attach files if needed.
 6. Click **Resubmit**. The request goes back through the approval chain from the beginning.
 
 

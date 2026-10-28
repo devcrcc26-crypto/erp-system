@@ -55,6 +55,7 @@ export interface LeavePeriod {
   startDate: string;
   endDate: string;
   days: number;
+  dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
 }
 
 export interface LeaveDayBreakdown {
@@ -162,7 +163,11 @@ export interface ListLeaveRequestsParams {
 
 export interface SubmitLeaveRequestPayload extends OnBehalfPayload {
   leaveType: LeaveType;
-  periods?: Array<{ startDate: string; endDate: string }>;
+  periods?: Array<{
+    startDate: string;
+    endDate: string;
+    dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
+  }>;
   startDate?: string;
   endDate?: string;
   days?: number;
@@ -172,7 +177,11 @@ export interface SubmitLeaveRequestPayload extends OnBehalfPayload {
 
 export interface UpdateLeaveRequestPayload {
   leaveType?: LeaveType;
-  periods?: Array<{ startDate: string; endDate: string }>;
+  periods?: Array<{
+    startDate: string;
+    endDate: string;
+    dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
+  }>;
   startDate?: string;
   endDate?: string;
   days?: number;

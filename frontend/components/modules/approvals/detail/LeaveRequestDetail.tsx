@@ -1,19 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
-  DatePicker,
   Form,
   Input,
-  InputNumber,
   Select,
   Skeleton,
   Space,
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
+import LeavePeriodsEditor, {
+  createEmptyLeavePeriod,
+  leavePeriodsOverlap,
+  toLeavePeriodInputs,
+  type LeavePeriodRow,
+} from '@/components/modules/hr/leave/LeavePeriodsEditor';
 import {
   MetaItem,
   SectionCard,
@@ -22,10 +26,13 @@ import {
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
+import type { PreviewDaysResult } from '@/lib/api/work-schedule.types';
 import { useLeaveRequest, useUpdateLeaveRequest } from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
+import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import {
   LEAVE_TYPE_OPTIONS,
   formatLeaveEmployeeName,
@@ -34,7 +41,8 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+import '@/components/modules/hr/leave/leave-v2.css';
 
 /**
  * Typed leave body for Approvals detail - editable when RETURNED by requester.
@@ -51,9 +59,49 @@ export default function LeaveRequestDetail({
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(sourceId);
   const updateMutation = useUpdateLeaveRequest(sourceId);
+  const previewMutation = usePreviewLeaveDays();
   const leave = detailQuery.data;
   const [editing, setEditing] = useState(false);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<{ leaveType: LeaveType; reason?: string }>();
+  const [periods, setPeriods] = useState<LeavePeriodRow[]>([]);
+  const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editing || !leave) {
+      return;
+    }
+    const inputs = toLeavePeriodInputs(periods);
+    if (inputs.length === 0) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+    if (leavePeriodsOverlap(periods)) {
+      setPreview(null);
+      setPreviewError(t('hr.form.overlapPeriods'));
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void previewMutation
+        .mutateAsync({ employeeId: leave.employeeId, periods: inputs })
+        .then((result) => {
+          setPreview(result);
+          setPreviewError(null);
+        })
+        .catch((error: unknown) => {
+          setPreview(null);
+          setPreviewError(
+            error instanceof ApiRequestError
+              ? error.message
+              : t('hr.messages.failedToPreviewLeaveDays'),
+          );
+        });
+    }, 300);
+    return () => window.clearTimeout(handle);
+    // previewMutation identity is unstable; periods + leave drive the preview.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [editing, periods, leave?.employeeId, t]);
 
   if (detailQuery.isLoading && !leave) {
     return (
@@ -83,47 +131,82 @@ export default function LeaveRequestDetail({
     Boolean(currentUser.data?.id) &&
     leave.employeeId === currentUser.data?.id;
 
+  function startEditing(): void {
+    const current = detailQuery.data;
+    if (!current) {
+      return;
+    }
+    form.setFieldsValue({
+      leaveType: current.leaveType,
+      reason: current.reason ?? '',
+    });
+    if (current.periods && current.periods.length > 0) {
+      setPeriods(
+        current.periods.map((period) => ({
+          id: period.id ?? createEmptyLeavePeriod().id,
+          range: [dayjs(period.startDate), dayjs(period.endDate)],
+          dayPortion: period.dayPortion ?? 'FULL',
+        })),
+      );
+    } else {
+      setPeriods([
+        {
+          id: createEmptyLeavePeriod().id,
+          range: [dayjs(current.startDate), dayjs(current.endDate)],
+          dayPortion: 'FULL',
+        },
+      ]);
+    }
+    setPreview(null);
+    setPreviewError(null);
+    setEditing(true);
+  }
+
   async function handleSave(): Promise<void> {
     try {
       const values = await form.validateFields();
+      const inputs = toLeavePeriodInputs(periods);
+      if (inputs.length === 0) {
+        messageApi.error(t('hr.form.periodRequired'));
+        return;
+      }
+      if (leavePeriodsOverlap(periods)) {
+        messageApi.error(t('hr.form.overlapPeriods'));
+        return;
+      }
+      if (previewError) {
+        messageApi.error(previewError);
+        return;
+      }
+      if (!preview || preview.totalDays <= 0) {
+        messageApi.error(t('hr.form.periodNoWorkingDays'));
+        return;
+      }
       await updateMutation.mutateAsync({
-        leaveType: values.leaveType as LeaveType,
-        periods: [
-          {
-            startDate: values.range[0].format('YYYY-MM-DD'),
-            endDate: values.range[1].format('YYYY-MM-DD'),
-          },
-        ],
+        leaveType: values.leaveType,
+        periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
-      messageApi.success('Leave request updated');
+      messageApi.success(t('hr.messages.leaveRequestUpdated'));
       setEditing(false);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      notifyApiError(error, 'Failed to update leave', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToUpdateLeaveRequest'),
+        messageApi,
+      );
     }
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="erp-leave-v2 flex flex-col gap-3">
       {canEdit && !editing ? (
         <div className="flex justify-end">
-          <Button
-            size="small"
-            onClick={() => {
-              form.setFieldsValue({
-                leaveType: leave.leaveType,
-                range: [dayjs(leave.startDate), dayjs(leave.endDate)],
-                days: leave.days,
-                reason: leave.reason ?? '',
-              });
-              setEditing(true);
-            }}
-            style={{ borderRadius: 0 }}
-          >
-            Edit
+          <Button size="small" onClick={startEditing} style={{ borderRadius: 0 }}>
+            {t('common.edit')}
           </Button>
         </div>
       ) : null}
@@ -144,22 +227,18 @@ export default function LeaveRequestDetail({
           <Form form={form} layout="vertical" requiredMark={false}>
             <Form.Item
               name="leaveType"
-              label="Leave type"
+              label={t('hr.form.leaveType')}
               rules={[{ required: true }]}
             >
               <Select options={LEAVE_TYPE_OPTIONS} />
             </Form.Item>
-            <Form.Item
-              name="range"
-              label="Dates"
-              rules={[{ required: true, message: 'Select date range' }]}
-            >
-              <DatePicker.RangePicker className="w-full" format="DD/MM/YYYY" />
-            </Form.Item>
-            <Form.Item name="days" label="Days" rules={[{ required: true }]}>
-              <InputNumber min={0.5} max={365} step={0.5} className="w-full" />
-            </Form.Item>
-            <Form.Item name="reason" label="Reason">
+            <LeavePeriodsEditor
+              periods={periods}
+              onChange={setPeriods}
+              preview={preview}
+              previewError={previewError}
+            />
+            <Form.Item name="reason" label={t('hr.form.reason')}>
               <Input.TextArea rows={3} maxLength={4000} />
             </Form.Item>
             <Space>
@@ -168,9 +247,11 @@ export default function LeaveRequestDetail({
                 loading={updateMutation.isPending}
                 onClick={() => void handleSave()}
               >
-                Save changes
+                {t('hr.buttons.saveLeaveRequest')}
               </Button>
-              <Button onClick={() => setEditing(false)}>Cancel</Button>
+              <Button onClick={() => setEditing(false)}>
+                {t('hr.buttons.cancel')}
+              </Button>
             </Space>
           </Form>
         </SectionCard>
@@ -216,7 +297,10 @@ export default function LeaveRequestDetail({
         </>
       )}
 
-      <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-3 py-4 sm:px-5">
+      <SectionCard
+        title={t('hr.section.leaveBalance')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
         {balance ? (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4">
             <MetaItem label={t('hr.labels.entitled')}>{balance.entitled}</MetaItem>

@@ -1,19 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  Select,
-  Skeleton,
-} from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
+import { Alert, Button, Form, Input, Select, Skeleton } from 'antd';
+import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
+import LeavePeriodsEditor, {
+  createEmptyLeavePeriod,
+  leavePeriodsOverlap,
+  toLeavePeriodInputs,
+  type LeavePeriodRow,
+} from '@/components/modules/hr/leave/LeavePeriodsEditor';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
@@ -22,10 +18,7 @@ import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
-import type {
-  LeavePeriodInput,
-  PreviewDaysResult,
-} from '@/lib/api/work-schedule.types';
+import type { PreviewDaysResult } from '@/lib/api/work-schedule.types';
 import {
   useLeaveRequest,
   useUpdateLeaveRequest,
@@ -35,42 +28,16 @@ import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-interface LeavePeriodRow {
-  id: string;
-  range: [Dayjs, Dayjs] | null;
-}
+import './leave-v2.css';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
   reason?: string;
 }
 
-function newPeriodId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function completeRange(
-  value: [Dayjs | null, Dayjs | null] | null,
-): [Dayjs, Dayjs] | null {
-  if (!value?.[0] || !value[1]) {
-    return null;
-  }
-  return [value[0], value[1]];
-}
-
-function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
-  return periods
-    .filter((row): row is LeavePeriodRow & { range: [Dayjs, Dayjs] } =>
-      Boolean(row.range?.[0] && row.range[1]),
-    )
-    .map((row) => ({
-      startDate: row.range[0].format('YYYY-MM-DD'),
-      endDate: row.range[1].format('YYYY-MM-DD'),
-    }));
-}
-
 /**
  * Edit a draft or returned leave request (owner or HR).
+ * Periods and day counts match the new-request form (work-schedule preview).
  */
 export default function LeaveRequestEditPageContent({
   requestId,
@@ -131,25 +98,32 @@ export default function LeaveRequestEditPageContent({
     if (request.periods && request.periods.length > 0) {
       setPeriods(
         request.periods.map((period) => ({
-          id: period.id ?? newPeriodId(),
+          id: period.id ?? createEmptyLeavePeriod().id,
           range: [dayjs(period.startDate), dayjs(period.endDate)],
+          dayPortion: period.dayPortion ?? 'FULL',
         })),
       );
     } else {
       setPeriods([
         {
-          id: newPeriodId(),
+          id: createEmptyLeavePeriod().id,
           range: [dayjs(request.startDate), dayjs(request.endDate)],
+          dayPortion: 'FULL',
         },
       ]);
     }
   }, [form, request]);
 
   useEffect(() => {
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0 || !request) {
       setPreview(null);
       setPreviewError(null);
+      return;
+    }
+    if (leavePeriodsOverlap(periods)) {
+      setPreview(null);
+      setPreviewError(t('hr.form.overlapPeriods'));
       return;
     }
     const handle = window.setTimeout(() => {
@@ -169,12 +143,17 @@ export default function LeaveRequestEditPageContent({
         });
     }, 300);
     return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [periods, request?.employeeId, t]);
 
   async function handleSubmit(values: LeaveFormValues): Promise<void> {
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0) {
       messageApi.error(t('hr.form.periodRequired'));
+      return;
+    }
+    if (leavePeriodsOverlap(periods)) {
+      messageApi.error(t('hr.form.overlapPeriods'));
       return;
     }
     if (previewError) {
@@ -248,122 +227,62 @@ export default function LeaveRequestEditPageContent({
       cancelHref={`/hr/leave-requests/${requestId}`}
       backLabel={t('hr.buttons.back')}
     >
-      {updateMutation.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            updateMutation.error instanceof ApiRequestError
-              ? updateMutation.error.message
-              : t('hr.messages.failedToUpdateLeaveRequest')
-          }
+      <div className="erp-leave-v2 flex flex-col gap-4">
+        {updateMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              updateMutation.error instanceof ApiRequestError
+                ? updateMutation.error.message
+                : t('hr.messages.failedToUpdateLeaveRequest')
+            }
+          />
+        ) : null}
+
+        <Form
+          id="leave-request-edit-form"
+          form={form}
+          layout="vertical"
+          onFinish={(values) => void handleSubmit(values)}
+          className="flex flex-col gap-4"
+        >
+          <FormLayout variant="pro" title={t('hr.form.leaveDetails')}>
+            <Form.Item
+              name="leaveType"
+              label={t('hr.form.leaveType')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectLeaveType'),
+                },
+              ]}
+            >
+              <Select options={leaveTypeOptions} />
+            </Form.Item>
+
+            <LeavePeriodsEditor
+              periods={periods}
+              onChange={setPeriods}
+              preview={preview}
+              previewError={previewError}
+            />
+
+            <Form.Item name="reason" label={t('hr.form.reason')}>
+              <Input.TextArea rows={4} maxLength={4000} showCount />
+            </Form.Item>
+          </FormLayout>
+        </Form>
+
+        <FormPageFooter
+          submitLabel={t('hr.buttons.saveLeaveRequest')}
+          formId="leave-request-edit-form"
+          useFormAttribute
+          isSubmitting={updateMutation.isPending}
+          submitDisabled={!canEdit}
+          onSubmit={() => form.submit()}
         />
-      ) : null}
-
-      <Form
-        id="leave-request-edit-form"
-        form={form}
-        layout="vertical"
-        onFinish={(values) => void handleSubmit(values)}
-        className="flex flex-col gap-4"
-      >
-        <FormLayout variant="pro" title={t('hr.form.leaveDetails')}>
-          <Form.Item
-            name="leaveType"
-            label={t('hr.form.leaveType')}
-            rules={[
-              {
-                required: true,
-                message: t('hr.validation.selectLeaveType'),
-              },
-            ]}
-          >
-            <Select options={leaveTypeOptions} />
-          </Form.Item>
-
-          <div className="mb-4">
-            <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
-            <div className="flex flex-col gap-3">
-              {periods.map((period, index) => (
-                <div key={period.id} className="flex items-start gap-2">
-                  <DatePicker.RangePicker
-                    className="w-full"
-                    value={period.range}
-                    onChange={(value) => {
-                      setPeriods((current) =>
-                        current.map((row) =>
-                          row.id === period.id
-                            ? {
-                                ...row,
-                                range: completeRange(
-                                  value as [Dayjs | null, Dayjs | null] | null,
-                                ),
-                              }
-                            : row,
-                        ),
-                      );
-                    }}
-                  />
-                  {periods.length > 1 ? (
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() =>
-                        setPeriods((current) =>
-                          current.filter((row) => row.id !== period.id),
-                        )
-                      }
-                    />
-                  ) : null}
-                  {index === periods.length - 1 ? (
-                    <Button
-                      icon={<PlusOutlined />}
-                      onClick={() =>
-                        setPeriods((current) => [
-                          ...current,
-                          { id: newPeriodId(), range: null },
-                        ])
-                      }
-                    >
-                      {t('hr.form.addPeriod')}
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            {previewError ? (
-              <Alert
-                type="error"
-                showIcon
-                title={previewError}
-                className="mt-3"
-              />
-            ) : preview ? (
-              <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
-                <LeavePeriodBreakdownTable
-                  breakdown={preview.periods.flatMap((row) => row.breakdown)}
-                  totalDays={preview.totalDays}
-                  showTotal
-                />
-              </div>
-            ) : null}
-          </div>
-
-          <Form.Item name="reason" label={t('hr.form.reason')}>
-            <Input.TextArea rows={4} maxLength={4000} showCount />
-          </Form.Item>
-        </FormLayout>
-      </Form>
-
-      <FormPageFooter
-        submitLabel={t('hr.buttons.saveLeaveRequest')}
-        formId="leave-request-edit-form"
-        useFormAttribute
-        isSubmitting={updateMutation.isPending}
-        submitDisabled={!canEdit}
-        onSubmit={() => form.submit()}
-      />
+      </div>
     </HrFormPageShell>
   );
 }

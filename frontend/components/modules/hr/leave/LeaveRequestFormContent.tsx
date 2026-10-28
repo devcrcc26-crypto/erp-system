@@ -3,20 +3,18 @@
 import './leave-v2.css';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  Select,
-} from 'antd';
+import { Alert, Form, Input, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
+import LeavePeriodsEditor, {
+  createEmptyLeavePeriod,
+  leavePeriodsOverlap,
+  toLeavePeriodInputs,
+  type LeavePeriodRow,
+} from '@/components/modules/hr/leave/LeavePeriodsEditor';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import {
@@ -29,11 +27,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
-import type {
-  LeaveDayPortion,
-  LeavePeriodInput,
-  PreviewDaysResult,
-} from '@/lib/api/work-schedule.types';
+import type { PreviewDaysResult } from '@/lib/api/work-schedule.types';
 import {
   useMyLeaveBalances,
   useSubmitLeaveRequest,
@@ -48,12 +42,6 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
 
-interface LeavePeriodRow {
-  id: string;
-  range: [Dayjs, Dayjs] | null;
-  dayPortion: LeaveDayPortion;
-}
-
 interface LeaveFormValues {
   leaveType: LeaveType;
   reason?: string;
@@ -63,93 +51,12 @@ const DEFAULT_LEAVE_TYPE: LeaveType = 'ANNUAL';
 
 const DETAILS_FIELDS = ['leaveType', 'reason'] as const;
 
-function newPeriodId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function periodsOverlap(periods: LeavePeriodRow[]): boolean {
-  const ranges = periods
-    .map((row) => row.range)
-    .filter((range): range is [Dayjs, Dayjs] => Boolean(range));
-  for (let i = 0; i < ranges.length; i += 1) {
-    for (let j = i + 1; j < ranges.length; j += 1) {
-      const a = ranges[i];
-      const b = ranges[j];
-      if (!a[1].isBefore(b[0], 'day') && !b[1].isBefore(a[0], 'day')) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function completeRange(
-  value: [Dayjs | null, Dayjs | null] | null,
-): [Dayjs, Dayjs] | null {
-  if (!value?.[0] || !value[1]) {
-    return null;
-  }
-  return [value[0], value[1]];
-}
-
-function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
-  return periods
-    .filter((row): row is LeavePeriodRow & { range: [Dayjs, Dayjs] } =>
-      Boolean(row.range?.[0] && row.range[1]),
-    )
-    .map((row) => ({
-      startDate: row.range[0].format('YYYY-MM-DD'),
-      endDate: row.range[1].format('YYYY-MM-DD'),
-      dayPortion: row.dayPortion,
-    }));
-}
-
-function isSingleDay(range: [Dayjs, Dayjs] | null): boolean {
-  if (!range) {
-    return false;
-  }
-  return range[0].isSame(range[1], 'day');
-}
-
 function roundBalanceAmount(value: number | string | undefined): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return 0;
   }
   return Math.round(numeric * 10) / 10;
-}
-
-function formatLeaveChargeSummary(
-  preview: PreviewDaysResult,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string {
-  const summary = preview.summary;
-  if (!summary) {
-    return t('hr.form.daysCharged', { days: preview.totalDays });
-  }
-  const parts: string[] = [];
-  if (summary.workingDays > 0) {
-    parts.push(
-      t('hr.form.summaryWorking', { count: summary.workingDays }),
-    );
-  }
-  if (summary.halfDays > 0) {
-    parts.push(t('hr.form.summaryHalf', { count: summary.halfDays }));
-  }
-  if (summary.weekendDays > 0) {
-    parts.push(
-      t('hr.form.summaryWeekend', { count: summary.weekendDays }),
-    );
-  }
-  if (summary.holidayDays > 0) {
-    parts.push(
-      t('hr.form.summaryHoliday', { count: summary.holidayDays }),
-    );
-  }
-  return t('hr.form.daysChargedDetail', {
-    days: preview.totalDays,
-    detail: parts.join(', '),
-  });
 }
 
 function ReviewItem({
@@ -188,7 +95,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     Partial<LeaveFormValues>
   >({ leaveType: DEFAULT_LEAVE_TYPE });
   const [periods, setPeriods] = useState<LeavePeriodRow[]>([
-    { id: newPeriodId(), range: null, dayPortion: 'FULL' },
+    createEmptyLeavePeriod(),
   ]);
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -197,7 +104,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     onBehalf.employee?.gender ?? currentUser.data?.gender ?? null;
 
   const balanceForDate = useMemo(() => {
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0) {
       return undefined;
     }
@@ -285,13 +192,13 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }, [form, leaveOwnerGender, leaveType]);
 
   useEffect(() => {
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0) {
       setPreview(null);
       setPreviewError(null);
       return;
     }
-    if (periodsOverlap(periods)) {
+    if (leavePeriodsOverlap(periods)) {
       setPreview(null);
       setPreviewError(t('hr.form.overlapPeriods'));
       return;
@@ -328,7 +235,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
     setSelectedFiles([]);
     setDetailsSnapshot({ leaveType: DEFAULT_LEAVE_TYPE });
-    setPeriods([{ id: newPeriodId(), range: null, dayPortion: 'FULL' }]);
+    setPeriods([createEmptyLeavePeriod()]);
     setPreview(null);
     setPreviewError(null);
     setFormError(null);
@@ -340,12 +247,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     } catch {
       return false;
     }
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0) {
       setFormError(t('hr.form.periodRequired'));
       return false;
     }
-    if (periodsOverlap(periods)) {
+    if (leavePeriodsOverlap(periods)) {
       setFormError(t('hr.form.overlapPeriods'));
       return false;
     }
@@ -387,12 +294,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     } catch {
       return;
     }
-    const inputs = toPeriodInputs(periods);
+    const inputs = toLeavePeriodInputs(periods);
     if (inputs.length === 0) {
       setFormError(t('hr.form.periodRequired'));
       return;
     }
-    if (periodsOverlap(periods)) {
+    if (leavePeriodsOverlap(periods)) {
       setFormError(t('hr.form.overlapPeriods'));
       return;
     }
@@ -586,100 +493,25 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 />
               </Form.Item>
 
-              <div className="erp-leave-period-editor mb-4">
-                <p className="erp-leave-period-editor-label">
-                  {t('hr.form.periods')}
-                </p>
-                <div className="erp-leave-period-editor-list">
-                  {periods.map((period, index) => (
-                    <div key={period.id} className="erp-leave-period-editor-row">
-                      <DatePicker.RangePicker
-                        className="w-full"
-                        value={period.range}
-                        onChange={(value) => {
-                          const nextRange = completeRange(
-                            value as [Dayjs | null, Dayjs | null] | null,
-                          );
-                          setPeriods((current) =>
-                            current.map((row) =>
-                              row.id === period.id
-                                ? {
-                                    ...row,
-                                    range: nextRange,
-                                    dayPortion:
-                                      nextRange && isSingleDay(nextRange)
-                                        ? row.dayPortion
-                                        : 'FULL',
-                                  }
-                                : row,
-                            ),
-                          );
-                        }}
-                      />
-                      {isSingleDay(period.range) ? (
-                        <Select
-                          className="w-full"
-                          value={period.dayPortion}
-                          options={[
-                            {
-                              value: 'FULL',
-                              label: t('hr.form.dayPortionFull'),
-                            },
-                            {
-                              value: 'MORNING',
-                              label: t('hr.form.dayPortionMorning'),
-                            },
-                            {
-                              value: 'AFTERNOON',
-                              label: t('hr.form.dayPortionAfternoon'),
-                            },
-                          ]}
-                          onChange={(value: LeaveDayPortion) => {
-                            setPeriods((current) =>
-                              current.map((row) =>
-                                row.id === period.id
-                                  ? { ...row, dayPortion: value }
-                                  : row,
-                              ),
-                            );
-                          }}
-                        />
-                      ) : null}
-                      <div className="erp-leave-period-editor-actions">
-                        {periods.length > 1 ? (
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            aria-label={t('hr.form.removePeriod')}
-                            onClick={() =>
-                              setPeriods((current) =>
-                                current.filter((row) => row.id !== period.id),
-                              )
-                            }
-                          />
-                        ) : null}
-                        {index === periods.length - 1 ? (
-                          <Button
-                            icon={<PlusOutlined />}
-                            onClick={() =>
-                              setPeriods((current) => [
-                                ...current,
-                                {
-                                  id: newPeriodId(),
-                                  range: null,
-                                  dayPortion: 'FULL',
-                                },
-                              ])
-                            }
-                          >
-                            {t('hr.form.addPeriod')}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <LeavePeriodsEditor
+                periods={periods}
+                onChange={setPeriods}
+                preview={preview}
+                previewError={previewError}
+                previewHint={
+                  selectedBalance && preview ? (
+                    <p className="erp-leave-preview-hint">
+                      {t('hr.form.remainingAfterRequest', {
+                        remaining:
+                          Math.round(
+                            (selectedBalance.remaining - preview.totalDays) *
+                              10,
+                          ) / 10,
+                      })}
+                    </p>
+                  ) : null
+                }
+              >
                 <DayCoverageNotice
                   className="mt-3"
                   employeeId={onBehalf.effectiveEmployeeId}
@@ -687,39 +519,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   to={coverageSpan?.to ?? null}
                   focus="LEAVE"
                 />
-                {previewError ? (
-                  <Alert
-                    type="error"
-                    showIcon
-                    title={previewError}
-                    className="mt-1"
-                  />
-                ) : preview ? (
-                  <div className="erp-leave-preview-panel">
-                    <p className="erp-leave-preview-title">
-                      {formatLeaveChargeSummary(preview, t)}
-                    </p>
-                    {selectedBalance ? (
-                      <p className="erp-leave-preview-hint">
-                        {t('hr.form.remainingAfterRequest', {
-                          remaining:
-                            Math.round(
-                              (selectedBalance.remaining - preview.totalDays) *
-                                10,
-                            ) / 10,
-                        })}
-                      </p>
-                    ) : null}
-                    <LeavePeriodBreakdownTable
-                      breakdown={preview.periods.flatMap(
-                        (row) => row.breakdown,
-                      )}
-                      totalDays={preview.totalDays}
-                      showTotal
-                    />
-                  </div>
-                ) : null}
-              </div>
+              </LeavePeriodsEditor>
 
               <div className="erp-leave-form-balance mb-4">
                 <p className="erp-leave-form-balance-title">
