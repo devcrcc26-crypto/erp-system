@@ -27,7 +27,6 @@ The status shows where an evaluation is: **Pending** → **Self-Assessed** → *
 4. Add a **Comment (optional)** to any criterion.
 5. Click **Submit Assessment**.
 
-[SCREENSHOT: evaluations-self-assessment.png]
 
 > **After you submit:** You see *"Assessment submitted successfully"*. Your evaluation moves on to the next assessment. Until your Team Lead starts, you can open it again and click **Re-assess** to change your answers.
 
@@ -74,7 +73,6 @@ The status shows where an evaluation is: **Pending** → **Self-Assessed** → *
 4. Write your overall comments about the employee's performance.
 5. Click **Submit Assessment**.
 
-[SCREENSHOT: evaluations-inbox.png]
 
 > **After you submit:** The evaluation moves to the Discipline Lead. Until they start, you can click **Re-assess** to change your scores.
 
@@ -145,7 +143,6 @@ The other tabs in the inbox are **In Progress**, **Awaiting Employee**, **Escala
 4. Click **Generate evaluations** to create an evaluation for each employee.
 5. When the quarter's evaluations are finished, click **Close cycle** and confirm. This cannot be undone.
 
-[SCREENSHOT: evaluations-cycles.png]
 
 ---
 <!-- /role -->

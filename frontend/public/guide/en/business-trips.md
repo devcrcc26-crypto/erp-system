@@ -19,7 +19,6 @@ Use a business trip request for travel to a third country. You enter the trip, i
 1. In the left menu, go to **New Request**.
 2. Click **Third-Country Business Trip**. The form has four steps: **Trip Details**, **Purpose & Budget**, **Passengers** and **Review & Submit**.
 
-[SCREENSHOT: business-trips-new-form.png]
 
 ## Step 1 — Trip Details
 
@@ -61,7 +60,6 @@ Use a business trip request for travel to a third country. You enter the trip, i
 3. Click **Back** to change anything.
 4. Click **Submit Business Trip**.
 
-[SCREENSHOT: business-trips-review.png]
 
 > **After you submit:** You see *"Business trip submitted"*. Your request has been sent for approval. You will receive a notification when it is approved or returned.
 

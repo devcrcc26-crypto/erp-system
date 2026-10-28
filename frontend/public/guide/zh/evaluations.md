@@ -29,7 +29,6 @@
 4. 可以为任一标准填写备注（**Comment (optional)**）。
 5. 点击 **Submit Assessment**（提交评估）。
 
-[SCREENSHOT: evaluations-self-assessment.png]
 
 > **提交后：** 页面会提示 *"Assessment submitted successfully"*。考核会进入下一步评估。在团队负责人开始评估之前，您可以重新打开并点击 **Re-assess** 修改答案。
 
@@ -76,7 +75,6 @@
 4. 填写对该员工表现的总体评价。
 5. 点击 **Submit Assessment**。
 
-[SCREENSHOT: evaluations-inbox.png]
 
 > **提交后：** 考核转到学科负责人。在学科负责人开始之前，您可以点击 **Re-assess** 修改评分。
 
@@ -147,7 +145,6 @@
 4. 点击 **Generate evaluations**，为每位员工生成考核。
 5. 本季度考核完成后，点击 **Close cycle** 并确认。此操作不可撤销。
 
-[SCREENSHOT: evaluations-cycles.png]
 
 ---
 <!-- /role -->

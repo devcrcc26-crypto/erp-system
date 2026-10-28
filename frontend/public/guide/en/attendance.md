@@ -16,7 +16,6 @@ Each month you import the attendance machine's export (Deli e+), match each mach
 2. In the left menu, go to **Time & Attendance** → **Attendance**.
 3. Click **Import Attendance**. The **Import Attendance** window opens with three steps: **Upload File**, **Review & Confirm** and **Done**.
 
-[SCREENSHOT: attendance-import-upload.png]
 
 ## Step 1 — Upload File
 
@@ -43,7 +42,6 @@ The review shows four sections. Work through each one.
 5. Check the summary at the bottom: how many records will be imported, skipped and not matched.
 6. Click **Confirm Import**. If the month was imported before, confirm **Replace existing data?** with **Yes, Replace**.
 
-[SCREENSHOT: attendance-import-review.png]
 
 ## Step 3 — Done
 
@@ -62,7 +60,6 @@ The review shows four sections. Work through each one.
 5. Click **View Daily Logs** on an employee to see each day's **Status**, **Clock In (Local)**, **Clock Out (Local)**, **Flag** and **Deduction**, and any explanation the employee submitted.
 6. When every record is checked, click **Mark as Reviewed**. The banner changes to *"Reviewed - Ready for approval"*.
 
-[SCREENSHOT: attendance-review-month.png]
 
 > **Note:** *"Would deduct … (not applied)"* shows a deduction that would apply but has not been applied.
 
@@ -98,7 +95,6 @@ Some employees only scan once a day. If their first scan was after the latest al
 3. Read **Approve [month] [year] Attendance?**: approving locks the month and notifies every employee with flagged days to submit explanations.
 4. Click **Approve**.
 
-[SCREENSHOT: attendance-approve-month.png]
 
 > **After you approve:** You see *"Attendance month approved and locked."* No corrections are possible. The banner shows who approved and when.
 

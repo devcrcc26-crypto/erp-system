@@ -43,7 +43,6 @@ Every run moves through these steps, shown at the top of the run:
 4. **Notes** (optional).
 5. Click **Create & generate**.
 
-[SCREENSHOT: payroll-new-run.png]
 
 > **After you create it:** You see *"Payroll run created."* The run is a **Draft** with one entry per employee on the payroll roster. Only one run can exist per month. If you try another, you see *"Payroll run for [month] already exists"*.
 
@@ -59,7 +58,6 @@ Every run moves through these steps, shown at the top of the run:
 4. Click **Details** on an entry to see its breakdown, including **Paid days** (on a 30-day month basis).
 5. Read each entry's **Flag** and **Flag note**.
 
-[SCREENSHOT: payroll-run-entries.png]
 
 **Flags you may see**
 
@@ -155,7 +153,6 @@ Recalculate after you change contracts, attendance, overtime or leave for the mo
 2. Check the totals and the entries.
 3. Click **GM approve** and confirm **GM approve payroll run?**.
 
-[SCREENSHOT: payroll-gm-approve.png]
 
 > **After you approve:** You see *"Run approved by GM."* HR can now pay the salaries and release the payslips.
 
@@ -195,7 +192,6 @@ If something needs to change, do not approve. Tell HR what to fix. HR changes an
 4. Click **Release to employees** and confirm **Release payslips to employees?**.
 5. To download them all, click **Download all (ZIP)**.
 
-[SCREENSHOT: payroll-payslips.png]
 
 > **After you release:** You see *"Released. [N] employees notified."* Each employee sees their payslip under **My Profile** → **Payroll**.
 

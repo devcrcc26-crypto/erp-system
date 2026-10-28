@@ -11,7 +11,6 @@
 1. In the left menu, click **My Profile**. It is at the bottom and shows your name.
 2. Click a tab to see that part of your record.
 
-[SCREENSHOT: profile-tabs.png]
 
 | Tab | What it shows |
 | --- | --- |
@@ -22,12 +21,27 @@
 | **Work Schedule** | Your working hours and the public holidays coming up |
 | **Documents** | Documents HR has filed for you |
 | **Contract** | Your employment contract |
-| **Payroll** | Your payslips. You see only your own |
 | **Assets** | Company equipment issued to you |
 | **Per Diem** | Your per diem rates and requests |
 | **Evaluations** | Your performance evaluations |
 
 ---
+
+<!-- role: EMPLOYEE -->
+## How to see your payslips
+
+*(Employees)*
+
+1. Go to **My Profile** → **Payroll**. You see only your own payslips.
+2. Each row shows the **Period**, your **Net pay** and the date it was **Released**. A payslip marked **Not released** is still being prepared by HR.
+3. Click **View breakdown** to see your earnings, overtime, deductions and net pay.
+4. Click **Download PDF** to save or print the payslip.
+
+> **Note:** If you see *"No payslips yet. They appear here once HR releases them."*, HR has not released a payslip for you yet. Ask HR if you think one is missing.
+
+---
+<!-- /role -->
+
 
 ## How to change your language, time zone or date format
 
@@ -82,4 +96,3 @@ You get a notification when something needs you, for example when a request is a
 3. Click a notification to open the request or page it is about. Click **Mark read** on one, or **Mark all read** for all of them.
 4. Click **View all notifications** to open the full list.
 
-[SCREENSHOT: profile-notifications.png]

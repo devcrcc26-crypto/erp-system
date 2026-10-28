@@ -17,7 +17,6 @@ HR keeps a record for every employee: their account, personal details, job, leav
 1. In the left menu, go to **People** → **Employees**.
 2. Click **Add employee**. The form has six steps: **Account & Access**, **Personal Information**, **Employment Details**, **Education & Experience**, **Leave Policy & Documents** and **Review & Submit**.
 
-[SCREENSHOT: employees-add.png]
 
 ## Step 1 — Account & Access
 
@@ -104,7 +103,6 @@ To add many employees at once, click **Import from Excel** on **Employees**. Eac
 5. **Supporting Documents**: attach the signed contract.
 6. **Review & Submit**: click **Create Contract**.
 
-[SCREENSHOT: employees-contract-new.png]
 
 > **After you save:** You see *"Employee contract created"*. Payroll uses the active contract's pay.
 
@@ -140,7 +138,6 @@ To end it, click **Reactivate**, set the **Last inactive day (optional)**, and c
 6. If they hold anything, click **Next: handover**. For each pending approval and each leader or approver role, choose the **Replacement**, or **Skip** with a reason. For each request they submitted, choose **Keep** or **Cancel request**.
 7. Click **Separate**.
 
-[SCREENSHOT: employees-separate.png]
 
 > **Note:** To undo a separation, click **Cancel separation**. Employment, the contract end date and login go back to how they were.
 

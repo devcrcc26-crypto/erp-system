@@ -38,7 +38,6 @@ You record overtime on one sheet per month. You add an entry each time you work 
    - If you already have a draft for that month, the page says so. Click **Continue draft**.
    - If you already submitted a sheet for that month, click **Open it**.
 
-[SCREENSHOT: overtime-open-sheet.png]
 
 > **After you open it:** Your sheet opens with the status **Draft**. Add your entries next.
 
@@ -56,7 +55,6 @@ You record overtime on one sheet per month. You add an entry each time you work 
 6. Check the **Hours preview**. It shows **Normal OT**, **Evening OT** (22:00–06:00), **Weekend**, **Holiday** and **Total**.
 7. Click **Save**.
 
-[SCREENSHOT: overtime-add-entry.png]
 
 > **After you save:** The entry appears under **Entries** and the totals update. If an entry shows **Attendance check**, the times do not match your attendance scans for that day. You can still save and submit.
 
@@ -80,7 +78,6 @@ You record overtime on one sheet per month. You add an entry each time you work 
 2. Click **Submit Sheet**.
 3. In **Submit overtime sheet?**, confirm.
 
-[SCREENSHOT: overtime-submit-sheet.png]
 
 > **After you submit:** Your sheet has been sent for approval and its status is **Submitted**. You will receive a notification when it is approved or returned. You do not need to do anything else unless it is returned to you.
 
@@ -147,7 +144,6 @@ If your sheet is returned, you receive the notification **Approval returned**. O
 4. Change the entries as asked and click **Save**.
 5. Click **Submit Sheet** and confirm. The sheet goes back through the approval chain from the beginning.
 
-[SCREENSHOT: overtime-returned.png]
 
 ---
 
@@ -170,7 +166,6 @@ When an overtime sheet reaches you, you receive the notification **Approval requ
    - **Reject**: click **Reject**, write the **Rejection reason**, and click **Reject**. This closes the sheet and cannot be undone.
    - **Conditionally Approve**: write the **Condition** and click **Submit**.
 
-[SCREENSHOT: overtime-approval-review.png]
 
 ---
 <!-- /role -->
@@ -202,7 +197,6 @@ The sheet belongs to the employee and follows their own approvers.
 4. The columns show **Sheet #**, **Employee**, **Period**, **Normal OT (hrs)**, **Evening OT (hrs)**, **Weekend (hrs)**, **Holiday (hrs)**, **Total (hrs)** and **Status**.
 5. Click a sheet to open it.
 
-[SCREENSHOT: overtime-hr-list.png]
 
 ---
 <!-- /role -->

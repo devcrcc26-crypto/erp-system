@@ -19,7 +19,6 @@ Use a work-from-home request to ask to work from home on one or more days. When 
 1. In the left menu, go to **New Request**.
 2. Click **Work From Home**. The **Request work from home** form has two steps: **Details** and **Review**.
 
-[SCREENSHOT: wfh-new-request.png]
 
 ## Step 1 — Details
 
@@ -104,7 +103,6 @@ Use this for office closures or planned remote days. No approval request is sent
    - **Specific employees**: choose the **Employees**.
 6. Click **Save**.
 
-[SCREENSHOT: wfh-hr-assign.png]
 
 > **After you save:** Attendance for the people covered shows **Work from home** for those days.
 

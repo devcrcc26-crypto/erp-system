@@ -21,7 +21,6 @@ You can explain days once HR has processed that month's attendance. When HR appr
 1. In the left menu, go to **New Request**.
 2. Click **Field Movement / Early Departure Log**. The form has three steps: **Choose month**, **Explain days** and **Review & submit**.
 
-[SCREENSHOT: field-movement-new.png]
 
 > **Note:** You can also start from **My Profile** → **Attendance**. When a month has flagged days, a banner there has a **Submit Explanation** button.
 
@@ -56,7 +55,6 @@ The table lists each flagged day with its **Date**, **Scans (in / out)**, **Issu
 8. Click **Save draft**. The days show as explained.
 9. Repeat for any other days, then click **Next**. You do not have to explain every day at once.
 
-[SCREENSHOT: field-movement-explain-days.png]
 
 > **Note:** A forgotten scan is filled in once your explanation is approved. An early departure is only excused by an approved **Left early** or **Field / site visit** explanation.
 
@@ -119,7 +117,6 @@ When an explanation reaches you, you receive the notification **Approval require
 4. The columns show **Log #**, **Employee**, **Period**, **Days**, **Status**, **Waiting on** and **Submitted**.
 5. Click a log to see the **Explained days** and the **Employee note**, or click **Open in Approvals**.
 
-[SCREENSHOT: field-movement-hr-list.png]
 
 ---
 

@@ -25,7 +25,6 @@
    - **审批中心**
    - **我的资料**
 
-[SCREENSHOT: dashboard-quick-actions.png]
 
 ---
 

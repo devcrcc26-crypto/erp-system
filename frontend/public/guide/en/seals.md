@@ -19,7 +19,6 @@ Use a seal request when a document needs the company's official seal or a projec
 1. In the left menu, go to **New Request**.
 2. Click **Official Seal Usage** or **Project Seal Usage**. The form has three steps: **Request Details**, **Document to Seal** and **Review & Submit**.
 
-[SCREENSHOT: seals-new-request.png]
 
 ## Step 1 — Request Details
 
@@ -100,7 +99,6 @@ When a request reaches you, you receive the notification **Approval required**.
 4. The columns show **Request #**, **Employee**, **File Name**, **Urgency**, **Date Needed**, **Status** and **Current Tier**.
 5. Click a request to open it.
 
-[SCREENSHOT: seals-hr-list.png]
 
 ---
 <!-- /role -->

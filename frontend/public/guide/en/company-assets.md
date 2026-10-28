@@ -18,7 +18,6 @@ The company asset register lists the equipment the company owns, such as laptops
 1. In the left menu, go to **My Profile**.
 2. Click the **Assets** tab. **Assigned Company Assets** lists each asset's **Photo**, **Asset Name**, **Serial Number**, **Type**, **Status** and **Assigned At** date.
 
-[SCREENSHOT: company-assets-profile-tab.png]
 
 > **Note:** If you see *"No company assets are currently assigned to you."* but you have company equipment, ask HR to record it.
 
@@ -42,7 +41,6 @@ The company asset register lists the equipment the company owns, such as laptops
 1. In the left menu, go to **Operations** → **Fleet & Assets** → **Company Assets**.
 2. Click **New Asset**. The form has four steps: **Asset Details**, **Fixed Asset Ledger**, **Photo** and **Review & Submit**.
 
-[SCREENSHOT: company-assets-new.png]
 
 ## Step 1 — Asset Details
 
@@ -92,7 +90,6 @@ The company asset register lists the equipment the company owns, such as laptops
 3. In **Issue asset**, choose the **Employee** and add **Notes** if needed.
 4. Click **Issue Asset**.
 
-[SCREENSHOT: company-assets-issue.png]
 
 > **After you issue it:** You see *"Asset issued successfully"*. The status becomes **In Use**, and the asset appears on the employee's **Assets** tab.
 

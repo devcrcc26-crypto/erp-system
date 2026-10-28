@@ -27,7 +27,6 @@ You need a per diem rate on your employee record. If the form shows **No per die
 1. In the left menu, go to **New Request**.
 2. Click **Per Diem Request**. The form has three steps: **Destination Category**, **Request Details** and **Review & Submit**.
 
-[SCREENSHOT: per-diem-new-request.png]
 
 ## Step 1 — Destination Category
 
@@ -53,7 +52,6 @@ You need a per diem rate on your employee record. If the form shows **No per die
 7. **Notes** (optional): anything the approver should know.
 8. Click **Next**.
 
-[SCREENSHOT: per-diem-step2-details.png]
 
 ## Step 3 — Review & Submit
 
@@ -96,7 +94,6 @@ You need a per diem rate on your employee record. If the form shows **No per die
 1. Check the **Calculation**: **Advances taken**, less the per diem you earned, and the balance. It shows **Balance in favor of Employee** or **Balance in favor of Company**.
 2. Click **Back** to change anything, or **Submit Request** to send it.
 
-[SCREENSHOT: per-diem-settlement-review.png]
 
 > **After you submit:** You see *"Per diem settlement submitted"*. Your settlement has been sent for approval. You will receive a notification when it is approved or returned. If the balance is in favor of the company, return the cash as you are told.
 
@@ -166,7 +163,6 @@ When a per diem request reaches you, you receive the notification **Approval req
 
 To return or reject the request instead, see the **Approvals Inbox** topic.
 
-[SCREENSHOT: per-diem-approve-rate.png]
 
 ---
 <!-- /role -->

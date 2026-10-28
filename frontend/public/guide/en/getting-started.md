@@ -13,7 +13,6 @@ Welcome to the Construction ERP. This page shows you how to sign in, find your w
 3. **Password**: enter your password.
 4. Click **Sign in**.
 
-[SCREENSHOT: getting-started-sign-in.png]
 
 > **New account?** Open the activation link HR sent to your email, choose your password, then sign in. You see *"Your account is ready. Sign in with your new password."*
 

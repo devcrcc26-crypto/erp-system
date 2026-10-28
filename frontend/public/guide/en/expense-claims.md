@@ -19,7 +19,6 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 1. In the left menu, go to **New Request**.
 2. Click **Expense Claim**. The form has three steps: **Request Details**, **Items** and **Review & Submit**.
 
-[SCREENSHOT: expense-claims-new-form.png]
 
 ## Step 1 — Request Details
 
@@ -44,7 +43,6 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 4. Repeat for each expense. To change or remove a line, use **Update** or **Delete** on it.
 5. Click **Next**.
 
-[SCREENSHOT: expense-claims-add-item.png]
 
 ## Step 3 — Review & Submit
 
@@ -122,7 +120,6 @@ If your claim is returned, you receive the notification **Approval returned**. O
 4. Go back to the claim in **Approvals**. In the **Resubmit** panel, write a **Note to approver (optional)** and click **Attach files** to add any missing documents.
 5. Click **Resubmit**. The claim goes back through the approval chain from the beginning.
 
-[SCREENSHOT: expense-claims-returned.png]
 
 ---
 

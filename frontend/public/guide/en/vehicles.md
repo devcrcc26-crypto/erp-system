@@ -19,7 +19,6 @@ This topic covers three requests: booking a company vehicle (**Vehicle Applicati
 1. In the left menu, go to **New Request**.
 2. Click **Vehicle Application**. The form has four steps: **Trip Schedule**, **Select Vehicle**, **Trip Details** and **Review & Submit**.
 
-[SCREENSHOT: vehicles-application-new.png]
 
 ## Step 1 — Trip Schedule
 
@@ -39,7 +38,6 @@ This topic covers three requests: booking a company vehicle (**Vehicle Applicati
 2. Click the vehicle you want. Its driver, if it has one, is shown on the card.
 3. Click **Next**.
 
-[SCREENSHOT: vehicles-application-select.png]
 
 ## Step 3 — Trip Details
 
@@ -80,7 +78,6 @@ This topic covers three requests: booking a company vehicle (**Vehicle Applicati
 1. In the left menu, go to **New Request**.
 2. Click **Office Vehicle Refueling**. The form has three steps: **Select Vehicle**, **Request Details** and **Review & Submit**.
 
-[SCREENSHOT: vehicles-refueling-new.png]
 
 ## Step 1 — Select Vehicle
 
@@ -121,7 +118,6 @@ This topic covers three requests: booking a company vehicle (**Vehicle Applicati
 1. In the left menu, go to **New Request**.
 2. Click **Inspection and Repair**. The form has three steps: **Asset**, **Request Details** and **Review & Submit**.
 
-[SCREENSHOT: vehicles-inspection-new.png]
 
 ## Step 1 — Asset
 
@@ -205,7 +201,6 @@ When a request reaches you, you receive the notification **Approval required**.
 3. Search, or filter by **Employee**. Click a request to open it.
 4. Click **Export applications** or **Export requests** to download the list. **Import from Excel** creates **Draft** requests. Nothing is submitted or approved, so review each draft and submit it.
 
-[SCREENSHOT: vehicles-hr-applications-list.png]
 
 ---
 <!-- /role -->
@@ -271,7 +266,6 @@ When a request reaches you, you receive the notification **Approval required**.
    - **Review & submit**: check everything.
 3. Click **Create vehicle**.
 
-[SCREENSHOT: vehicles-company-add.png]
 
 > **Note:** Only vehicles with an **Assigned Driver** can be booked with **Company Driver**.
 

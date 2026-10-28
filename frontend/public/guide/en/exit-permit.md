@@ -19,7 +19,6 @@ An exit permit records equipment and materials that leave or enter a site. You l
 1. In the left menu, go to **New Request**.
 2. Click **Exit Permit**. The form has three steps: **Request Details**, **Items** and **Review & Submit**.
 
-[SCREENSHOT: exit-permit-new-form.png]
 
 ## Step 1 — Request Details
 
@@ -42,7 +41,6 @@ An exit permit records equipment and materials that leave or enter a site. You l
 2. Click **Save** to add the item. Add at least one item.
 3. Click **Next**.
 
-[SCREENSHOT: exit-permit-items.png]
 
 ## Step 3 — Review & Submit
 
@@ -117,7 +115,6 @@ When a permit reaches you, you receive the notification **Approval required**.
 - **One permit:** open an approved permit and click **Gate pass**.
 - **All permits for a day:** on the list, click **Gate pass register**. Choose the **Date** and the **Direction** (**Entrance and exit**, **Entrance** or **Exit**), and click **Download PDF**. The PDF lists every item, with a column for security to tick.
 
-[SCREENSHOT: exit-permit-gate-register.png]
 
 > **After you download:** You see *"Gate pass register PDF downloaded."* Post it at the gate.
 

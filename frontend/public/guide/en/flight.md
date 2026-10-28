@@ -19,7 +19,6 @@ Use a flight application to ask for air tickets for work travel. You enter the t
 1. In the left menu, go to **New Request**.
 2. Click **Flight Application**. The form has three steps: **Trip Details**, **Passengers** and **Review & Submit**.
 
-[SCREENSHOT: flight-new-application.png]
 
 ## Step 1 — Trip Details
 
@@ -58,7 +57,6 @@ Use a flight application to ask for air tickets for work travel. You enter the t
 3. Click **Back** to change anything.
 4. Click **Submit Application**.
 
-[SCREENSHOT: flight-review-submit.png]
 
 > **After you submit:** You see *"Flight application submitted"*. Your application has been sent for approval. You will receive a notification when it is approved or returned.
 
@@ -119,7 +117,6 @@ See the **Approvals Inbox** topic for the full steps.
 4. The columns show **Application #**, **Submitted by**, **Route**, **Departure**, **Trip Type**, **International**, **Status** and **Current Step**.
 5. Click an application to open it.
 
-[SCREENSHOT: flight-hr-list.png]
 
 ---
 <!-- /role -->
@@ -139,7 +136,6 @@ When an application is approved, its page shows **Tickets required**.
 3. To change a ticket, click **Replace**. To remove it, click **Remove** and confirm. Removing a ticket resets that passenger's confirmation.
 4. The **Acknowledged** column shows **Pending** until the passenger confirms, then **Acknowledged**.
 
-[SCREENSHOT: flight-hr-tickets.png]
 
 ---
 <!-- /role -->

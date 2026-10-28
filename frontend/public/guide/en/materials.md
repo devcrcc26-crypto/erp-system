@@ -23,7 +23,6 @@ There are three requests for getting things you need for work:
 1. In the left menu, go to **New Request**.
 2. Click **Purchase Request**. The form has three steps: **Request Details**, **Items** and **Review & Submit**.
 
-[SCREENSHOT: materials-purchase-new.png]
 
 ## Step 1 — Request Details (purchase)
 
@@ -49,7 +48,6 @@ There are three requests for getting things you need for work:
 3. Click **Save**. The line **Total** and the **Estimated Total** are worked out for you.
 4. Add every item you need, and click **Next**.
 
-[SCREENSHOT: materials-purchase-items.png]
 
 ## Step 3 — Review & Submit (purchase)
 
@@ -71,7 +69,6 @@ There are three requests for getting things you need for work:
 1. In the left menu, go to **New Request**.
 2. Click **Material Requisition**. The form has three steps: **Request Details**, **Items** and **Review & Submit**.
 
-[SCREENSHOT: materials-requisition-new.png]
 
 ## Step 1 — Request Details (material requisition)
 
@@ -141,7 +138,6 @@ This form is for low-value consumable items only. Each item must be valued below
 3. Under **Supporting Documents**, attach quotes or packing lists if needed.
 4. Click **Submit Request**.
 
-[SCREENSHOT: materials-consumables-review.png]
 
 > **After you submit:** You see *"Consumables requisition submitted for approval"*. Your request has been sent for approval. You will receive a notification when it is approved or returned.
 
@@ -202,7 +198,6 @@ When a request reaches you, you receive the notification **Approval required**.
 3. Search, or filter by **Employee**. Click a request to open it.
 4. To download, click **Export requests** or **Export requisitions** on the list. On an open request, click **Export items** or **Export PDF**.
 
-[SCREENSHOT: materials-hr-purchase-list.png]
 
 ---
 <!-- /role -->

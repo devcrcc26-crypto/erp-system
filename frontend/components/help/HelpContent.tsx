@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -32,7 +32,7 @@ import { useCurrentUser } from '@/lib/query/profile';
  * - `1.` numbered steps and nested `-` lists
  * - a line that is only `**Label**` becomes a section label
  * - a line that is only `*(HR only)*` becomes an audience pill
- * - tables, links, inline code, bold/italic and `[SCREENSHOT: file.png]` slots
+ * - tables, links, inline code, bold/italic
  * - `<!-- role: HR -->…<!-- /role -->` blocks are kept only for matching roles
  */
 export default function HelpContent({
@@ -63,19 +63,7 @@ export default function HelpContent({
     return resolveHelpRoleGroup(roleNames, canViewHr);
   }, [roleGroupProp, profileQuery.data?.roles, canViewHr]);
 
-  const processed = filterGuideByRole(content, roleGroup)
-    .replace(
-      /\[SCREENSHOT:\s*([^\]]+)\]/gi,
-      (_match, filename: string) =>
-        `![screenshot](/guide/images/${filename.trim()})`,
-    )
-    // Markdown relative paths like ../images/foo.png resolve against /help/… in
-    // the browser; rewrite them to the public guide images URL.
-    .replace(
-      /!\[([^\]]*)\]\((?:\.\.\/)?images\/([^)\s]+)\)/g,
-      (_match, alt: string, filename: string) =>
-        `![${alt}](/guide/images/${filename})`,
-    );
+  const processed = filterGuideByRole(content, roleGroup);
 
   const { lead, overview, sections } = layoutArticle(
     parseBlocks(processed.replace(/\r\n/g, '\n').split('\n'), { next: 0 }),
@@ -238,8 +226,7 @@ type Block =
   | { type: 'hr' }
   | { type: 'list'; ordered: boolean; items: ListItem[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
-  | { type: 'callout'; tone: Tone; blocks: Block[] }
-  | { type: 'image'; src: string; alt: string };
+  | { type: 'callout'; tone: Tone; blocks: Block[] };
 
 const LIST_MARKER = /^(\s*)([-*]|\d+\.)\s+(.*)$/;
 
@@ -260,7 +247,6 @@ function startsBlock(trimmed: string): boolean {
     trimmed.startsWith('#') ||
     trimmed.startsWith('|') ||
     trimmed.startsWith('>') ||
-    trimmed.startsWith('![') ||
     LIST_MARKER.test(trimmed)
   );
 }
@@ -281,13 +267,6 @@ function parseBlocks(lines: string[], ids: { next: number }): Block[] {
 
     if (trimmed === '---' || trimmed === '***') {
       blocks.push({ type: 'hr' });
-      i += 1;
-      continue;
-    }
-
-    const image = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
-    if (image) {
-      blocks.push({ type: 'image', alt: image[1] ?? '', src: image[2] ?? '' });
       i += 1;
       continue;
     }
@@ -678,8 +657,6 @@ function BlockView({ block }: { block: Block }): ReactNode {
         </div>
       );
     }
-    case 'image':
-      return <ScreenshotSlot src={block.src} alt={block.alt} />;
     default:
       return null;
   }
@@ -695,41 +672,6 @@ function ListChildren({ blocks }: { blocks: readonly Block[] }): ReactNode {
         <BlockView key={index} block={block} />
       ))}
     </div>
-  );
-}
-
-/** Shows the screenshot file; falls back to the placeholder when it is missing. */
-function ScreenshotSlot({ src, alt }: { src: string; alt: string }): ReactNode {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return <ScreenshotPlaceholder src={src} alt={alt} />;
-  }
-  return (
-    <img
-      src={src}
-      alt={alt || 'Screenshot'}
-      loading="lazy"
-      className="my-4 w-full rounded-lg border border-[#E8EBEF]"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function ScreenshotPlaceholder({ src, alt }: { src: string; alt: string }): ReactNode {
-  const filename = src.split('/').pop() ?? src;
-  return (
-    <span
-      className="my-4 flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-100 text-slate-400"
-      role="img"
-      aria-label={alt || 'Screenshot coming soon'}
-    >
-      <span className="p-6 text-center">
-        <span className="block text-xs text-slate-400">
-          {alt || 'Screenshot coming soon'}
-        </span>
-        <span className="mt-0.5 block text-xs text-slate-300">{filename}</span>
-      </span>
-    </span>
   );
 }
 

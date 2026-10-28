@@ -20,7 +20,6 @@ Announcements are company news and notices. The **Announcements** item in the le
 2. Click **Unread** to see only the ones you have not read, or **All** to see everything. **Pinned** announcements stay at the top.
 3. Click an announcement to open it. Download any **Attachments** at the bottom.
 
-[SCREENSHOT: announcements-list.png]
 
 > **Note:** The latest announcements also appear on your dashboard under **Latest announcements**.
 
@@ -75,7 +74,6 @@ Some announcements show **Acknowledgement required**.
 9. **When to publish**: choose **Publish now**, or **Schedule** and set **Publish at**. You can also set an **Expires** date. After it, the announcement leaves the banners and dashboard but stays in the list.
 10. Click **Publish now** (or **Schedule**) and confirm.
 
-[SCREENSHOT: announcements-new.png]
 
 > **After you publish:** You see *"Published. Recipients: N."* A scheduled announcement shows *"Scheduled for [date]."* Click **Unschedule** to stop it.
 

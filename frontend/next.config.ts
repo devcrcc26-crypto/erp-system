@@ -17,8 +17,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // User-guide markdown/images live under public/guide — never cache so edits
-  // show on the next navigation/refresh without restarting the frontend.
+  // User-guide markdown lives under public/guide — never cache so edits show
+  // on the next navigation/refresh without restarting the frontend.
   async headers() {
     return [
       {

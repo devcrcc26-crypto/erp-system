@@ -25,7 +25,6 @@
 3. Click the request type. Its form opens.
 4. Fill in the form and submit it. Each request type has its own topic in this guide with the exact steps.
 
-[SCREENSHOT: approvals-new-request-picker.png]
 
 > **After you submit:** Your request has been sent for approval. You will receive a notification when it is approved or returned.
 
@@ -42,7 +41,6 @@
 5. The columns show **Request #**, **Title**, **Category**, **Submitted**, **Status** and **Current tier**.
 6. Click a request to open it. The right side shows the **Approval Chain** and what the request is waiting for, for example *"Waiting on …"* or *"Fully approved - no further action required"*.
 
-[SCREENSHOT: approvals-my-requests.png]
 
 **What the statuses mean**
 
@@ -73,14 +71,13 @@
 
 If your request is returned, you receive the notification **Approval returned**. Open the request to see the reason.
 
-1. In the left menu, go to **Approvals** → **My Requests** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
+1. In the left menu, go to **Approvals** → **Pending My Action** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
 3. If the request has its own page (for example leave or overtime), change it there first. See that request type's topic in this guide.
 4. Back on the request in **Approvals**, find the **Resubmit** panel. The **Return note** shows what the approver asked for.
 5. **Note to approver (optional)**: explain what you changed. Click **Attach files** to add files if needed.
 6. Click **Resubmit**. The request goes back through the approval chain from the beginning.
 
-[SCREENSHOT: approvals-returned-resubmit.png]
 
 > **After you resubmit:** You see *"Request resubmitted"*. Earlier notes stay in **Resubmission / response history**.
 
@@ -111,7 +108,6 @@ When a request reaches your step, you receive the notification **Approval requir
 3. The **Action needed** column shows what to do. Search by title or request number, or filter by **Category**.
 4. Click a request to open it.
 
-[SCREENSHOT: approvals-pending-my-action.png]
 
 ---
 <!-- /role -->
@@ -213,7 +209,6 @@ Use this when an approver is away or has left.
 4. **Reason** (required, at least 3 characters): say why.
 5. Click **Reassign**. The new approver is notified.
 
-[SCREENSHOT: approvals-reassign.png]
 
 ---
 <!-- /role -->
@@ -245,6 +240,5 @@ The original approver is notified, and the step records that you acted for them.
 - **Dashboard:** in the left menu, click **Dashboard**. The **Overview**, **Payroll & OT** and **Operations** views summarize the company.
 - **HR reports:** in the left menu, go to **People** → **HR Reports**. The tabs are **Overview**, **Leave & OT**, **Payroll & spend** and **Contracts & attendance**.
 
-[SCREENSHOT: approvals-all-requests.png]
 <!-- /role -->
 

@@ -19,7 +19,6 @@ Use a leave request to take time off. The form counts only your working days and
 1. In the left menu, go to **New Request**.
 2. Click **Leave Request**. The **New Leave Request** form opens. It has three steps: **Leave details**, **Supporting Documents** and **Review & Submit**.
 
-[SCREENSHOT: leave-new-request-form.png]
 
 ## Step 1 — Leave details
 
@@ -36,7 +35,6 @@ Use a leave request to take time off. The form counts only your working days and
 5. **Reason** (optional): describe why you need the leave.
 6. Click **Next**.
 
-[SCREENSHOT: leave-step1-details-filled.png]
 
 > **Note:** **Unpaid** leave does not use your balance. Those days are treated as unpaid absence.
 
@@ -55,7 +53,6 @@ Use a leave request to take time off. The form counts only your working days and
 2. Click **Back** to correct anything.
 3. Click **Submit Request**.
 
-[SCREENSHOT: leave-step3-review.png]
 
 > **After you submit:** Your request has been sent for approval and its status is **Submitted**. You will receive a notification when it is approved or returned. You do not need to do anything else unless it is returned to you.
 
@@ -78,7 +75,6 @@ Use a leave request to take time off. The form counts only your working days and
 
 You also see your balance on the right of the leave form while you choose dates.
 
-[SCREENSHOT: leave-profile-balance.png]
 
 ---
 
@@ -145,7 +141,6 @@ If your request is returned, you receive the notification **Approval returned**.
 5. Go back to the request in **Approvals** → **My Requests**. In the **Resubmit** panel, write a **Note to approver (optional)** that explains what you changed, and attach files if needed.
 6. Click **Resubmit**. The request goes back through the approval chain from the beginning.
 
-[SCREENSHOT: leave-returned-resubmit.png]
 
 ---
 
@@ -164,7 +159,6 @@ When a leave request reaches you, you receive the notification **Approval requir
    - **Reject**: click **Reject**, write the **Rejection reason**, and click **Reject**. This closes the request and cannot be undone. The employee is notified.
    - **Conditionally Approve**: click it, write the **Condition**, and click **Submit**. The request waits at your step until the condition is resolved.
 
-[SCREENSHOT: leave-approval-pending-my-action.png]
 
 > **After you decide:** If there is another approver, the request moves to them. If you are the last approver, the leave is approved and the days are taken from the employee's balance.
 
@@ -200,7 +194,6 @@ When a leave request reaches you, you receive the notification **Approval requir
 4. Click a row, or **View**, to open a request.
 5. To download the list, click **Export Excel**. Only the rows matching your search and filters are exported. On a narrow screen, the button is in the **⋯** menu.
 
-[SCREENSHOT: leave-hr-requests-list.png]
 
 ---
 <!-- /role -->
@@ -232,7 +225,6 @@ When a leave request reaches you, you receive the notification **Approval requir
 6. **Reason** (required, at least 3 characters): say why you are changing the balance.
 7. Click **Save**. The change is kept in the employee's **Balance history**.
 
-[SCREENSHOT: leave-hr-edit-balances.png]
 
 ---
 <!-- /role -->

@@ -22,7 +22,6 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 2. Click the **Leave** tab.
 3. Scroll to **Site assignments**. Each row shows **Request #**, **Site**, **Start Date**, **End Date**, **Days** and **Status**.
 
-[SCREENSHOT: site-assignments-profile.png]
 
 > **Note:** If a site assignment is missing or wrong, ask your supervisor or HR to correct it.
 
@@ -36,7 +35,6 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 1. In the left menu, go to **New Request**.
 2. Click **Site Assignment**. The **Site assignment request** form opens. It has two steps: **Details** and **Review**.
 
-[SCREENSHOT: site-assignments-new-form.png]
 
 ## Step 1 — Details
 
@@ -101,7 +99,6 @@ Your supervisor or HR creates site assignments for you. You cannot create one fo
 4. The columns show **Request #**, **Employee**, **Site**, **Project**, **Start**, **End**, **Days** and **Status**.
 5. Click a row to open the assignment. **Assignment details** shows the dates, project and reason, and **Linked per diem advances** shows any per diem paid for it.
 
-[SCREENSHOT: site-assignments-hr-list.png]
 
 ---
 <!-- /role -->

@@ -25,7 +25,6 @@ The **Dashboard** is the first page you see after signing in. It shows shortcuts
    - **Approvals inbox**
    - **My profile**
 
-[SCREENSHOT: dashboard-quick-actions.png]
 
 ---
 
