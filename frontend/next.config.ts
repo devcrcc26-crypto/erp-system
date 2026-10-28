@@ -17,6 +17,21 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // User-guide markdown/images live under public/guide — never cache so edits
+  // show on the next navigation/refresh without restarting the frontend.
+  async headers() {
+    return [
+      {
+        source: '/guide/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

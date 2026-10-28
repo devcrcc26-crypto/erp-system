@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { Suspense, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForgotPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
@@ -10,10 +11,12 @@ import AuthCenteredShell from '@/components/auth/AuthCenteredShell';
 const AUTH_INPUT_CLASS =
   'w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
 
-export default function ForgotPasswordPage(): React.ReactNode {
+function ForgotPasswordForm(): React.ReactNode {
   const forgotPassword = useForgotPassword();
+  const searchParams = useSearchParams();
+  const emailFromQuery = searchParams.get('email')?.trim() ?? '';
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailFromQuery);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -105,5 +108,13 @@ export default function ForgotPasswordPage(): React.ReactNode {
       </p>
     </div>
     </AuthCenteredShell>
+  );
+}
+
+export default function ForgotPasswordPage(): React.ReactNode {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

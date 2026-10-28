@@ -40,11 +40,19 @@ export default function HelpContent({
 }): ReactNode {
   const { locale } = useEpcTranslation();
 
-  const processed = content.replace(
-    /\[SCREENSHOT:\s*([^\]]+)\]/gi,
-    (_match, filename: string) =>
-      `![screenshot](/guide/images/${filename.trim()})`,
-  );
+  const processed = content
+    .replace(
+      /\[SCREENSHOT:\s*([^\]]+)\]/gi,
+      (_match, filename: string) =>
+        `![screenshot](/guide/images/${filename.trim()})`,
+    )
+    // Markdown relative paths like ../images/foo.png resolve against /help/… in
+    // the browser; rewrite them to the public guide images URL.
+    .replace(
+      /!\[([^\]]*)\]\((?:\.\.\/)?images\/([^)\s]+)\)/g,
+      (_match, alt: string, filename: string) =>
+        `![${alt}](/guide/images/${filename})`,
+    );
 
   const { lead, overview, sections } = layoutArticle(
     parseBlocks(processed.replace(/\r\n/g, '\n').split('\n'), { next: 0 }),

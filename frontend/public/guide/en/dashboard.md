@@ -6,9 +6,9 @@ The **Dashboard** is the first page you see after signing in. It shows shortcuts
 
 | You are | Read these sections |
 | --- | --- |
-| Employee | Quick actions and **My Work** |
-| Anyone with people reporting to them | **My Team** |
-| HR, General Manager, Managing Director, System Administrator | **Overview**, **Payroll & OT** and **Operations** |
+| Employee | Quick actions and **your personal summary** (shown on the page — there is no **My Work** tab) |
+| Anyone with people reporting to them | **My Team** (and **My Work** when more than one view is available) |
+| HR, General Manager, Managing Director, System Administrator | **Overview**, **Payroll & OT**, **Operations** and **My Work** |
 
 ---
 
@@ -17,7 +17,7 @@ The **Dashboard** is the first page you see after signing in. It shows shortcuts
 *(Everyone)*
 
 1. In the left menu, click **Dashboard**.
-2. Under **Quick actions**, click one of the buttons. You only see the ones your account can use:
+2. On the header of the dashboard, click one of the buttons. You only see the ones your account can use:
    - **New leave**
    - **New overtime**
    - **New per diem**
@@ -29,11 +29,13 @@ The **Dashboard** is the first page you see after signing in. It shows shortcuts
 
 ---
 
-## What My Work shows
+## Your personal summary (leave, overtime, requests)
 
 *(Everyone)*
 
-Click **My Work** at the top of the Dashboard. You see:
+If you are a normal employee, the Dashboard opens straight onto your personal summary. You do **not** see a **My Work** tab, that tab only appears when your role also has other views (for example **My Team** or company **Overview**).
+
+On this summary you see:
 
 - **My snapshot**: your leave balance, overtime this month, your pending requests and your next site assignment.
 - **My pending approvals**: requests that need your decision, and how long they have waited.
@@ -43,7 +45,7 @@ Click **My Work** at the top of the Dashboard. You see:
 - **Leave balance**: days left by leave type.
 - **My evaluation**: your current quarterly evaluation, and whether it needs you.
 
-Click **View all** on any card to see the full list.
+If you do see tabs at the top, click **My Work** to open the same summary. Click **View all** on any card to see the full list.
 
 ---
 

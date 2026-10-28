@@ -23,11 +23,14 @@ export default function HelpArticle({ slug }: { slug: string }): ReactNode {
     setLoading(true);
 
     async function load(): Promise<void> {
+      // Bust browser/CDN caches so public/guide/*.md edits show without a
+      // frontend restart (no-cache alone can still reuse a 304 response).
+      const bust = `t=${Date.now()}`;
+      const opts: RequestInit = { cache: 'no-store' };
       try {
-        // Revalidate so edited guides show up at once instead of a cached copy.
-        let res = await fetch(`/guide/${locale}/${slug}.md`, { cache: 'no-cache' });
+        let res = await fetch(`/guide/${locale}/${slug}.md?${bust}`, opts);
         if (!res.ok && locale !== 'en') {
-          res = await fetch(`/guide/en/${slug}.md`, { cache: 'no-cache' });
+          res = await fetch(`/guide/en/${slug}.md?${bust}`, opts);
         }
         if (!res.ok) {
           throw new Error('missing');
