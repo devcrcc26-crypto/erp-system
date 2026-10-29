@@ -472,7 +472,7 @@
       "resubmit": {
         "title": "Resubmit",
         "modalTitle": "Resubmit request",
-        "modalDescription": "The request goes back to the first approver with the details as they are now.",
+        "modalDescription": "The request returns to the same approver who returned it. Earlier approved tiers stay approved.",
         "returnNote": "Return note",
         "noteLabel": "Note to approver (optional)",
         "notePlaceholder": "Explain what you changed…",
@@ -484,6 +484,23 @@
         "resubmitLabel": "Resubmit",
         "conditionResponse": "Condition #{{index}} response",
         "attachment": "Attachment"
+      },
+      "history": {
+        "title": "History",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "approvedTier": "Approved (Tier {{tier}})",
+        "returned": "Returned",
+        "returnedTier": "Returned (Tier {{tier}})",
+        "rejected": "Rejected",
+        "rejectedTier": "Rejected (Tier {{tier}})",
+        "resubmitted": "Resubmitted",
+        "conditionResponse": "Condition response",
+        "cancelled": "Cancelled",
+        "skipped": "Skipped",
+        "skippedTier": "Skipped (Tier {{tier}})",
+        "conditionallyApproved": "Conditionally approved",
+        "conditionallyApprovedTier": "Conditionally approved (Tier {{tier}})"
       },
       "dialog": {
         "approveTitle": "Approve tier",
@@ -1768,7 +1785,10 @@
         "notFound": "Field movement log not found",
         "add": "Add",
         "addOnBehalf": "Add on behalf",
-        "submittedOnBehalf": "Submitted by {{name}} on behalf"
+        "submittedOnBehalf": "Submitted by {{name}} on behalf",
+        "cancelSuccess": "Field movement log cancelled",
+        "cancelFailed": "Failed to cancel field movement log",
+        "cancelConfirm": "Cancel this field movement log? It will be withdrawn from approval."
       },
       "flight": {
         "new": "New Flight Application",

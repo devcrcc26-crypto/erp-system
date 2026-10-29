@@ -472,7 +472,7 @@
       "resubmit": {
         "title": "重新提交",
         "modalTitle": "重新提交申请",
-        "modalDescription": "申请将按当前内容重新提交给第一位审批人。",
+        "modalDescription": "申请将退回给退回该申请的同一审批人。此前已批准的层级保持不变。",
         "returnNote": "退回备注",
         "noteLabel": "给审批人的备注（可选）",
         "notePlaceholder": "说明您修改了什么…",
@@ -484,6 +484,23 @@
         "resubmitLabel": "重新提交",
         "conditionResponse": "条件 #{{index}} 回复",
         "attachment": "附件"
+      },
+      "history": {
+        "title": "历史记录",
+        "submitted": "已提交",
+        "approved": "已批准",
+        "approvedTier": "已批准（第 {{tier}} 级）",
+        "returned": "已退回",
+        "returnedTier": "已退回（第 {{tier}} 级）",
+        "rejected": "已拒绝",
+        "rejectedTier": "已拒绝（第 {{tier}} 级）",
+        "resubmitted": "已重新提交",
+        "conditionResponse": "条件回复",
+        "cancelled": "已取消",
+        "skipped": "已跳过",
+        "skippedTier": "已跳过（第 {{tier}} 级）",
+        "conditionallyApproved": "有条件批准",
+        "conditionallyApprovedTier": "有条件批准（第 {{tier}} 级）"
       },
       "dialog": {
         "approveTitle": "批准层级",
@@ -1649,7 +1666,10 @@
         "notFound": "未找到外勤说明",
         "add": "新增",
         "addOnBehalf": "代他人新增",
-        "submittedOnBehalf": "由 {{name}} 代为提交"
+        "submittedOnBehalf": "由 {{name}} 代为提交",
+        "cancelSuccess": "外勤说明已取消",
+        "cancelFailed": "取消外勤说明失败",
+        "cancelConfirm": "确定取消此外勤说明？申请将从审批中撤回。"
       },
       "flight": {
         "new": "新建机票申请",

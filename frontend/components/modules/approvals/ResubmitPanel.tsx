@@ -19,7 +19,8 @@ import './approvals-v2.css';
 /**
  * The single Resubmit action for a RETURNED request (requester only), opened
  * from the request page. Edits are saved separately on the edit form; this
- * sends the request back to the first approver with an optional note.
+ * sends the request back to the same tier that returned it (earlier
+ * approvals stay) with an optional note.
  */
 export default function ResubmitRequestDialog({
   requestId,

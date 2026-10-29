@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ApprovalRequestStatus,
   InspectionRepairStatus,
   InspectionRepairType,
   InspectionRepairUrgency,
@@ -332,13 +333,27 @@ export class InspectionRepairService {
       throw new BadRequestException('Only draft or submitted requests can be cancelled');
     }
 
-    await this.prisma.inspectionRepair.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedBy: userId,
-        updatedBy: userId,
-      },
+    const now = new Date();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Soft-delete the request (no CANCELLED status on this model).
+      await tx.inspectionRepair.update({
+        where: { id },
+        data: {
+          deletedAt: now,
+          deletedBy: userId,
+          updatedBy: userId,
+        },
+      });
+      if (request.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: request.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
     });
 
     return { success: true };

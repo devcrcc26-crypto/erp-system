@@ -1,20 +1,29 @@
 'use client';
 
-import { Alert, Skeleton, Tag } from 'antd';
+import { useState } from 'react';
+import { Alert, Button, Skeleton, Tag } from 'antd';
+import { useRouter } from 'next/navigation';
 import {
   MetaItem,
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FieldMovementReason } from '@/lib/api/attendance.types';
-import { useFieldMovementLog } from '@/lib/query/attendance';
-import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import {
+  useCancelFieldMovementLog,
+  useFieldMovementLog,
+} from '@/lib/query/attendance';
+import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatDateList,
   groupBy,
 } from '@/lib/utils/date-format.util';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const REASON_LABELS: Record<FieldMovementReason, string> = {
@@ -25,7 +34,7 @@ const REASON_LABELS: Record<FieldMovementReason, string> = {
 };
 
 /**
- * Field movement body for the Approvals detail inbox (read-only).
+ * Field movement body for the Approvals detail inbox.
  * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function FieldMovementDetail({
@@ -35,7 +44,12 @@ export default function FieldMovementDetail({
   sourceId: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
+  const messageApi = useAppMessage();
+  const currentUser = useCurrentUser();
   const detailQuery = useFieldMovementLog(sourceId);
+  const cancelMutation = useCancelFieldMovementLog();
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const log = detailQuery.data;
 
   if (detailQuery.isLoading && !log) {
@@ -79,8 +93,36 @@ export default function FieldMovementDetail({
   const onBehalfCreatorName =
     log.submittedOnBehalf && log.creator ? formatUserName(log.creator) : null;
 
+  const isOwner =
+    Boolean(currentUser.data?.id) && log.employeeId === currentUser.data?.id;
+  const canCancel =
+    isOwner && (log.status === 'DRAFT' || log.status === 'SUBMITTED');
+
+  async function handleCancel(): Promise<void> {
+    try {
+      await cancelMutation.mutateAsync(sourceId);
+      messageApi.success(t('pages.hr.fieldMovementLogs.cancelSuccess'));
+      setConfirmCancel(false);
+      router.push('/approvals');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('pages.hr.fieldMovementLogs.cancelFailed'),
+        messageApi,
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
+      {canCancel ? (
+        <div className="flex justify-end">
+          <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+            {t('hr.buttons.cancelRequest')}
+          </Button>
+        </div>
+      ) : null}
+
       {onBehalfCreatorName ? (
         <ErpNotice
           tone="info"
@@ -171,6 +213,17 @@ export default function FieldMovementDetail({
           {log.notes?.trim() || '-'}
         </p>
       </SectionCard>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title={t('hr.buttons.cancelRequest')}
+        description={t('pages.hr.fieldMovementLogs.cancelConfirm')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
+        danger
+        confirmLoading={cancelMutation.isPending}
+        onConfirm={() => void handleCancel()}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 }

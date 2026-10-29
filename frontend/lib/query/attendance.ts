@@ -471,13 +471,17 @@ export function useCancelFieldMovementLog() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => cancelFieldMovementLog(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       void queryClient.invalidateQueries({
         queryKey: attendanceKeys.fieldMovementLists(),
       });
       void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.fieldMovementDetail(id),
+      });
+      void queryClient.invalidateQueries({
         queryKey: attendanceKeys.all,
       });
+      void queryClient.invalidateQueries({ queryKey: ['approvals'] });
     },
   });
 }

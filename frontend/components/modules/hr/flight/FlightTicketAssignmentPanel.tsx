@@ -144,16 +144,17 @@ export default function FlightTicketAssignmentPanel({
     (p) => p.acknowledgementStatus === 'ACKNOWLEDGED',
   ).length;
 
-  async function handleUploadCombined(): Promise<void> {
-    if (combinedTicketFiles.length === 0) {
+  async function handleUploadCombined(files: File[]): Promise<void> {
+    if (files.length === 0) {
       return;
     }
+    setCombinedTicketFiles(files);
     try {
-      await attachCombined.mutateAsync(combinedTicketFiles);
+      await attachCombined.mutateAsync(files);
       messageApi.success(
         replacingCombined
           ? 'Combined ticket replaced'
-          : combinedTicketFiles.length > 1
+          : files.length > 1
             ? 'Combined tickets uploaded'
             : 'Combined ticket uploaded',
       );
@@ -175,11 +176,14 @@ export default function FlightTicketAssignmentPanel({
     }
   }
 
-  async function handleUploadPassenger(passengerId: string): Promise<void> {
-    const files = passengerFiles[passengerId] ?? [];
+  async function handleUploadPassenger(
+    passengerId: string,
+    files: File[],
+  ): Promise<void> {
     if (files.length === 0) {
       return;
     }
+    setPassengerFiles((prev) => ({ ...prev, [passengerId]: files }));
     setUploadingPassengerId(passengerId);
     try {
       await attachPassenger.mutateAsync({ passengerId, files });
@@ -279,12 +283,9 @@ export default function FlightTicketAssignmentPanel({
         <div className="min-w-0 flex-1 sm:max-w-xs">
           <FileUploadInput
             files={pending}
-            onChange={(files) =>
-              setPassengerFiles((prev) => ({
-                ...prev,
-                [row.id]: files,
-              }))
-            }
+            onChange={(files) => {
+              void handleUploadPassenger(row.id, files);
+            }}
             accept={TICKET_ACCEPT}
             multiple
             placeholder={t('hr.labels.attachTicket')}
@@ -294,38 +295,22 @@ export default function FlightTicketAssignmentPanel({
             }
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {pending.length > 0 ? (
-            <Button
-              size="small"
-              type="primary"
-              loading={
-                attachPassenger.isPending && uploadingPassengerId === row.id
-              }
-              onClick={() => void handleUploadPassenger(row.id)}
-            >
-              {isReplacing
-                ? t('hr.buttons.replaceTicket')
-                : t('hr.buttons.uploadTicket')}
-            </Button>
-          ) : null}
-          {isReplacing ? (
-            <Button
-              size="small"
-              disabled={attachPassenger.isPending}
-              onClick={() => {
-                setReplacingPassengerId(null);
-                setPassengerFiles((prev) => {
-                  const next = { ...prev };
-                  delete next[row.id];
-                  return next;
-                });
-              }}
-            >
-              {t('hr.buttons.cancel')}
-            </Button>
-          ) : null}
-        </div>
+        {isReplacing ? (
+          <Button
+            size="small"
+            disabled={attachPassenger.isPending}
+            onClick={() => {
+              setReplacingPassengerId(null);
+              setPassengerFiles((prev) => {
+                const next = { ...prev };
+                delete next[row.id];
+                return next;
+              });
+            }}
+          >
+            {t('hr.buttons.cancel')}
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -421,38 +406,26 @@ export default function FlightTicketAssignmentPanel({
           <div className="ml-0 sm:ml-[23px] flex flex-col gap-2">
             <FileUploadInput
               files={combinedTicketFiles}
-              onChange={setCombinedTicketFiles}
+              onChange={(files) => {
+                void handleUploadCombined(files);
+              }}
               accept={TICKET_ACCEPT}
               multiple
               placeholder={t('hr.buttons.uploadCombinedTicket')}
               disabled={attachCombined.isPending}
             />
-            {combinedTicketFiles.length > 0 || replacingCombined ? (
+            {replacingCombined ? (
               <div className="flex flex-wrap gap-2">
-                {combinedTicketFiles.length > 0 ? (
-                  <Button
-                    type="primary"
-                    size="small"
-                    loading={attachCombined.isPending}
-                    onClick={() => void handleUploadCombined()}
-                  >
-                    {replacingCombined
-                      ? t('hr.buttons.replaceTicket')
-                      : t('hr.buttons.uploadCombinedTicket')}
-                  </Button>
-                ) : null}
-                {replacingCombined ? (
-                  <Button
-                    size="small"
-                    disabled={attachCombined.isPending}
-                    onClick={() => {
-                      setReplacingCombined(false);
-                      setCombinedTicketFiles([]);
-                    }}
-                  >
-                    {t('hr.buttons.cancel')}
-                  </Button>
-                ) : null}
+                <Button
+                  size="small"
+                  disabled={attachCombined.isPending}
+                  onClick={() => {
+                    setReplacingCombined(false);
+                    setCombinedTicketFiles([]);
+                  }}
+                >
+                  {t('hr.buttons.cancel')}
+                </Button>
               </div>
             ) : null}
           </div>

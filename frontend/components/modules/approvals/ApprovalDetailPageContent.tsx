@@ -41,9 +41,8 @@ import FieldMovementDetail from '@/components/modules/approvals/detail/FieldMove
 import WorkFromHomeDetail from '@/components/modules/approvals/detail/WorkFromHomeDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
-import ResubmitRequestDialog, {
-  ResponseHistory,
-} from '@/components/modules/approvals/ResubmitPanel';
+import ResubmitRequestDialog from '@/components/modules/approvals/ResubmitPanel';
+import ApprovalEventHistory from '@/components/modules/approvals/ApprovalEventHistory';
 import LateSubmissionBanner from '@/components/modules/approvals/LateSubmissionBanner';
 import ReturnedBanner from '@/components/modules/approvals/ReturnedBanner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -894,9 +893,11 @@ export default function ApprovalDetailPageContent({
               ))
             : null}
 
-          {responses.length > 0 ? (
-            <ResponseHistory responses={responses} />
-          ) : null}
+          <ApprovalEventHistory
+            request={request}
+            tiers={tiers}
+            responses={responses}
+          />
         </div>
 
         <ApprovalDetailSidebar

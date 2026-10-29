@@ -100,6 +100,8 @@ export const APPROVE_ON_BEHALF_OWN_REQUEST_MESSAGE =
 
 export const RESPONSE_TYPE_RESUBMIT = 'RESUBMIT';
 export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
+export const RESPONSE_TYPE_RETURNED = 'RETURNED';
+export const RESPONSE_TYPE_CANCELLED = 'CANCELLED';
 
 type UploadedFile = {
   originalname: string;
@@ -1546,6 +1548,16 @@ export class ApprovalsService {
             updatedBy: userId,
           },
         });
+        // Durable history row (tier comment is cleared on later actions).
+        await tx.approvalResponse.create({
+          data: {
+            id: randomUUID(),
+            requestId: request.id,
+            responseType: RESPONSE_TYPE_RETURNED,
+            note: note?.trim() || null,
+            respondedBy: userId,
+          },
+        });
       },
       PRISMA_TX_OPTIONS,
     );
@@ -1792,10 +1804,15 @@ export class ApprovalsService {
     await this.assertSourceReadyToResubmit(request);
 
     const responseId = randomUUID();
-    const firstTier = request.tiers[0];
-    if (!firstTier) {
+    if (request.tiers.length === 0) {
       throw new BadRequestException('Approval chain has no tiers');
     }
+
+    // Resume at the returned tier only — earlier APPROVED tiers stay approved.
+    const returnedTiers = request.tiers
+      .filter((tier) => tier.decision === ApprovalTierDecision.RETURNED)
+      .sort((a, b) => b.tierOrder - a.tierOrder);
+    const resumeTier = returnedTiers[0] ?? request.tiers[0];
 
     const folderId = await this.ensureApprovalAttachmentFolder(
       request,
@@ -1828,7 +1845,11 @@ export class ApprovalsService {
           },
         });
 
+        // Reset only the returned tier (and any later tiers if present).
         for (const tier of request.tiers) {
+          if (tier.tierOrder < resumeTier.tierOrder) {
+            continue;
+          }
           await tx.approvalTier.update({
             where: { id: tier.id },
             data: {
@@ -1836,6 +1857,8 @@ export class ApprovalsService {
               comment: null,
               decidedAt: null,
               conditions: [],
+              actingApproverId: null,
+              onBehalfOfApproverId: null,
             },
           });
         }
@@ -1844,7 +1867,7 @@ export class ApprovalsService {
           where: { id: request.id },
           data: {
             status: ApprovalRequestStatus.SUBMITTED,
-            currentTier: firstTier.tierOrder,
+            currentTier: resumeTier.tierOrder,
             completedAt: null,
             updatedBy: userId,
           },
@@ -2036,11 +2059,11 @@ export class ApprovalsService {
       );
     }
 
-    await this.notifyApprovalPending(companyId, userId, firstTier, {
+    await this.notifyApprovalPending(companyId, userId, resumeTier, {
       subject: `Resubmitted for approval - ${request.requestNumber}`,
       body:
         note?.trim() ||
-        `Request ${request.requestNumber} was resubmitted and awaits your review.`,
+        `Request ${request.requestNumber} was resubmitted and awaits your review at tier "${resumeTier.label}".`,
       link: `/approvals/${request.id}`,
       variables: {
         requestId: request.id,
@@ -2100,10 +2123,17 @@ export class ApprovalsService {
       );
     }
 
-    const firstTier = request.tiers[0];
-    if (!firstTier) {
+    if (request.tiers.length === 0) {
       throw new BadRequestException('Approval chain has no tiers');
     }
+
+    // If the sheet was returned mid-chain, resume at that tier; otherwise
+    // restart from the beginning (edit of an in-flight/approved sheet).
+    const returnedTiers = request.tiers
+      .filter((tier) => tier.decision === ApprovalTierDecision.RETURNED)
+      .sort((a, b) => b.tierOrder - a.tierOrder);
+    const resumeTier = returnedTiers[0] ?? request.tiers[0];
+    const resumeOnly = Boolean(returnedTiers[0]);
 
     const responseId = randomUUID();
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -2114,12 +2144,17 @@ export class ApprovalsService {
           responseType: RESPONSE_TYPE_RESUBMIT,
           note:
             note?.trim() ||
-            'Request edited by employee — approval chain restarted',
+            (resumeOnly
+              ? 'Request edited and resubmitted after return'
+              : 'Request edited by employee — approval chain restarted'),
           respondedBy: userId,
         },
       });
 
       for (const tier of request.tiers) {
+        if (resumeOnly && tier.tierOrder < resumeTier.tierOrder) {
+          continue;
+        }
         await tx.approvalTier.update({
           where: { id: tier.id },
           data: {
@@ -2127,6 +2162,8 @@ export class ApprovalsService {
             comment: null,
             decidedAt: null,
             conditions: [],
+            actingApproverId: null,
+            onBehalfOfApproverId: null,
           },
         });
       }
@@ -2135,7 +2172,7 @@ export class ApprovalsService {
         where: { id: request.id },
         data: {
           status: ApprovalRequestStatus.SUBMITTED,
-          currentTier: firstTier.tierOrder,
+          currentTier: resumeTier.tierOrder,
           completedAt: null,
           updatedBy: userId,
         },
@@ -2154,11 +2191,11 @@ export class ApprovalsService {
       }
     }, PRISMA_TX_OPTIONS);
 
-    await this.notifyApprovalPending(companyId, userId, firstTier, {
+    await this.notifyApprovalPending(companyId, userId, resumeTier, {
       subject: `Edited overtime resubmitted - ${request.requestNumber}`,
       body:
         note?.trim() ||
-        `Overtime request ${request.requestNumber} was edited and awaits your review again.`,
+        `Overtime request ${request.requestNumber} was edited and awaits your review at tier "${resumeTier.label}".`,
       link: `/approvals/${request.id}`,
       variables: {
         requestId: request.id,
