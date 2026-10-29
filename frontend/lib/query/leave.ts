@@ -398,6 +398,8 @@ export function useCancelLeaveRequest(id: string) {
       void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
       void queryClient.setQueryData(leaveKeys.detail(id), updated);
+      // The linked approval is cancelled too.
+      invalidateAfterRequestEdit(queryClient);
     },
   });
 }

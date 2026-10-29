@@ -383,7 +383,9 @@ export class LeaveController {
   }
 
   @Patch(':id/cancel')
-  @RequireAnyPermission({ module: 'leave', action: 'create' })
+  // Ownership (owner or leave.manage) and status are enforced in the service,
+  // so employees can always cancel their own pending leave.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'Cancel a draft, submitted or in-review leave request (owner or HR), or an approved one (HR - reverses used days)',

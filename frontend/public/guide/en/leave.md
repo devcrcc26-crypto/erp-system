@@ -83,7 +83,7 @@ You also see your balance on the right of the leave form while you choose dates.
 *(Employees)*
 
 1. In the left menu, go to **My Profile** and click the **Leave** tab.
-2. Under **Leave history**, click **View all** to see every request.
+2. Under **Leave history**.
 3. The list shows **Request #**, **Leave Type**, **Start Date**, **End Date**, **Days** and **Status**.
 4. Click a request to open it. You see the dates, the day breakdown, the reason, attachments and the **Approval Chain**.
 

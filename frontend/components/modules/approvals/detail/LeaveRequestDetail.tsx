@@ -11,7 +11,7 @@ import {
   Space,
   Typography,
 } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { EditOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import LeavePeriodsEditor, {
   createEmptyLeavePeriod,
@@ -24,14 +24,20 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import type { PreviewDaysResult } from '@/lib/api/work-schedule.types';
-import { useLeaveRequest, useUpdateLeaveRequest } from '@/lib/query/leave';
+import {
+  useCancelLeaveRequest,
+  useLeaveRequest,
+  useUpdateLeaveRequest,
+} from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import {
@@ -58,8 +64,11 @@ export default function LeaveRequestDetail({
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
+  const canManage = useCanViewHr();
   const detailQuery = useLeaveRequest(sourceId);
   const updateMutation = useUpdateLeaveRequest(sourceId);
+  const cancelMutation = useCancelLeaveRequest(sourceId);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const previewMutation = usePreviewLeaveDays();
   const leave = detailQuery.data;
   const [editing, setEditing] = useState(false);
@@ -127,10 +136,29 @@ export default function LeaveRequestDetail({
   }
 
   const balance = leave.balance;
-  const canEdit =
-    leave.status === 'RETURNED' &&
-    Boolean(currentUser.data?.id) &&
-    leave.employeeId === currentUser.data?.id;
+  const isOwner =
+    Boolean(currentUser.data?.id) && leave.employeeId === currentUser.data?.id;
+  const canEdit = leave.status === 'RETURNED' && isOwner;
+  // Same rule as the leave request page; approved leave is cancelled by HR there.
+  const canCancel =
+    (isOwner || canManage) &&
+    (leave.status === 'DRAFT' ||
+      leave.status === 'SUBMITTED' ||
+      leave.status === 'IN_REVIEW');
+
+  async function handleCancel(): Promise<void> {
+    try {
+      await cancelMutation.mutateAsync();
+      messageApi.success(t('hr.messages.leaveRequestCancelled'));
+      setConfirmCancel(false);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCancelLeaveRequest'),
+        messageApi,
+      );
+    }
+  }
 
   function startEditing(): void {
     const current = detailQuery.data;
@@ -205,18 +233,42 @@ export default function LeaveRequestDetail({
 
   return (
     <div className="erp-leave-v2 flex flex-col gap-3">
-      {canEdit && !editing ? (
-        <div className="flex justify-end">
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={startEditing}
-            style={{ borderRadius: 0 }}
-          >
-            {t('pages.approvals.edit.button')}
-          </Button>
+      {(canEdit || canCancel) && !editing ? (
+        <div className="flex justify-end gap-2">
+          {canCancel ? (
+            <Button
+              size="small"
+              danger
+              icon={<StopOutlined />}
+              onClick={() => setConfirmCancel(true)}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.cancelRequest')}
+            </Button>
+          ) : null}
+          {canEdit ? (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={startEditing}
+              style={{ borderRadius: 0 }}
+            >
+              {t('pages.approvals.edit.button')}
+            </Button>
+          ) : null}
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title={t('hr.dialog.cancelLeaveTitle')}
+        description={t('hr.dialog.cancelLeaveDesc')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
+        danger
+        confirmLoading={cancelMutation.isPending}
+        onCancel={() => setConfirmCancel(false)}
+        onConfirm={() => void handleCancel()}
+      />
 
       {!editing ? (
         <SummaryStrip
