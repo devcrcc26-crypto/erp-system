@@ -1,13 +1,10 @@
 'use client';
 
+import '@/components/modules/hr/attendance/work-from-home-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Button, Collapse, Input, Modal } from 'antd';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
 import WorkFromHomeRangeDays from '@/components/modules/hr/attendance/WorkFromHomeRangeDays';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -105,7 +102,8 @@ export default function WorkFromHomeDetail({
           (request.requestedBy === viewerId || createdBy === viewerId))));
 
   const cancelMutation = useMutation({
-    mutationFn: () => cancelWorkFromHomeRequest(request.id, cancelReason.trim() || undefined),
+    mutationFn: () =>
+      cancelWorkFromHomeRequest(request.id, cancelReason.trim() || undefined),
     onSuccess: (result) => {
       messageApi.success(
         result.removedDates.length > 0
@@ -121,62 +119,84 @@ export default function WorkFromHomeDetail({
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <SummaryStrip
-        items={[
-          { label: t(`${KEY}.period`), value: rangeLabel, emphasize: true },
-          {
-            label: t('hr.table.employee'),
-            value: employeeName,
-          },
-          {
-            label: t(`${KEY}.workingDays`),
-            value: String(dates.length),
-          },
-        ]}
-      />
+    <div className="erp-wfh-v2 flex flex-col gap-4">
+      <div className="erp-wfh-detail-facts">
+        <div className="erp-wfh-detail-fact">
+          <p className="erp-wfh-detail-fact-label">{t(`${KEY}.period`)}</p>
+          <p className="erp-wfh-detail-fact-value">{rangeLabel}</p>
+        </div>
+        <div className="erp-wfh-detail-fact">
+          <p className="erp-wfh-detail-fact-label">{t('hr.table.employee')}</p>
+          <p className="erp-wfh-detail-fact-value">{employeeName}</p>
+        </div>
+        <div className="erp-wfh-detail-fact">
+          <p className="erp-wfh-detail-fact-label">{t(`${KEY}.workingDays`)}</p>
+          <p className="erp-wfh-detail-fact-value">{dates.length}</p>
+        </div>
+      </div>
 
-      <SectionCard
-        title={t('pages.hr.workFromHome.request.title')}
-        action={
-          canCancel ? (
+      <section className="erp-employee-section">
+        <div className="erp-employee-section-header !justify-between gap-3">
+          <h2 className="erp-employee-section-title m-0">
+            {t('pages.hr.workFromHome.request.title')}
+          </h2>
+          {canCancel ? (
             <Button danger size="small" onClick={() => setCancelOpen(true)}>
               {t(`${KEY}.cancel`)}
             </Button>
-          ) : null
-        }
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <MetaItem label={t('pages.hr.workFromHome.fields.reason')}>
-            {form.reason || '-'}
-          </MetaItem>
-          {form.cancelledAt ? (
-            <MetaItem label={t(`${KEY}.cancelledOn`)}>
-              {formatProjectDate(form.cancelledAt)}
-              {form.cancelReason ? ` - ${form.cancelReason}` : ''}
-            </MetaItem>
-          ) : null}
-          {form.notAppliedDates && form.notAppliedDates.length > 0 ? (
-            <MetaItem label={t(`${KEY}.notApplied`)}>
-              {form.notAppliedDates.map((date) => formatProjectDate(date)).join(', ')}
-            </MetaItem>
           ) : null}
         </div>
+        <div className="erp-employee-section-body">
+          <div className="erp-wfh-detail-grid">
+            <div className="erp-wfh-detail-field erp-wfh-detail-field--wide">
+              <p className="erp-wfh-detail-field-label">
+                {t('pages.hr.workFromHome.fields.reason')}
+              </p>
+              <p className="erp-wfh-detail-field-value">
+                {form.reason || '-'}
+              </p>
+            </div>
+            {form.cancelledAt ? (
+              <div className="erp-wfh-detail-field erp-wfh-detail-field--wide">
+                <p className="erp-wfh-detail-field-label">
+                  {t(`${KEY}.cancelledOn`)}
+                </p>
+                <p className="erp-wfh-detail-field-value">
+                  {formatProjectDate(form.cancelledAt)}
+                  {form.cancelReason ? ` - ${form.cancelReason}` : ''}
+                </p>
+              </div>
+            ) : null}
+            {form.notAppliedDates && form.notAppliedDates.length > 0 ? (
+              <div className="erp-wfh-detail-field erp-wfh-detail-field--wide">
+                <p className="erp-wfh-detail-field-label">
+                  {t(`${KEY}.notApplied`)}
+                </p>
+                <p className="erp-wfh-detail-field-value">
+                  {form.notAppliedDates
+                    .map((date) => formatProjectDate(date))
+                    .join(', ')}
+                </p>
+              </div>
+            ) : null}
+          </div>
 
-        <Collapse
-          className="mt-4"
-          size="small"
-          items={[
-            {
-              key: 'days',
-              label: t(`${KEY}.showDays`, { count: days.length }),
-              children: <WorkFromHomeRangeDays days={days} />,
-            },
-          ]}
-        />
-      </SectionCard>
+          <Collapse
+            className="mt-4"
+            size="small"
+            items={[
+              {
+                key: 'days',
+                label: t(`${KEY}.showDays`, { count: days.length }),
+                children: <WorkFromHomeRangeDays days={days} />,
+              },
+            ]}
+          />
+        </div>
+      </section>
 
       <Modal
+        rootClassName="erp-wfh-cancel-modal"
         open={cancelOpen}
         title={t(`${KEY}.cancelTitle`)}
         okText={t(`${KEY}.cancel`)}
@@ -187,10 +207,15 @@ export default function WorkFromHomeDetail({
         onCancel={() => setCancelOpen(false)}
         destroyOnHidden
       >
-        <p className="m-0 mb-3 text-sm text-slate-700">
-          {isApproved ? t(`${KEY}.cancelApprovedHint`) : t(`${KEY}.cancelPendingHint`)}
+        <p className="m-0 mb-3 text-sm text-[rgba(0,0,0,0.65)]">
+          {isApproved
+            ? t(`${KEY}.cancelApprovedHint`)
+            : t(`${KEY}.cancelPendingHint`)}
         </p>
-        <label htmlFor="wfh-cancel-reason" className="mb-1.5 block text-[13px] text-slate-600">
+        <label
+          htmlFor="wfh-cancel-reason"
+          className="mb-1.5 block text-[13px] text-[rgba(0,0,0,0.65)]"
+        >
           {t(`${KEY}.cancelReason`)}
         </label>
         <Input.TextArea

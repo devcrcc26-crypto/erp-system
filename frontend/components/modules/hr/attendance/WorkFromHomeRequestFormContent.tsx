@@ -1,6 +1,5 @@
 'use client';
 
-import '../site-assignment/site-assignments-v2.css';
 import './work-from-home-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -50,9 +49,9 @@ function ReviewItem({
   wide?: boolean;
 }): React.ReactNode {
   return (
-    <div className={`erp-sa-review-item${wide ? ' erp-sa-review-item--wide' : ''}`}>
-      <p className="erp-sa-review-label">{label}</p>
-      <p className="erp-sa-review-value">{value}</p>
+    <div className={`erp-wfh-review-item${wide ? ' erp-wfh-review-item--wide' : ''}`}>
+      <p className="erp-wfh-review-label">{label}</p>
+      <p className="erp-wfh-review-value">{value}</p>
     </div>
   );
 }
@@ -359,7 +358,7 @@ export default function WorkFromHomeRequestFormContent({
             title={t('pages.hr.workFromHome.request.steps.review')}
             description={t('pages.hr.workFromHome.request.reviewStepDescription')}
           >
-            <div className="erp-sa-review-grid">
+            <div className="erp-wfh-review-grid">
               <ReviewItem
                 label={t('hr.onBehalf.employee')}
                 value={onBehalfLabel}
@@ -401,7 +400,7 @@ export default function WorkFromHomeRequestFormContent({
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-sa-form-page erp-wfh-v2 flex flex-col">
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-wfh-form-page erp-wfh-v2 flex flex-col">
       <HrFormPageShell
         title={
           isEdit

@@ -38,24 +38,24 @@ export default function WorkFromHomeRangeDays({
   };
 
   return (
-    <ul className="m-0 flex list-none flex-col gap-1 p-0" aria-label={t(`${KEY}.dayListLabel`)}>
+    <ul className="erp-wfh-day-list" aria-label={t(`${KEY}.dayListLabel`)}>
       {days.map((day) => (
         <li
           key={day.date}
-          className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-[13px] ${
-            day.included ? 'bg-emerald-50 text-slate-900' : 'bg-slate-50 text-slate-600'
+          className={`erp-wfh-day ${
+            day.included ? 'erp-wfh-day--included' : 'erp-wfh-day--skipped'
           }`}
         >
-          <span className={day.included ? 'font-medium' : 'line-through decoration-slate-400'}>
-            <span className="mr-2 inline-block w-9 text-slate-600">{weekday(day.date)}</span>
+          <span className="erp-wfh-day-date">
+            <span className="erp-wfh-day-weekday">{weekday(day.date)}</span>
             {formatProjectDate(day.date)}
           </span>
           {day.included ? (
-            <Tag color="green" className="m-0 rounded-full">
+            <Tag color="green" className="erp-wfh-day-chip">
               {t(`${KEY}.included`)}
             </Tag>
           ) : (
-            <span className="text-xs text-slate-600">
+            <span className="erp-wfh-day-skip-reason">
               {t(`${KEY}.skipped`)} - {reasonLabel(day)}
             </span>
           )}

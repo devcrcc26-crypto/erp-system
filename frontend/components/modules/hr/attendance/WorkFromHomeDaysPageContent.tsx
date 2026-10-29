@@ -1,6 +1,5 @@
 'use client';
 
-import './attendance-v2.css';
 import './work-from-home-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -497,7 +496,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
 
   if (!canAssign) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2 erp-wfh-v2">
+      <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -505,8 +504,8 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2 erp-wfh-v2">
-        <div className="erp-att-loading">
+      <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
+        <div className="erp-wfh-loading">
           <Spin />
         </div>
       </div>
@@ -516,7 +515,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const monthName = t(`hr.months.${month}`);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2 erp-wfh-v2">
+    <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
       <ConfirmDialog
         open={Boolean(deleteId)}
         title={t('pages.hr.workFromHome.deleteTitle')}
@@ -875,7 +874,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
               label: String(y),
             }))}
             onChange={setYear}
-            className="erp-att-year-input"
+            className="erp-wfh-year-input"
             aria-label={t('pages.hr.attendance.filters.year')}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
