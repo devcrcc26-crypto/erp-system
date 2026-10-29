@@ -41,7 +41,9 @@ Work through this before deploying to production. Each item says how to check it
 - [ ] **Request initiators migrated.** Migration `20261017140000_request_initiators` (approval `initiated_as`, tier `acting_approver_id` / `on_behalf_of_approver_id`, site-assignment `crew_id`) was created on 2026-10-17 and applied to local `pwf_fresh` only (Prisma client regenerated). The backend will not run against a database without it. Stop the backend, `npx prisma migrate deploy`, `npx prisma generate`, restart.
 - [ ] **allowedInitiators reviewed.** HR Policy Settings → Requests (System Administrator only, takes effect immediately). Defaults: Site assignment = supervisor + delegate (no self), WFH = all three, Flight = self + delegate, Business trip = all three. GM / MD / HR Manager / HR Officer / System Administrator can always file for anyone and approve or return on behalf of any approver (never on their own requests or their own filings); reject stays with the assigned approver. Direct WFH assignment is now HR only.
 - [ ] **Inactive policies reviewed.** `inactivePaid` (default: all unpaid) and `inactiveCanLogin` (default: only LONG_LEAVE can log in).
-- [ ] **Permissions seeded.** `npm run prisma:seed-announcement-permissions`, plus any other module permission seeds added since the last deploy.
+- [ ] **Permissions seeded.** `npm run prisma:seed-announcement-permissions`, plus any other module permission seeds added since the last deploy. In particular:
+  - `npx ts-node --transpile-only prisma/seed-work-schedule-permissions.ts`: gives Employee (and leads, HR, GM/MD) `wfh.view` / `wfh.create`. Without it, Work From Home is missing from New Request and employees get 403 on submit. On 2026-10-29 the local dev DB had no `wfh` grants for Employee.
+  - `npx ts-node --transpile-only prisma/scripts/grant-new-request-create-permissions.ts`: New Request `create` grants for all roles, and limits Vehicle Refueling to Driver / HR Officer / HR Manager / System Administrator. On 2026-10-29 the local dev DB still let Employee create refueling requests.
 
 ## Environment
 

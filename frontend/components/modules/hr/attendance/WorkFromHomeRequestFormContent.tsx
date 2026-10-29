@@ -68,8 +68,8 @@ function initialRangeOf(
 }
 
 /**
- * Employee work-from-home request for a date range - one request, Employee →
- * Discipline Lead approval; approval creates a WFH day per working day.
+ * Employee work-from-home request for a date range - one request, Reports to →
+ * HR Officer approval; approval creates a WFH day per working day.
  *
  * With `editRequest`, edits the employee's own RETURNED request (prefilled);
  * saving keeps it RETURNED (resubmit from the request page).

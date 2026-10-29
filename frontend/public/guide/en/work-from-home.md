@@ -7,7 +7,7 @@ Use a work-from-home request to ask to work from home on one or more days. When 
 | You are | Read these sections |
 | --- | --- |
 | Employee | Requesting work from home, following and cancelling your request, and what to do if it is returned |
-| Discipline Lead | How to approve a work-from-home request |
+| Reports to (your supervisor), HR Officer | How to approve a work-from-home request |
 | HR (HR Manager, HR Assistant, HR Specialist) | Assigning work-from-home days directly, and cancelling approved requests |
 
 ---
@@ -78,9 +78,9 @@ After you resubmit, the request goes back through the approval chain from the be
 <!-- role: HR, SUPERVISOR -->
 ## How to approve a work-from-home request
 
-*(Discipline Leads)*
+*(The employee's Reports to, then the HR Officer)*
 
-When a request from your discipline reaches you, you receive the notification **Approval required**.
+A work-from-home request goes first to the employee's **Reports to** (the supervisor set on their profile), then to the **HR Officer**. When it reaches you, you receive the notification **Approval required**.
 
 1. In the left menu, go to **Approvals** → **Pending My Action** and open the request.
 2. Check the **Days in this request** and the **Reason**.
