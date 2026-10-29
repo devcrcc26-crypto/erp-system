@@ -55,6 +55,15 @@ function makeService(input: {
     perDiemRequest: {
       count: async (): Promise<number> => paidAdvanceCount,
     },
+    // Who-may-file checks (no direct reports, Employee role, default policy).
+    user: {
+      findFirst: async () => ({ excludedFromHrProcesses: false }),
+      count: async (): Promise<number> => 0,
+    },
+    userRole: {
+      findFirst: async () => ({ role: { name: roleNames[0] ?? 'Employee' } }),
+    },
+    policySetting: { findMany: async () => [] },
   };
 
   const permissionService = {

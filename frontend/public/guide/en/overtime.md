@@ -65,6 +65,7 @@ You record overtime on one sheet per month. You add an entry each time you work 
 *(Employees)*
 
 1. Open your sheet.
+2. Click the **plus (+)** sign on the entries row. 
 2. Under **Attachments**, click **Attach files** and choose the files, for example a signed time record.
 3. To remove a file, click **Remove** next to it and confirm.
 
@@ -138,11 +139,15 @@ A **Resubmitted** badge means the sheet was changed and sent for approval again.
 
 If your sheet is returned, you receive the notification **Approval returned**. Open the sheet to see the reason.
 
-1. In the left menu, go to **Approvals** → **My Requests** and open the sheet with status **Returned**. The banner says **This request was returned** and shows the approver's note.
+1. In the left menu, go to **Approvals** → **Pending My Action** (or **My Requests**) and open the sheet with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. Open the sheet: go to **My Profile** → **Overtime**, click **View all**, and click the sheet.
+3. Open the sheet in one of these ways:
+   - On the same request page, click **Edit** at the top, or **Update** on the sheet summary.
+   - Or go to **My Profile** → **Overtime**, click **View all**, and click the sheet.
 4. Change the entries as asked and click **Save**.
 5. Click **Submit Sheet** and confirm. The sheet goes back through the approval chain from the beginning.
+
+> **Note:** Overtime has no **Resubmit** button in **Approvals**. Submitting the sheet again is how a returned sheet is resubmitted, because it also updates the sheet totals.
 
 
 ---

@@ -4,7 +4,7 @@ import type { PrismaService } from '../../../../shared/prisma/prisma.service';
 import type { PermissionService } from '../../../../shared/permissions/permission.service';
 import { ApprovalsService } from './approvals.service';
 
-function makeService(prisma: unknown): ApprovalsService {
+function makeService(prisma: unknown, hasPermission = true): ApprovalsService {
   const permissionService = {
     getUserRoleNames: async (): Promise<string[]> => ['Employee'],
     getUserModulePermissionsMap: async (
@@ -18,7 +18,7 @@ function makeService(prisma: unknown): ApprovalsService {
       }
       return map;
     },
-    hasPermission: async (): Promise<boolean> => true,
+    hasPermission: async (): Promise<boolean> => hasPermission,
   };
   return new ApprovalsService(
     prisma as PrismaService,
@@ -30,6 +30,85 @@ function makeService(prisma: unknown): ApprovalsService {
     {} as never,
   );
 }
+
+/** Prisma mocks for the who-may-file checks (user, reports, role, policy). */
+function filingMocks(options: {
+  directReports?: number;
+  primaryRole?: string;
+  excludedFromHrProcesses?: boolean;
+} = {}): Record<string, unknown> {
+  return {
+    user: {
+      findFirst: async () => ({
+        excludedFromHrProcesses: options.excludedFromHrProcesses ?? false,
+      }),
+      count: async () => options.directReports ?? 0,
+    },
+    userRole: {
+      findFirst: async () => ({
+        role: { name: options.primaryRole ?? 'Employee' },
+      }),
+    },
+    policySetting: { findMany: async () => [] },
+  };
+}
+
+const NEW_REQUEST_CODES = [
+  'LEAVE_REQUEST',
+  'PURCHASE_REQUEST',
+  'SITE_ASSIGNMENT',
+  'WORK_FROM_HOME',
+  'FLIGHT_APPLICATION',
+  'BUSINESS_TRIP',
+];
+
+async function visibleCodes(
+  filing: Parameters<typeof filingMocks>[0],
+  hasPermission = false,
+): Promise<string[]> {
+  const service = makeService(
+    {
+      approvalCategory: {
+        findMany: async () =>
+          NEW_REQUEST_CODES.map((code) => ({ code, isUserRequestable: true })),
+      },
+      perDiemRequest: { count: async () => 0 },
+      ...filingMocks(filing),
+    },
+    hasPermission,
+  );
+  const rows = (await service.getCategories('company-1', 'user-1')) as Array<{
+    code: string;
+  }>;
+  return rows.map((row) => row.code);
+}
+
+describe('ApprovalsService - New Request lists only what the user can file', () => {
+  it('hides purchase requests and site assignments from a normal employee', async () => {
+    expect(await visibleCodes({})).toEqual([
+      'LEAVE_REQUEST',
+      'WORK_FROM_HOME',
+      'FLIGHT_APPLICATION',
+      'BUSINESS_TRIP',
+    ]);
+  });
+
+  it('shows site assignments to a supervisor with direct reports', async () => {
+    expect(await visibleCodes({ directReports: 2 })).toContain('SITE_ASSIGNMENT');
+  });
+
+  it('shows purchase requests to HR Manager and above', async () => {
+    expect(await visibleCodes({ primaryRole: 'HR Manager' })).toContain(
+      'PURCHASE_REQUEST',
+    );
+  });
+
+  it('hides work from home when the employee is excluded from HR processes', async () => {
+    expect(await visibleCodes({ excludedFromHrProcesses: true })).not.toContain(
+      'WORK_FROM_HOME',
+    );
+  });
+});
 
 describe('ApprovalsService - isUserRequestable', () => {
   it('lists only user-requestable categories the user may create', async () => {
@@ -43,6 +122,7 @@ describe('ApprovalsService - isUserRequestable', () => {
     const service = makeService({
       approvalCategory: { findMany },
       perDiemRequest: { count: async () => 0 },
+      ...filingMocks(),
     });
 
     const rows = await service.getCategories('company-1', 'user-1');

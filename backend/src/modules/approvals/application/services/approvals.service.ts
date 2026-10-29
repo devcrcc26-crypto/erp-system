@@ -60,6 +60,12 @@ import {
   payrollMonthsFromApprovalRequest,
 } from '../../../hr-shared/application/utils/late-submission-meta.util';
 import { resolveCategoryPermissionModule } from '../utils/approval-category-permission.util';
+import { PURCHASE_REQUEST_SUBMITTER_ROLES } from '../../../purchase-request/application/purchase-request-submitter.roles';
+import { getPolicy } from '../../../../shared/policy/policy-reader.util';
+import type {
+  InitiatorRequestType,
+  RequestInitiator,
+} from '../../../../shared/policy/policy-definitions';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
   AUTO_APPROVE_COMMENT,
@@ -193,6 +199,16 @@ export interface TierCondition {
   resolvedAt?: string;
 }
 
+/** Who-may-file facts for the New Request category list. */
+interface FilingContext {
+  takesPartInHrProcesses: boolean;
+  hasDirectReports: boolean;
+  hrView: boolean;
+  siteManage: boolean;
+  primaryRoleName: string;
+  initiators: Record<InitiatorRequestType, RequestInitiator[]>;
+}
+
 /**
  * Application service for approval categories and request workflow.
  */
@@ -269,7 +285,7 @@ export class ApprovalsService {
       }
     }
 
-    return categories.filter((category) => {
+    const permitted = categories.filter((category) => {
       if (category.code === 'PER_DIEM_SETTLEMENT' && !hasPaidUnsettledAdvance) {
         return false;
       }
@@ -282,6 +298,85 @@ export class ApprovalsService {
       }
       return permissionMap?.[module]?.canCreate === true;
     });
+    if (isSysAdmin) {
+      return permitted;
+    }
+
+    // Every role holds `create` on the New Request modules, so also apply the
+    // submit-time rules: hide what this user would be refused on submit.
+    const filing = await this.loadFilingContext(companyId, userId);
+    return permitted.filter((category) =>
+      this.canFileCategory(category.code, filing),
+    );
+  }
+
+  /** Facts the submit services check about who may file a request. */
+  private async loadFilingContext(
+    companyId: string,
+    userId: string,
+  ): Promise<FilingContext> {
+    const [user, directReports, hrView, siteManage, primaryRole, initiators] =
+      await Promise.all([
+        this.prisma.user.findFirst({
+          where: activeOnly({ id: userId, companyId }),
+          select: { excludedFromHrProcesses: true },
+        }),
+        this.prisma.user.count({
+          where: activeOnly({ companyId, reportsToUserId: userId, isActive: true }),
+        }),
+        this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+        this.permissionService.hasPermission(
+          userId,
+          companyId,
+          'site-assignment',
+          'manage',
+        ),
+        this.prisma.userRole.findFirst({
+          where: activeOnly({
+            userId,
+            isPrimary: true,
+            role: activeOnly({ companyId }),
+          }),
+          select: { role: { select: { name: true } } },
+        }),
+        getPolicy(this.prisma, companyId, 'allowedInitiators', new Date()),
+      ]);
+    return {
+      takesPartInHrProcesses: user?.excludedFromHrProcesses !== true,
+      hasDirectReports: directReports > 0,
+      hrView,
+      siteManage,
+      primaryRoleName: primaryRole?.role.name ?? '',
+      initiators,
+    };
+  }
+
+  /**
+   * Mirrors the submit-time rules (purchase-request roles, site-assignment
+   * submitters, allowed initiators) so New Request only lists what will work.
+   */
+  private canFileCategory(code: string, filing: FilingContext): boolean {
+    switch (code) {
+      case 'PURCHASE_REQUEST':
+        return PURCHASE_REQUEST_SUBMITTER_ROLES.includes(filing.primaryRoleName);
+      case 'SITE_ASSIGNMENT':
+        // Never for yourself: HR, or a supervisor for their direct reports.
+        return filing.hrView || filing.siteManage || filing.hasDirectReports;
+      case 'WORK_FROM_HOME':
+      case 'FLIGHT_APPLICATION':
+      case 'BUSINESS_TRIP': {
+        const allowed = filing.initiators[code as InitiatorRequestType];
+        const self =
+          allowed.includes('SELF') &&
+          (code !== 'WORK_FROM_HOME' || filing.takesPartInHrProcesses);
+        const supervisor =
+          allowed.includes('SUPERVISOR') && filing.hasDirectReports;
+        const delegate = allowed.includes('DELEGATE') && filing.hrView;
+        return self || supervisor || delegate;
+      }
+      default:
+        return true;
+    }
   }
 
   /**
