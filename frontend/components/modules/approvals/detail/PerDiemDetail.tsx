@@ -10,6 +10,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { usePerDiemRequest } from '@/lib/query/per-diem';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import PerDiemRateSummary from '@/components/modules/hr/per-diem/PerDiemRateSummary';
 
 /**
  * Per diem request body for the Approvals detail inbox.
@@ -74,6 +75,8 @@ export default function PerDiemDetail({
           },
         ]}
       />
+
+      <PerDiemRateSummary request={request} />
 
       <SectionCard title="Request Details" bodyClassName="px-3 py-4 sm:px-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">

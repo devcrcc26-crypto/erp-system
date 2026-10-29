@@ -174,7 +174,12 @@ export class PerDiemController {
     @Param('id') id: string,
     @Body() dto: SetApprovedRateDto,
   ): Promise<unknown> {
-    return this.perDiemService.setApprovedRate(id, dto.approvedDailyRate, companyId);
+    return this.perDiemService.setApprovedRate(
+      id,
+      dto.approvedDailyRate,
+      companyId,
+      user.userId,
+    );
   }
 
   @Post(':id/settle')

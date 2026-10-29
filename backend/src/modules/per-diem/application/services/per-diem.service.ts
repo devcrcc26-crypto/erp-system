@@ -749,6 +749,7 @@ export class PerDiemService
   ): Promise<unknown> {
     const request = await this.prisma.perDiemRequest.findFirst({
       where: activeOnly({ id, companyId }),
+      include: { disbursements: { select: { amount: true } } },
     });
     if (!request) {
       throw new NotFoundException('Per diem request not found');
@@ -779,6 +780,20 @@ export class PerDiemService
     }
     const days = calendarDaysInclusive(coveredFrom, coveredTo);
     const amount = new Prisma.Decimal(approvedRate.toString()).mul(days);
+    // The approved total (approved rate × approved days) is the ceiling.
+    const approvedTotal = new Prisma.Decimal(approvedRate.toString()).mul(
+      request.days,
+    );
+    const alreadyDisbursed = request.disbursements.reduce(
+      (sum, row) => sum.add(row.amount),
+      new Prisma.Decimal(0),
+    );
+    const remaining = approvedTotal.sub(alreadyDisbursed);
+    if (amount.greaterThan(remaining)) {
+      throw new BadRequestException(
+        `This disbursement (${amount.toFixed(2)} ETB) exceeds the remaining approved amount (${remaining.toFixed(2)} ETB of ${approvedTotal.toFixed(2)} ETB)`,
+      );
+    }
 
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.perDiemDisbursement.create({
@@ -916,7 +931,8 @@ export class PerDiemService
     const calculatedDays = calendarDaysInclusive(baseDate, actualReturnDate);
     const actualDays = dto.actualDaysOverride ?? calculatedDays;
 
-    const dailyRate = Number(request.dailyRate);
+    // Earned at the approved rate (falls back to the standard rate).
+    const dailyRate = Number(request.approvedDailyRate ?? request.dailyRate);
     const earnedTotal = actualDays * dailyRate;
     const totalDisbursed = request.disbursements.reduce(
       (sum, d) => sum + Number(d.amount),
@@ -1103,22 +1119,90 @@ export class PerDiemService
   }
 
   /**
-   * Sets the approved daily rate on a pending per diem request (called by the approver before confirming).
+   * Sets the approved daily rate on a pending per diem request (called by the
+   * approver before confirming). The approved total (approved rate × days) is
+   * stored as the request total, so disbursement and settlement use it; the
+   * standard figure stays available as dailyRate × days.
    */
   async setApprovedRate(
     id: string,
     approvedDailyRate: number,
     companyId: string,
+    userId: string,
   ): Promise<unknown> {
     const request = await this.prisma.perDiemRequest.findFirst({
       where: activeOnly({ id, companyId }),
+      include: {
+        approvalRequest: {
+          select: {
+            currentTier: true,
+            tiers: { select: { tierOrder: true, approverId: true, decision: true } },
+          },
+        },
+      },
     });
     if (!request) {
       throw new NotFoundException('Per diem request not found');
     }
-    await this.prisma.perDiemRequest.update({
-      where: { id },
-      data: { approvedDailyRate: new Prisma.Decimal(approvedDailyRate), updatedBy: request.updatedBy },
+    // Only the approver of the current tier (or per-diem.manage, e.g. approving
+    // on behalf) may set the rate - never the employee for their own request.
+    const currentTier = request.approvalRequest?.tiers.find(
+      (tier) => tier.tierOrder === request.approvalRequest?.currentTier,
+    );
+    const isCurrentApprover =
+      currentTier?.approverId === userId && request.employeeId !== userId;
+    if (
+      !isCurrentApprover &&
+      !(await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'per-diem',
+        'manage',
+      ))
+    ) {
+      throw new ForbiddenException(
+        'Only the current approver can set the approved rate',
+      );
+    }
+    if (
+      request.status !== PerDiemStatus.SUBMITTED &&
+      request.status !== PerDiemStatus.IN_REVIEW
+    ) {
+      throw new BadRequestException(
+        'The approved rate can only be set while the request awaits approval',
+      );
+    }
+    if (!(approvedDailyRate > 0)) {
+      throw new BadRequestException('Approved daily rate must be greater than 0');
+    }
+    const approvedRate = new Prisma.Decimal(approvedDailyRate);
+    const approvedTotal = approvedRate.mul(request.days);
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.perDiemRequest.update({
+        where: { id },
+        data: {
+          approvedDailyRate: approvedRate,
+          totalAmount: approvedTotal,
+          totalAmountEtb: approvedTotal,
+          updatedBy: request.updatedBy,
+        },
+      });
+      if (request.approvalRequestId) {
+        const approval = await tx.approvalRequest.findFirst({
+          where: { id: request.approvalRequestId },
+          select: { formData: true },
+        });
+        await tx.approvalRequest.update({
+          where: { id: request.approvalRequestId },
+          data: {
+            formData: {
+              ...((approval?.formData ?? {}) as Prisma.JsonObject),
+              approvedDailyRate: Number(approvedRate),
+              totalAmountEtb: Number(approvedTotal),
+            },
+          },
+        });
+      }
     });
     return this.getRequest(id, companyId, request.employeeId);
   }

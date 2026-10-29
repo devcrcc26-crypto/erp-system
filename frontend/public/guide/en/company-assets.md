@@ -15,6 +15,8 @@ The company asset register lists the equipment the company owns, such as laptops
 
 *(Employees)*
 
+You cannot add, issue or change company assets; Fleet and HR staff manage them. You can see the ones issued to you.
+
 1. In the left menu, go to **My Profile**.
 2. Click the **Assets** tab. **Assigned Company Assets** lists each asset's **Photo**, **Asset Name**, **Serial Number**, **Type**, **Status** and **Assigned At** date.
 
@@ -34,6 +36,7 @@ The company asset register lists the equipment the company owns, such as laptops
 
 ---
 
+<!-- role: HR -->
 ## How to add a company asset
 
 *(Fleet and HR staff)*
@@ -127,3 +130,4 @@ The company asset register lists the equipment the company owns, such as laptops
 2. Search by serial number, brand, model or the person it is assigned to, or filter by **Type**.
 3. Click **Export assets** to download the register.
 4. Click **Import from Excel** to add many assets at once. Imported assets are **Available**, and serial numbers must be unique.
+<!-- /role -->

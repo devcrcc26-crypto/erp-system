@@ -193,10 +193,19 @@ export class PerDiemSettlementService
         userId,
       );
 
-    const dailyRate = new Prisma.Decimal(resolvedRate.dailyRate);
+    // Each advance counts at its approved total (approved rate × days; the
+    // standard rate when no approver override). Earnings use the advances'
+    // approved rate when they share one, else the employee's current rate.
+    const approvedRateOf = (row: (typeof advances)[number]): Prisma.Decimal =>
+      new Prisma.Decimal((row.approvedDailyRate ?? row.dailyRate).toString());
+    const advanceRates = new Set(advances.map((row) => approvedRateOf(row).toFixed(2)));
+    const dailyRate =
+      advanceRates.size === 1
+        ? approvedRateOf(advances[0])
+        : new Prisma.Decimal(resolvedRate.dailyRate);
     const perDiemEarned = dailyRate.mul(dto.actualDays);
     const totalAdvances = advances.reduce(
-      (sum, row) => sum.add(row.totalAmount),
+      (sum, row) => sum.add(approvedRateOf(row).mul(row.days)),
       new Prisma.Decimal(0),
     );
     const { balance, balanceDirection } = this.computeBalance(

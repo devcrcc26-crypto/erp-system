@@ -93,6 +93,7 @@ If your explanation is returned, you receive the notification **Approval returne
 
 ---
 
+<!-- role: HR, SUPERVISOR -->
 ## How to approve an explanation
 
 *(Anyone who approves explanations)*
@@ -106,7 +107,9 @@ When an explanation reaches you, you receive the notification **Approval require
 > **After you approve:** The explanation is applied to the employee's attendance for those days.
 
 ---
+<!-- /role -->
 
+<!-- role: HR -->
 ## How to see all explanations
 
 *(HR)*
@@ -119,7 +122,9 @@ When an explanation reaches you, you receive the notification **Approval require
 
 
 ---
+<!-- /role -->
 
+<!-- role: HR -->
 ## How to enter a paper form for someone
 
 *(HR)*
@@ -131,10 +136,13 @@ When an explanation reaches you, you receive the notification **Approval require
 > **After you submit:** The log shows *"Submitted on behalf by [your name]"* and goes through the employee's approval chain.
 
 ---
+<!-- /role -->
 
+<!-- role: HR -->
 ## Things HR should know
 
 *(HR)*
 
 - **When employees can explain.** Employees can only explain a month after its attendance has been imported and approved. Approving a month notifies every employee with flagged days.
 - **Locked days.** A saved but unsubmitted draft, or an explanation waiting for approval, locks its days until it is cancelled or rejected.
+<!-- /role -->

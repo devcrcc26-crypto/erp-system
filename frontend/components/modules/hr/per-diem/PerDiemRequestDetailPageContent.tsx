@@ -46,12 +46,14 @@ import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import {
   formatPerDiemEmployeeName,
   formatPerDiemStatus,
+  perDiemAmounts,
   perDiemStatusVariant,
 } from '@/lib/utils/per-diem-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+import PerDiemRateSummary from '@/components/modules/hr/per-diem/PerDiemRateSummary';
 
 function inclusiveCalendarDays(from: string, to: string): number | null {
   const start = dayjs(from.slice(0, 10));
@@ -670,33 +672,8 @@ export default function PerDiemRequestDetailPageContent({
               </div>
             </DetailSection>
 
-            <DetailSection
-              title={t('hr.labels.budgetEstimate')}
-              className="w-full min-w-0"
-              bodyClassName="erp-employee-section-body--flush"
-            >
-              <table className="w-full min-w-0 border-collapse">
-                <tbody>
-                  <tr className="border-b border-[#eef1f4]">
-                    <td className="erp-users-cell-sub px-4 py-2.5 text-sm sm:px-5">
-                      {t('hr.labels.days')} ×{' '}
-                      {formatEtbAmount(request.dailyRate)}
-                    </td>
-                    <td className="erp-users-cell-strong px-4 py-2.5 text-right text-sm tabular-nums sm:px-5">
-                      {formatEtbAmount(request.totalAmount)}
-                    </td>
-                  </tr>
-                  <tr className="bg-[var(--color-surface-secondary)]">
-                    <td className="erp-users-cell-strong px-4 py-3 text-sm sm:px-5">
-                      {t('hr.table.total')} (ETB)
-                    </td>
-                    <td className="erp-employee-meta-value px-4 py-3 text-right tabular-nums sm:px-5">
-                      {formatEtbAmount(request.totalAmountEtb)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </DetailSection>
+            {/* Standard vs approved rate and the approved total paid out. */}
+            <PerDiemRateSummary request={request} />
 
             {(request.disbursements?.length ?? 0) > 0 ? (
               <DetailSection
@@ -977,6 +954,15 @@ export default function PerDiemRequestDetailPageContent({
                 days: disbursementAmountPreview.days,
                 amount: formatEtbAmount(disbursementAmountPreview.amount),
                 dailyRate: formatEtbAmount(disbursementAmountPreview.dailyRate),
+              })}
+            </p>
+          ) : null}
+          {detailQuery.data ? (
+            // The approved total is the ceiling; the API refuses anything above it.
+            <p className="erp-users-cell-sub m-0 mb-4 text-sm">
+              {t('hr.perDiem.disbursementRemaining', {
+                remaining: formatEtbAmount(perDiemAmounts(detailQuery.data).remaining),
+                total: formatEtbAmount(perDiemAmounts(detailQuery.data).approvedTotal),
               })}
             </p>
           ) : null}

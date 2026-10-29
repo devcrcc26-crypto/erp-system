@@ -149,13 +149,13 @@ export const HELP_MODULES: readonly HelpModule[] = [
     slug: 'field-movement',
     titleEn: 'Field Movement & Early Departure',
     titleZh: '外勤与早退说明',
-    roles: ['HR'],
+    roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
     slug: 'company-assets',
     titleEn: 'Company Assets',
     titleZh: '公司资产',
-    roles: ['HR'],
+    roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
   {
     slug: 'tips',

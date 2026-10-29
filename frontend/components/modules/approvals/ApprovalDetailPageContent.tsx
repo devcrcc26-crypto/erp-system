@@ -320,8 +320,13 @@ export default function ApprovalDetailPageContent({
   const _overtimeSourceId = _isOvertime ? (_earlyRequest?.sourceId ?? '') : '';
 
   useEffect(() => {
-    if (actionModal === 'approve' && _isPerDiem && perDiemDetailQuery.data) {
-      const raw = perDiemDetailQuery.data.approvedDailyRate ?? perDiemDetailQuery.data.requestedDailyRate ?? perDiemDetailQuery.data.dailyRate;
+    if (
+      (actionModal === 'approve' || actionModal === 'approveOnBehalf') &&
+      _isPerDiem &&
+      perDiemDetailQuery.data
+    ) {
+      // Pre-filled with the standard rate (or a rate an earlier tier set).
+      const raw = perDiemDetailQuery.data.approvedDailyRate ?? perDiemDetailQuery.data.dailyRate;
       setApprovedRate(parseFloat(String(raw)));
     }
   }, [actionModal, _isPerDiem, perDiemDetailQuery.data]);
@@ -620,6 +625,76 @@ export default function ApprovalDetailPageContent({
     categoryCode !== 'OVERTIME_APPLICATION' &&
     canResubmitOwnRequest(request.status, request.requestedBy, currentUserId);
 
+  // Per diem approval: standard rate, optional requested rate, the approver's
+  // rate per day (editable) and the resulting approved total.
+  const perDiemRateField =
+    isPerDiem && perDiemDetail ? (
+      <div className="erp-confirm-dialog-field" style={{ marginBottom: 12 }}>
+        <div
+          className="mb-3 rounded-md p-3"
+          style={{ background: 'var(--color-teal-50)', border: '1px solid var(--color-teal-400)' }}
+        >
+          <p className="erp-confirm-dialog-field-label" style={{ marginBottom: 8 }}>
+            {t('pages.approvals.dialog.perDiem.summary')}
+          </p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div>
+              <p className="erp-users-cell-sub m-0">
+                {t('pages.approvals.dialog.perDiem.standardRate')}
+              </p>
+              <p className="m-0 font-semibold">
+                {t('pages.approvals.dialog.perDiem.perDay', {
+                  amount: formatEtbAmount(perDiemDetail.dailyRate),
+                })}
+              </p>
+            </div>
+            <div>
+              <p className="erp-users-cell-sub m-0">{t('pages.approvals.dialog.perDiem.days')}</p>
+              <p className="m-0 font-semibold">{perDiemDetail.days}</p>
+            </div>
+            {perDiemDetail.requestedDailyRate ? (
+              <div>
+                <p className="erp-users-cell-sub m-0">
+                  {t('pages.approvals.dialog.perDiem.requestedRate')}
+                </p>
+                <p className="m-0 font-semibold">
+                  {t('pages.approvals.dialog.perDiem.perDay', {
+                    amount: formatEtbAmount(perDiemDetail.requestedDailyRate),
+                  })}
+                </p>
+              </div>
+            ) : null}
+            {perDiemDetail.rateOverrideReason ? (
+              <div className="col-span-2">
+                <p className="erp-users-cell-sub m-0">
+                  {t('pages.approvals.dialog.perDiem.overrideReason')}
+                </p>
+                <p className="m-0">{perDiemDetail.rateOverrideReason}</p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <p className="erp-confirm-dialog-field-label">
+          {t('pages.approvals.dialog.perDiem.ratePerDay')}{' '}
+          <span aria-hidden style={{ color: 'var(--color-danger, #b42318)' }}>*</span>
+        </p>
+        <InputNumber
+          style={{ width: '100%' }}
+          min={0}
+          precision={2}
+          value={approvedRate}
+          onChange={(v) => setApprovedRate(v)}
+          aria-label={t('pages.approvals.dialog.perDiem.ratePerDay')}
+          suffix="ETB"
+        />
+        <p className="erp-confirm-dialog-field-label" style={{ marginTop: 8 }}>
+          {t('pages.approvals.dialog.perDiem.total', {
+            amount: formatEtbAmount((approvedRate ?? 0) * perDiemDetail.days),
+          })}
+        </p>
+      </div>
+    ) : null;
+
   return (
     <div className={DETAIL_ROOT}>
       <div className="erp-pro-card">
@@ -860,52 +935,7 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleApprove()}
       >
-        {isPerDiem && perDiemDetail ? (
-          <div className="erp-confirm-dialog-field" style={{ marginBottom: 12 }}>
-            <div
-              className="rounded-md p-3 mb-3"
-              style={{ background: 'var(--color-teal-50)', border: '1px solid var(--color-teal-400)' }}
-            >
-              <p className="erp-confirm-dialog-field-label" style={{ marginBottom: 8 }}>
-                Rate Summary
-              </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <div>
-                  <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Configured Rate</p>
-                  <p style={{ fontWeight: 600, margin: 0 }}>
-                    {formatEtbAmount(perDiemDetail.dailyRate)} / day
-                  </p>
-                </div>
-                {perDiemDetail.requestedDailyRate ? (
-                  <div>
-                    <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Requested Rate</p>
-                    <p style={{ fontWeight: 600, margin: 0 }}>
-                      {formatEtbAmount(perDiemDetail.requestedDailyRate)} / day
-                    </p>
-                  </div>
-                ) : null}
-                {perDiemDetail.rateOverrideReason ? (
-                  <div className="col-span-2">
-                    <p style={{ fontSize: 12, color: '#667085', margin: 0 }}>Override Reason</p>
-                    <p style={{ margin: 0 }}>{perDiemDetail.rateOverrideReason}</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <p className="erp-confirm-dialog-field-label">
-              Approved Daily Rate <span style={{ color: '#f04438' }}>*</span>
-            </p>
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              precision={2}
-              value={approvedRate}
-              onChange={(v) => setApprovedRate(v)}
-              placeholder="Enter approved rate"
-              suffix="ETB"
-            />
-          </div>
-        ) : null}
+        {perDiemRateField}
         <div className="erp-confirm-dialog-field">
           <p className="erp-confirm-dialog-field-label">
             {t('pages.approvals.dialog.noteLabel')}
@@ -936,6 +966,7 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleApprove(true)}
       >
+        {perDiemRateField}
         <div className="erp-confirm-dialog-field">
           <p className="erp-confirm-dialog-field-label">
             {t('pages.approvals.dialog.noteLabel')}
