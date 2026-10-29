@@ -5079,7 +5079,7 @@
       "failedToDeleteExpenseClaimItem": "删除明细失败",
       "draftClaimCreated": "草稿已创建，请继续添加报销明细。",
       "failedToCreateExpenseClaim": "创建费用报销失败",
-      "attachReceiptRequired": "请上传该明细的收据",
+      "attachReceiptRequired": "所有物品都必须附有收据。",
       "expenseClaimUpdated": "费用报销已更新",
       "failedToUpdateExpenseClaim": "更新费用报销失败",
       "expenseClaimDeleted": "费用报销已删除",
