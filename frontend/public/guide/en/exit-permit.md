@@ -72,8 +72,14 @@ If your permit is returned, you receive the notification **Approval returned**. 
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the permit with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. In the **Resubmit** panel, write a **Note to approver (optional)** with the corrections, and attach files if needed.
-4. Click **Resubmit**. The permit goes back through the approval chain from the beginning.
+3. To change the permit, click **Edit** at the top of the permit (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save and resubmit**. You can change the details and the items, including item images.
+4. If nothing needs to change (for example, you only want to answer the approver or add a file), use the **Resubmit** panel instead: write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
+
+Either way, the permit goes back through the approval chain from the beginning.
+
+> **After you save:** You see *"Request resubmitted for approval."*
+
+> **Note:** Supporting documents cannot be added in the edit form. To send one, use the **Resubmit** panel instead.
 
 ---
 

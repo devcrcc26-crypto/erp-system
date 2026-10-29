@@ -84,8 +84,14 @@ If your application is returned, you receive the notification **Approval returne
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the application with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. In the **Resubmit** panel, write a **Note to approver (optional)** with the corrected details, and click **Attach files** if needed.
-4. Click **Resubmit**. The application goes back through the approval chain from the beginning.
+3. To change the application, click **Edit** at the top of the application (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save and resubmit**. You can change the trip details and passengers.
+4. If nothing needs to change (for example, you only want to answer the approver or add a file), use the **Resubmit** panel instead: write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
+
+Either way, the application goes back through the approval chain from the beginning.
+
+> **After you save:** You see *"Request resubmitted for approval."*
+
+> **Note:** The edit form does not take new attachments. To send a file, use the **Resubmit** panel instead.
 
 ---
 

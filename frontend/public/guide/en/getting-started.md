@@ -74,8 +74,10 @@ Almost every request works the same way.
 
 1. Open the notification **Approval returned**, or find the request under **Approvals** → **My Requests** with status **Returned**.
 2. Read the approver's note in the banner **This request was returned**.
-3. In the **Resubmit** panel, write a **Note to approver (optional)** and attach files if needed.
-4. Click **Resubmit**.
+3. To change the request, click **Edit** at the top of the request, make your changes, and click **Save and resubmit**.
+4. If nothing needs to change, use the **Resubmit** panel instead: write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**.
+
+You can only edit your own requests, and only while they are a draft or returned.
 
 See the **Approvals Inbox** topic for the full approval process.
 

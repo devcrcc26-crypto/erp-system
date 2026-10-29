@@ -91,7 +91,7 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 *(Employees — only while the claim is **Draft**)*
 
 1. Open the claim from **My Expense Claims**.
-2. To change the title or description, click **Update**, make the changes, and click **Save**.
+2. To change the title or description, click **Update**, make the changes, and click **Save changes**.
 3. To add an item, click **Add Item**. To change or remove one, use **Update** or **Delete** on the item.
 4. If the page says *"N item(s) still need a receipt before you can submit."*, add the missing receipts.
 5. Click **Submit Claim** and confirm **Submit expense claim?**.
@@ -116,9 +116,12 @@ If your claim is returned, you receive the notification **Approval returned**. O
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the claim with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. If the title or description needs to change, open the claim from **Pay & Travel** → **Expense Claims**, click **Update**, make the changes, and click **Save**. The items cannot be changed on a returned claim.
-4. Go back to the claim in **Approvals**. In the **Resubmit** panel, write a **Note to approver (optional)** and click **Attach files** to add any missing documents.
-5. Click **Resubmit**. The claim goes back through the approval chain from the beginning.
+3. To change the claim, click **Edit** at the top of the claim (or **Edit** next to it in **My Requests**). The edit page shows the approver's note at the top.
+4. Change the **Title** or **Description** if needed. Under **Items**, click **Add Item** to add one, or use the edit and delete buttons on an item. Item changes are saved straight away, and every item needs a receipt.
+5. Click **Save and resubmit**. You see *"Request resubmitted for approval."*
+6. If nothing needs to change (for example, you only want to answer the approver or add a document), use the **Resubmit** panel instead: write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
+
+Either way, the claim goes back through the approval chain from the beginning.
 
 
 ---
