@@ -261,7 +261,10 @@ export default function ExpenseClaimEditPageContent({
                 title: t('hr.table.receipt'),
                 key: 'receipt',
                 width: 90,
-                render: (_: unknown, row) => (row.receipt ? '✓' : '-'),
+                render: (_: unknown, row) =>
+                  row.receipts.length > 0
+                    ? t('hr.form.receiptFileCount', { count: row.receipts.length })
+                    : '-',
               },
               {
                 title: <span className="sr-only">{t('common.edit')}</span>,

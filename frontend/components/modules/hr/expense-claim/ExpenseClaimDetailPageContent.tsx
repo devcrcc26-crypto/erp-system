@@ -72,6 +72,7 @@ import {
   formatEtbAmount,
   formatExpenseClaimEmployeeName,
   formatExpenseClaimStatus,
+  itemReceiptDocuments,
 } from '@/lib/utils/expense-claim-display';
 import { exportExpenseClaimDetailItemsExcel } from '@/lib/utils/expense-claim-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -183,7 +184,7 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(isOwner) &&
     (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
   const missingReceiptCount = useMemo(
-    () => (claim?.items ?? []).filter((item) => !item.receipt).length,
+    () => (claim?.items ?? []).filter((item) => item.receipts.length === 0).length,
     [claim?.items],
   );
   const canSubmit =
@@ -397,21 +398,25 @@ export default function ExpenseClaimDetailPageContent({
         title: t('hr.table.receipt'),
         key: 'receipt',
         width: isNarrow ? 72 : 96,
-        render: (_: unknown, row: ExpenseClaimItem) =>
-          row.receipt ? (
+        render: (_: unknown, row: ExpenseClaimItem) => {
+          // One row per item; each of its receipts gets its own preview/download.
+          const receipts = itemReceiptDocuments(row);
+          return receipts.length > 0 ? (
             <div
-              className="flex items-center gap-0.5 sm:gap-1"
+              className="flex flex-col gap-0.5"
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <DocumentPreviewActions document={row.receipt}>
+              {receipts.map((receipt) => (
+              <div key={receipt.id} className="flex items-center gap-0.5 sm:gap-1">
+              <DocumentPreviewActions document={receipt}>
                 {(actions) => (
                   <>
-                    <Tooltip title={row.receipt!.name}>
+                    <Tooltip title={receipt.name}>
                       <span className="inline-flex shrink-0">
                         <ProfileFileTypeIcon
-                          name={row.receipt!.name}
-                          fileType={row.receipt!.fileType}
+                          name={receipt.name}
+                          fileType={receipt.fileType}
                           size="sm"
                         />
                       </span>
@@ -429,7 +434,7 @@ export default function ExpenseClaimDetailPageContent({
                           }
                           loading={actions.previewLoading}
                           aria-label={t('common.previewFile', {
-                            name: row.receipt!.name,
+                            name: receipt.name,
                           })}
                           onClick={actions.preview}
                         />
@@ -456,6 +461,8 @@ export default function ExpenseClaimDetailPageContent({
                   </>
                 )}
               </DocumentPreviewActions>
+              </div>
+              ))}
             </div>
           ) : (
             <Tooltip title={t('hr.labels.receiptMissing')}>
@@ -466,7 +473,8 @@ export default function ExpenseClaimDetailPageContent({
                 <File size={16} strokeWidth={1.75} />
               </span>
             </Tooltip>
-          ),
+          );
+        },
       },
       ...(canEditItems
         ? [
@@ -851,9 +859,7 @@ export default function ExpenseClaimDetailPageContent({
               </div>
             </div>
             <DocumentPreviewGroup
-              documents={claim.items.flatMap((item) =>
-                item.receipt ? [item.receipt] : [],
-              )}
+              documents={claim.items.flatMap(itemReceiptDocuments)}
             >
               <DataTable<ExpenseClaimItem>
                 rowKey="id"

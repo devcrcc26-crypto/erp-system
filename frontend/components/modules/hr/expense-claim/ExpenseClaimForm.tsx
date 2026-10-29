@@ -199,7 +199,7 @@ export default function ExpenseClaimForm({
       expenseDate: dayjs(item.expenseDate),
       amount: item.amount,
     });
-    setReceiptFiles(item.file ? [item.file] : []);
+    setReceiptFiles(item.files ?? []);
     setShowItemForm(true);
   }
 
@@ -224,21 +224,18 @@ export default function ExpenseClaimForm({
         amount: Number(values.amount),
         currency: 'ETB' as const,
       };
+      // One item, all of its receipt files (never one item per file).
+      const entry: ClientItem = {
+        ...base,
+        _key: editingKey ?? nextKey(),
+        files: receiptFiles,
+      };
       if (editingKey) {
-        const entry: ClientItem = {
-          ...base,
-          _key: editingKey,
-          file: receiptFiles[0] ?? undefined,
-        };
         setItems((prev) =>
           prev.map((row) => (row._key === editingKey ? entry : row)),
         );
       } else {
-        const newEntries: ClientItem[] =
-          receiptFiles.length > 0
-            ? receiptFiles.map((file) => ({ ...base, _key: nextKey(), file }))
-            : [{ ...base, _key: nextKey() }];
-        setItems((prev) => [...prev, ...newEntries]);
+        setItems((prev) => [...prev, entry]);
       }
       cancelItemForm();
     } catch {
@@ -269,7 +266,7 @@ export default function ExpenseClaimForm({
     }
 
     for (const item of items) {
-      if (!item.file) {
+      if (!item.files?.length) {
         messageApi.warning(t('hr.messages.attachReceiptRequired'));
         return;
       }
@@ -351,14 +348,19 @@ export default function ExpenseClaimForm({
       width: isNarrow ? 72 : 140,
       responsive: ['sm'],
       render: (_: unknown, row: ClientItem) =>
-        row.file ? (
-          <Tooltip title={row.file.name}>
-            <span className="inline-flex">
+        row.files?.length ? (
+          <Tooltip title={row.files.map((file) => file.name).join(', ')}>
+            <span className="inline-flex items-center gap-1">
               <ProfileFileTypeIcon
-                name={row.file.name}
-                fileType={row.file.type}
+                name={row.files[0].name}
+                fileType={row.files[0].type}
                 size="sm"
               />
+              {row.files.length > 1 ? (
+                <span className="erp-users-cell-sub">
+                  {t('hr.form.receiptFileCount', { count: row.files.length })}
+                </span>
+              ) : null}
             </span>
           </Tooltip>
         ) : (

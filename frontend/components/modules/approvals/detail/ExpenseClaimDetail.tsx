@@ -16,6 +16,7 @@ import { useExpenseClaim } from '@/lib/query/expense-claim';
 import {
   formatCurrencyAmount,
   formatEtbAmount,
+  itemReceiptDocuments,
 } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -121,12 +122,15 @@ export default function ExpenseClaimDetail({
       title: 'Receipt',
       key: 'receipt',
       width: 96,
-      render: (_: unknown, row: ExpenseClaimItem) =>
-        row.receipt ? (
-          <AttachmentDownloadList documents={[row.receipt]} compact />
+      render: (_: unknown, row: ExpenseClaimItem) => {
+        // One row per item; every receipt of the item is listed here.
+        const receipts = itemReceiptDocuments(row);
+        return receipts.length > 0 ? (
+          <AttachmentDownloadList documents={receipts} compact />
         ) : (
           '-'
-        ),
+        );
+      },
     },
   ];
 
@@ -159,7 +163,7 @@ export default function ExpenseClaimDetail({
       ) : null}
 
       <SectionCard title="Expense Items" bodyClassName="px-3 py-4 sm:px-5">
-        <DocumentPreviewGroup documents={claim.items.flatMap((item) => (item.receipt ? [item.receipt] : []))}>
+        <DocumentPreviewGroup documents={claim.items.flatMap(itemReceiptDocuments)}>
           <DataTable<ExpenseClaimItem>
             rowKey="id"
             className="erp-pro-table"

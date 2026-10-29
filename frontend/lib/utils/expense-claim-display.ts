@@ -1,5 +1,7 @@
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import type {
+  ExpenseClaimDocumentSummary,
+  ExpenseClaimItemReceipt,
   ExpenseClaimStatus,
   ExpenseClaimUserSummary,
 } from '@/lib/api/expense-claim.types';
@@ -93,4 +95,13 @@ export function formatCurrencyAmount(
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+/** Receipt documents of one expense item (an item can have several). */
+export function itemReceiptDocuments(item: {
+  receipts?: ExpenseClaimItemReceipt[] | null;
+}): ExpenseClaimDocumentSummary[] {
+  return (item.receipts ?? []).flatMap((receipt) =>
+    receipt.document ? [receipt.document] : [],
+  );
 }

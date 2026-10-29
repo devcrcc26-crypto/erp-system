@@ -6161,7 +6161,7 @@
       "REPAIR": "Repair"
     },
     "hints": {
-      "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it.",
+      "replaceReceipt": "Current receipts: {{name}}. Uploading new files replaces all of them.",
       "receiptRequired": "Attach a PDF or image receipt for this expense.",
       "itemImageOptional": "Optional photo of the item (JPEG, PNG, WebP, or GIF).",
       "replaceItemImage": "Current image: {{name}}. Upload a new file to replace it."
@@ -6352,6 +6352,7 @@
       "category": "Category",
       "expenseDate": "Expense Date",
       "receipt": "Receipt",
+      "receiptFileCount": "{{count}} files",
       "warehouseLocation": "Warehouse Location",
       "department": "Department",
       "direction": "Direction",

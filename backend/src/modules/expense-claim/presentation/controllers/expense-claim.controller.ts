@@ -10,10 +10,14 @@ import {
   Query,
   StreamableFile,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -62,6 +66,27 @@ async function parseDto<T extends object>(
     });
   }
   return dto;
+}
+
+/** Receipt uploads for one line item: `files` (several), or legacy `file`. */
+type ReceiptUploads = {
+  files?: Express.Multer.File[];
+  file?: Express.Multer.File[];
+};
+
+const MAX_RECEIPTS_PER_ITEM = 10;
+
+const RECEIPT_FILES_INTERCEPTOR = FileFieldsInterceptor(
+  [
+    { name: 'files', maxCount: MAX_RECEIPTS_PER_ITEM },
+    { name: 'file', maxCount: 1 },
+  ],
+  { storage: memoryStorage() },
+);
+
+/** All files sent for one item — they all become receipts of that item. */
+function receiptFiles(uploads: ReceiptUploads | undefined): Express.Multer.File[] {
+  return [...(uploads?.files ?? []), ...(uploads?.file ?? [])];
 }
 
 @ApiTags('HR Expense Claims')
@@ -211,7 +236,10 @@ export class ExpenseClaimController {
 
   @Post(':id/items')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Add a line item (with receipt) to a draft claim' })
+  @ApiOperation({
+    summary:
+      'Add a line item with one or more receipt files (all stored on this one item)',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -223,23 +251,23 @@ export class ExpenseClaimController {
         expenseDate: { type: 'string', format: 'date' },
         amount: { type: 'number' },
         currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
-        file: { type: 'string', format: 'binary' },
+        files: { type: 'array', items: { type: 'string', format: 'binary' } },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(RECEIPT_FILES_INTERCEPTOR)
   async addItem(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() uploads?: ReceiptUploads,
   ): Promise<unknown> {
     const dto = await parseDto(AddExpenseClaimItemDto, body);
     return this.expenseClaimService.addItem(
       id,
       dto,
-      file,
+      receiptFiles(uploads),
       companyId,
       user.userId,
     );
@@ -247,7 +275,9 @@ export class ExpenseClaimController {
 
   @Patch(':id/items/:itemId')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Update a line item and/or replace its receipt' })
+  @ApiOperation({
+    summary: 'Update a line item; uploaded files replace its receipts',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -258,25 +288,25 @@ export class ExpenseClaimController {
         expenseDate: { type: 'string', format: 'date' },
         amount: { type: 'number' },
         currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
-        file: { type: 'string', format: 'binary' },
+        files: { type: 'array', items: { type: 'string', format: 'binary' } },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(RECEIPT_FILES_INTERCEPTOR)
   async updateItem(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Param('itemId') itemId: string,
     @Body() body: Record<string, unknown>,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() uploads?: ReceiptUploads,
   ): Promise<unknown> {
     const dto = await parseDto(UpdateExpenseClaimItemDto, body);
     return this.expenseClaimService.updateItem(
       id,
       itemId,
       dto,
-      file,
+      receiptFiles(uploads),
       companyId,
       user.userId,
     );

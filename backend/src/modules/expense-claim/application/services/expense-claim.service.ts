@@ -74,7 +74,12 @@ const CLAIM_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
   paidBy: { select: USER_SELECT },
   items: {
-    include: { receipt: { select: DOCUMENT_SELECT } },
+    include: {
+      receipts: {
+        include: { document: { select: DOCUMENT_SELECT } },
+        orderBy: { createdAt: 'asc' as const },
+      },
+    },
     orderBy: { expenseDate: 'asc' as const },
   },
   approvalRequest: {
@@ -210,12 +215,13 @@ export class ExpenseClaimService
   }
 
   /**
-   * Adds a line item (with optional receipt file) to a DRAFT claim.
+   * Adds a line item to a DRAFT / RETURNED claim. Every uploaded file becomes a
+   * receipt of this one item (never one item per file).
    */
   async addItem(
     claimId: string,
     dto: AddExpenseClaimItemDto,
-    file: UploadedFile | undefined,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
@@ -228,10 +234,7 @@ export class ExpenseClaimService
         : await this.currencyService.getRate(dto.currency, 'ETB', companyId);
     const amountEtb = dto.amount * rate;
 
-    let documentId: string | null = null;
-    if (file?.buffer?.length) {
-      documentId = await this.uploadReceipt(claim, companyId, userId, file);
-    }
+    const documentIds = await this.uploadReceipts(claim, companyId, userId, files);
 
     await this.prisma.expenseClaimItem.create({
       data: {
@@ -244,7 +247,9 @@ export class ExpenseClaimService
         amountEtb: new Prisma.Decimal(amountEtb),
         exchangeRate: new Prisma.Decimal(rate),
         expenseDate,
-        documentId,
+        receipts: {
+          create: documentIds.map((documentId) => ({ documentId })),
+        },
       },
     });
 
@@ -253,13 +258,14 @@ export class ExpenseClaimService
   }
 
   /**
-   * Updates a line item's fields and/or replaces its receipt.
+   * Updates a line item's fields. When files are uploaded they replace the
+   * item's receipts (all files sent together are kept on this one item).
    */
   async updateItem(
     claimId: string,
     itemId: string,
     dto: UpdateExpenseClaimItemDto,
-    file: UploadedFile | undefined,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
@@ -283,10 +289,7 @@ export class ExpenseClaimService
         : await this.currencyService.getRate(nextCurrency, 'ETB', companyId);
     const amountEtb = nextAmount * rate;
 
-    let documentId = existing.documentId;
-    if (file?.buffer?.length) {
-      documentId = await this.uploadReceipt(claim, companyId, userId, file);
-    }
+    const documentIds = await this.uploadReceipts(claim, companyId, userId, files);
 
     await this.prisma.expenseClaimItem.update({
       where: { id: itemId },
@@ -298,7 +301,14 @@ export class ExpenseClaimService
         amountEtb: new Prisma.Decimal(amountEtb),
         exchangeRate: new Prisma.Decimal(rate),
         expenseDate: nextExpenseDate,
-        documentId,
+        ...(documentIds.length > 0
+          ? {
+              receipts: {
+                deleteMany: {},
+                create: documentIds.map((documentId) => ({ documentId })),
+              },
+            }
+          : {}),
       },
     });
 
@@ -339,7 +349,7 @@ export class ExpenseClaimService
   ): Promise<unknown> {
     const claim = await this.prisma.expenseClaim.findFirst({
       where: activeOnly({ id: claimId, companyId }),
-      include: { items: true },
+      include: { items: { include: { receipts: { select: { id: true } } } } },
     });
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
@@ -355,7 +365,7 @@ export class ExpenseClaimService
         'Add at least one expense item before submitting',
       );
     }
-    const missingReceipt = claim.items.some((item) => !item.documentId);
+    const missingReceipt = claim.items.some((item) => item.receipts.length === 0);
     if (missingReceipt) {
       throw new BadRequestException(
         'Every expense item requires a receipt before submitting',
@@ -903,6 +913,35 @@ export class ExpenseClaimService
       where: { id: claimId },
       data: { totalAmountEtb: new Prisma.Decimal(total), updatedBy: userId },
     });
+  }
+
+  /**
+   * Uploads every file as a receipt of the same item. The claim's attachment
+   * folder is resolved once so several files never create several folders.
+   */
+  private async uploadReceipts(
+    claim: { id: string; claimNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+    files: UploadedFile[],
+  ): Promise<string[]> {
+    const uploads = files.filter((file) => file.buffer?.length);
+    if (uploads.length === 0) {
+      return [];
+    }
+    const withFolder = {
+      ...claim,
+      attachmentFolderId:
+        claim.attachmentFolderId ??
+        (await this.ensureAttachmentFolder(claim, companyId, userId)),
+    };
+    const documentIds: string[] = [];
+    for (const file of uploads) {
+      documentIds.push(
+        await this.uploadReceipt(withFolder, companyId, userId, file),
+      );
+    }
+    return documentIds;
   }
 
   private async uploadReceipt(

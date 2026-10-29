@@ -22,6 +22,7 @@ import {
   useUpdateExpenseClaimItem,
 } from '@/lib/query/expense-claim';
 import { detailDrawerStyles } from '@/lib/theme/layout';
+import { itemReceiptDocuments } from '@/lib/utils/expense-claim-display';
 
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -94,14 +95,15 @@ export default function ExpenseClaimItemModal({
       expenseDate: values.expenseDate.format('YYYY-MM-DD'),
       amount: values.amount,
       currency: 'ETB' as const,
-      file: selectedFiles[0],
+      // All selected files are receipts of this one item.
+      files: selectedFiles,
     };
     try {
       if (editingItem) {
         await updateMutation.mutateAsync({ itemId: editingItem.id, payload });
         messageApi.success(t('hr.messages.expenseClaimItemUpdated'));
       } else {
-        if (!payload.file) {
+        if (payload.files.length === 0) {
           messageApi.warning(t('hr.messages.attachReceiptRequired'));
           return;
         }
@@ -119,6 +121,7 @@ export default function ExpenseClaimItemModal({
   }
 
   const saving = addMutation.isPending || updateMutation.isPending;
+  const editingReceipts = editingItem ? itemReceiptDocuments(editingItem) : [];
   const title = editingItem
     ? t('hr.dialog.editExpenseItemTitle')
     : t('hr.dialog.addExpenseItemTitle');
@@ -240,9 +243,9 @@ export default function ExpenseClaimItemModal({
               required={!editingItem}
               className="!mb-0"
               extra={
-                editingItem?.receipt
+                editingReceipts.length > 0
                   ? t('hr.hints.replaceReceipt', {
-                      name: editingItem.receipt.name,
+                      name: editingReceipts.map((doc) => doc.name).join(', '),
                     })
                   : t('hr.hints.receiptRequired')
               }
@@ -251,7 +254,7 @@ export default function ExpenseClaimItemModal({
                 files={selectedFiles}
                 onChange={setSelectedFiles}
                 accept=".pdf,.jpg,.jpeg,.png"
-                multiple={false}
+                multiple
                 disabled={saving}
               />
             </Form.Item>

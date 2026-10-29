@@ -347,7 +347,7 @@ export class ExpenseClaimImportService {
         await this.expenseClaimService.addItem(
           claimId,
           dto,
-          undefined,
+          [],
           ctx.companyId,
           ctx.userId,
         );

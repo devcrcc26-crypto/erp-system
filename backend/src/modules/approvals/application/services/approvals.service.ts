@@ -2383,14 +2383,14 @@ export class ApprovalsService {
     if (request.expenseClaim) {
       const items = await this.prisma.expenseClaimItem.findMany({
         where: { claimId: request.expenseClaim.id },
-        select: { documentId: true },
+        select: { _count: { select: { receipts: true } } },
       });
       if (items.length === 0) {
         throw new BadRequestException(
           'Add at least one expense item before submitting',
         );
       }
-      if (items.some((item) => !item.documentId)) {
+      if (items.some((item) => item._count.receipts === 0)) {
         throw new BadRequestException(
           'Every expense item requires a receipt before submitting',
         );

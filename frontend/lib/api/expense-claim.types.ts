@@ -34,8 +34,14 @@ export interface ExpenseClaimItem {
   amountEtb: number | string;
   exchangeRate: number | string;
   expenseDate: string;
-  documentId?: string | null;
-  receipt?: ExpenseClaimDocumentSummary | null;
+  /** One item can carry several receipt files. */
+  receipts: ExpenseClaimItemReceipt[];
+}
+
+export interface ExpenseClaimItemReceipt {
+  id: string;
+  documentId: string;
+  document?: ExpenseClaimDocumentSummary | null;
 }
 
 export interface ExpenseClaimListItem {
@@ -97,7 +103,8 @@ export interface AddExpenseClaimItemPayload {
   expenseDate: string;
   amount: number;
   currency: SupportedCurrency;
-  file?: File;
+  /** All receipt files for this one item. */
+  files?: File[];
 }
 
 export interface UpdateExpenseClaimItemPayload {
@@ -106,7 +113,8 @@ export interface UpdateExpenseClaimItemPayload {
   expenseDate?: string;
   amount?: number;
   currency?: SupportedCurrency;
-  file?: File;
+  /** When set, these files replace the item's receipts. */
+  files?: File[];
 }
 
 export interface ListExpenseClaimsParams {

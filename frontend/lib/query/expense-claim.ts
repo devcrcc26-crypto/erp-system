@@ -151,7 +151,8 @@ function itemFormData(payload: AddExpenseClaimItemPayload | UpdateExpenseClaimIt
   if (payload.expenseDate !== undefined) formData.append('expenseDate', payload.expenseDate);
   if (payload.amount !== undefined) formData.append('amount', String(payload.amount));
   if (payload.currency !== undefined) formData.append('currency', payload.currency);
-  if (payload.file) formData.append('file', payload.file);
+  // Every file goes on this one item (never one item per file).
+  for (const file of payload.files ?? []) formData.append('files', file);
   return formData;
 }
 

@@ -1441,7 +1441,7 @@ model Document {
   businessTripDocuments      BusinessTripDocument[]
   businessTripCombinedTickets BusinessTrip[]             @relation("BusinessTripCombinedTicket")
   businessTripPassengerTickets BusinessTripPassenger[]   @relation("BusinessTripPassengerTicket")
-  expenseClaimItemReceipts    ExpenseClaimItem[]         @relation("ExpenseItemReceipt")
+  expenseClaimItemReceipts    ExpenseClaimItemReceipt[]  @relation("ExpenseItemReceipt")
   vehicleRefuelingReceipts    VehicleRefueling[]         @relation("RefuelingReceipt")
   officialSealedDocuments     OfficialSeal[]             @relation("OfficialSealSealedDocument")
   projectSealedDocuments      ProjectSeal[]              @relation("ProjectSealSealedDocument")
@@ -5119,15 +5119,30 @@ model ExpenseClaimItem {
   amountEtb    Decimal           @map("amount_etb") @db.Decimal(14, 2)
   exchangeRate Decimal           @default(1) @map("exchange_rate") @db.Decimal(18, 6)
   expenseDate  DateTime          @map("expense_date") @db.Date
-  documentId   String?           @map("document_id")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
 
-  claim   ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  receipt Document?    @relation("ExpenseItemReceipt", fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  claim    ExpenseClaim              @relation(fields: [claimId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  /// One item can carry several receipt files (e.g. invoice + payment slip).
+  receipts ExpenseClaimItemReceipt[]
 
   @@index([claimId], map: "idx_expense_claim_item_claim")
   @@map("expense_claim_item")
+}
+
+/// A receipt file attached to an expense claim line item.
+model ExpenseClaimItemReceipt {
+  id         String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  itemId     String   @map("item_id")
+  documentId String   @map("document_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  item     ExpenseClaimItem @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  document Document         @relation("ExpenseItemReceipt", fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([itemId, documentId], map: "uq_expense_claim_item_receipt")
+  @@index([itemId], map: "idx_expense_claim_item_receipt_item")
+  @@map("expense_claim_item_receipt")
 }
 
 // ─── Per Diem ─────────────────────────────────────────────────────────────

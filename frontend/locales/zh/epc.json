@@ -6160,7 +6160,7 @@
       "REPAIR": "维修"
     },
     "hints": {
-      "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。",
+      "replaceReceipt": "当前收据：{{name}}。上传新文件将替换全部收据。",
       "receiptRequired": "请为本费用附上 PDF 或图片收据。",
       "itemImageOptional": "可选的物品照片（JPEG、PNG、WebP 或 GIF）。",
       "replaceItemImage": "当前图片：{{name}}。上传新文件可替换。"
@@ -6351,6 +6351,7 @@
       "category": "类别",
       "expenseDate": "费用日期",
       "receipt": "票据",
+      "receiptFileCount": "{{count}} 个文件",
       "warehouseLocation": "仓库位置",
       "department": "部门",
       "direction": "方向",
