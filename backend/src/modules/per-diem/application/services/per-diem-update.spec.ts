@@ -40,7 +40,7 @@ function record(status: PerDiemStatus, employeeId = EMPLOYEE_ID) {
 
 describe('PerDiemService.updateRequest', () => {
   let service: PerDiemService;
-  let resubmitAfterOwnerEdit: jest.Mock<() => Promise<boolean>>;
+  let resubmitRequest: jest.Mock<() => Promise<unknown>>;
   let prisma: {
     perDiemRequest: {
       findFirst: jest.Mock<() => Promise<unknown>>;
@@ -59,11 +59,11 @@ describe('PerDiemService.updateRequest', () => {
       approvalRequest: { update: jest.fn<() => Promise<unknown>>() },
       $transaction: jest.fn(async (fn) => fn(prisma)),
     };
-    resubmitAfterOwnerEdit = jest.fn<() => Promise<boolean>>().mockResolvedValue(true);
+    resubmitRequest = jest.fn<() => Promise<unknown>>();
 
     service = new PerDiemService(
       prisma as unknown as PrismaService,
-      { resubmitAfterOwnerEdit } as unknown as ApprovalsService,
+      { resubmitRequest } as unknown as ApprovalsService,
       {} as HrApprovalChainService,
       {} as OnBehalfService,
       {
@@ -130,20 +130,19 @@ describe('PerDiemService.updateRequest', () => {
     const data = prisma.perDiemRequest.update.mock.calls[0][0].data;
     expect(data).not.toHaveProperty('status');
     expect(data.destination).toBe('Adama');
-    expect(resubmitAfterOwnerEdit).not.toHaveBeenCalled();
+    expect(resubmitRequest).not.toHaveBeenCalled();
   });
 
-  it('saving a RETURNED request resubmits it (chain restarts)', async () => {
+  it('saves a RETURNED request without resubmitting (Resubmit is separate)', async () => {
     prisma.perDiemRequest.findFirst.mockResolvedValue(
       record(PerDiemStatus.RETURNED),
     );
     await service.updateRequest(REQUEST_ID, DTO, COMPANY_ID, EMPLOYEE_ID);
 
+    const data = prisma.perDiemRequest.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('status');
+    // The approval card mirrors the edit, but the chain is not restarted.
     expect(prisma.approvalRequest.update).toHaveBeenCalled();
-    expect(resubmitAfterOwnerEdit).toHaveBeenCalledWith(
-      APPROVAL_ID,
-      COMPANY_ID,
-      EMPLOYEE_ID,
-    );
+    expect(resubmitRequest).not.toHaveBeenCalled();
   });
 });

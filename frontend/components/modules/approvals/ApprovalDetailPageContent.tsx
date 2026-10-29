@@ -41,7 +41,7 @@ import FieldMovementDetail from '@/components/modules/approvals/detail/FieldMove
 import WorkFromHomeDetail from '@/components/modules/approvals/detail/WorkFromHomeDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
-import ResubmitPanel, {
+import ResubmitRequestDialog, {
   ResponseHistory,
 } from '@/components/modules/approvals/ResubmitPanel';
 import LateSubmissionBanner from '@/components/modules/approvals/LateSubmissionBanner';
@@ -80,6 +80,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   canEditOwnRequest,
+  canResubmitOwnRequest,
   editRequestHref,
 } from '@/lib/utils/request-edit';
 
@@ -302,6 +303,7 @@ export default function ApprovalDetailPageContent({
   const resolveConditionMutation = useResolveApprovalCondition(requestId);
 
   const [actionModal, setActionModal] = useState<ActionModalKind>(null);
+  const [resubmitOpen, setResubmitOpen] = useState(false);
   const [note, setNote] = useState('');
   const [conditionText, setConditionText] = useState('');
   const [approvedRate, setApprovedRate] = useState<number | null>(null);
@@ -612,6 +614,11 @@ export default function ApprovalDetailPageContent({
     canEditOwnRequest(request.status, request.requestedBy, currentUserId)
       ? editRequestHref(categoryCode, request.sourceId, request.id)
       : null;
+  // The one Resubmit action. Overtime sheets are resubmitted by submitting the
+  // sheet again (it refreshes the sheet totals), so they are excluded here.
+  const canResubmit =
+    categoryCode !== 'OVERTIME_APPLICATION' &&
+    canResubmitOwnRequest(request.status, request.requestedBy, currentUserId);
 
   return (
     <div className={DETAIL_ROOT}>
@@ -627,18 +634,28 @@ export default function ApprovalDetailPageContent({
               {isNarrow ? undefined : t('pages.approvals.backToList')}
             </Button>
           </div>
-          {editHref ? (
+          {editHref || canResubmit ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => router.push(editHref)}
-                aria-label={t('pages.approvals.edit.buttonAria', {
-                  number: request.requestNumber,
-                })}
-              >
-                {t('pages.approvals.edit.button')}
-              </Button>
+              {editHref ? (
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => router.push(editHref)}
+                  aria-label={t('pages.approvals.edit.buttonAria', {
+                    number: request.requestNumber,
+                  })}
+                >
+                  {t('pages.approvals.edit.button')}
+                </Button>
+              ) : null}
+              {canResubmit ? (
+                <Button
+                  type="primary"
+                  icon={<RollbackOutlined />}
+                  onClick={() => setResubmitOpen(true)}
+                >
+                  {t('pages.approvals.resubmit.submit')}
+                </Button>
+              ) : null}
             </div>
           ) : null}
           {canApproveOnBehalf && currentTier ? (
@@ -785,9 +802,6 @@ export default function ApprovalDetailPageContent({
 
           {renderTypedDetail(request)}
 
-          {isRequester && request.status === 'RETURNED' ? (
-            <ResubmitPanel requestId={request.id} returnNote={returnNote} />
-          ) : null}
 
           {isRequester &&
           unresolvedConditions.length > 0 &&
@@ -825,6 +839,14 @@ export default function ApprovalDetailPageContent({
           }
         />
       </div>
+
+      {canResubmit ? (
+        <ResubmitRequestDialog
+          requestId={request.id}
+          open={resubmitOpen}
+          onClose={() => setResubmitOpen(false)}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={actionModal === 'approve'}

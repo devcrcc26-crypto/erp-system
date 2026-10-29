@@ -559,6 +559,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
  
     private async assertCanView(
         projectSeal: {
+            status: string;
             employeeId: string;
             createdBy?: string;
             approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -577,9 +578,11 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
 
         const isOwner = projectSeal.employeeId === userId || projectSeal.createdBy === userId;
         const isTierApprover =
-            projectSeal.approvalRequest?.tiers?.some(
+            // Cancelled requests are hidden from the approval chain.
+            projectSeal.status !== 'CANCELLED' &&
+            (projectSeal.approvalRequest?.tiers?.some(
                 (t) => t.approverId === userId,
-            ) ?? false;
+            ) ?? false);
 
         if (!isOwner && !isTierApprover) {
             throw new ForbiddenException('You do not have access to this project seal request');

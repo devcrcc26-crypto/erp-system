@@ -24,11 +24,7 @@ import type {
   SubmitBusinessTripPayload,
   UpdateBusinessTripPayload,
 } from '@/lib/api/business-trip.types';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
@@ -256,10 +252,6 @@ export function useUpdateBusinessTrip(id: string) {
   return useMutation({
     mutationFn: (payload: UpdateBusinessTripPayload) =>
       apiPatch<BusinessTripDetail>(`${BUSINESS_TRIP_PATH}/${id}`, payload),
-    onMutate: () =>
-      applyOptimisticRequestEdit<BusinessTripDetail>(queryClient, detailKey),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, detailKey, context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: businessTripKeys.lists() });
       queryClient.setQueryData(detailKey, updated);

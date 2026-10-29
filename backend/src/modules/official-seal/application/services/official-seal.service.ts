@@ -598,6 +598,7 @@ export class OfficialSealService
 
   private async assertCanView(
     officialSeal: {
+      status: string;
       employeeId: string;
       createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -615,9 +616,11 @@ export class OfficialSealService
 
     const isOwner = officialSeal.employeeId === userId || officialSeal.createdBy === userId;
     const isTierApprover =
-      officialSeal.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      officialSeal.status !== 'CANCELLED' &&
+      (officialSeal.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

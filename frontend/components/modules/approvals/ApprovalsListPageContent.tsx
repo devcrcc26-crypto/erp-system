@@ -59,6 +59,7 @@ import {
 import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
 import {
   filterApprovalRequests,
+  hideCancelledFromApprovers,
   statusesForApprovalMode,
   type ApprovalStatusMode,
 } from '@/lib/utils/approvals-list-filter';
@@ -205,7 +206,17 @@ export default function ApprovalsListPageContent(): React.ReactNode {
     { inbox: toApprovalInbox(inbox) },
     !isDraftsInbox,
   );
-  const allRows = listQuery.data ?? [];
+  const allRows = useMemo(
+    () =>
+      isDraftsInbox
+        ? []
+        : hideCancelledFromApprovers(listQuery.data ?? [], {
+            inbox: toApprovalInbox(inbox),
+            currentUserId,
+            isFullAccess,
+          }),
+    [currentUserId, inbox, isDraftsInbox, isFullAccess, listQuery.data],
+  );
 
   const statusCounts = useMemo(() => {
     const scoped = filterApprovalRequests(allRows, {

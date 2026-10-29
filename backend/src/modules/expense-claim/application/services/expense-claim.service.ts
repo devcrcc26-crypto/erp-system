@@ -583,30 +583,8 @@ export class ExpenseClaimService
     ) {
       throw new ForbiddenException('This request can no longer be edited.');
     }
-    // requestedBy is the claim owner (see submitClaim).
-    const resubmit =
-      claim.status === ExpenseClaimStatus.RETURNED &&
-      Boolean(claim.approvalRequestId) &&
-      claim.employeeId === userId;
-    if (
-      !resubmit &&
-      dto.title === undefined &&
-      dto.description === undefined
-    ) {
+    if (dto.title === undefined && dto.description === undefined) {
       throw new BadRequestException('No fields to update');
-    }
-    if (resubmit) {
-      // Same item rules as the first submit.
-      if (claim.items.length === 0) {
-        throw new BadRequestException(
-          'Add at least one expense item before submitting',
-        );
-      }
-      if (claim.items.some((item) => !item.documentId)) {
-        throw new BadRequestException(
-          'Every expense item requires a receipt before submitting',
-        );
-      }
     }
 
     const title =
@@ -636,14 +614,6 @@ export class ExpenseClaimService
         });
       }
     });
-
-    if (resubmit && claim.approvalRequestId) {
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        claim.approvalRequestId,
-        companyId,
-        userId,
-      );
-    }
 
     return this.getClaim(id, companyId, userId);
   }
@@ -893,6 +863,7 @@ export class ExpenseClaimService
 
   private async assertCanView(
     claim: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -910,8 +881,10 @@ export class ExpenseClaimService
 
     const isOwner = claim.employeeId === userId || claim.createdBy === userId;
     const isTierApprover =
-      claim.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      claim.status !== 'CANCELLED' &&
+      (claim.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
+      false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

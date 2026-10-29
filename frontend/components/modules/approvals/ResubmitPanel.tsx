@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from 'antd';
-import { RotateCcw, Send } from 'lucide-react';
+import { Input } from 'antd';
+import { RotateCcw } from 'lucide-react';
 import { DocumentPreviewGroup } from '@/components/shared/preview';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -16,14 +17,18 @@ import { formatApprovalUserName } from '@/lib/utils/approval-display';
 import './approvals-v2.css';
 
 /**
- * Requester panel to resubmit a RETURNED approval with optional attachments.
+ * The single Resubmit action for a RETURNED request (requester only), opened
+ * from the request page. Edits are saved separately on the edit form; this
+ * sends the request back to the first approver with an optional note.
  */
-export default function ResubmitPanel({
+export default function ResubmitRequestDialog({
   requestId,
-  returnNote,
+  open,
+  onClose,
 }: {
   requestId: string;
-  returnNote?: string | null;
+  open: boolean;
+  onClose: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -31,85 +36,63 @@ export default function ResubmitPanel({
   const [note, setNote] = useState('');
   const [files, setFiles] = useState<File[]>([]);
 
-  async function handleSubmit(): Promise<void> {
+  function close(): void {
+    setNote('');
+    setFiles([]);
+    onClose();
+  }
+
+  async function handleConfirm(): Promise<void> {
     try {
       await resubmitMutation.mutateAsync({
         note: note.trim() || undefined,
         files,
       });
       messageApi.success(t('pages.approvals.resubmit.success'));
-      setNote('');
-      setFiles([]);
+      close();
     } catch (error: unknown) {
       notifyApiError(error, t('pages.approvals.resubmit.failed'), messageApi);
     }
   }
 
   return (
-    <section className="erp-resubmit-card" aria-labelledby="erp-resubmit-title">
-      <div className="erp-resubmit-card-header">
-        <span className="erp-resubmit-card-icon" aria-hidden>
-          <RotateCcw size={18} strokeWidth={2} />
-        </span>
-        <div className="min-w-0">
-          <h3 id="erp-resubmit-title" className="erp-resubmit-card-title">
-            {t('pages.approvals.resubmit.title')}
-          </h3>
-          <p className="erp-resubmit-card-subtitle">
-            {t('pages.approvals.returnedHint')}
-          </p>
-        </div>
+    <ConfirmDialog
+      open={open}
+      className="erp-approval-modal"
+      tone="warning"
+      icon={<RotateCcw size={18} strokeWidth={2} aria-hidden />}
+      title={t('pages.approvals.resubmit.modalTitle')}
+      description={t('pages.approvals.resubmit.modalDescription')}
+      confirmLabel={t('pages.approvals.resubmit.submit')}
+      cancelLabel={t('hr.buttons.cancel')}
+      confirmLoading={resubmitMutation.isPending}
+      onCancel={close}
+      onConfirm={() => void handleConfirm()}
+    >
+      <div className="erp-confirm-dialog-field">
+        <p className="erp-confirm-dialog-field-label">
+          {t('pages.approvals.resubmit.noteLabel')}
+        </p>
+        <Input.TextArea
+          autoSize={{ minRows: 3, maxRows: 8 }}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={2000}
+          showCount
+          placeholder={t('pages.approvals.resubmit.notePlaceholder')}
+        />
       </div>
-
-      <div className="erp-resubmit-card-body">
-        {returnNote?.trim() ? (
-          <div className="erp-resubmit-return-note">
-            <p className="erp-resubmit-return-note-label">
-              {t('pages.approvals.resubmit.returnNote')}
-            </p>
-            <p className="erp-resubmit-return-note-text">{returnNote.trim()}</p>
-          </div>
-        ) : null}
-
-        <div className="erp-resubmit-field">
-          <p className="erp-resubmit-field-label">
-            {t('pages.approvals.resubmit.noteLabel')}
-          </p>
-          <Input.TextArea
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={2000}
-            showCount
-            placeholder={t('pages.approvals.resubmit.notePlaceholder')}
-            className="erp-resubmit-textarea"
-          />
-        </div>
-
-        <div className="erp-resubmit-field">
-          <FileUploadInput
-            files={files}
-            onChange={setFiles}
-            multiple
-            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-            placeholder={t('pages.approvals.resubmit.attachFiles')}
-            disabled={resubmitMutation.isPending}
-          />
-        </div>
-
-        <div className="erp-resubmit-actions">
-          <Button
-            type="primary"
-            icon={<Send size={14} strokeWidth={2.25} aria-hidden />}
-            loading={resubmitMutation.isPending}
-            onClick={() => void handleSubmit()}
-            className="erp-resubmit-submit"
-          >
-            {t('pages.approvals.resubmit.submit')}
-          </Button>
-        </div>
+      <div className="erp-confirm-dialog-field">
+        <FileUploadInput
+          files={files}
+          onChange={setFiles}
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+          placeholder={t('pages.approvals.resubmit.attachFiles')}
+          disabled={resubmitMutation.isPending}
+        />
       </div>
-    </section>
+    </ConfirmDialog>
   );
 }
 

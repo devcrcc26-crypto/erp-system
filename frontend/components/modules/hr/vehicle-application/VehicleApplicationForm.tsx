@@ -38,10 +38,6 @@ import {
   useSubmitVehicleApplication,
   useUpdateVehicleApplication,
 } from '@/lib/query/vehicle-application';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -363,7 +359,7 @@ export default function VehicleApplicationForm({
           // Not on the form; keep the saved project link.
           projectId: initialRecord.projectId ?? undefined,
         });
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess(saved);
         return;
       }
@@ -802,7 +798,7 @@ export default function VehicleApplicationForm({
         contentVariant="sections"
         submitLabel={
           initialRecord
-            ? t(requestSaveLabelKey(initialRecord.status))
+            ? t('pages.approvals.edit.saveChanges')
             : t('hr.buttons.submitApplication')
         }
       />

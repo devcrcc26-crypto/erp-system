@@ -34,11 +34,7 @@ import type {
   UpdatePerDiemRequestPayload,
   UpsertEmployeePerDiemRatePayload,
 } from '@/lib/api/per-diem.types';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
@@ -342,10 +338,6 @@ export function useUpdatePerDiemRequest(id: string) {
   return useMutation({
     mutationFn: (payload: UpdatePerDiemRequestPayload) =>
       apiPatch<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}`, payload),
-    onMutate: () =>
-      applyOptimisticRequestEdit<PerDiemRequestDetail>(queryClient, detailKey),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, detailKey, context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
       queryClient.setQueryData(detailKey, updated);

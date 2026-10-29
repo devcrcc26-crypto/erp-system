@@ -68,7 +68,7 @@ If your request is returned, you receive the notification **Approval returned**.
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. In the **Resubmit** panel, write a **Note to approver (optional)**, and click **Attach files** to add the corrected document if needed.
+3. Click **Resubmit** at the top of the request. In **Resubmit request**, write a **Note to approver (optional)**, and click **Attach files** to add the corrected document if needed.
 4. Click **Resubmit**. The request goes back through the approval chain from the beginning.
 
 ---

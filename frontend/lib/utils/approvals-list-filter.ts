@@ -106,3 +106,27 @@ export function filterApprovalRequests(
     return matchesApprovalSearch(row, filters.search);
   });
 }
+
+/**
+ * Cancelled requests are hidden from the approval chain: never in "Pending My
+ * Action", and elsewhere only for the requester (their history) or full-access
+ * HR / admins. The API applies the same rule; this keeps cached lists honest.
+ */
+export function hideCancelledFromApprovers(
+  rows: ApprovalRequestListItem[],
+  options: {
+    inbox: 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
+    currentUserId: string;
+    isFullAccess: boolean;
+  },
+): ApprovalRequestListItem[] {
+  return rows.filter((row) => {
+    if (row.status !== 'CANCELLED') {
+      return true;
+    }
+    if (options.inbox === 'PENDING_MY_ACTION') {
+      return false;
+    }
+    return options.isFullAccess || row.requestedBy === options.currentUserId;
+  });
+}

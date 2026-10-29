@@ -24,11 +24,7 @@ import type {
   SubmitFlightApplicationPayload,
   UpdateFlightApplicationPayload,
 } from '@/lib/api/flight.types';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 import type {
   HrImportCommitResult,
   HrImportPreviewResult,
@@ -225,10 +221,6 @@ export function useUpdateFlightApplication(id: string) {
   return useMutation({
     mutationFn: (payload: UpdateFlightApplicationPayload) =>
       apiPatch<FlightApplicationDetail>(`${FLIGHT_PATH}/${id}`, payload),
-    onMutate: () =>
-      applyOptimisticRequestEdit<FlightApplicationDetail>(queryClient, detailKey),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, detailKey, context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
       queryClient.setQueryData(detailKey, updated);

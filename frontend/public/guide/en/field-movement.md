@@ -86,7 +86,7 @@ If your explanation is returned, you receive the notification **Approval returne
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the explanation with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. In the **Resubmit** panel, write a **Note to approver (optional)** with the missing details, and click **Attach files** to add proof if needed.
+3. Click **Resubmit** at the top of the request. In **Resubmit request**, write a **Note to approver (optional)** with the missing details, and click **Attach files** to add proof if needed.
 4. Click **Resubmit**. The explanation goes back through the approval chain from the beginning.
 
 > **Note:** While an explanation is waiting for approval, you cannot pick those days again. If it is rejected or cancelled, the days can be explained again.

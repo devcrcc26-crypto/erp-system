@@ -41,10 +41,6 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import '@/components/modules/hr/leave/leave-v2.css';
@@ -187,13 +183,13 @@ export default function LeaveRequestDetail({
         messageApi.error(t('hr.form.periodNoWorkingDays'));
         return;
       }
-      // Saving a returned request resubmits it (chain restarts at tier 1).
+      // Saves only; the request is resubmitted with the Resubmit button.
       await updateMutation.mutateAsync({
         leaveType: values.leaveType,
         periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
-      messageApi.success(t(requestSaveSuccessKey(leave?.status)));
+      messageApi.success(t('pages.approvals.edit.saved'));
       setEditing(false);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -258,7 +254,7 @@ export default function LeaveRequestDetail({
                 loading={updateMutation.isPending}
                 onClick={() => void handleSave()}
               >
-                {t(requestSaveLabelKey(leave.status))}
+                {t('pages.approvals.edit.saveChanges')}
               </Button>
               <Button onClick={() => setEditing(false)}>
                 {t('hr.buttons.cancel')}

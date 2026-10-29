@@ -267,15 +267,8 @@ export class MaterialRequisitionService
       where: { id },
       include: { items: { select: { id: true } } },
     });
-    if (
-      updated.status === MaterialRequisitionStatus.RETURNED &&
-      updated.approvalRequestId
-    ) {
-      if (updated.items.length === 0) {
-        throw new BadRequestException(
-          'Add at least one item before submitting',
-        );
-      }
+    if (updated.approvalRequestId) {
+      // Keep the approval card in step with the edited requisition.
       await this.prisma.approvalRequest.update({
         where: { id: updated.approvalRequestId },
         data: {
@@ -288,12 +281,6 @@ export class MaterialRequisitionService
           updatedBy: userId,
         },
       });
-      // Requester's save resubmits the returned requisition (chain restarts).
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        updated.approvalRequestId,
-        companyId,
-        userId,
-      );
     }
 
     return this.getRequisition(id, companyId, userId);
@@ -393,8 +380,8 @@ export class MaterialRequisitionService
   /**
    * Submits a DRAFT material requisition for approval.
    * Always opens Discipline Lead → HR → GM (duplicates collapsed).
-   * Returned requisitions are resubmitted by the requester saving the edit
-   * form (updateDraft) or via the Approvals inbox.
+   * Returned requisitions are resubmitted via the Approvals request
+   * (Resubmit), after any edits.
    */
   async submitRequisition(
     id: string,
@@ -789,6 +776,7 @@ export class MaterialRequisitionService
 
   private async assertCanView(
     requisition: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -807,9 +795,11 @@ export class MaterialRequisitionService
     const isOwner =
       requisition.employeeId === userId || requisition.createdBy === userId;
     const isTierApprover =
-      requisition.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      requisition.status !== 'CANCELLED' &&
+      (requisition.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

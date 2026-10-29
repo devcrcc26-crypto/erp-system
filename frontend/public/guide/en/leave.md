@@ -110,9 +110,9 @@ You can also follow any request in **Approvals** → **My Requests**.
 1. Open the request (see *How to follow your leave requests*).
 2. Click **Update**. The button only appears while the request is **Draft** or **Returned**.
 3. Change the **Leave Type**, **Leave periods** or **Reason**. The same rules as a new request apply.
-4. Click **Save changes** (on a draft) or **Save and resubmit** (on a returned request).
+4. Click **Save**.
 
-> **Note:** Saving a draft keeps it as a draft (*"Changes saved."*). Saving a returned request sends it back for approval (*"Request resubmitted for approval."*). See *What to do if your request is returned*.
+> **Note:** Saving keeps the status as it is (*"Changes saved."*). A returned request goes back for approval only when you click **Resubmit**. See *What to do if your request is returned*.
 
 ---
 
@@ -137,10 +137,10 @@ If your request is returned, you receive the notification **Approval returned**.
 1. In the left menu, go to **Approvals** → **My Requests** (or **Pending My Action**) and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
 3. On the same page, click **Edit**. Change the **Leave type**, **Leave periods** (you can add or remove periods) or **Reason**. The days update from the work schedule, the same way as a new request.
-4. Click **Save and resubmit**. You see *"Request resubmitted for approval."* You can also open the request from **My Profile** → **Leave** → **View all**, click **Update**, and save there. The approver's note is shown at the top of that form.
-5. If nothing needs to change (for example, you only want to answer the approver or add a file), use the **Resubmit** panel instead: write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**.
+4. Click **Save**. You see *"Changes saved."* and go back to the request, which is still **Returned**. You can also open the request from **My Profile** → **Leave** → **View all**, click **Update**, and save there. The approver's note is shown at the top of that form.
+5. When you are ready, click **Resubmit** at the top of the request (if nothing needs to change, you can skip editing). In **Resubmit request**, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**.
 
-Either way, the request goes back through the approval chain from the beginning, and the days are held from your balance again.
+After you resubmit, the request goes back through the approval chain from the beginning, and the days are held from your balance again.
 
 
 ---

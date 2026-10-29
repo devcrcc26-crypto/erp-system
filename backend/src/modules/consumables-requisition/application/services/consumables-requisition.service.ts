@@ -791,6 +791,7 @@ export class ConsumablesRequisitionService
 
   private async assertCanView(
     requisition: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -809,9 +810,11 @@ export class ConsumablesRequisitionService
     const isOwner =
       requisition.employeeId === userId || requisition.createdBy === userId;
     const isTierApprover =
-      requisition.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      requisition.status !== 'CANCELLED' &&
+      (requisition.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

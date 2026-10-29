@@ -174,7 +174,7 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(claim) &&
     (claim?.status === 'DRAFT' || claim?.status === 'RETURNED') &&
     (canManage || isOwner);
-  // Returned claims can fix items too; saving the edit page resubmits.
+  // Returned claims can fix items too, then resubmit from Approvals.
   const canEditItems = Boolean(
     (isOwner || canViewHr) &&
       (claim?.status === 'DRAFT' || claim?.status === 'RETURNED'),

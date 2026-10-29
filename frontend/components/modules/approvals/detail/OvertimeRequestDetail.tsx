@@ -245,7 +245,7 @@ export default function OvertimeRequestDetail({
           type="info"
           showIcon
           className="!rounded-xl"
-          title="This sheet was returned. Edit entries on the overtime sheet, then resubmit from this page."
+          title="This sheet was returned. Edit entries on the overtime sheet, then submit the sheet again from there."
         />
       ) : null}
 

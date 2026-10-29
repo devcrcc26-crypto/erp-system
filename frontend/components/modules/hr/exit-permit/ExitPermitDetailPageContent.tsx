@@ -134,8 +134,10 @@ export default function ExitPermitDetailPageContent({
   const isDraftOrReturned =
     permit?.status === 'DRAFT' || permit?.status === 'RETURNED';
   const canEdit = Boolean(isActor && isDraftOrReturned);
+  // Returned permits are resubmitted from the Approvals page (one Resubmit).
   const canSubmit =
-    Boolean(isActor && isDraftOrReturned) && (permit?.items.length ?? 0) > 0;
+    Boolean(isActor && permit?.status === 'DRAFT') &&
+    (permit?.items.length ?? 0) > 0;
   const canCancel =
     Boolean(isActor) &&
     (permit?.status === 'DRAFT' || permit?.status === 'SUBMITTED');
@@ -393,10 +395,7 @@ export default function ExitPermitDetailPageContent({
       total: true,
     },
   ];
-  const submitLabel =
-    permit.status === 'RETURNED'
-      ? t('hr.buttons.resubmit')
-      : t('hr.buttons.submitRequest');
+  const submitLabel = t('hr.buttons.submitRequest');
 
   const overflowMenuItems: MenuProps['items'] = [];
   if (permit.approvalRequestId) {

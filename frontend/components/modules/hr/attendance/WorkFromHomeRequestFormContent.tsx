@@ -33,10 +33,6 @@ import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { formatUserName } from '@/lib/utils/user-display';
 
 interface WfhRequestFormValues {
@@ -76,7 +72,7 @@ function initialRangeOf(
  * Discipline Lead approval; approval creates a WFH day per working day.
  *
  * With `editRequest`, edits the employee's own RETURNED request (prefilled);
- * saving resubmits it and restarts the approval chain.
+ * saving keeps it RETURNED (resubmit from the request page).
  */
 export default function WorkFromHomeRequestFormContent({
   editRequest,
@@ -194,7 +190,7 @@ export default function WorkFromHomeRequestFormContent({
           reason: values.reason,
           lateReason: form.getFieldValue('lateReason')?.trim() || undefined,
         });
-        messageApi.success(t(requestSaveSuccessKey(editRequest.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         router.push(`/approvals/${editRequest.id}`);
       } catch (error) {
         notifyApiError(error, t('pages.approvals.edit.failed'), messageApi, t);
@@ -446,7 +442,7 @@ export default function WorkFromHomeRequestFormContent({
           contentVariant="sections"
           submitLabel={
             editRequest
-              ? t(requestSaveLabelKey(editRequest.status))
+              ? t('pages.approvals.edit.saveChanges')
               : t('pages.hr.workFromHome.request.submit')
           }
         />

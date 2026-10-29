@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   EDITABLE_REQUEST_CATEGORIES,
   canEditOwnRequest,
+  canResubmitOwnRequest,
   editRequestHref,
   findReturnNote,
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
 } from '@/lib/utils/request-edit';
 
 describe('canEditOwnRequest', () => {
@@ -34,16 +33,13 @@ describe('canEditOwnRequest', () => {
   });
 });
 
-describe('save messages', () => {
-  it('says resubmitted for a returned request, saved for a draft', () => {
-    expect(requestSaveSuccessKey('RETURNED')).toBe(
-      'pages.approvals.edit.resubmitted',
-    );
-    expect(requestSaveSuccessKey('DRAFT')).toBe('pages.approvals.edit.saved');
-    expect(requestSaveLabelKey('RETURNED')).toBe(
-      'pages.approvals.edit.saveAndResubmit',
-    );
-    expect(requestSaveLabelKey('DRAFT')).toBe('pages.approvals.edit.saveChanges');
+describe('canResubmitOwnRequest', () => {
+  it('is only for the requester of a RETURNED request', () => {
+    expect(canResubmitOwnRequest('RETURNED', 'u1', 'u1')).toBe(true);
+    expect(canResubmitOwnRequest('RETURNED', 'u1', 'u2')).toBe(false);
+    expect(canResubmitOwnRequest('DRAFT', 'u1', 'u1')).toBe(false);
+    expect(canResubmitOwnRequest('SUBMITTED', 'u1', 'u1')).toBe(false);
+    expect(canResubmitOwnRequest('CANCELLED', 'u1', 'u1')).toBe(false);
   });
 });
 

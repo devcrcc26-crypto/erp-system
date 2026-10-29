@@ -13,7 +13,7 @@ import { useBusinessTrip } from '@/lib/query/business-trip';
 
 /**
  * Employee edit of their own DRAFT / RETURNED business trip, reusing the
- * create form prefilled. Saving a RETURNED trip resubmits it.
+ * create form prefilled. Saves only; resubmit from the request page.
  */
 export default function BusinessTripEditPageContent({
   tripId,

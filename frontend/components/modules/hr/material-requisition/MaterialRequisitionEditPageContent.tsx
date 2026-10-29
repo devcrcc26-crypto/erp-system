@@ -12,8 +12,8 @@ import { useMaterialRequisition } from '@/lib/query/material-requisition';
 
 /**
  * Employee edit of their own DRAFT / RETURNED material requisition, reusing
- * the create form prefilled (details + items). Saving a RETURNED requisition
- * resubmits it.
+ * the create form prefilled (details + items). Saves only; resubmit from
+ * the request page.
  */
 export default function MaterialRequisitionEditPageContent({
   requisitionId,

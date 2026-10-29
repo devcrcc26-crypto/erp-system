@@ -371,7 +371,7 @@ export class LeaveController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Update a draft or returned leave request (owner or HR). An owner saving a returned request resubmits it.',
+      'Update a draft or returned leave request (owner or HR). Saves only; a returned request is resubmitted from Approvals.',
   })
   update(
     @CurrentUser() user: AuthenticatedUser,

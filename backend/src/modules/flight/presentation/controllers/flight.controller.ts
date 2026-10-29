@@ -337,7 +337,7 @@ export class FlightController {
   @Patch(':id')
   @ApiOperation({
     summary:
-      'Edit your own draft or returned flight application (a returned application is resubmitted)',
+      'Edit your own draft or returned flight application (saves only; resubmit from Approvals)',
   })
   update(
     @CurrentUser() user: AuthenticatedUser,

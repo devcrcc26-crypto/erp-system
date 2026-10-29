@@ -143,12 +143,12 @@ If your request is returned, you receive the notification **Approval returned**.
 
 1. In the left menu, go to **Approvals** → **My Requests** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. To change the request, click **Edit** at the top of the request (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save and resubmit**. The daily rate and total are worked out again from your current per diem rate.
-4. If nothing needs to change (for example, you only want to answer the approver or add a file), use the **Resubmit** panel instead: write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
+3. To change the request, click **Edit** at the top of the request (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save**. You see *"Changes saved."* and go back to the request, which is still **Returned**. The daily rate and total are worked out again from your current per diem rate.
+4. When you are ready, click **Resubmit** at the top of the request (if nothing needs to change, you can skip editing). In **Resubmit request**, write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
 
-Either way, the request goes back through the approval chain from the beginning.
+After you resubmit, the request goes back through the approval chain from the beginning.
 
-> **After you save:** You see *"Request resubmitted for approval."*
+> **After you resubmit:** You see *"Request resubmitted"*.
 
 ---
 

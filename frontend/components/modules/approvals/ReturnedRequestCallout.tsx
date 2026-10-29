@@ -8,7 +8,7 @@ import { findReturnNote } from '@/lib/utils/request-edit';
 /**
  * Amber callout at the top of an edit form for a RETURNED request: the
  * approver's return note (read-only) and what to do next. Saving the form
- * resubmits the request.
+ * keeps it RETURNED; it is resubmitted from the request page.
  */
 export default function ReturnedRequestCallout({
   approvalRequestId,

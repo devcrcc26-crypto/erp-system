@@ -32,10 +32,6 @@ import {
   useSubmitFlightApplication,
   useUpdateFlightApplication,
 } from '@/lib/query/flight';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { formatUserName } from '@/lib/utils/user-display';
 import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
@@ -195,7 +191,7 @@ export function FlightApplicationForm({
 
   const selectablePassengers = passengersQuery.data ?? [];
   const resolvedSubmitLabel = initialRecord
-    ? t(requestSaveLabelKey(initialRecord.status))
+    ? t('pages.approvals.edit.saveChanges')
     : submitLabel ?? t('hr.buttons.submitApplication');
 
   const steps = useMemo(
@@ -425,7 +421,7 @@ export function FlightApplicationForm({
       } satisfies UpdateFlightApplicationPayload;
       if (initialRecord) {
         const saved = await updateMutation.mutateAsync(payload);
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess?.(saved);
         return;
       }

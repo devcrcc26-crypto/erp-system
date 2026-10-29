@@ -28,10 +28,6 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 
 import './leave-v2.css';
 
@@ -173,19 +169,13 @@ export default function LeaveRequestEditPageContent({
       messageApi.error(t('hr.form.periodNoWorkingDays'));
       return;
     }
-    const previousStatus = request?.status;
     try {
       await updateMutation.mutateAsync({
         leaveType: values.leaveType,
         periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
-      // Only the owner's save resubmits; HR edits keep it RETURNED.
-      messageApi.success(
-        isOwner
-          ? t(requestSaveSuccessKey(previousStatus))
-          : t('hr.messages.leaveRequestUpdated'),
-      );
+      messageApi.success(t('pages.approvals.edit.saved'));
       router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
@@ -297,7 +287,7 @@ export default function LeaveRequestEditPageContent({
         <FormPageFooter
           submitLabel={
             isOwner
-              ? t(requestSaveLabelKey(request.status))
+              ? t('pages.approvals.edit.saveChanges')
               : t('hr.buttons.saveLeaveRequest')
           }
           formId="leave-request-edit-form"

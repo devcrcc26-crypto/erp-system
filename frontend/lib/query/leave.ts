@@ -37,11 +37,7 @@ import type {
   PaginationMeta,
 } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -415,11 +411,6 @@ export function useUpdateLeaveRequest(id: string) {
   return useMutation({
     mutationFn: (payload: UpdateLeaveRequestPayload) =>
       apiPatch<LeaveRequestDetail>(`${LEAVE_PATH}/${id}`, payload),
-    // A returned request saved by its owner is resubmitted.
-    onMutate: () =>
-      applyOptimisticRequestEdit<LeaveRequestDetail>(queryClient, detailKey),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, detailKey, context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });

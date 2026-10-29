@@ -3,8 +3,9 @@ import type { ApprovalTierDecision } from '@/lib/api/approvals.types';
 /**
  * Employee self-edit of HR requests: a request is editable only by its owner
  * while DRAFT (never submitted) or RETURNED (sent back by an approver).
- * Saving a RETURNED request resubmits it and restarts the approval chain;
- * the backend enforces the same rules (403 otherwise).
+ * Saving only stores the fields; a RETURNED request is resubmitted with the
+ * separate Resubmit action on the request page. The backend enforces the
+ * same rules (403 otherwise).
  */
 export const EDITABLE_REQUEST_STATUSES = ['DRAFT', 'RETURNED'] as const;
 
@@ -26,22 +27,18 @@ export function canEditOwnRequest(
   );
 }
 
-/** Success toast key after saving: a RETURNED record was resubmitted. */
-export function requestSaveSuccessKey(
-  previousStatus: string | null | undefined,
-): 'pages.approvals.edit.resubmitted' | 'pages.approvals.edit.saved' {
-  return previousStatus === 'RETURNED'
-    ? 'pages.approvals.edit.resubmitted'
-    : 'pages.approvals.edit.saved';
-}
-
-/** Submit button label key for an edit form. */
-export function requestSaveLabelKey(
+/** Resubmit (separate from Edit) is for the requester of a RETURNED request. */
+export function canResubmitOwnRequest(
   status: string | null | undefined,
-): 'pages.approvals.edit.saveAndResubmit' | 'pages.approvals.edit.saveChanges' {
-  return status === 'RETURNED'
-    ? 'pages.approvals.edit.saveAndResubmit'
-    : 'pages.approvals.edit.saveChanges';
+  requesterId: string | null | undefined,
+  currentUserId: string | null | undefined,
+): boolean {
+  return (
+    status === 'RETURNED' &&
+    Boolean(requesterId) &&
+    Boolean(currentUserId) &&
+    requesterId === currentUserId
+  );
 }
 
 /** Latest approver note that returned the request (newest tier first). */

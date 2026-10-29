@@ -697,8 +697,8 @@ export class WorkFromHomeDayService
   /**
    * Employee edits their own RETURNED work-from-home request (the request
    * lives entirely in the approval's formData). The range is re-planned
-   * exactly as on submit, then the request is resubmitted and the approval
-   * chain restarts.
+   * exactly as on submit. Saves only: it stays RETURNED until resubmitted
+   * from Approvals.
    */
   async updateRequest(
     approvalRequestId: string,
@@ -777,12 +777,6 @@ export class WorkFromHomeDayService
         updatedBy: userId,
       },
     });
-
-    await this.approvalsService.resubmitAfterOwnerEdit(
-      approval.id,
-      companyId,
-      userId,
-    );
 
     return this.approvalsService.getRequest(approval.id, companyId, userId);
   }

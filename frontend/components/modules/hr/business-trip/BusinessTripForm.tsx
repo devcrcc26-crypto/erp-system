@@ -34,10 +34,6 @@ import {
   useSubmitBusinessTrip,
   useUpdateBusinessTrip,
 } from '@/lib/query/business-trip';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { formatUserName } from '@/lib/utils/user-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -176,7 +172,7 @@ export function BusinessTripForm({
 
   const selectablePassengers = passengersQuery.data ?? [];
   const resolvedSubmitLabel = initialRecord
-    ? t(requestSaveLabelKey(initialRecord.status))
+    ? t('pages.approvals.edit.saveChanges')
     : submitLabel ?? t('hr.buttons.submitBusinessTrip');
 
   const steps = useMemo(
@@ -402,7 +398,7 @@ export function BusinessTripForm({
       } satisfies UpdateBusinessTripPayload;
       if (initialRecord) {
         const saved = await updateMutation.mutateAsync(payload);
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess?.(saved);
         return;
       }

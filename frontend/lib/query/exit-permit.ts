@@ -27,11 +27,7 @@ import type {
 import type { PaginationMeta } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -183,14 +179,6 @@ export function useUpdateExitPermit(permitId: string) {
         `${EXIT_PERMIT_PATH}/${permitId}`,
         payload,
       ),
-    // A returned permit saved by its requester is resubmitted.
-    onMutate: () =>
-      applyOptimisticRequestEdit<ExitPermitDetail>(
-        queryClient,
-        exitPermitKeys.detail(permitId),
-      ),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, exitPermitKeys.detail(permitId), context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: exitPermitKeys.lists(),

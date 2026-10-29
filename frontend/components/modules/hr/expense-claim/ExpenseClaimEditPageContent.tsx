@@ -28,10 +28,6 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 
 interface ClaimFormValues {
   title: string;
@@ -40,8 +36,8 @@ interface ClaimFormValues {
 
 /**
  * Edit an expense claim (header and line items) when DRAFT or RETURNED.
- * Item changes save immediately; Save writes the header and, for the owner of
- * a RETURNED claim, resubmits it (approval chain restarts).
+ * Item changes save immediately; Save writes the header. Status is unchanged:
+ * a RETURNED claim is resubmitted from the request page.
  */
 export default function ExpenseClaimEditPageContent({
   claimId,
@@ -95,13 +91,12 @@ export default function ExpenseClaimEditPageContent({
   }
 
   async function handleSubmit(values: ClaimFormValues): Promise<void> {
-    const previousStatus = claim?.status;
     try {
       await updateMutation.mutateAsync({
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
       });
-      messageApi.success(t(requestSaveSuccessKey(previousStatus)));
+      messageApi.success(t('pages.approvals.edit.saved'));
       router.push(backHref);
     } catch (error: unknown) {
       notifyApiError(
@@ -176,7 +171,7 @@ export default function ExpenseClaimEditPageContent({
             loading={updateMutation.isPending}
             onClick={() => form.submit()}
           >
-            {t(requestSaveLabelKey(claim.status))}
+            {t('pages.approvals.edit.saveChanges')}
           </Button>
         }
       >

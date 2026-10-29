@@ -4818,8 +4818,10 @@ export class AttendanceService
     const isOwner = log.employeeId === userId;
     const isCreator = log.createdBy === userId;
     const isApprover =
-      log.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      log.status !== 'CANCELLED' &&
+      (log.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
+      false);
 
     if (!isHr && !isOwner && !isCreator && !isApprover) {
       throw new ForbiddenException('You do not have access to this log');

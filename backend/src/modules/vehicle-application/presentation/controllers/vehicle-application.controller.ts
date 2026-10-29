@@ -124,7 +124,7 @@ export class VehicleApplicationController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Edit your own draft or returned vehicle application (a returned application is resubmitted)',
+      'Edit your own draft or returned vehicle application (saves only; resubmit from Approvals)',
   })
   async update(
     @CurrentUser() user: AuthenticatedUser,

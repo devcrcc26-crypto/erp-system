@@ -34,10 +34,6 @@ import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 
 interface PerDiemFormValues {
   tripType?: PerDiemTripType;
@@ -464,7 +460,7 @@ export default function PerDiemRequestForm({
       } satisfies UpdatePerDiemRequestPayload;
       if (initialRecord) {
         const saved = await updateMutation.mutateAsync(payload);
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess(saved);
         return;
       }
@@ -979,7 +975,7 @@ export default function PerDiemRequestForm({
         contentVariant="sections"
         submitLabel={
           initialRecord
-            ? t(requestSaveLabelKey(initialRecord.status))
+            ? t('pages.approvals.edit.saveChanges')
             : t('hr.buttons.submitRequest')
         }
       />

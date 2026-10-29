@@ -381,8 +381,9 @@ export class BusinessTripService
 
   /**
    * Employee edits their own DRAFT or RETURNED business trip. Same validation
-   * as submit; passengers are replaced. Saving a RETURNED trip resubmits it
-   * and restarts the approval chain.
+   * as submit; passengers are replaced.
+   * Saves only: status is unchanged; a
+   * RETURNED request is resubmitted separately from Approvals.
    */
   async updateTrip(
     id: string,
@@ -462,17 +463,6 @@ export class BusinessTripService
       },
       { maxWait: 10_000, timeout: 30_000 },
     );
-
-    if (
-      trip.status === BusinessTripStatus.RETURNED &&
-      trip.approvalRequestId
-    ) {
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        trip.approvalRequestId,
-        companyId,
-        userId,
-      );
-    }
 
     return this.getTrip(id, companyId, userId);
   }
@@ -1650,6 +1640,7 @@ export class BusinessTripService
    */
   private async assertCanView(
     app: {
+      status: string;
       submittedBy: string;
       createdBy?: string;
       passengers: Array<{ employeeId: string }>;
@@ -1670,7 +1661,9 @@ export class BusinessTripService
       app.submittedBy === userId || app.createdBy === userId;
     const isPassenger = app.passengers.some((p) => p.employeeId === userId);
     const isTierApprover =
-      app.approvalRequest?.tiers?.some((t) => t.approverId === userId) ?? false;
+      // Cancelled requests are hidden from the approval chain.
+      app.status !== 'CANCELLED' &&
+      (app.approvalRequest?.tiers?.some((t) => t.approverId === userId) ?? false);
 
     if (!isSubmitter && !isPassenger && !isTierApprover) {
       throw new ForbiddenException(

@@ -670,11 +670,16 @@ export class ApprovalsService {
 
     // PENDING_MY_ACTION uses its own OR scope (includes flight ticket ack); skip the
     // default "submitted or tier approver" gate so passengers can see ack items.
+    // Cancelled requests are hidden from the approval chain: approvers no
+    // longer see them; the requester keeps them in their history.
     if (!isFullAccess && filters.inbox !== 'PENDING_MY_ACTION') {
       andClauses.push({
         OR: [
           { requestedBy: userId },
-          { tiers: { some: { approverId: userId } } },
+          {
+            tiers: { some: { approverId: userId } },
+            status: { not: ApprovalRequestStatus.CANCELLED },
+          },
         ],
       });
     }
@@ -691,6 +696,7 @@ export class ApprovalsService {
             decision: ApprovalTierDecision.PENDING,
           },
         },
+        status: { not: ApprovalRequestStatus.CANCELLED },
       });
     }
 
@@ -811,6 +817,8 @@ export class ApprovalsService {
             : []),
         ],
       });
+      // Nothing to act on once cancelled (tier decisions are left as-is).
+      andClauses.push({ status: { not: ApprovalRequestStatus.CANCELLED } });
     }
 
     const search = filters.search?.trim();
@@ -1607,10 +1615,9 @@ export class ApprovalsService {
       throw new ForbiddenException('Only the requester can resubmit');
     }
     if (request.status !== ApprovalRequestStatus.RETURNED) {
-      throw new BadRequestException(
-        'Only returned requests can be resubmitted',
-      );
+      throw new ForbiddenException('Only returned requests can be resubmitted.');
     }
+    await this.assertSourceReadyToResubmit(request);
 
     const responseId = randomUUID();
     const firstTier = request.tiers[0];
@@ -1880,41 +1887,6 @@ export class ApprovalsService {
     }
 
     return this.getRequest(request.id, companyId, userId);
-  }
-
-  /**
-   * Resubmits a RETURNED request right after its requester saved edits to the
-   * source record (edit form). Same effect as the Approvals resubmit panel:
-   * tiers reset and the chain restarts from tier 1.
-   *
-   * No-op (returns false) when the editor is not the requester (e.g. HR fixing
-   * a returned request) or the request is no longer RETURNED, so callers can
-   * invoke it after any edit of a returned record.
-   */
-  async resubmitAfterOwnerEdit(
-    requestId: string,
-    companyId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const request = await this.prisma.approvalRequest.findFirst({
-      where: activeOnly({ id: requestId, companyId }),
-      select: { requestedBy: true, status: true },
-    });
-    if (
-      !request ||
-      request.requestedBy !== userId ||
-      request.status !== ApprovalRequestStatus.RETURNED
-    ) {
-      return false;
-    }
-    await this.resubmitRequest(
-      requestId,
-      companyId,
-      userId,
-      'Request edited and resubmitted by the requester',
-      [],
-    );
-    return true;
   }
 
   /**
@@ -2305,12 +2277,56 @@ export class ApprovalsService {
   }
 
   /**
+   * Same item rules as the first submit, for records edited while RETURNED
+   * (edits no longer resubmit; this is the only way back into the chain).
+   */
+  private async assertSourceReadyToResubmit(request: {
+    expenseClaim?: { id: string } | null;
+    materialRequisition?: { id: string } | null;
+    exitPermit?: { id: string } | null;
+  }): Promise<void> {
+    if (request.expenseClaim) {
+      const items = await this.prisma.expenseClaimItem.findMany({
+        where: { claimId: request.expenseClaim.id },
+        select: { documentId: true },
+      });
+      if (items.length === 0) {
+        throw new BadRequestException(
+          'Add at least one expense item before submitting',
+        );
+      }
+      if (items.some((item) => !item.documentId)) {
+        throw new BadRequestException(
+          'Every expense item requires a receipt before submitting',
+        );
+      }
+    }
+    if (request.materialRequisition) {
+      const count = await this.prisma.materialRequisitionItem.count({
+        where: { requisitionId: request.materialRequisition.id },
+      });
+      if (count === 0) {
+        throw new BadRequestException('Add at least one item before submitting');
+      }
+    }
+    if (request.exitPermit) {
+      const count = await this.prisma.exitPermitItem.count({
+        where: { requestId: request.exitPermit.id },
+      });
+      if (count === 0) {
+        throw new BadRequestException('Add at least one item before submitting');
+      }
+    }
+  }
+
+  /**
    * Ensures the caller may view this approval request.
    */
   private async assertCanViewRequest(
     request: {
       id: string;
       requestedBy: string;
+      status: ApprovalRequestStatus;
       tiers: Array<{ approverId: string }>;
       flightApplication?: { id: string } | null;
       businessTrip?: { id: string } | null;
@@ -2324,7 +2340,11 @@ export class ApprovalsService {
     }
 
     const isRequester = request.requestedBy === userId;
-    const isApprover = request.tiers.some((t) => t.approverId === userId);
+    // Cancelled requests are hidden from the approval chain (requester and
+    // full-access HR / admins still see them read-only).
+    const isApprover =
+      request.status !== ApprovalRequestStatus.CANCELLED &&
+      request.tiers.some((t) => t.approverId === userId);
     if (isRequester || isApprover) {
       return;
     }

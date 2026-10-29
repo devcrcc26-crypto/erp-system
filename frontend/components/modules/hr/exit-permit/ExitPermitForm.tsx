@@ -54,10 +54,6 @@ import {
   useCreateExitPermit,
   useUpdateExitPermit,
 } from '@/lib/query/exit-permit';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { useDepartments } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
@@ -318,8 +314,7 @@ export default function ExitPermitForm({
     if (initialRecord) {
       try {
         // New images upload through the item endpoint first (still DRAFT /
-        // RETURNED); the PATCH then sets the full item list. For a RETURNED
-        // permit that PATCH also resubmits it, so it must come last.
+        // RETURNED); the PATCH then sets the full item list, including them.
         const originalItemIds = new Set(initialRecord.items.map((row) => row.id));
         let latest: ExitPermitDetail | null = null;
         for (const item of items.filter((row) => row.file)) {
@@ -349,7 +344,7 @@ export default function ExitPermitForm({
             ),
           ],
         });
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess(saved);
       } catch (error: unknown) {
         void queryClient.invalidateQueries({ queryKey: exitPermitKeys.all });
@@ -733,7 +728,7 @@ export default function ExitPermitForm({
         contentVariant="sections"
         submitLabel={
           initialRecord
-            ? t(requestSaveLabelKey(initialRecord.status))
+            ? t('pages.approvals.edit.saveChanges')
             : t('hr.buttons.submitRequest')
         }
       />

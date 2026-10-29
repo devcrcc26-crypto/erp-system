@@ -12,7 +12,7 @@ import { useVehicleApplication } from '@/lib/query/vehicle-application';
 
 /**
  * Employee edit of their own DRAFT / RETURNED vehicle application, reusing
- * the create form prefilled. Saving a RETURNED application resubmits it.
+ * the create form prefilled. Saves only; resubmit from the request page.
  */
 export default function VehicleApplicationEditPageContent({
   applicationId,

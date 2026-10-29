@@ -685,6 +685,7 @@ export class VehicleRefuelingService
 
   private async assertCanView(
     refueling: {
+      status: string;
       employeeId: string;
       createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -702,9 +703,11 @@ export class VehicleRefuelingService
 
     const isOwner = refueling.employeeId === userId || refueling.createdBy === userId;
     const isTierApprover =
-      refueling.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      refueling.status !== 'CANCELLED' &&
+      (refueling.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

@@ -350,7 +350,7 @@ export class BusinessTripController {
   @Patch(':id')
   @ApiOperation({
     summary:
-      'Edit your own draft or returned business trip (a returned trip is resubmitted)',
+      'Edit your own draft or returned business trip (saves only; resubmit from Approvals)',
   })
   update(
     @CurrentUser() user: AuthenticatedUser,

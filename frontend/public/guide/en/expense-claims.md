@@ -118,10 +118,10 @@ If your claim is returned, you receive the notification **Approval returned**. O
 2. Read the note.
 3. To change the claim, click **Edit** at the top of the claim (or **Edit** next to it in **My Requests**). The edit page shows the approver's note at the top.
 4. Change the **Title** or **Description** if needed. Under **Items**, click **Add Item** to add one, or use the edit and delete buttons on an item. Item changes are saved straight away, and every item needs a receipt.
-5. Click **Save and resubmit**. You see *"Request resubmitted for approval."*
-6. If nothing needs to change (for example, you only want to answer the approver or add a document), use the **Resubmit** panel instead: write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
+5. Click **Save**. You see *"Changes saved."* and go back to the request, which is still **Returned**.
+6. When you are ready, click **Resubmit** at the top of the request (if nothing needs to change, you can skip editing). In **Resubmit request**, write a **Note to approver (optional)**, click **Attach files** if needed, and click **Resubmit**.
 
-Either way, the claim goes back through the approval chain from the beginning.
+After you resubmit, the claim goes back through the approval chain from the beginning.
 
 
 ---

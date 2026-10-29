@@ -38,10 +38,6 @@ import {
   useCreateMaterialRequisition,
   useUpdateMaterialRequisition,
 } from '@/lib/query/material-requisition';
-import {
-  requestSaveLabelKey,
-  requestSaveSuccessKey,
-} from '@/lib/utils/request-edit';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -247,8 +243,7 @@ export default function MaterialRequisitionForm({
     setSubmitting(true);
     if (initialRecord) {
       try {
-        // Sync items first (allowed while DRAFT / RETURNED); the header PATCH
-        // comes last because for a RETURNED requisition it resubmits.
+        // Sync items (allowed while DRAFT / RETURNED), then the header.
         const keptIds = new Set(
           items.map((row) => row.serverId).filter(Boolean),
         );
@@ -273,7 +268,7 @@ export default function MaterialRequisitionForm({
             : undefined,
           warehouseLocation: values.warehouseLocation?.trim() || undefined,
         });
-        messageApi.success(t(requestSaveSuccessKey(initialRecord.status)));
+        messageApi.success(t('pages.approvals.edit.saved'));
         onSuccess(saved);
       } catch (error: unknown) {
         const fallback = t('pages.approvals.edit.failed');
@@ -642,7 +637,7 @@ export default function MaterialRequisitionForm({
         contentVariant="sections"
         submitLabel={
           initialRecord
-            ? t(requestSaveLabelKey(initialRecord.status))
+            ? t('pages.approvals.edit.saveChanges')
             : t('hr.buttons.submitRequest')
         }
       />

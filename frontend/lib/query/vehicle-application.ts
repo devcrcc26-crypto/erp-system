@@ -19,11 +19,7 @@ import type {
   VehicleApplicationDetail,
   VehicleApplicationListItem,
 } from '@/lib/api/vehicle-application.types';
-import {
-  applyOptimisticRequestEdit,
-  invalidateAfterRequestEdit,
-  rollbackRequestEdit,
-} from '@/lib/query/request-edit';
+import { invalidateAfterRequestEdit } from '@/lib/query/request-edit';
 import type { PaginationMeta } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
@@ -158,13 +154,6 @@ export function useUpdateVehicleApplication(applicationId: string) {
         `${APPLICATIONS_PATH}/${applicationId}`,
         payload,
       ),
-    onMutate: () =>
-      applyOptimisticRequestEdit<VehicleApplicationDetail>(
-        queryClient,
-        detailKey,
-      ),
-    onError: (_error, _payload, context) =>
-      rollbackRequestEdit(queryClient, detailKey, context),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: vehicleApplicationKeys.lists(),

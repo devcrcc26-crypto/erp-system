@@ -99,7 +99,7 @@ export class PerDiemController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Edit your own draft or returned per diem request (a returned request is resubmitted)',
+      'Edit your own draft or returned per diem request (saves only; resubmit from Approvals)',
   })
   update(
     @CurrentUser() user: AuthenticatedUser,

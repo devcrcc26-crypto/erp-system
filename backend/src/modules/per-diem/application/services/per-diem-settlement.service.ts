@@ -588,6 +588,7 @@ export class PerDiemSettlementService
 
   private async assertCanView(
     settlement: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -608,9 +609,11 @@ export class PerDiemSettlementService
     const isOwner =
       settlement.employeeId === userId || settlement.createdBy === userId;
     const isTierApprover =
-      settlement.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      settlement.status !== 'CANCELLED' &&
+      (settlement.approvalRequest?.tiers?.some(
         (tier) => tier.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

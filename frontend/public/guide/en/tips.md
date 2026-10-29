@@ -36,7 +36,7 @@ Open the request and look at the **Approval Chain**. It shows which approver the
 
 ## An approver returned my request. What now?
 
-Open the request from **Approvals** → **Pending My Action** and read the approver's note. In the **Resubmit** panel, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**. The request starts again from the beginning of the approval chain.
+Open the request from **Approvals** → **Pending My Action** and read the approver's note. Click **Resubmit** at the top of the request. In **Resubmit request**, write a **Note to approver (optional)**, attach files if needed, and click **Resubmit**. The request starts again from the beginning of the approval chain.
 
 ---
 

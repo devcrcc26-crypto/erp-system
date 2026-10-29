@@ -814,6 +814,7 @@ export class PurchaseRequestService
 
   private async assertCanView(
     request: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -832,8 +833,10 @@ export class PurchaseRequestService
     const isOwner =
       request.employeeId === userId || request.createdBy === userId;
     const isTierApprover =
-      request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      request.status !== 'CANCELLED' &&
+      (request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
+      false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

@@ -13,7 +13,7 @@ import { useFlightApplication } from '@/lib/query/flight';
 
 /**
  * Employee edit of their own DRAFT / RETURNED flight application, reusing the
- * create form prefilled. Saving a RETURNED application resubmits it.
+ * create form prefilled. Saves only; resubmit from the request page.
  */
 export default function FlightApplicationEditPageContent({
   applicationId,

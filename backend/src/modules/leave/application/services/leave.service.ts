@@ -665,19 +665,6 @@ export class LeaveService
       }
     });
 
-    // Requester saving a returned request resubmits it (chain restarts at
-    // tier 1). HR edits leave it RETURNED for the employee to resubmit.
-    if (
-      leave.status === LeaveRequestStatus.RETURNED &&
-      leave.approvalRequestId
-    ) {
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        leave.approvalRequestId,
-        companyId,
-        userId,
-      );
-    }
-
     return this.getRequest(id, companyId, userId);
   }
 
@@ -1067,6 +1054,7 @@ export class LeaveService
    */
   private async assertCanViewLeaveRequest(
     leave: {
+      status: string;
       employeeId: string;
       createdBy?: string;
       approvalRequest?: {
@@ -1088,8 +1076,10 @@ export class LeaveService
 
     const isOwner = leave.employeeId === userId || leave.createdBy === userId;
     const isApprover =
-      leave.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      leave.status !== 'CANCELLED' &&
+      (leave.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
+      false);
 
     if (!isOwner && !isApprover) {
       throw new ForbiddenException(

@@ -234,8 +234,9 @@ export class VehicleApplicationService
 
   /**
    * Employee edits their own DRAFT or RETURNED vehicle application. Same
-   * validation (dates, driver, availability) as submit. Saving a RETURNED
-   * application resubmits it and restarts the approval chain.
+   * validation (dates, driver, availability) as submit.
+   * Saves only: status is unchanged; a
+   * RETURNED request is resubmitted separately from Approvals.
    */
   async updateApplication(
     id: string,
@@ -290,17 +291,6 @@ export class VehicleApplicationService
         });
       }
     });
-
-    if (
-      application.status === VehicleApplicationStatus.RETURNED &&
-      application.approvalRequestId
-    ) {
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        application.approvalRequestId,
-        companyId,
-        userId,
-      );
-    }
 
     return this.getApplication(id, companyId, userId);
   }
@@ -838,6 +828,7 @@ export class VehicleApplicationService
 
   private async assertCanView(
     application: {
+      status: string;
       employeeId: string;
       createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -855,9 +846,11 @@ export class VehicleApplicationService
 
     const isOwner = application.employeeId === userId || application.createdBy === userId;
     const isTierApprover =
-      application.approvalRequest?.tiers?.some(
+      // Cancelled requests are hidden from the approval chain.
+      application.status !== 'CANCELLED' &&
+      (application.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,
-      ) ?? false;
+      ) ?? false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

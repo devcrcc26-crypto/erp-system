@@ -1315,6 +1315,7 @@ export class OvertimeService
 
   private async assertCanViewSheet(
     row: {
+      status: string;
       employeeId: string;
       approvalRequest?: {
         tiers?: Array<{ approverId: string }>;
@@ -1335,8 +1336,10 @@ export class OvertimeService
 
     const isOwner = row.employeeId === userId;
     const isApprover =
-      row.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      row.status !== 'CANCELLED' &&
+      (row.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
+      false);
 
     if (
       !isOwner &&

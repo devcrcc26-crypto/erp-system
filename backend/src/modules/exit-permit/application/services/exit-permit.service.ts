@@ -205,14 +205,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       where: activeOnly({ id, companyId }),
       select: { status: true, approvalRequestId: true },
     });
-    if (
-      existing.status === ExitPermitStatus.RETURNED &&
-      dto.items !== undefined &&
-      dto.items.length === 0
-    ) {
-      throw new BadRequestException('Add at least one item before submitting');
-    }
-
     await this.prisma.$transaction(async (tx) => {
       await tx.exitPermit.update({
         where: { id },
@@ -254,10 +246,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       }
     });
 
-    if (
-      existing.status === ExitPermitStatus.RETURNED &&
-      existing.approvalRequestId
-    ) {
+    if (existing.approvalRequestId) {
+      // Keep the approval card in step with the edited permit.
       const updated = await this.prisma.exitPermit.findFirstOrThrow({
         where: { id },
         include: { items: { select: { id: true } } },
@@ -277,12 +267,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
           updatedBy: userId,
         },
       });
-      // Requester's save resubmits the returned permit (chain restarts).
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        existing.approvalRequestId,
-        companyId,
-        userId,
-      );
     }
 
     return this.getRequest(id, companyId, userId);
@@ -417,12 +401,13 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         throw new BadRequestException('Add at least one item before submitting');
     }
 
-    if (
-      request.status !== ExitPermitStatus.DRAFT &&
-      request.status !== ExitPermitStatus.RETURNED
-    ) {
+    // Returned permits go through the approval's resubmit (same chain,
+    // restarted); submitting again here would open a second chain.
+    if (request.status !== ExitPermitStatus.DRAFT) {
       throw new BadRequestException(
-        'Only draft or returned exit permits can be submitted',
+        request.status === ExitPermitStatus.RETURNED
+          ? 'Returned permits are resubmitted from Approvals'
+          : 'Only draft exit permits can be submitted',
       );
     }
 
@@ -732,6 +717,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
   private async assertCanView(
     request: {
+      status: string;
       employeeId: string;
       createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -759,8 +745,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     }
 
     const isTierApprover =
-      request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      request.status !== 'CANCELLED' &&
+      (request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
+      false);
 
     if (!isTierApprover) {
       throw new ForbiddenException(

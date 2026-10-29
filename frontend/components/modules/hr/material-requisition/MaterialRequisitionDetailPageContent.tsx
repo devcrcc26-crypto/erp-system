@@ -138,7 +138,8 @@ export default function MaterialRequisitionDetailPageContent({
   const canCancel =
     Boolean(isOwner) &&
     (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
-  const canResubmit =
+  // Returned: the Approvals page holds the single Resubmit action.
+  const requiresAction =
     Boolean(isOwner) &&
     requisition?.status === 'RETURNED' &&
     Boolean(requisition.approvalRequestId);
@@ -380,9 +381,7 @@ export default function MaterialRequisitionDetailPageContent({
   if (requisition.approvalRequestId) {
     overflowMenuItems.push({
       key: 'approvals',
-      label: canResubmit
-        ? t('hr.buttons.resubmit')
-        : t('hr.buttons.viewInApprovals'),
+      label: t('hr.buttons.viewInApprovals'),
       onClick: () =>
         router.push(`/approvals/${requisition.approvalRequestId}`),
     });
@@ -445,23 +444,17 @@ export default function MaterialRequisitionDetailPageContent({
               <>
                 {requisition.approvalRequestId ? (
                   <Button
-                    type={canResubmit ? 'primary' : 'default'}
+                    type={requiresAction ? 'primary' : 'default'}
                     onClick={() =>
                       router.push(
                         `/approvals/${requisition.approvalRequestId}`,
                       )
                     }
                     aria-label={
-                      canResubmit
-                        ? t('hr.buttons.resubmit')
-                        : t('hr.buttons.viewInApprovals')
+                      t('hr.buttons.viewInApprovals')
                     }
                   >
-                    {canResubmit
-                      ? isNarrow
-                        ? undefined
-                        : t('hr.buttons.resubmit')
-                      : isCompact
+                    {isCompact
                         ? t('nav.approvals')
                         : t('hr.buttons.viewInApprovals')}
                   </Button>

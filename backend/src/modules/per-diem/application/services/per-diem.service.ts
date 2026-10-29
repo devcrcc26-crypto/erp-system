@@ -442,8 +442,9 @@ export class PerDiemService
 
   /**
    * Employee edits their own DRAFT or RETURNED per diem request. Inputs are
-   * re-validated and the rate re-resolved exactly as on submit. Saving a
-   * RETURNED request resubmits it and restarts the approval chain.
+   * re-validated and the rate re-resolved exactly as on submit.
+   * Saves only: status is unchanged; a
+   * RETURNED request is resubmitted separately from Approvals.
    */
   async updateRequest(
     id: string,
@@ -515,17 +516,6 @@ export class PerDiemService
         });
       }
     });
-
-    if (
-      request.status === PerDiemStatus.RETURNED &&
-      request.approvalRequestId
-    ) {
-      await this.approvalsService.resubmitAfterOwnerEdit(
-        request.approvalRequestId,
-        companyId,
-        userId,
-      );
-    }
 
     return this.getRequest(id, companyId, userId);
   }
@@ -1219,6 +1209,7 @@ export class PerDiemService
 
   private async assertCanView(
     request: {
+      status: string;
       employeeId: string;
       createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
@@ -1236,8 +1227,10 @@ export class PerDiemService
 
     const isOwner = request.employeeId === userId || request.createdBy === userId;
     const isTierApprover =
-      request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
-      false;
+      // Cancelled requests are hidden from the approval chain.
+      request.status !== 'CANCELLED' &&
+      (request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
+      false);
 
     if (!isOwner && !isTierApprover) {
       throw new ForbiddenException(

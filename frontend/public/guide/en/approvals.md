@@ -51,7 +51,7 @@
 | Returned | Sent back to you to change. |
 | Approved | Fully approved. |
 | Rejected | Not approved. The request is closed. |
-| Cancelled | Cancelled. |
+| Cancelled | Cancelled. It stays in your **My Requests** history, read-only, but is removed from approvers' lists. |
 
 ---
 
@@ -73,14 +73,15 @@ If your request is returned, you receive the notification **Approval returned**.
 
 1. In the left menu, go to **Approvals** → **Pending My Action** and open the request with status **Returned**. The banner says **This request was returned** and shows the approver's note.
 2. Read the note.
-3. To change the request, click **Edit** at the top of the request (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save and resubmit**.
+3. If the request needs to change, click **Edit** at the top of the request (or **Edit** next to it in **My Requests**). The form opens with your details filled in, and the approver's note is shown at the top. Make your changes and click **Save**. You see *"Changes saved."* and go back to the request, which is still **Returned**. Saving does not send it for approval.
    - For leave, click **Edit** in the request details on the same page.
-   - For overtime, **Edit** opens the overtime sheet. Change the entries there, then submit the sheet again.
-4. If nothing needs to change (for example, you only want to answer the approver), use the **Resubmit** panel instead. **Note to approver (optional)**: explain your answer. Click **Attach files** to add files if needed, then click **Resubmit**.
+   - For overtime, **Edit** opens the overtime sheet. Change the entries there, then submit the sheet again from the sheet page. Overtime has no **Resubmit** button in **Approvals**.
+4. When you are ready, click **Resubmit** at the top of the request. If nothing needs to change, you can skip step 3.
+5. In **Resubmit request**, write a **Note to approver (optional)** to explain what you changed. Click **Attach files** to add files if needed, then click **Resubmit**. Click **Cancel** to close it without resubmitting.
 
-Either way, the request goes back through the approval chain from the beginning.
+The request goes back through the approval chain from the beginning, with the details as they are now.
 
-> **After you resubmit:** You see *"Request resubmitted for approval."* (after editing) or *"Request resubmitted"* (from the panel). Earlier notes stay in **Resubmission / response history**.
+> **After you resubmit:** You see *"Request resubmitted"*. Your note is shown to approvers in **Resubmission / response history**, together with earlier notes.
 
 > **Drafts:** a request you saved but never submitted is a draft. Go to **Approvals** → **My Drafts** and click **Edit** next to it. Saving a draft keeps it as a draft (*"Changes saved."*).
 

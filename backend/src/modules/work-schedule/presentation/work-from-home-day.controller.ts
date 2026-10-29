@@ -100,7 +100,7 @@ export class WorkFromHomeDayController {
   @RequireAnyPermission({ module: 'wfh', action: 'create' })
   @ApiOperation({
     summary:
-      'Edit your own returned work-from-home request; saving resubmits it (chain restarts)',
+      'Edit your own returned work-from-home request (saves only; resubmit from Approvals)',
   })
   updateRequest(
     @CurrentUser() user: AuthenticatedUser,

@@ -12,7 +12,7 @@ import { useExitPermit } from '@/lib/query/exit-permit';
 
 /**
  * Employee edit of their own DRAFT / RETURNED exit permit, reusing the create
- * form prefilled (details + items). Saving a RETURNED permit resubmits it.
+ * form prefilled (details + items). Saves only; resubmit from the request page.
  */
 export default function ExitPermitEditPageContent({
   permitId,

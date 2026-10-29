@@ -6,7 +6,7 @@ import { useApprovalRequest } from '@/lib/query/approvals';
 
 /**
  * Employee edit of their own RETURNED work-from-home request (the approval
- * request is the record). Saving resubmits it.
+ * request is the record). Saves only; resubmit from the request page.
  */
 export default function WorkFromHomeEditPageContent({
   approvalRequestId,

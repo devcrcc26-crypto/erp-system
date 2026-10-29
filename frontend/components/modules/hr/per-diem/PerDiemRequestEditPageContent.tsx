@@ -13,7 +13,7 @@ import { usePerDiemRequest } from '@/lib/query/per-diem';
 
 /**
  * Employee edit of their own DRAFT / RETURNED per diem request, reusing the
- * create form prefilled. Saving a RETURNED request resubmits it.
+ * create form prefilled. Saves only; resubmit from the request page.
  */
 export default function PerDiemRequestEditPageContent({
   requestId,
