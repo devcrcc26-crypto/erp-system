@@ -18,6 +18,20 @@ export function signOutLocally(options?: SignOutLocallyOptions): void {
   clearAuthCookie();
   clearPendingTemporaryPassword();
 
+  if (typeof window !== 'undefined') {
+    try {
+      window.sessionStorage.clear();
+    } catch {
+      // ignore quota / private-mode errors
+    }
+    try {
+      window.localStorage.removeItem('erp-auth');
+      window.localStorage.removeItem('session');
+    } catch {
+      // ignore
+    }
+  }
+
   if (clearQuery) {
     getQueryClient()?.clear();
   }

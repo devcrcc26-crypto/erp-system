@@ -132,7 +132,16 @@ export function useConfirmEmailChange() {
 export function useLogout() {
   return useMutation({
     mutationFn: async (): Promise<MessageResponse> => {
-      return apiPost<MessageResponse>('/auth/logout');
+      // Cap wait so a hung API cannot block redirect forever.
+      return Promise.race([
+        apiPost<MessageResponse>('/auth/logout'),
+        new Promise<MessageResponse>((_, reject) => {
+          window.setTimeout(
+            () => reject(new Error('Logout request timed out')),
+            5000,
+          );
+        }),
+      ]);
     },
     onSettled: () => {
       signOutLocally();

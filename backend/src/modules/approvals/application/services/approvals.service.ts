@@ -17,6 +17,8 @@ import {
   FolderContextType,
   LeaveRequestStatus,
   LeaveType,
+  NotificationChannel,
+  NotificationStatus,
   OvertimeSheetStatus,
   PerDiemStatus,
   Prisma,
@@ -562,22 +564,19 @@ export class ApprovalsService {
       include: REQUEST_DETAIL_INCLUDE,
     });
 
-    const firstApproverId = matched.tiers[0]?.approverId;
-    if (
-      firstApproverId &&
-      firstApproverId !== userId &&
-      firstApproverId !== options?.createdByUserId
-    ) {
-      await this.notifySafe(companyId, userId, {
-        recipientId: firstApproverId,
-        eventType: APPROVAL_PENDING_EVENT,
-        subject: `Approval required ? ${created.requestNumber}`,
+    const firstTier = matched.tiers[0];
+    if (firstTier?.approverId) {
+      await this.notifyApprovalPending(companyId, userId, firstTier, {
+        subject: `Approval required - ${created.requestNumber}`,
         body: `${dto.title} (${created.requestNumber}) is awaiting your approval.`,
         link: `/approvals/${created.id}`,
         variables: {
           requestId: created.id,
           requestNumber: created.requestNumber,
         },
+        excludeRecipientIds: [userId, options?.createdByUserId].filter(
+          (id): id is string => Boolean(id),
+        ),
       });
     }
 
@@ -880,6 +879,9 @@ export class ApprovalsService {
         ...businessTripAckRequestIds,
       ];
 
+      const hrManagerIds = await this.findActiveHrManagerUserIds(companyId);
+      const isHrManagerViewer = hrManagerIds.includes(userId);
+
       andClauses.push({
         OR: [
           {
@@ -895,6 +897,42 @@ export class ApprovalsService {
               },
             },
           },
+          ...(isHrManagerViewer
+            ? [
+                {
+                  tiers: {
+                    some: {
+                      decision: {
+                        in: [
+                          ApprovalTierDecision.PENDING,
+                          ApprovalTierDecision.CONDITIONALLY_APPROVED,
+                        ],
+                      },
+                      OR: [
+                        {
+                          label: {
+                            in: [
+                              'HR Manager',
+                              'Local HR Manager',
+                              'HR Officer',
+                            ],
+                          },
+                        },
+                        {
+                          resolver: {
+                            in: [
+                              'ROLE:HR Manager',
+                              'ROLE:Local HR Manager',
+                              'ROLE:HR Officer',
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              ]
+            : []),
           {
             requestedBy: userId,
             status: ApprovalRequestStatus.RETURNED,
@@ -957,6 +995,7 @@ export class ApprovalsService {
           id: true,
           tierOrder: true,
           label: true,
+          resolver: true,
           decision: true,
           approverId: true,
           conditions: true,
@@ -980,6 +1019,9 @@ export class ApprovalsService {
         orderBy: { createdAt: 'desc' },
         include: listInclude,
       });
+      const hrManagerPeerIds = new Set(
+        await this.findActiveHrManagerUserIds(companyId),
+      );
 
       const filtered = candidates.filter((row) =>
         this.requestNeedsUserAction(
@@ -987,6 +1029,7 @@ export class ApprovalsService {
           userId,
           flightAckRequestIds,
           businessTripAckRequestIds,
+          hrManagerPeerIds,
         ),
       );
       const total = filtered.length;
@@ -1082,6 +1125,8 @@ export class ApprovalsService {
       tiers: Array<{
         tierOrder: number;
         approverId: string;
+        label?: string | null;
+        resolver?: string | null;
         decision: ApprovalTierDecision;
         conditions: Prisma.JsonValue;
       }>;
@@ -1093,6 +1138,7 @@ export class ApprovalsService {
     userId: string,
     flightAckRequestIds: Set<string> = new Set(),
     businessTripAckRequestIds: Set<string> = new Set(),
+    hrManagerPeerIds: Set<string> = new Set(),
   ): boolean {
     if (row.id && flightAckRequestIds.has(row.id)) {
       return true;
@@ -1103,7 +1149,16 @@ export class ApprovalsService {
 
     const current = row.tiers.find((t) => t.tierOrder === row.currentTier);
 
-    if (current && current.approverId === userId) {
+    const isAssignedApprover = Boolean(
+      current && current.approverId === userId,
+    );
+    const isHrManagerPeer =
+      Boolean(current) &&
+      hrManagerPeerIds.has(userId) &&
+      this.isHrManagerApprovalTier(current!) &&
+      hrManagerPeerIds.has(current!.approverId);
+
+    if (current && (isAssignedApprover || isHrManagerPeer)) {
       if (current.decision === ApprovalTierDecision.PENDING) {
         return true;
       }
@@ -1168,8 +1223,14 @@ export class ApprovalsService {
           options?.bypassApproverCheck === true || options?.onBehalf === true,
       },
     );
+    const hrManagerPeer =
+      tier.approverId !== userId &&
+      (await this.canActAsHrManagerPeer(request.companyId, userId, tier));
     const actingOnBehalf =
-      options?.bypassApproverCheck !== true && tier.approverId !== userId;
+      options?.bypassApproverCheck !== true &&
+      tier.approverId !== userId &&
+      !hrManagerPeer &&
+      options?.onBehalf === true;
     if (actingOnBehalf) {
       await this.assertCanApproveOnBehalf(request, userId);
     }
@@ -1227,17 +1288,21 @@ export class ApprovalsService {
       await this.afterActedOnBehalf('approve', request, tier, userId);
     }
 
+    await this.resolvePendingNotificationsForRequest(
+      request.companyId,
+      request.id,
+    );
+
     if (nextApprover) {
-      await this.notifySafe(request.companyId, userId, {
-        recipientId: nextApprover.approverId,
-        eventType: APPROVAL_PENDING_EVENT,
-        subject: `Approval required ? ${request.requestNumber}`,
+      await this.notifyApprovalPending(request.companyId, userId, nextApprover, {
+        subject: `Approval required - ${request.requestNumber}`,
         body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
         link: `/approvals/${request.id}`,
         variables: {
           requestId: request.id,
           requestNumber: request.requestNumber,
         },
+        excludeRecipientIds: [userId],
       });
     } else {
       if (request.requestedBy !== userId) {
@@ -1313,19 +1378,16 @@ export class ApprovalsService {
     );
 
     if (nextApprover) {
-      if (nextApprover.approverId !== approverUserId) {
-        await this.notifySafe(companyId, approverUserId, {
-          recipientId: nextApprover.approverId,
-          eventType: APPROVAL_PENDING_EVENT,
-          subject: `Approval required - ${request.requestNumber}`,
-          body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
-          link: `/approvals/${request.id}`,
-          variables: {
-            requestId: request.id,
-            requestNumber: request.requestNumber,
-          },
-        });
-      }
+      await this.notifyApprovalPending(companyId, approverUserId, nextApprover, {
+        subject: `Approval required - ${request.requestNumber}`,
+        body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
+        link: `/approvals/${request.id}`,
+        variables: {
+          requestId: request.id,
+          requestNumber: request.requestNumber,
+        },
+        excludeRecipientIds: [approverUserId],
+      });
       return { tierId: tier.id, completed: false };
     }
 
@@ -1397,6 +1459,11 @@ export class ApprovalsService {
       PRISMA_TX_OPTIONS,
     );
 
+    await this.resolvePendingNotificationsForRequest(
+      request.companyId,
+      request.id,
+    );
+
     if (request.requestedBy !== userId) {
       await this.notifySafe(request.companyId, userId, {
         recipientId: request.requestedBy,
@@ -1437,7 +1504,13 @@ export class ApprovalsService {
       userId,
       { bypassApproverCheck: options?.onBehalf === true },
     );
-    const actingOnBehalf = tier.approverId !== userId;
+    const hrManagerPeer =
+      tier.approverId !== userId &&
+      (await this.canActAsHrManagerPeer(request.companyId, userId, tier));
+    const actingOnBehalf =
+      tier.approverId !== userId &&
+      !hrManagerPeer &&
+      options?.onBehalf === true;
     if (actingOnBehalf) {
       await this.assertCanApproveOnBehalf(request, userId);
     }
@@ -1477,10 +1550,15 @@ export class ApprovalsService {
       PRISMA_TX_OPTIONS,
     );
 
+    await this.resolvePendingNotificationsForRequest(
+      request.companyId,
+      request.id,
+    );
+
     await this.notifySafe(request.companyId, userId, {
       recipientId: request.requestedBy,
       eventType: APPROVAL_RETURNED_EVENT,
-      subject: `Approval returned ? ${request.requestNumber}`,
+      subject: `Approval returned - ${request.requestNumber}`,
       body:
         note?.trim() ||
         `Your approval request ${request.requestNumber} was returned for revision.`,
@@ -1642,13 +1720,12 @@ export class ApprovalsService {
     );
 
     if (nextApprover) {
-      await this.notifySafe(request.companyId, userId, {
-        recipientId: nextApprover.approverId,
-        eventType: APPROVAL_PENDING_EVENT,
+      await this.notifyApprovalPending(request.companyId, userId, nextApprover, {
         subject: `Approval required`,
         body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
         link: `/approvals/${request.id}`,
         variables: { requestId: request.id },
+        excludeRecipientIds: [userId],
       });
     } else if (shouldAdvance) {
       if (request.requestedBy !== userId) {
@@ -1959,9 +2036,7 @@ export class ApprovalsService {
       );
     }
 
-    await this.notifySafe(companyId, userId, {
-      recipientId: firstTier.approverId,
-      eventType: APPROVAL_PENDING_EVENT,
+    await this.notifyApprovalPending(companyId, userId, firstTier, {
       subject: `Resubmitted for approval - ${request.requestNumber}`,
       body:
         note?.trim() ||
@@ -1971,6 +2046,7 @@ export class ApprovalsService {
         requestId: request.id,
         requestNumber: request.requestNumber,
       },
+      excludeRecipientIds: [userId],
     });
 
     const category = await this.prisma.approvalCategory.findFirst({
@@ -2078,9 +2154,7 @@ export class ApprovalsService {
       }
     }, PRISMA_TX_OPTIONS);
 
-    await this.notifySafe(companyId, userId, {
-      recipientId: firstTier.approverId,
-      eventType: APPROVAL_PENDING_EVENT,
+    await this.notifyApprovalPending(companyId, userId, firstTier, {
       subject: `Edited overtime resubmitted - ${request.requestNumber}`,
       body:
         note?.trim() ||
@@ -2090,6 +2164,7 @@ export class ApprovalsService {
         requestId: request.id,
         requestNumber: request.requestNumber,
       },
+      excludeRecipientIds: [userId],
     });
 
     if (request.category?.code) {
@@ -2422,7 +2497,11 @@ export class ApprovalsService {
       id: string;
       requestedBy: string;
       status: ApprovalRequestStatus;
-      tiers: Array<{ approverId: string }>;
+      tiers: Array<{
+        approverId: string;
+        label?: string | null;
+        resolver?: string | null;
+      }>;
       flightApplication?: { id: string } | null;
       businessTrip?: { id: string } | null;
     },
@@ -2442,6 +2521,20 @@ export class ApprovalsService {
       request.tiers.some((t) => t.approverId === userId);
     if (isRequester || isApprover) {
       return;
+    }
+
+    if (request.status !== ApprovalRequestStatus.CANCELLED) {
+      const hrManagers = await this.findActiveHrManagerUserIds(companyId);
+      if (hrManagers.includes(userId)) {
+        const peerTier = request.tiers.find(
+          (t) =>
+            this.isHrManagerApprovalTier(t) &&
+            hrManagers.includes(t.approverId),
+        );
+        if (peerTier) {
+          return;
+        }
+      }
     }
 
     if (request.flightApplication?.id) {
@@ -2640,9 +2733,20 @@ export class ApprovalsService {
       tier.approverId !== userId &&
       options?.bypassApproverCheck !== true
     ) {
-      throw new ForbiddenException(
-        'Only the assigned approver can act on this tier',
+      const peerOk = await this.canActAsHrManagerPeer(
+        tier.request.companyId,
+        userId,
+        {
+          label: tier.label,
+          resolver: tier.resolver,
+          approverId: tier.approverId,
+        },
       );
+      if (!peerOk) {
+        throw new ForbiddenException(
+          'Only the assigned approver can act on this tier',
+        );
+      }
     }
 
     if (
@@ -2737,7 +2841,11 @@ export class ApprovalsService {
     tx: Prisma.TransactionClient,
     requestId: string,
     actorUserId: string,
-  ): Promise<{ approverId: string; label: string } | null> {
+  ): Promise<{
+    approverId: string;
+    label: string;
+    resolver: string | null;
+  } | null> {
     const tiers = await tx.approvalTier.findMany({
       where: { requestId },
       orderBy: { tierOrder: 'asc' },
@@ -2763,7 +2871,11 @@ export class ApprovalsService {
         },
       });
 
-      return { approverId: next.approverId, label: next.label };
+      return {
+        approverId: next.approverId,
+        label: next.label,
+        resolver: next.resolver,
+      };
     }
 
     await tx.approvalRequest.update({
@@ -2822,6 +2934,144 @@ export class ApprovalsService {
     } catch (error: unknown) {
       this.logger.warn(
         `Approval notification failed (${payload.eventType})`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  /** True when the tier is the shared HR Manager approval step. */
+  private isHrManagerApprovalTier(tier: {
+    label?: string | null;
+    resolver?: string | null;
+  }): boolean {
+    const label = (tier.label ?? '').trim().toLowerCase();
+    const resolver = (tier.resolver ?? '').trim().toLowerCase();
+    return (
+      label === 'hr manager' ||
+      label === 'local hr manager' ||
+      label === 'hr officer' ||
+      resolver === 'role:hr manager' ||
+      resolver === 'role:local hr manager' ||
+      resolver === 'role:hr officer'
+    );
+  }
+
+  /**
+   * Active users whose primary role is HR Manager (or Local HR Manager /
+   * HR Officer fallback used as the company HR Manager seat).
+   */
+  private async findActiveHrManagerUserIds(
+    companyId: string,
+  ): Promise<string[]> {
+    const roleNames = ['HR Manager', 'Local HR Manager', 'HR Officer'];
+    const users = await this.prisma.user.findMany({
+      where: activeOnly({
+        companyId,
+        isActive: true,
+        employmentStatus: 'ACTIVE' as const,
+        userRoles: {
+          some: activeOnly({
+            isPrimary: true,
+            role: activeOnly({
+              companyId,
+              name: { in: roleNames },
+            }),
+          }),
+        },
+      }),
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    return users.map((row) => row.id);
+  }
+
+  /**
+   * Sends approval-pending notifications. When the tier is HR Manager,
+   * every active HR Manager receives it (any one may act).
+   */
+  private async notifyApprovalPending(
+    companyId: string,
+    actorUserId: string,
+    tier: {
+      approverId: string;
+      label?: string | null;
+      resolver?: string | null;
+    },
+    payload: {
+      subject: string;
+      body: string;
+      link?: string;
+      variables?: Record<string, string>;
+      excludeRecipientIds?: string[];
+    },
+  ): Promise<void> {
+    const exclude = new Set(payload.excludeRecipientIds ?? []);
+    let recipientIds = [tier.approverId];
+    if (this.isHrManagerApprovalTier(tier)) {
+      const managers = await this.findActiveHrManagerUserIds(companyId);
+      if (managers.length > 0) {
+        recipientIds = managers;
+      }
+    }
+    await Promise.all(
+      recipientIds
+        .filter((id) => id && !exclude.has(id))
+        .map((recipientId) =>
+          this.notifySafe(companyId, actorUserId, {
+            recipientId,
+            eventType: APPROVAL_PENDING_EVENT,
+            subject: payload.subject,
+            body: payload.body,
+            link: payload.link,
+            variables: payload.variables,
+          }),
+        ),
+    );
+  }
+
+  /**
+   * True when the user may act on a pending HR Manager tier assigned to a peer.
+   */
+  private async canActAsHrManagerPeer(
+    companyId: string,
+    userId: string,
+    tier: { label?: string | null; resolver?: string | null; approverId: string },
+  ): Promise<boolean> {
+    if (!this.isHrManagerApprovalTier(tier)) {
+      return false;
+    }
+    if (tier.approverId === userId) {
+      return true;
+    }
+    const managers = await this.findActiveHrManagerUserIds(companyId);
+    return managers.includes(userId) && managers.includes(tier.approverId);
+  }
+
+  /**
+   * Marks unread approval-pending notifications for a request as read for every
+   * recipient (e.g. all HR Managers after one of them acts).
+   */
+  private async resolvePendingNotificationsForRequest(
+    companyId: string,
+    requestId: string,
+  ): Promise<void> {
+    const link = `/approvals/${requestId}`;
+    try {
+      await this.prisma.notification.updateMany({
+        where: {
+          companyId,
+          channel: NotificationChannel.IN_APP,
+          readAt: null,
+          OR: [{ link }, { link: { startsWith: `${link}?` } }],
+        },
+        data: {
+          readAt: new Date(),
+          status: NotificationStatus.READ,
+        },
+      });
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Failed to resolve pending notifications for ${requestId}`,
         error instanceof Error ? error.message : String(error),
       );
     }

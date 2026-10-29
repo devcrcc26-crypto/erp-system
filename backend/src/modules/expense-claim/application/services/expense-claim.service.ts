@@ -41,6 +41,10 @@ import type {
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
+  isEmployeeInTeamScope,
+  resolveTeamScopedEmployeeIds,
+} from '../../../../shared/org/team-scope.util';
+import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
   ListExpenseClaimsDto,
@@ -492,10 +496,16 @@ export class ExpenseClaimService
       'manage',
     );
 
+    const teamEmployeeIds = canManage
+      ? null
+      : await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId);
+
     const where: Prisma.ExpenseClaimWhereInput = {
       companyId,
       deletedAt: null,
-      ...(canManage ? {} : { employeeId: userId }),
+      ...(canManage
+        ? {}
+        : { employeeId: { in: teamEmployeeIds ?? [userId] } }),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
@@ -895,8 +905,16 @@ export class ExpenseClaimService
       claim.status !== 'CANCELLED' &&
       (claim.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false);
+    const inTeamScope =
+      !isOwner &&
+      (await isEmployeeInTeamScope(
+        this.prisma,
+        userId,
+        companyId,
+        claim.employeeId,
+      ));
 
-    if (!isOwner && !isTierApprover) {
+    if (!isOwner && !isTierApprover && !inTeamScope) {
       throw new ForbiddenException(
         'You do not have access to this expense claim',
       );

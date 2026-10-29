@@ -101,8 +101,15 @@ export default function HeaderActions({
     Boolean(sessionProfile?.photoDocumentId),
   );
 
-  const displayName = user ? formatUserName(user) : t('common.defaultUser');
-  const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
+  // Prefer /auth/me (includes middleName); fall back to login payload.
+  const displayName = sessionProfile
+    ? formatUserName(sessionProfile)
+    : user
+      ? formatUserName(user)
+      : t('common.defaultUser');
+  const avatarInitial =
+    (sessionProfile?.firstName ?? user?.firstName)?.charAt(0)?.toUpperCase() ??
+    'U';
   const roleName = sessionProfile
     ? pickTopLevelRoleName(sessionProfile.roles, t('common.defaultUser'))
     : profileLoading
@@ -114,10 +121,11 @@ export default function HeaderActions({
     try {
       await logout.mutateAsync();
     } catch {
-      // swallowed; cleared below
+      // Backend may fail or time out — still clear local session.
+    } finally {
+      signOutLocally();
+      router.replace('/login');
     }
-    signOutLocally();
-    router.replace('/login');
   }
 
   const profileTrigger = (

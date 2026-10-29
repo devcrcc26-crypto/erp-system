@@ -7,7 +7,10 @@ import { Button, DatePicker, Form, Input, Select } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { siteAssignmentKeys } from '@/lib/query/site-assignment';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
@@ -119,6 +122,7 @@ function ReviewItem({
 export default function SiteAssignmentFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SiteAssignmentFormValues>();
   const currentUser = useCurrentUser();
@@ -305,11 +309,11 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
               count: created.length,
             }),
       );
-      if (created.length === 1) {
-        router.push(`/hr/site-assignments/${created[0].id}`);
-        return;
-      }
-      router.push('/hr/site-assignments');
+      await navigateAfterRequestSubmit({
+        queryClient,
+        router,
+        invalidateKeys: [siteAssignmentKeys.all],
+      });
     } catch (error) {
       notifyApiError(
         error,

@@ -41,6 +41,7 @@ export interface AuthUser {
   email: string;
   loginName?: string | null;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   chineseName: string | null;
   companyId: string;

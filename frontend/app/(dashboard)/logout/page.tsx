@@ -14,9 +14,11 @@ export default function LogoutPage(): React.ReactNode {
       try {
         await logout.mutateAsync();
       } catch {
+        // ignore
+      } finally {
         signOutLocally();
+        router.replace('/login');
       }
-      router.replace('/login');
     }
 
     void performLogout();

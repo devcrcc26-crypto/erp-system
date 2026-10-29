@@ -3,12 +3,13 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import ExitPermitForm from '@/components/modules/hr/exit-permit/ExitPermitForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { ExitPermitDetail } from '@/lib/api/exit-permit.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { exitPermitKeys } from '@/lib/query/exit-permit';
 
 /**
  * New exit permit - shared HR form banner + stepper form.
@@ -16,13 +17,15 @@ const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 export default function ExitPermitFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: ExitPermitDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`${EXIT_PERMIT_LIST_PATH}/${created.id}`);
-    }
+  async function handleSuccess(created: ExitPermitDetail): Promise<void> {
+    queryClient.setQueryData(exitPermitKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [exitPermitKeys.all, exitPermitKeys.detail(created.id)],
+    });
   }
 
   return (
@@ -34,7 +37,7 @@ export default function ExitPermitFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <ExitPermitForm onSuccess={handleSuccess} />
+        <ExitPermitForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

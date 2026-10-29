@@ -2,10 +2,13 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import VehicleRefuelingForm from '@/components/modules/hr/vehicle-refueling/VehicleRefuelingForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { vehicleRefuelingKeys } from '@/lib/query/vehicle-refueling';
 
 /**
  * New vehicle refueling request - shared HR form banner + stepper form.
@@ -13,13 +16,18 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function VehicleRefuelingFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: VehicleRefuelingDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/vehicle-refueling/${created.id}`);
-    }
+  async function handleSuccess(created: VehicleRefuelingDetail): Promise<void> {
+    queryClient.setQueryData(vehicleRefuelingKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [
+        vehicleRefuelingKeys.all,
+        vehicleRefuelingKeys.detail(created.id),
+      ],
+    });
   }
 
   return (
@@ -31,7 +39,7 @@ export default function VehicleRefuelingFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <VehicleRefuelingForm onSuccess={handleSuccess} />
+        <VehicleRefuelingForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

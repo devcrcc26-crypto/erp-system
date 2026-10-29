@@ -3,11 +3,14 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import FlightApplicationForm from '@/components/modules/hr/flight/FlightApplicationForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { flightKeys } from '@/lib/query/flight';
 
 /**
  * New flight application - shared HR form banner + stepper form.
@@ -15,13 +18,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function FlightApplicationFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: FlightApplicationDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/flight-applications/${created.id}`);
-    }
+  async function handleSuccess(created: FlightApplicationDetail): Promise<void> {
+    queryClient.setQueryData(flightKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [flightKeys.all, flightKeys.detail(created.id)],
+    });
   }
 
   return (
@@ -33,7 +38,7 @@ export default function FlightApplicationFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <FlightApplicationForm onSuccess={handleSuccess} />
+        <FlightApplicationForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

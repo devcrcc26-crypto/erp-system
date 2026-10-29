@@ -15,6 +15,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Select,
   Skeleton,
   Space,
 } from 'antd';
@@ -59,6 +60,21 @@ function inclusiveCalendarDays(from: string, to: string): number | null {
     return null;
   }
   return end.diff(start, 'day') + 1;
+}
+
+function eachDayKeys(startIso: string, endIso: string): string[] {
+  const start = dayjs(startIso.slice(0, 10));
+  const end = dayjs(endIso.slice(0, 10));
+  if (!start.isValid() || !end.isValid() || end.isBefore(start, 'day')) {
+    return [];
+  }
+  const keys: string[] = [];
+  let cursor = start;
+  while (!cursor.isAfter(end, 'day')) {
+    keys.push(cursor.format('YYYY-MM-DD'));
+    cursor = cursor.add(1, 'day');
+  }
+  return keys;
 }
 
 function DetailSection({
@@ -173,7 +189,7 @@ export default function PerDiemRequestDetailPageContent({
     !request?.settlementId &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
   const canAddDisbursement =
-    canEditHr &&
+    Boolean(request?.canDisburse ?? canEditHr) &&
     (request?.status === 'APPROVED' || request?.status === 'ACTIVE');
   const canSettle =
     canEditHr &&
@@ -193,6 +209,29 @@ export default function PerDiemRequestDetailPageContent({
   const tiers = useMemo(
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
     [request?.approvalRequest?.tiers],
+  );
+
+  const availableDisbursementDays = useMemo(() => {
+    if (!request?.startDate || !request?.endDate) {
+      return [] as string[];
+    }
+    const requestDays = eachDayKeys(request.startDate, request.endDate);
+    const covered = new Set<string>();
+    for (const row of request.disbursements ?? []) {
+      for (const day of eachDayKeys(row.coveredDaysFrom, row.coveredDaysTo)) {
+        covered.add(day);
+      }
+    }
+    return requestDays.filter((day) => !covered.has(day));
+  }, [request]);
+
+  const disbursementDayOptions = useMemo(
+    () =>
+      availableDisbursementDays.map((day) => ({
+        value: day,
+        label: formatProjectDate(day),
+      })),
+    [availableDisbursementDays],
   );
 
   async function handleAddDisbursement(): Promise<void> {
@@ -342,8 +381,19 @@ export default function PerDiemRequestDetailPageContent({
                   : t('hr.buttons.viewInApprovals')}
               </Button>
             ) : null}
-            {canAddDisbursement ? (
-              <Button onClick={() => setDisbursementOpen(true)}>
+            {canAddDisbursement && availableDisbursementDays.length > 0 ? (
+              <Button
+                onClick={() => {
+                  disbursementForm.setFieldsValue({
+                    coveredDaysFrom: availableDisbursementDays[0],
+                    coveredDaysTo:
+                      availableDisbursementDays[
+                        availableDisbursementDays.length - 1
+                      ],
+                  });
+                  setDisbursementOpen(true);
+                }}
+              >
                 {t('hr.perDiem.addDisbursement')}
               </Button>
             ) : null}
@@ -867,16 +917,59 @@ export default function PerDiemRequestDetailPageContent({
           <Form.Item
             name="coveredDaysFrom"
             label={t('hr.perDiem.coveredFrom')}
-            rules={[{ required: true }]}
+            rules={[
+              { required: true },
+              {
+                validator: async (_, value: string | undefined) => {
+                  if (!value) return;
+                  if (!availableDisbursementDays.includes(value)) {
+                    throw new Error(t('hr.perDiem.coveredDaysUnavailable'));
+                  }
+                },
+              },
+            ]}
           >
-            <Input type="date" className="w-full" />
+            <Select
+              options={disbursementDayOptions}
+              className="w-full"
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
           <Form.Item
             name="coveredDaysTo"
             label={t('hr.perDiem.coveredTo')}
-            rules={[{ required: true }]}
+            rules={[
+              { required: true },
+              {
+                validator: async (_, value: string | undefined) => {
+                  if (!value) return;
+                  if (!availableDisbursementDays.includes(value)) {
+                    throw new Error(t('hr.perDiem.coveredDaysUnavailable'));
+                  }
+                  const from = disbursementForm.getFieldValue(
+                    'coveredDaysFrom',
+                  ) as string | undefined;
+                  if (from && value < from) {
+                    throw new Error(t('hr.perDiem.coveredToBeforeFrom'));
+                  }
+                  const span = eachDayKeys(from ?? value, value);
+                  const uncovered = span.every((day) =>
+                    availableDisbursementDays.includes(day),
+                  );
+                  if (!uncovered) {
+                    throw new Error(t('hr.perDiem.coveredDaysOverlap'));
+                  }
+                },
+              },
+            ]}
           >
-            <Input type="date" className="w-full" />
+            <Select
+              options={disbursementDayOptions}
+              className="w-full"
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
           {disbursementAmountPreview ? (
             <p className="erp-users-cell-strong m-0 mb-4 text-sm">

@@ -30,6 +30,7 @@ import {
 import dayjs from 'dayjs';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
@@ -52,6 +53,7 @@ import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import {
   downloadOvertimeSheetImportTemplate,
+  overtimeKeys,
   useCancelOvertimeSheet,
   useDeleteOvertimeEntry,
   useDeleteOvertimeSheet,
@@ -114,6 +116,7 @@ export default function OvertimeSheetDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const returnToParam = searchParams.get('returnTo');
   const messageApi = useAppMessage();
@@ -314,6 +317,9 @@ export default function OvertimeSheetDetailPageContent({
       await submitMutation.mutateAsync();
       messageApi.success(t('hr.messages.overtimeSheetSubmitted'));
       setConfirmSubmit(false);
+      await queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      await queryClient.invalidateQueries({ queryKey: overtimeKeys.all });
+      router.push('/approvals');
     } catch (error: unknown) {
       notifyApiError(
         error,

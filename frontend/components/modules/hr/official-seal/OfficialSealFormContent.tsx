@@ -3,10 +3,13 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import OfficialSealForm from '@/components/modules/hr/official-seal/OfficialSealForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { OfficialSealDetail } from '@/lib/api/official-seal.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { officialSealKeys } from '@/lib/query/official-seal';
 
 /**
  * New official seal usage request - shared HR form banner + stepper form.
@@ -14,13 +17,18 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function OfficialSealFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: OfficialSealDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/official-seal/${created.id}`);
-    }
+  async function handleSuccess(created: OfficialSealDetail): Promise<void> {
+    queryClient.setQueryData(officialSealKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [
+        officialSealKeys.all,
+        officialSealKeys.detail(created.id),
+      ],
+    });
   }
 
   return (
@@ -32,7 +40,7 @@ export default function OfficialSealFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <OfficialSealForm onSuccess={handleSuccess} />
+        <OfficialSealForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

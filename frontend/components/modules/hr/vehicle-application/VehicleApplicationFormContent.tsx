@@ -2,10 +2,13 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import VehicleApplicationForm from '@/components/modules/hr/vehicle-application/VehicleApplicationForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { VehicleApplicationDetail } from '@/lib/api/vehicle-application.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { vehicleApplicationKeys } from '@/lib/query/vehicle-application';
 
 /**
  * New vehicle application - shared HR form banner + stepper form.
@@ -13,13 +16,18 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function VehicleApplicationFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: VehicleApplicationDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/vehicle-applications/${created.id}`);
-    }
+  async function handleSuccess(created: VehicleApplicationDetail): Promise<void> {
+    queryClient.setQueryData(vehicleApplicationKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [
+        vehicleApplicationKeys.all,
+        vehicleApplicationKeys.detail(created.id),
+      ],
+    });
   }
 
   return (
@@ -31,7 +39,7 @@ export default function VehicleApplicationFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <VehicleApplicationForm onSuccess={handleSuccess} />
+        <VehicleApplicationForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

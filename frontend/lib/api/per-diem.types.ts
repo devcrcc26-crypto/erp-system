@@ -114,6 +114,8 @@ export interface PerDiemRequestListItem {
 }
 
 export interface PerDiemRequestDetail extends PerDiemRequestListItem {
+  /** True when the caller may record a cash disbursement for this request. */
+  canDisburse?: boolean;
   notes?: string | null;
   requestedDailyRate?: string | null;
   rateOverrideReason?: string | null;

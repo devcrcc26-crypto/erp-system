@@ -2,10 +2,13 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import ConsumablesRequisitionForm from '@/components/modules/hr/consumables/ConsumablesRequisitionForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { ConsumablesRequisitionDetail } from '@/lib/api/consumables-requisition.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { consumablesRequisitionKeys } from '@/lib/query/consumables-requisition';
 
 /**
  * New consumables requisition - shared HR form banner + stepper form.
@@ -13,13 +16,21 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function ConsumablesRequisitionFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: ConsumablesRequisitionDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/consumables-requisitions/${created.id}`);
-    }
+  async function handleSuccess(created: ConsumablesRequisitionDetail): Promise<void> {
+    queryClient.setQueryData(
+      consumablesRequisitionKeys.detail(created.id),
+      created,
+    );
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [
+        consumablesRequisitionKeys.all,
+        consumablesRequisitionKeys.detail(created.id),
+      ],
+    });
   }
 
   return (
@@ -31,7 +42,9 @@ export default function ConsumablesRequisitionFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <ConsumablesRequisitionForm onSuccess={handleSuccess} />
+        <ConsumablesRequisitionForm
+          onSuccess={(created) => void handleSuccess(created)}
+        />
       </HrFormPageShell>
     </div>
   );

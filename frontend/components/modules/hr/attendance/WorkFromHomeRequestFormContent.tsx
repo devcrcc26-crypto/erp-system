@@ -205,6 +205,7 @@ export default function WorkFromHomeRequestFormContent({
         ...onBehalf.payload,
       });
       messageApi.success(t('pages.hr.workFromHome.request.submitSuccess'));
+      await queryClient.invalidateQueries({ queryKey: ['approvals'] });
       router.push('/approvals');
     } catch (error) {
       notifyApiError(

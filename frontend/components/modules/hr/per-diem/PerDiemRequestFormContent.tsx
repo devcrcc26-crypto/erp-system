@@ -3,11 +3,14 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import PerDiemRequestForm from '@/components/modules/hr/per-diem/PerDiemRequestForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { PerDiemRequestDetail } from '@/lib/api/per-diem.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { perDiemKeys } from '@/lib/query/per-diem';
 
 /**
  * New per diem request - shared HR form banner + stepper form.
@@ -15,13 +18,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function PerDiemRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: PerDiemRequestDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/per-diem/${created.id}`);
-    }
+  async function handleSuccess(created: PerDiemRequestDetail): Promise<void> {
+    queryClient.setQueryData(perDiemKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [perDiemKeys.all, perDiemKeys.detail(created.id)],
+    });
   }
 
   return (
@@ -33,7 +38,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <PerDiemRequestForm onSuccess={handleSuccess} />
+        <PerDiemRequestForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

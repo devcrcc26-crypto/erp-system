@@ -13,6 +13,9 @@ export class AuthUserDto {
   @ApiProperty()
   firstName!: string;
 
+  @ApiProperty({ nullable: true })
+  middleName!: string | null;
+
   @ApiProperty()
   lastName!: string;
 

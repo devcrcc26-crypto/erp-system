@@ -71,10 +71,12 @@ function LogoutButton({ onClick }: { onClick?: () => void }) {
     try {
       await logout.mutateAsync();
     } catch {
+      // ignore — always clear and redirect
+    } finally {
       signOutLocally();
+      onClick?.();
+      router.replace('/login');
     }
-    onClick?.();
-    router.replace('/login');
   }
 
   return (

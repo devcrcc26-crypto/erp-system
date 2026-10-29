@@ -2,10 +2,13 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import MaterialRequisitionForm from '@/components/modules/hr/material-requisition/MaterialRequisitionForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { MaterialRequisitionDetail } from '@/lib/api/material-requisition.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { materialRequisitionKeys } from '@/lib/query/material-requisition';
 
 /**
  * New material requisition - shared HR form banner + stepper form.
@@ -13,13 +16,18 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function MaterialRequisitionFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: MaterialRequisitionDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/material-requisitions/${created.id}`);
-    }
+  async function handleSuccess(created: MaterialRequisitionDetail): Promise<void> {
+    queryClient.setQueryData(materialRequisitionKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [
+        materialRequisitionKeys.all,
+        materialRequisitionKeys.detail(created.id),
+      ],
+    });
   }
 
   return (
@@ -31,7 +39,7 @@ export default function MaterialRequisitionFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <MaterialRequisitionForm onSuccess={handleSuccess} />
+        <MaterialRequisitionForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

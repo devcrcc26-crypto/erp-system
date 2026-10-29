@@ -46,6 +46,10 @@ import {
   STORAGE_SERVICE,
 } from '../../../../shared/storage/storage.constants';
 import type { IStorageService } from '../../../../shared/storage/storage.interface';
+import {
+  isEmployeeInTeamScope,
+  resolveTeamScopedEmployeeIds,
+} from '../../../../shared/org/team-scope.util';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   CreatePerDiemDisbursementDto,
@@ -564,7 +568,13 @@ export class PerDiemService
     }
 
     await this.assertCanView(request, companyId, userId);
-    return this.mapRequestDetail(request);
+    const mapped = await this.mapRequestDetail(request);
+    const canDisburse = await this.canDisburse(
+      request.employeeId,
+      companyId,
+      userId,
+    );
+    return { ...mapped, canDisburse };
   }
 
   async listRequests(
@@ -584,10 +594,16 @@ export class PerDiemService
       'manage',
     );
 
+    const teamEmployeeIds = canManage
+      ? null
+      : await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId);
+
     const where: Prisma.PerDiemRequestWhereInput = {
       companyId,
       deletedAt: null,
-      ...(canManage ? {} : { employeeId: userId }),
+      ...(canManage
+        ? {}
+        : { employeeId: { in: teamEmployeeIds ?? [userId] } }),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
@@ -731,22 +747,13 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const canManage = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'per-diem',
-      'manage',
-    );
-    if (!canManage) {
-      throw new ForbiddenException('Missing permission: per-diem.manage');
-    }
-
     const request = await this.prisma.perDiemRequest.findFirst({
       where: activeOnly({ id, companyId }),
     });
     if (!request) {
       throw new NotFoundException('Per diem request not found');
     }
+    await this.assertCanDisburse(request.employeeId, companyId, userId);
     if (
       request.status !== PerDiemStatus.APPROVED &&
       request.status !== PerDiemStatus.ACTIVE
@@ -814,21 +821,21 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const canManage = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'per-diem',
-      'manage',
-    );
-    if (!canManage) {
-      throw new ForbiddenException('Missing permission: per-diem.manage');
-    }
     if (!file?.buffer?.length) {
       throw new BadRequestException('File is required');
     }
     if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
     }
+
+    const parentRequest = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      select: { employeeId: true },
+    });
+    if (!parentRequest) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    await this.assertCanDisburse(parentRequest.employeeId, companyId, userId);
 
     const disbursement = await this.prisma.perDiemDisbursement.findFirst({
       where: {
@@ -1231,12 +1238,57 @@ export class PerDiemService
       request.status !== 'CANCELLED' &&
       (request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false);
+    const inTeamScope =
+      !isOwner &&
+      (await isEmployeeInTeamScope(
+        this.prisma,
+        userId,
+        companyId,
+        request.employeeId,
+      ));
 
-    if (!isOwner && !isTierApprover) {
+    if (!isOwner && !isTierApprover && !inTeamScope) {
       throw new ForbiddenException(
         'You do not have access to this per diem request',
       );
     }
+  }
+
+  /**
+   * HR with per-diem.manage, or a supervisor/leader who has the employee
+   * in their team scope, may record disbursements.
+   */
+  private async canDisburse(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const canManage = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'per-diem',
+      'manage',
+    );
+    if (canManage) {
+      return true;
+    }
+    if (employeeId === userId) {
+      return false;
+    }
+    return isEmployeeInTeamScope(this.prisma, userId, companyId, employeeId);
+  }
+
+  private async assertCanDisburse(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (await this.canDisburse(employeeId, companyId, userId)) {
+      return;
+    }
+    throw new ForbiddenException(
+      'You do not have permission to disburse this per diem request',
+    );
   }
 
   private normalizeStatuses(

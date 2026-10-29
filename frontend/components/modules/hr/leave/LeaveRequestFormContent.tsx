@@ -6,7 +6,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Form, Input, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { leaveKeys } from '@/lib/query/leave';
+import { approvalKeys } from '@/lib/query/approvals';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import LeavePeriodsEditor, {
@@ -86,6 +90,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   const onBehalf = useOnBehalf('LEAVE_REQUEST');
   const currentUser = useCurrentUser();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -336,12 +341,17 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       });
       messageApi.success(t('hr.messages.leaveRequestSubmitted'));
       if (created.id) {
-        router.push(`/hr/leave-requests/${created.id}`);
-      } else if (created.approvalRequestId) {
-        router.push(`/approvals/${created.approvalRequestId}`);
-      } else {
-        router.push('/hr/leave-requests');
+        queryClient.setQueryData(leaveKeys.detail(created.id), created);
       }
+      await navigateAfterRequestSubmit({
+        queryClient,
+        router,
+        invalidateKeys: [
+          leaveKeys.all,
+          ...(created.id ? [leaveKeys.detail(created.id)] : []),
+          approvalKeys.all,
+        ],
+      });
     } catch (error: unknown) {
       const fallback = t('hr.messages.failedToSubmitLeaveRequest');
       notifyApiError(error, fallback, messageApi);

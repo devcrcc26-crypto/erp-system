@@ -142,6 +142,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
         email: user.email ?? '',
         loginName: user.loginName,
         firstName: user.firstName,
+        middleName: user.middleName ?? null,
         lastName: user.lastName,
         chineseName: user.chineseName,
         companyId: user.companyId,

@@ -3,11 +3,14 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import ExpenseClaimForm from '@/components/modules/hr/expense-claim/ExpenseClaimForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { ExpenseClaimDetail } from '@/lib/api/expense-claim.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { expenseClaimKeys } from '@/lib/query/expense-claim';
 
 /**
  * New expense claim page - shared HR form banner + stepper form.
@@ -15,13 +18,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function ExpenseClaimFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: ExpenseClaimDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/expense-claims/${created.id}`);
-    }
+  async function handleSuccess(created: ExpenseClaimDetail): Promise<void> {
+    queryClient.setQueryData(expenseClaimKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [expenseClaimKeys.all, expenseClaimKeys.detail(created.id)],
+    });
   }
 
   return (
@@ -33,7 +38,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <ExpenseClaimForm onSuccess={handleSuccess} />
+        <ExpenseClaimForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );

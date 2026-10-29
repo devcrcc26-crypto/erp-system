@@ -3,11 +3,14 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import BusinessTripForm from '@/components/modules/hr/business-trip/BusinessTripForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
+import { businessTripKeys } from '@/lib/query/business-trip';
 
 /**
  * New business trip - shared HR form banner + stepper form.
@@ -15,13 +18,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function BusinessTripFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  function handleSuccess(created: BusinessTripDetail): void {
-    if (created.approvalRequestId) {
-      router.push(`/approvals/${created.approvalRequestId}`);
-    } else {
-      router.push(`/hr/business-trips/${created.id}`);
-    }
+  async function handleSuccess(created: BusinessTripDetail): Promise<void> {
+    queryClient.setQueryData(businessTripKeys.detail(created.id), created);
+    await navigateAfterRequestSubmit({
+      queryClient,
+      router,
+      invalidateKeys: [businessTripKeys.all, businessTripKeys.detail(created.id)],
+    });
   }
 
   return (
@@ -33,7 +38,7 @@ export default function BusinessTripFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
       >
-        <BusinessTripForm onSuccess={handleSuccess} />
+        <BusinessTripForm onSuccess={(created) => void handleSuccess(created)} />
       </HrFormPageShell>
     </div>
   );
