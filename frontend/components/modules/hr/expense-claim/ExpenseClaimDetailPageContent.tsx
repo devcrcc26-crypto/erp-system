@@ -668,7 +668,8 @@ export default function ExpenseClaimDetailPageContent({
                     {isNarrow ? undefined : t('common.update')}
                   </Button>
                 ) : null}
-                {canEditItems ? (
+                {canEditItems && isDraft ? (
+                  // Drafts only: a returned claim is resubmitted from Approvals.
                   <Button
                     type="primary"
                     icon={<SendOutlined />}

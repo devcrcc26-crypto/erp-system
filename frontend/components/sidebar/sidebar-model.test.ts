@@ -181,7 +181,7 @@ describe('sidebar permissions and filtering', () => {
     expect(payroll?.items.some((item) => item.id === 'payroll')).toBe(true);
   });
 
-  it('limits staff without hr.view to Dashboard, New Request, the inboxes and My Profile', () => {
+  it('limits staff without hr.view to Dashboard, New Request, the inboxes, Pay & Travel and My Profile', () => {
     const model = modelFor({
       canCreateLeave: true,
       canCreateOvertime: true,
@@ -196,9 +196,21 @@ describe('sidebar permissions and filtering', () => {
       'approvals',
       'evaluation-inbox',
       'announcements',
+      'finance',
       'user-guide',
     ]);
     expect(ids(model.utility)).toEqual(['my-profile']);
+  });
+
+  it('keeps only the allowlisted links inside a folder for staff without hr.view', () => {
+    const model = modelFor({ canAccessPayroll: true });
+    const finance = model.primary.find((entry) => entry.id === 'finance');
+    const links =
+      finance?.kind === 'folder'
+        ? finance.groups.flatMap((group) => group.items.map((item) => item.id))
+        : [];
+    // Their own expense claims and per diem, never payroll or flight admin.
+    expect(links).toEqual(['expense-claims', 'per-diem']);
   });
 
   it('grants direct work-from-home assignment to HR only, not Discipline Leads', () => {

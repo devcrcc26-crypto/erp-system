@@ -23,6 +23,8 @@ export interface StepperFormProps {
   contentVariant?: 'card' | 'sections';
   /** Tighter layout without forcing a full-viewport height. */
   compact?: boolean;
+  /** Extra footer buttons shown before Reset (e.g. "Save as draft"). */
+  extraActions?: React.ReactNode;
 }
 
 const FOOTER_HEIGHT_PX = 56;
@@ -77,6 +79,7 @@ export function StepperForm({
   isSubmitting = false,
   contentVariant = 'card',
   compact = false,
+  extraActions,
 }: StepperFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const resolvedSubmitLabel = submitLabel ?? t('hr.buttons.submitRequest');
@@ -153,6 +156,7 @@ export function StepperForm({
         {t('hr.buttons.back')}
       </Button>
       <div className="flex flex-wrap items-center gap-2">
+        {extraActions}
         {onReset ? (
           <Button
             onClick={handleReset}

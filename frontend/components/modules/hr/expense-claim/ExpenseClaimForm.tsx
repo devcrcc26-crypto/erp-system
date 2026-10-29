@@ -138,6 +138,7 @@ export default function ExpenseClaimForm({
   const [showItemForm, setShowItemForm] = useState(false);
   const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const createMutation = useCreateExpenseClaim();
@@ -247,6 +248,52 @@ export default function ExpenseClaimForm({
     setItems((prev) => prev.filter((row) => row._key !== key));
   }
 
+  /** Creates the claim (DRAFT) and adds every item with all of its receipts. */
+  async function saveClaimWithItems(values: Step1Values): Promise<ExpenseClaimDetail> {
+    const created = await createMutation.mutateAsync({
+      ...onBehalf.payload,
+      title: values.title?.trim() ?? '',
+      description: values.description?.trim() || undefined,
+    });
+    let latest = created;
+    for (const item of items) {
+      const { _key: _unused, ...payload } = item;
+      latest = await apiPostForm<ExpenseClaimDetail>(
+        `/hr/expense-claims/${created.id}/items`,
+        buildExpenseClaimItemFormData(payload),
+      );
+    }
+    return latest;
+  }
+
+  /**
+   * Saves the claim as a DRAFT without submitting it (receipts may still be
+   * missing). It is finished later from My Expense Claims or My Drafts.
+   */
+  async function handleSaveDraft(): Promise<void> {
+    setFormError(null);
+    const values = {
+      ...detailsSnapshot,
+      ...detailsForm.getFieldsValue(true),
+    };
+    if (!values.title?.trim()) {
+      messageApi.warning(t('hr.validation.titleRequired'));
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      const draft = await saveClaimWithItems(values);
+      messageApi.success(t('hr.messages.expenseClaimDraftSaved'));
+      onSuccess(draft);
+    } catch (error: unknown) {
+      const message = t('hr.messages.failedToSaveExpenseClaimDraft');
+      notifyApiError(error, message, messageApi);
+      setFormError(message);
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function handleSubmit(): Promise<void> {
     setFormError(null);
 
@@ -274,19 +321,7 @@ export default function ExpenseClaimForm({
 
     setSubmitting(true);
     try {
-      const created = await createMutation.mutateAsync({
-        ...onBehalf.payload,
-        title: values.title.trim(),
-        description: values.description?.trim() || undefined,
-      });
-
-      for (const item of items) {
-        const { _key: _unused, ...payload } = item;
-        await apiPostForm<ExpenseClaimDetail>(
-          `/hr/expense-claims/${created.id}/items`,
-          buildExpenseClaimItemFormData(payload),
-        );
-      }
+      const created = await saveClaimWithItems(values);
 
       const submitted = await apiPost<ExpenseClaimDetail>(
         `/hr/expense-claims/${created.id}/submit`,
@@ -617,9 +652,19 @@ export default function ExpenseClaimForm({
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}
-        isSubmitting={submitting || createMutation.isPending}
+        isSubmitting={submitting || savingDraft || createMutation.isPending}
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitClaim')}
+        extraActions={
+          <Button
+            onClick={() => void handleSaveDraft()}
+            loading={savingDraft}
+            disabled={submitting}
+            style={{ borderRadius: 8 }}
+          >
+            {t('hr.buttons.saveAsDraft')}
+          </Button>
+        }
       />
       <Drawer
         open={showItemForm}

@@ -38,7 +38,7 @@ Use an expense claim to get back money you spent on work, such as transport, mea
    - **Description** (required): what the expense was.
    - **Expense Date** (required): it cannot be in the future.
    - **Amount** (required): in ETB.
-   - **Receipt** (required): a PDF, JPG or PNG file.
+   - **Receipt** (required): one or more PDF, JPG or PNG files. All files you add stay on this one item (for example an invoice and its payment slip).
 3. Click **Save**. The item appears in the list with its **Date**, **Category**, **Description**, **Amount** and **Receipt**.
 4. Repeat for each expense. To change or remove a line, use **Update** or **Delete** on it.
 5. Click **Next**.
@@ -50,9 +50,11 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 
 1. Check the items and the **Total**.
 2. Click **Back** to change anything.
-3. Click **Submit Claim**.
+3. Click **Submit Claim** to send it for approval, or click **Save as draft** to finish it later. A draft can be saved without receipts, but every item needs one before you submit.
 
 > **After you submit:** You see *"Expense claim submitted for approval"*. Your claim has been sent for approval. You will receive a notification when it is approved or returned.
+
+> **After you save a draft:** You see *"Draft saved. You can finish and submit it later from My Expense Claims or My Drafts."* and the claim opens with status **Draft**. See *How to finish a draft claim*.
 
 ### Why the form might not let you submit
 
@@ -67,10 +69,12 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 
 *(Employees)*
 
-1. In the left menu, go to **Pay & Travel** → **Expense Claims**. **My Expense Claims** opens.
+1. In the left menu, open **Pay & Travel** and click **Expense Claims**. **My Expense Claims** opens and lists only your own claims.
 2. The counters show **Total**, **Drafts**, **In Review**, **Approved** and **Rejected**.
 3. The list shows **Claim #**, **Title**, **Items**, **Total**, **Status** and **Created**.
-4. Click a claim to open it. You see the items, the **Approval Chain**, and whether it is **Paid** or **Unpaid**.
+4. Click a claim to open it. You see each item with its receipts, the **Approval Chain**, and under **Paid** the date HR paid you. An approved claim not yet paid shows **Unpaid**.
+
+You can also follow a submitted claim in **Approvals** → **My Requests**, where you see which approver it is waiting for.
 
 **What the statuses mean**
 
@@ -90,9 +94,13 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 
 *(Employees — only while the claim is **Draft**)*
 
-1. Open the claim from **My Expense Claims**.
-2. To change the title or description, click **Update**, make the changes, and click **Save changes**.
-3. To add an item, click **Add Item**. To change or remove one, use **Update** or **Delete** on the item.
+A claim is a **Draft** when you clicked **Save as draft** instead of **Submit Claim**.
+
+1. Open the draft in one of these ways:
+   - **Pay & Travel** → **Expense Claims**, then click the claim with status **Draft**.
+   - **Approvals** → **My Drafts**, then click the claim (or **Edit** next to it).
+2. To change the title or description, click **Update**, make the changes, and click **Save**.
+3. To add an item, click **Add Item**. To change or remove one, click **⋯** on the item and choose **Update** or **Delete**. An item can have more than one receipt file. Uploading new files on **Update** replaces its receipts.
 4. If the page says *"N item(s) still need a receipt before you can submit."*, add the missing receipts.
 5. Click **Submit Claim** and confirm **Submit expense claim?**.
 

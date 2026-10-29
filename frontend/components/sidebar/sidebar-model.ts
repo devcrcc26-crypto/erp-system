@@ -188,17 +188,48 @@ export function buildSidebarModel(
   const utility = filterEntries(config.utility, permissions, projectContext);
 
   // Limited navigation: without the gating permission, only the allowlisted
-  // top-level entries remain (e.g. Dashboard, New Request, Approvals).
+  // entries remain (e.g. Dashboard, New Request, Approvals).
   const limited = config.limitedNavigation;
   if (limited && !permissions.has(limited.unlessGranted)) {
     const allowed = new Set(limited.entryIds);
     return {
-      primary: primary.filter((e) => allowed.has(e.id)),
-      utility: utility.filter((e) => allowed.has(e.id)),
+      primary: limitEntries(primary, allowed),
+      utility: limitEntries(utility, allowed),
     };
   }
 
   return { primary, utility };
+}
+
+/**
+ * Keeps allowlisted entries. An allowlisted folder keeps all its links; any
+ * other folder keeps only its allowlisted links (e.g. Pay & Travel → Expense
+ * Claims) and disappears when none are left.
+ */
+function limitEntries(
+  entries: readonly SidebarEntry[],
+  allowed: ReadonlySet<string>,
+): SidebarEntry[] {
+  const kept: SidebarEntry[] = [];
+  for (const entry of entries) {
+    if (allowed.has(entry.id)) {
+      kept.push(entry);
+      continue;
+    }
+    if (entry.kind !== 'folder') {
+      continue;
+    }
+    const groups = entry.groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => allowed.has(item.id)),
+      }))
+      .filter((group) => group.items.length > 0);
+    if (groups.length > 0) {
+      kept.push({ ...entry, groups });
+    }
+  }
+  return kept;
 }
 
 /** Converts visibility-filtered project workspace groups into sidebar groups. */
