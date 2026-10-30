@@ -90,9 +90,14 @@ export function snapStartPastWeekdayLunch(startTime: string): string {
 }
 
 /**
- * End times inside the selectable window that contains `startTime`.
- * On weekdays, also caps at lunch (12:30) when start is before lunch so the
- * interval cannot span the break (site/holiday/weekend skip that cap).
+ * End times after `startTime` that land in selectable OT windows only
+ * (scheduled duty is never listed). Covers every OT slot later that day so
+ * after-work ends (e.g. 17:45–24:00) stay available — not only the pre-morning
+ * fragment when start defaults early.
+ *
+ * On weekdays, lunch ticks (12:30–13:30) are omitted, and a start before lunch
+ * cannot use an end after 12:30 inside the same continuous morning-side span
+ * (later after-work windows remain available only when start is already in them).
  */
 export function enumerateEndTimesInWindows(
   startTime: string,
@@ -116,6 +121,9 @@ export function enumerateEndTimesInWindows(
 
   const times: string[] = [];
   for (let m = start + 15; m <= maxEnd; m += 15) {
+    if (options?.excludeWeekdayLunch && isInsideWeekdayLunch(m)) {
+      continue;
+    }
     times.push(minutesToHhMm(m));
   }
   return times;
