@@ -296,8 +296,8 @@ export function isIntervalInsideSelectableWindows(
 }
 
 /**
- * Same-day OT: start must fall in a selectable window (scheduled duty hidden
- * for non-site days); end may run through 24:00 as long as end > start.
+ * Same-day OT: the whole [start, end] interval must sit inside one selectable
+ * window (scheduled duty is not selectable on non-site days).
  */
 export function isSameDayOvertimeIntervalAllowed(
   startHhMm: string,
@@ -312,7 +312,7 @@ export function isSameDayOvertimeIntervalAllowed(
   return windows.some((w) => {
     const ws = parseHhMmToMinutesStrict(w.start);
     const we = parseHhMmToMinutesStrict(w.end);
-    return start >= ws && start < we;
+    return start >= ws && end <= we;
   });
 }
 

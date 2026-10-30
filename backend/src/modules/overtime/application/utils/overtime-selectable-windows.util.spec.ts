@@ -54,6 +54,13 @@ describe('computeSelectableOvertimeWindows', () => {
     expect(
       isSameDayOvertimeIntervalAllowed('09:00', '12:00', result.windows),
     ).toBe(false);
+    // Start in pre-morning OT window but end into duty → blocked
+    expect(
+      isSameDayOvertimeIntervalAllowed('06:00', '12:00', result.windows),
+    ).toBe(false);
+    expect(
+      isSameDayOvertimeIntervalAllowed('06:00', '08:30', result.windows),
+    ).toBe(true);
   });
 
   it('2 - Saturday half day: before morning and after morning end', () => {

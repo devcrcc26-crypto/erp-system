@@ -128,9 +128,17 @@ export default function OvertimeEntryFormDrawer({
               const s = toMin(start);
               return s >= toMin(w.start) && s < toMin(w.end);
             });
+          const endValid =
+            !end ||
+            !start ||
+            result.windows.some((w) => {
+              const s = toMin(start);
+              const e = toMin(end);
+              return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
+            });
           if (start && !startValid) {
             form.setFieldsValue({ startTime: undefined, endTime: undefined });
-          } else if (end && start && toMin(end) <= toMin(start)) {
+          } else if (end && (!endValid || (start && toMin(end) <= toMin(start)))) {
             form.setFieldValue('endTime', undefined);
           }
         })

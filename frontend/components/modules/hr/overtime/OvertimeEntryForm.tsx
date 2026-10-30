@@ -89,37 +89,36 @@ export function snapStartPastWeekdayLunch(startTime: string): string {
   return startTime;
 }
 
-/** End times strictly after start through end of the same calendar day (15-min steps). */
-export function enumerateEndTimes(startTime: string): string[] {
+/**
+ * End times inside the selectable window that contains `startTime`.
+ * On weekdays, also caps at lunch (12:30) when start is before lunch so the
+ * interval cannot span the break (site/holiday/weekend skip that cap).
+ */
+export function enumerateEndTimesInWindows(
+  startTime: string,
+  windows: Array<{ start: string; end: string }>,
+  options?: { excludeWeekdayLunch?: boolean },
+): string[] {
   const start = parseHhMmToMinutes(startTime);
+  const containing = windows.find((window) => {
+    const ws = parseHhMmToMinutes(window.start);
+    const we = parseHhMmToMinutes(window.end);
+    return start >= ws && start < we;
+  });
+  if (!containing) {
+    return [];
+  }
+
+  let maxEnd = parseHhMmToMinutes(containing.end);
+  if (options?.excludeWeekdayLunch && start < LUNCH_START_MINUTES) {
+    maxEnd = Math.min(maxEnd, LUNCH_START_MINUTES);
+  }
+
   const times: string[] = [];
-  for (let m = start + 15; m <= 24 * 60; m += 15) {
+  for (let m = start + 15; m <= maxEnd; m += 15) {
     times.push(minutesToHhMm(m));
   }
   return times;
-}
-
-/**
- * End times for OT. On weekdays, if start is before lunch, cap end at 12:30
- * so the interval cannot span the lunch break.
- */
-export function enumerateEndTimesWithLunchCap(
-  startTime: string,
-  excludeLunch: boolean,
-): string[] {
-  const times = enumerateEndTimes(startTime);
-  if (!excludeLunch) {
-    return times;
-  }
-  const start = parseHhMmToMinutes(startTime);
-  if (start >= LUNCH_END_MINUTES) {
-    return times;
-  }
-  if (start < LUNCH_START_MINUTES) {
-    return times.filter((t) => parseHhMmToMinutes(t) <= LUNCH_START_MINUTES);
-  }
-  // Start inside lunch — treat as snapped to 13:30 for end enumeration.
-  return enumerateEndTimes(LUNCH_END_HHMM);
 }
 
 /** Start times inside windows (exclusive of window end), 15-min steps. */
@@ -279,10 +278,9 @@ export default function OvertimeEntryForm({
     const effectiveStart = excludeWeekdayLunch
       ? snapStartPastWeekdayLunch(watchedStart)
       : watchedStart;
-    return enumerateEndTimesWithLunchCap(
-      effectiveStart,
+    return enumerateEndTimesInWindows(effectiveStart, windows.windows, {
       excludeWeekdayLunch,
-    ).map((value) => ({
+    }).map((value) => ({
       value,
       label: value,
       title:
@@ -452,14 +450,16 @@ export default function OvertimeEntryForm({
                         new Error(t('hr.dateRules.endAfterStart')),
                       );
                     }
-                    if (
-                      excludeWeekdayLunch &&
-                      parseHhMmToMinutes(effectiveStart) <
-                        LUNCH_START_MINUTES &&
-                      parseHhMmToMinutes(value) > LUNCH_START_MINUTES
-                    ) {
+                    const allowed = windows?.windows?.length
+                      ? enumerateEndTimesInWindows(
+                          effectiveStart,
+                          windows.windows,
+                          { excludeWeekdayLunch },
+                        )
+                      : [];
+                    if (allowed.length > 0 && !allowed.includes(value)) {
                       return Promise.reject(
-                        new Error(t('hr.labels.lunchBreakOtCapTooltip')),
+                        new Error(t('hr.labels.noSelectableWindows')),
                       );
                     }
                     return Promise.resolve();
@@ -479,11 +479,11 @@ export default function OvertimeEntryForm({
               />
             </Form.Item>
 
-            {excludeWeekdayLunch ? (
+            {/* {excludeWeekdayLunch ? (
               <p className="md:col-span-2 m-0 text-[12px] text-[var(--color-text-tertiary)]">
                 {t('hr.labels.lunchBreakOtExcluded')}
               </p>
-            ) : null}
+            ) : null} */}
           </div>
 
           {watchedEnd === END_OF_DAY && watchedDate ? (
@@ -494,17 +494,17 @@ export default function OvertimeEntryForm({
               title={t('hr.labels.workedPastMidnight', {
                 date: watchedDate.add(1, 'day').format('DD/MM/YYYY'),
               })}
-              action={
-                onAddNextDay ? (
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => onAddNextDay(watchedDate.add(1, 'day'))}
-                  >
-                    {t('hr.buttons.addNextDayEntry')}
-                  </Button>
-                ) : null
-              }
+              // action={
+              //   onAddNextDay ? (
+              //     <Button
+              //       size="small"
+              //       type="link"
+              //       onClick={() => onAddNextDay(watchedDate.add(1, 'day'))}
+              //     >
+              //       {t('hr.buttons.addNextDayEntry')}
+              //     </Button>
+              //   ) : null
+              // }
             />
           ) : null}
 
