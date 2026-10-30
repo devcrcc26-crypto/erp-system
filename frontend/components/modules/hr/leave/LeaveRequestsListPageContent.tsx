@@ -45,6 +45,7 @@ import {
   useCanAccessLeave,
   useCanCreateLeave,
   useCanViewHr,
+  useCanViewTeam,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -79,7 +80,7 @@ import {
 } from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildLeaveRequestExportSheets } from '@/lib/utils/leave-export';
 
@@ -97,6 +98,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
+  const canViewTeam = useCanViewTeam();
   const canManage = canViewHr;
   const canCreate = useCanCreateLeave();
   const messageApi = useAppMessage();
@@ -145,12 +147,13 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     [leaveType, employeeId, dateRange, canViewHr],
   );
 
-  const companyListQuery = useLeaveRequestsAll(fetchParams, canViewHr);
+  // Supervisors use the company list too; the backend scopes it to their team.
+  const companyListQuery = useLeaveRequestsAll(fetchParams, canViewTeam);
   const myListQuery = useMyLeaveRequestsAll(
     fetchParams,
-    !canViewHr && canAccess,
+    !canViewTeam && canAccess,
   );
-  const listQuery = canViewHr ? companyListQuery : myListQuery;
+  const listQuery = canViewTeam ? companyListQuery : myListQuery;
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
@@ -158,6 +161,18 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const draft = allRows.filter((row) =>
@@ -187,7 +202,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         search: appliedSearch,
         statuses: statusesForMode(statusMode),
         leaveType,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
         dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
         dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       }),
@@ -198,7 +213,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       leaveType,
       employeeId,
       dateRange,
-      canViewHr,
+      canViewTeam,
     ],
   );
 
@@ -219,12 +234,14 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.leave.listTitle')
     : t('pages.hr.leave.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.leave.listDescription')
-    : t('pages.hr.leave.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.leave.myListDescription');
 
   function handleResetFilters(): void {
     setSearch('');
@@ -302,7 +319,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.employee'),
@@ -418,7 +435,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         ),
       },
     ],
-    [canManage, canViewHr, isCompact, router, t],
+    [canManage, canViewHr, canViewTeam, isCompact, router, t],
   );
 
   const hasFilters =
@@ -602,18 +619,15 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);

@@ -47,7 +47,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -120,6 +120,7 @@ export default function ExpenseClaimDetailPageContent({
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const canViewTeam = useCanViewTeam();
   const currentUser = useCurrentUser();
   const authUser = useAuthStore((state) => state.user);
   const detailQuery = useExpenseClaim(claimId);
@@ -568,7 +569,8 @@ export default function ExpenseClaimDetailPageContent({
     );
   }
 
-  const backHref = canViewHr ? '/hr/expense-claims' : '/approvals';
+  // Back to the list for those who have it in the sidebar; others use Approvals.
+  const backHref = canViewTeam ? '/hr/expense-claims' : '/approvals';
   const employeeName = formatExpenseClaimEmployeeName(claim.employee);
   const receiptOkCount = claim.items.length - missingReceiptCount;
 

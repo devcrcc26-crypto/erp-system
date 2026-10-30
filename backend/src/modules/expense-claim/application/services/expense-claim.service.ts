@@ -41,8 +41,9 @@ import type {
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
-  isEmployeeInTeamScope,
+  canViewThroughTeam,
   resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
 } from '../../../../shared/org/team-scope.util';
 import {
   AddExpenseClaimItemDto,
@@ -503,9 +504,10 @@ export class ExpenseClaimService
     const where: Prisma.ExpenseClaimWhereInput = {
       companyId,
       deletedAt: null,
-      ...(canManage
-        ? {}
-        : { employeeId: { in: teamEmployeeIds ?? [userId] } }),
+      // Own records plus the team's (not their drafts or cancelled ones).
+      ...(teamEmployeeIds
+        ? { AND: [teamScopeWhere(userId, teamEmployeeIds, filters.employeeId)] }
+        : {}),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
@@ -907,12 +909,7 @@ export class ExpenseClaimService
       false);
     const inTeamScope =
       !isOwner &&
-      (await isEmployeeInTeamScope(
-        this.prisma,
-        userId,
-        companyId,
-        claim.employeeId,
-      ));
+      (await canViewThroughTeam(this.prisma, userId, companyId, claim));
 
     if (!isOwner && !isTierApprover && !inTeamScope) {
       throw new ForbiddenException(

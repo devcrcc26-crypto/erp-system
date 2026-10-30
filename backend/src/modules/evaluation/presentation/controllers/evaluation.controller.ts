@@ -12,8 +12,13 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import {
+  isEmployeeInTeamScope,
+  resolveTeamScopedEmployeeIds,
+} from '../../../../shared/org/team-scope.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
@@ -41,6 +46,7 @@ export class EvaluationController {
     private readonly evaluationService: EvaluationService,
     private readonly permissionService: PermissionService,
     private readonly schedulerService: EvaluationSchedulerService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get()
@@ -67,30 +73,33 @@ export class EvaluationController {
       resolvedDisciplineLeadId === user.userId ||
       resolvedTeamLeadId === user.userId;
 
-    if (!selfScoped) {
-      const hasHr =
-        (await this.permissionService.hasPermission(
-          user.userId,
-          companyId,
-          'evaluation',
-          'manage',
-        )) ||
-        (await this.permissionService.hasPermission(
-          user.userId,
-          companyId,
-          'evaluation',
-          'manage',
-        ));
-      if (!hasHr) {
+    let teamEmployeeIds: string[] | undefined;
+    if (!selfScoped && !(await this.isEvaluationHr(user.userId, companyId))) {
+      // Supervisors see evaluations of everyone in their reporting chain.
+      const teamIds = await resolveTeamScopedEmployeeIds(
+        this.prisma,
+        user.userId,
+        companyId,
+      );
+      const otherLeadFilter = resolvedDisciplineLeadId || resolvedTeamLeadId;
+      if (
+        teamIds.length <= 1 ||
+        otherLeadFilter ||
+        (resolvedEmployeeId && !teamIds.includes(resolvedEmployeeId))
+      ) {
         throw new ForbiddenException(
           'Missing permission to list company evaluations',
         );
+      }
+      if (!resolvedEmployeeId) {
+        teamEmployeeIds = teamIds;
       }
     }
 
     return this.evaluationService.listEvaluations(companyId, {
       cycleId,
       employeeId: resolvedEmployeeId,
+      employeeIds: teamEmployeeIds,
       status,
       disciplineLeadId: resolvedDisciplineLeadId,
       teamLeadId: resolvedTeamLeadId,
@@ -142,15 +151,46 @@ export class EvaluationController {
   @Get(':id')
   @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get evaluation by id' })
-  getEvaluation(
+  async getEvaluation(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
-    return this.evaluationService.getEvaluationById(
+    const evaluation = (await this.evaluationService.getEvaluationById(
       id,
       companyId,
       user.userId,
+    )) as {
+      employeeId: string;
+      teamLeadId: string | null;
+      disciplineLeadId: string | null;
+    };
+    const isParticipant = [
+      evaluation.employeeId,
+      evaluation.teamLeadId,
+      evaluation.disciplineLeadId,
+    ].includes(user.userId);
+    if (
+      !isParticipant &&
+      !(await this.isEvaluationHr(user.userId, companyId)) &&
+      !(await isEmployeeInTeamScope(
+        this.prisma,
+        user.userId,
+        companyId,
+        evaluation.employeeId,
+      ))
+    ) {
+      throw new ForbiddenException('You do not have access to this evaluation');
+    }
+    return evaluation;
+  }
+
+  private isEvaluationHr(userId: string, companyId: string): Promise<boolean> {
+    return this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'evaluation',
+      'manage',
     );
   }
 

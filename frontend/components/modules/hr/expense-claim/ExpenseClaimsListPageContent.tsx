@@ -36,7 +36,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -67,7 +67,7 @@ import {
 } from '@/lib/utils/expense-claim-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildExpenseClaimExportSheets } from '@/lib/utils/expense-claim-export';
 
@@ -135,6 +135,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const canViewTeam = useCanViewTeam();
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id;
@@ -159,6 +160,18 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const draft = allRows.filter((row) =>
@@ -187,9 +200,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
       filterExpenseClaims(allRows, {
         search: appliedSearch,
         statusMode,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
       }),
-    [allRows, appliedSearch, statusMode, employeeId, canViewHr],
+    [allRows, appliedSearch, statusMode, employeeId, canViewTeam],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -209,12 +222,14 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.expenseClaim.listTitle')
     : t('pages.hr.expenseClaim.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.expenseClaim.listDescription')
-    : t('pages.hr.expenseClaim.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.expenseClaim.myListDescription');
 
   function handleResetFilters(): void {
     setSearch('');
@@ -290,7 +305,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.employee'),
@@ -395,7 +410,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canManage, canViewHr, currentUserId, isCompact, isNarrow, router, t],
+    [canManage, canViewHr, canViewTeam, currentUserId, isCompact, isNarrow, router, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -567,18 +582,15 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
             }}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);

@@ -19,6 +19,17 @@ export function useCanViewHr(): boolean {
 }
 
 /**
+ * True for HR, or for a supervisor (anyone with direct reports). Team lists
+ * then show the reports' records too; the backend scopes them to the
+ * viewer's reporting chain.
+ */
+export function useCanViewTeam(): boolean {
+  return useAuthStore(
+    (state) => state.capabilities.canViewHr || state.capabilities.hasDirectReports,
+  );
+}
+
+/**
  * True when the session can edit Human Resources records (hr.edit).
  */
 export function useCanEditHr(): boolean {

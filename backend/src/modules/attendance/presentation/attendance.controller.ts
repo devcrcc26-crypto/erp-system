@@ -515,12 +515,18 @@ export class AttendanceController {
   @ApiOperation({
     summary: 'Get employee daily logs for a month (HR review)',
   })
-  getEmployeeDailyLogs(
+  async getEmployeeDailyLogs(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('employeeId') employeeId: string,
     @Param('month') month: string,
     @Param('year') year: string,
   ): Promise<unknown> {
+    await this.attendanceService.assertCanViewEmployeeAttendance(
+      user.userId,
+      employeeId,
+      companyId,
+    );
     return this.attendanceService.getEmployeeDailyLogs(
       employeeId,
       parseInt(month, 10),
@@ -532,13 +538,19 @@ export class AttendanceController {
   @Get(':employeeId/year/:year')
   @RequireAnyPermission({ module: 'attendance', action: 'view' })
   @ApiOperation({ summary: 'Get an employee attendance year (HR)' })
-  getEmployeeAttendance(
+  async getEmployeeAttendance(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('employeeId') employeeId: string,
     @Param('year') year: string,
   ): Promise<unknown> {
-    void user;
+    // attendance.view is held by every employee (own attendance); opening
+    // someone else's needs HR or a supervisor relationship.
+    await this.attendanceService.assertCanViewEmployeeAttendance(
+      user.userId,
+      employeeId,
+      companyId,
+    );
     return this.attendanceService.getMyAttendance(
       employeeId,
       companyId,

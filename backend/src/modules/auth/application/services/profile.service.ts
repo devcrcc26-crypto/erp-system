@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { hasDirectReports } from '../../../../shared/org/team-scope.util';
 import { DocumentService } from '../../../documents/application/services/document.service';
 import {
   AUTH_REPOSITORY,
@@ -123,7 +124,14 @@ export class ProfileService {
       throw new NotFoundException('User not found');
     }
 
-    return this.mapProfile(user);
+    return {
+      ...this.mapProfile(user),
+      hasDirectReports: await hasDirectReports(
+        this.prisma,
+        ctx.userId,
+        ctx.companyId,
+      ),
+    };
   }
 
   /**
@@ -473,7 +481,9 @@ export class ProfileService {
     return { message: 'Email address updated successfully' };
   }
 
-  private mapProfile(user: ProfileUser): ProfileResponseDto {
+  private mapProfile(
+    user: ProfileUser,
+  ): Omit<ProfileResponseDto, 'hasDirectReports'> {
     const reportsToName = user.reportsTo
       ? `${user.reportsTo.firstName} ${user.reportsTo.lastName}`.trim()
       : null;

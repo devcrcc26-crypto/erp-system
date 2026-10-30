@@ -703,6 +703,8 @@ export interface AuthCapabilities {
   isSystemAdministrator: boolean;
   /** True System Administrator role only (not Project Administrator). */
   isSystemAdmin: boolean;
+  /** At least one active employee reports to this user (supervisor views). */
+  hasDirectReports: boolean;
 }
 
 export interface EpcCapabilities {
@@ -774,6 +776,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   modulesProjectManagementEnabled: false,
   isSystemAdministrator: false,
   isSystemAdmin: false,
+  hasDirectReports: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },
 };

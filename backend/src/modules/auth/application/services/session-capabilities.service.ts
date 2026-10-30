@@ -9,6 +9,7 @@ import {
 import { isSystemAdministrator, isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { hasDirectReports } from '../../../../shared/org/team-scope.util';
 import {
   CapabilitiesDto,
   EpcCapabilitiesDto,
@@ -105,6 +106,7 @@ export class SessionCapabilitiesService {
         this.resolveNavAssignmentProbes(userId, companyId),
         this.pmModuleSettings.isEnabled(companyId),
       ]);
+    const directReports = await hasDirectReports(this.prisma, userId, companyId);
 
     const systemAdministrator = isSystemAdministrator(roleNames);
     const isSystemAdmin = isTrueSystemAdministrator(roleNames);
@@ -158,6 +160,7 @@ export class SessionCapabilitiesService {
       canCreatePurchaseRequest: purchaseRequest.canCreate,
       modulesProjectManagementEnabled: pmModuleEnabled,
       isSystemAdministrator: systemAdministrator,
+      hasDirectReports: directReports,
       isSystemAdmin,
       pm,
       epc: this.resolveEpcCapabilities(

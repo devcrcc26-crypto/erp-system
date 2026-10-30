@@ -598,6 +598,7 @@
       "comingSoonTitle": "Coming soon",
       "comingSoonDescription": "{{module}} will be available in a future update.",
       "accessDenied": "You do not have access to Human Resources.",
+      "teamListDescription": "Your own requests and those of the people who report to you.",
       "reports": {
         "title": "HR Reports",
         "description": "Workforce, leave, overtime, travel, contracts, expenses and evaluations for a chosen period.",

@@ -20,6 +20,11 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  canViewThroughTeam,
+  resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
+} from '../../../../shared/org/team-scope.util';
 import { assertWithinEmploymentWindow, datesInRange } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -967,9 +972,18 @@ export class LeaveService
       'manage',
     );
 
+    // Supervisors (anyone with reports) see their team's requests too.
+    const teamScope = isHrViewer
+      ? null
+      : teamScopeWhere(
+          userId,
+          await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+          filters.employeeId,
+        );
+
     const where = activeOnly({
       companyId,
-      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(teamScope ? { AND: [teamScope] } : {}),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(filters.leaveType ? { leaveType: filters.leaveType } : {}),
       ...(isHrViewer && filters.employeeId
@@ -1081,7 +1095,11 @@ export class LeaveService
       (leave.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
       false);
 
-    if (!isOwner && !isApprover) {
+    if (
+      !isOwner &&
+      !isApprover &&
+      !(await canViewThroughTeam(this.prisma, userId, companyId, leave))
+    ) {
       throw new ForbiddenException(
         'You do not have access to this leave request',
       );

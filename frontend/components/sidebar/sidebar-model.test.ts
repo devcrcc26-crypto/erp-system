@@ -181,36 +181,73 @@ describe('sidebar permissions and filtering', () => {
     expect(payroll?.items.some((item) => item.id === 'payroll')).toBe(true);
   });
 
-  it('limits staff without hr.view to Dashboard, New Request, the inboxes, Pay & Travel and My Profile', () => {
+  it('limits staff without hr.view to Dashboard, New Request, the inboxes and My Profile', () => {
     const model = modelFor({
       canCreateLeave: true,
       canCreateOvertime: true,
       canCreateFlight: true,
       canViewAuditLogs: true,
       canManageRoles: true,
+      canAccessPayroll: true,
       ...withProjects(),
     });
+    // No Pay & Travel: they file and track expense claims and per diem via
+    // New Request and Approvals.
     expect(ids(model.primary)).toEqual([
       'dashboard',
       'new-request',
       'approvals',
       'evaluation-inbox',
       'announcements',
-      'finance',
       'user-guide',
     ]);
     expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
-  it('keeps only the allowlisted links inside a folder for staff without hr.view', () => {
-    const model = modelFor({ canAccessPayroll: true });
-    const finance = model.primary.find((entry) => entry.id === 'finance');
-    const links =
-      finance?.kind === 'folder'
-        ? finance.groups.flatMap((group) => group.items.map((item) => item.id))
-        : [];
-    // Their own expense claims and per diem, never payroll or flight admin.
-    expect(links).toEqual(['expense-claims', 'per-diem']);
+  it('adds the team lists for supervisors (anyone with direct reports)', () => {
+    const model = modelFor({
+      hasDirectReports: true,
+      canViewLeave: true,
+      canCreateOvertime: true,
+      canAccessPayroll: true,
+    });
+    const links = flattenSidebarModel(model).map((entry) => entry.link.id);
+    expect(links).toEqual(
+      expect.arrayContaining([
+        'leave-requests',
+        'overtime',
+        'attendance',
+        'site-assignments',
+        'evaluations',
+        'expense-claims',
+        'per-diem',
+      ]),
+    );
+    // Team lists only - never HR admin pages or payroll.
+    for (const hrOnly of ['leave-policy', 'attendance-identities', 'payroll', 'employee-per-diem-rates']) {
+      expect(links).not.toContain(hrOnly);
+    }
+  });
+
+  it('grants the expense claim and per diem lists to HR, admins and supervisors only', () => {
+    const permissions = (overrides: Partial<Capabilities>) =>
+      resolveSidebarPermissions({
+        capabilities: capabilities(overrides),
+        ready: true,
+        hasProjectAdministratorRole: false,
+      });
+    expect(permissions({}).has('expenseClaims.access')).toBe(false);
+    expect(permissions({}).has('perDiem.access')).toBe(false);
+    for (const caps of [
+      { canViewHr: true },
+      { isSystemAdministrator: true },
+      { hasDirectReports: true },
+    ]) {
+      expect(permissions(caps).has('expenseClaims.access')).toBe(true);
+      expect(permissions(caps).has('perDiem.access')).toBe(true);
+    }
+    expect(permissions({ hasDirectReports: true }).has('team.view')).toBe(true);
+    expect(permissions({}).has('team.view')).toBe(false);
   });
 
   it('grants direct work-from-home assignment to HR only, not Discipline Leads', () => {

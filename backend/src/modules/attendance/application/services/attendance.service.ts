@@ -32,6 +32,10 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  isEmployeeInTeamScope,
+  resolveTeamScopedEmployeeIds,
+} from '../../../../shared/org/team-scope.util';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
   cappedContractSegments,
@@ -1895,16 +1899,25 @@ export class AttendanceService
       'view',
     );
 
+    // Supervisors (anyone with reports) see their team's attendance too.
+    const teamIds = isHrViewer
+      ? null
+      : await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId);
+    const scopedEmployee =
+      filters.employeeId && (teamIds === null || teamIds.includes(filters.employeeId))
+        ? filters.employeeId
+        : null;
+
     const where: Prisma.AttendanceRecordWhereInput = {
       companyId,
       month,
       year,
-      ...(isHrViewer && filters.employeeId
-        ? { employeeId: filters.employeeId }
-        : !isHrViewer
-          ? { employeeId: userId }
+      ...(scopedEmployee
+        ? { employeeId: scopedEmployee }
+        : teamIds
+          ? { employeeId: { in: teamIds } }
           : {}),
-      ...(isHrViewer && filters.search?.trim()
+      ...((isHrViewer || (teamIds?.length ?? 0) > 1) && filters.search?.trim()
         ? {
             employee: hrProcessEmployeeWhere({
               OR: [
@@ -2077,6 +2090,29 @@ export class AttendanceService
   /**
    * Year profile for one employee: month rows with rates, daily logs, summary.
    */
+  /**
+   * Another employee's attendance: HR (hr.view), or a supervisor whose team
+   * includes the employee. Own attendance is always allowed.
+   */
+  async assertCanViewEmployeeAttendance(
+    viewerId: string,
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    if (viewerId === employeeId) {
+      return;
+    }
+    if (await this.permissionService.hasPermission(viewerId, companyId, 'hr', 'view')) {
+      return;
+    }
+    if (await isEmployeeInTeamScope(this.prisma, viewerId, companyId, employeeId)) {
+      return;
+    }
+    throw new ForbiddenException(
+      "You do not have access to this employee's attendance",
+    );
+  }
+
   async getMyAttendance(
     employeeId: string,
     companyId: string,

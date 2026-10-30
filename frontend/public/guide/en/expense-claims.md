@@ -69,12 +69,11 @@ Use an expense claim to get back money you spent on work, such as transport, mea
 
 *(Employees)*
 
-1. In the left menu, open **Pay & Travel** and click **Expense Claims**. **My Expense Claims** opens and lists only your own claims.
-2. The counters show **Total**, **Drafts**, **In Review**, **Approved** and **Rejected**.
-3. The list shows **Claim #**, **Title**, **Items**, **Total**, **Status** and **Created**.
-4. Click a claim to open it. You see each item with its receipts, the **Approval Chain**, and under **Paid** the date HR paid you. An approved claim not yet paid shows **Unpaid**.
+1. In the left menu, go to **Approvals** and click the **My Requests** tab. Your submitted claims are listed with the approver each one is waiting for.
+2. Click a claim to open it. You see each item with its receipts, the **Approval Chain**, and under **Paid** the date HR paid you. An approved claim not yet paid shows **Unpaid**.
+3. Claims you saved but did not send are in **Approvals** → **My Drafts**.
 
-You can also follow a submitted claim in **Approvals** → **My Requests**, where you see which approver it is waiting for.
+If people report to you, you also have **Pay & Travel** → **Expense Claims** in the left menu. It lists your own claims and your team's, with **Total**, **Drafts**, **In Review**, **Approved** and **Rejected** counters.
 
 **What the statuses mean**
 
@@ -97,8 +96,8 @@ You can also follow a submitted claim in **Approvals** → **My Requests**, wher
 A claim is a **Draft** when you clicked **Save as draft** instead of **Submit Claim**.
 
 1. Open the draft in one of these ways:
-   - **Pay & Travel** → **Expense Claims**, then click the claim with status **Draft**.
    - **Approvals** → **My Drafts**, then click the claim (or **Edit** next to it).
+   - If people report to you: **Pay & Travel** → **Expense Claims**, then click the claim with status **Draft**.
 2. To change the title or description, click **Update**, make the changes, and click **Save**.
 3. To add an item, click **Add Item**. To change or remove one, click **⋯** on the item and choose **Update** or **Delete**. An item can have more than one receipt file. Uploading new files on **Update** replaces its receipts.
 4. If the page says *"N item(s) still need a receipt before you can submit."*, add the missing receipts.

@@ -103,10 +103,10 @@ You need a per diem rate on your employee record. If the form shows **No per die
 
 *(Employees)*
 
-1. In the left menu, go to **Pay & Travel** → **Per Diem**. **My Per Diem Requests** opens.
-2. The **Advances** tab lists your requests with **Request #**, **Destination**, **Start Date**, **Days**, **Total**, **Paid** (**Disbursed**, **Unpaid** or **Settled**) and **Status**.
-3. The **Settlements** tab lists your settlements.
-4. Click a request to see its details and its **Approval Chain**.
+1. In the left menu, go to **Approvals** and click the **My Requests** tab.
+2. Click your per diem request to see its details, what has been paid, and its **Approval Chain**.
+
+If people report to you, you also have **Pay & Travel** → **Per Diem** in the left menu. The **Advances** tab lists your requests and your team's with **Request #**, **Destination**, **Start Date**, **Days**, **Total**, **Paid** (**Disbursed**, **Unpaid** or **Settled**) and **Status**. The **Settlements** tab lists settlements.
 
 **What the statuses mean**
 

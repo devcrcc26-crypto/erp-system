@@ -47,8 +47,10 @@ import {
 } from '../../../../shared/storage/storage.constants';
 import type { IStorageService } from '../../../../shared/storage/storage.interface';
 import {
+  canViewThroughTeam,
   isEmployeeInTeamScope,
   resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
 } from '../../../../shared/org/team-scope.util';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
@@ -601,9 +603,10 @@ export class PerDiemService
     const where: Prisma.PerDiemRequestWhereInput = {
       companyId,
       deletedAt: null,
-      ...(canManage
-        ? {}
-        : { employeeId: { in: teamEmployeeIds ?? [userId] } }),
+      // Own records plus the team's (not their drafts or cancelled ones).
+      ...(teamEmployeeIds
+        ? { AND: [teamScopeWhere(userId, teamEmployeeIds, filters.employeeId)] }
+        : {}),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(canManage && filters.employeeId
         ? { employeeId: filters.employeeId }
@@ -1324,12 +1327,7 @@ export class PerDiemService
       false);
     const inTeamScope =
       !isOwner &&
-      (await isEmployeeInTeamScope(
-        this.prisma,
-        userId,
-        companyId,
-        request.employeeId,
-      ));
+      (await canViewThroughTeam(this.prisma, userId, companyId, request));
 
     if (!isOwner && !isTierApprover && !inTeamScope) {
       throw new ForbiddenException(

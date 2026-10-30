@@ -39,7 +39,7 @@ Welcome to the Construction ERP. This page shows you how to sign in, find your w
 | **Language control** (top of the screen) | Switch between English and Chinese. This guide switches too. |
 | **User Guide** | This guide, in the left menu. |
 
-<!-- Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **Expense Claims**, **Per Diem**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. HR staff also see the folders **People**, **Time & Attendance**, **Pay & Travel** and **Operations**. -->
+<!-- Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. Anyone with people reporting to them also sees their team's leave, overtime, attendance, site assignments, evaluations, expense claims and per diem. HR staff also see the folders **People**, **Time & Attendance**, **Pay & Travel** and **Operations**. -->
 
 
 ---

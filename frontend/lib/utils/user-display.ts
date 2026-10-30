@@ -153,3 +153,24 @@ export function pickTopLevelRoleName(
 export function formatUserPickerLabel(user: User): string {
   return `${formatUserName(user)} (${formatUserDiscipline(user)})`;
 }
+
+/**
+ * Employee filter options built from list rows (one per person, sorted by
+ * name). Supervisors filter their team list this way without needing the
+ * company user directory.
+ */
+export function teamEmployeeOptions(
+  rows: readonly {
+    employee?: (Parameters<typeof formatUserName>[0] & { id: string }) | null;
+  }[],
+): { value: string; label: string }[] {
+  const byId = new Map<string, string>();
+  for (const row of rows) {
+    if (row.employee && !byId.has(row.employee.id)) {
+      byId.set(row.employee.id, formatUserName(row.employee));
+    }
+  }
+  return [...byId]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}

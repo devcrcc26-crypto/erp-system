@@ -319,6 +319,8 @@ export class EvaluationService {
     filters: {
       cycleId?: string;
       employeeId?: string;
+      /** Restricts to these employees (supervisor team scope). */
+      employeeIds?: string[];
       status?: EvaluationStatus | string;
       disciplineLeadId?: string;
       teamLeadId?: string;
@@ -330,6 +332,7 @@ export class EvaluationService {
         deletedAt: null,
         ...(filters.cycleId ? { cycleId: filters.cycleId } : {}),
         ...(filters.employeeId ? { employeeId: filters.employeeId } : {}),
+        ...(filters.employeeIds ? { employeeId: { in: filters.employeeIds } } : {}),
         ...(filters.status
           ? { status: filters.status as EvaluationStatus }
           : {}),

@@ -19,6 +19,7 @@ export type SidebarPermission =
   | 'settings.manage'
   | 'users.manage'
   | 'hr.view'
+  | 'team.view'
   | 'evaluation.inbox'
   | 'leave.access'
   | 'wfh.assign'
@@ -124,8 +125,13 @@ export type SidebarEntryConfig = SidebarLinkConfig | SidebarFolderConfig;
 export interface SidebarLimitedNavigation {
   /** Sessions holding this permission get the full sidebar. */
   readonly unlessGranted: SidebarPermission;
-  /** Everyone else sees only these top-level entry ids. */
+  /** Everyone else sees only these entry ids (top-level or inside a folder). */
   readonly entryIds: readonly string[];
+  /** Extra entry ids for limited sessions holding a permission (e.g. supervisors). */
+  readonly extraEntryIds?: readonly {
+    readonly whenGranted: SidebarPermission;
+    readonly entryIds: readonly string[];
+  }[];
 }
 
 export interface SidebarConfig {
@@ -156,6 +162,8 @@ export const SIDEBAR_STORAGE_KEYS = {
 } as const;
 
 const HR = ['hr.view'] as const;
+/** HR, or a supervisor viewing their reports. */
+const TEAM = ['team.view'] as const;
 
 /**
  * One User Guide topic (`/help/<slug>`). Who sees it follows the topic's roles
@@ -185,10 +193,23 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       'approvals',
       'evaluation-inbox',
       'announcements',
-      'expense-claims',
-      'per-diem',
       'my-profile',
       'user-guide',
+    ],
+    extraEntryIds: [
+      {
+        // Supervisors see their team's records (scoped by the backend).
+        whenGranted: 'team.view',
+        entryIds: [
+          'leave-requests',
+          'overtime',
+          'attendance',
+          'site-assignments',
+          'evaluations',
+          'expense-claims',
+          'per-diem',
+        ],
+      },
     ],
   },
   primary: [
@@ -239,7 +260,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.sections.performance',
           items: [
             { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-evaluation-inbox', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
-            { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
+            { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: TEAM, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
             { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-evaluation-cycles', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
             { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-evaluation-templates', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
           ],
@@ -291,11 +312,11 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'time-attendance',
           labelKey: 'nav.sections.attendance',
           items: [
-            { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
+            { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: TEAM, keywords: ['clock in', 'deli', 'timesheet'] },
             { kind: 'link', id: 'attendance-identities', labelKey: 'nav.hr.attendanceIdentities', icon: 'hr-attendance-identities', href: '/hr/attendance/identities', requires: HR, keywords: ['deli', 'device mapping', 'ignored'] },
             { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
             { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-work-from-home', href: '/hr/work-from-home', requires: ['wfh.assign'], keywords: ['wfh', 'remote', 'home office'] },
-            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-site-assignments', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
+            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-site-assignments', href: '/hr/site-assignments', requires: TEAM, keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
           ],
         },
         {

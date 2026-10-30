@@ -23,6 +23,11 @@ import {
   isDateInFuture,
 } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  canViewThroughTeam,
+  resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
+} from '../../../../shared/org/team-scope.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
@@ -444,9 +449,18 @@ export class OvertimeService
       'manage',
     );
 
+    // Supervisors (anyone with reports) see their team's sheets too.
+    const teamScope = canViewAll
+      ? null
+      : teamScopeWhere(
+          userId,
+          await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+          filters.employeeId,
+        );
+
     const where = activeOnly({
       companyId,
-      ...(canViewAll ? {} : { employeeId: userId }),
+      ...(teamScope ? { AND: [teamScope] } : {}),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(canViewAll && filters.employeeId
         ? { employeeId: filters.employeeId }
@@ -1344,7 +1358,8 @@ export class OvertimeService
     if (
       !isOwner &&
       !isApprover &&
-      !(await this.onBehalfService.isEligibleFor(userId, row.employeeId, companyId))
+      !(await this.onBehalfService.isEligibleFor(userId, row.employeeId, companyId)) &&
+      !(await canViewThroughTeam(this.prisma, userId, companyId, row))
     ) {
       throw new ForbiddenException(
         'You do not have access to this overtime sheet',

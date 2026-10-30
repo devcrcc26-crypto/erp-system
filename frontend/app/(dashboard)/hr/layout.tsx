@@ -42,6 +42,7 @@ export default function HrSectionLayout({
     pathname.startsWith('/hr/expense-claims') ||
     pathname.startsWith('/hr/per-diem') ||
     pathname.startsWith('/hr/attendance') ||
+    pathname.startsWith('/hr/site-assignments') ||
     pathname.startsWith('/hr/evaluations');
 
   const isWfhAssignRoute = pathname.startsWith('/hr/work-from-home');

@@ -12,6 +12,11 @@ import { randomUUID } from 'crypto';
 import { getRequestContext } from '../../../../shared/context/request-context';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  isEmployeeInTeamScope,
+  resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
+} from '../../../../shared/org/team-scope.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
@@ -539,7 +544,15 @@ export class SiteAssignmentService
     const where: Prisma.SiteAssignmentWhereInput = activeOnly({ companyId });
 
     if (!canManageAll) {
-      where.employeeId = userId;
+      // Own assignments, plus the team's for supervisors (anyone with reports).
+      where.AND = [
+        teamScopeWhere(
+          userId,
+          await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+          query.employeeId,
+          ['CANCELLED'],
+        ),
+      ];
     } else if (query.employeeId) {
       where.employeeId = query.employeeId;
     }
@@ -1036,12 +1049,11 @@ export class SiteAssignmentService
     if (employeeId === userId) {
       return;
     }
-    const canViewOthers = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'site-assignment',
-      'view',
-    );
+    // HR, or a supervisor for their team. Plain site-assignment.view (held by
+    // every employee) is not enough to open someone else's record.
+    const canViewOthers =
+      (await this.isHrSiteAssignmentSubmitter(userId, companyId)) ||
+      (await isEmployeeInTeamScope(this.prisma, userId, companyId, employeeId));
     if (!canViewOthers) {
       throw new ForbiddenException('You do not have access to this record');
     }

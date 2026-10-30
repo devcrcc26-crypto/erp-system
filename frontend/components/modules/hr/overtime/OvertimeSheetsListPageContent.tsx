@@ -34,6 +34,7 @@ import {
   useCanAccessOvertime,
   useCanCreateOvertime,
   useCanViewHr,
+  useCanViewTeam,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -86,7 +87,7 @@ import {
 import {
 } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildOvertimeExportSheets } from '@/lib/utils/overtime-export';
 
@@ -160,6 +161,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   const canAccess = useCanAccessOvertime();
   const canViewHr = useCanViewHr();
+  const canViewTeam = useCanViewTeam();
   const canManage = canViewHr;
   const canCreate = useCanCreateOvertime();
   const currentUser = useCurrentUser();
@@ -202,6 +204,18 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   const allRows = listQuery.data ?? [];
 
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
+
   const statusCounts = useMemo(() => {
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
@@ -225,11 +239,11 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
       filterOvertimeSheets(allRows, {
         search: appliedSearch,
         statusMode,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
         month,
         year,
       }),
-    [allRows, appliedSearch, statusMode, employeeId, month, year, canViewHr],
+    [allRows, appliedSearch, statusMode, employeeId, month, year, canViewTeam],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -249,12 +263,14 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.overtime.listTitle')
     : t('pages.hr.overtime.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.overtime.listDescription')
-    : t('pages.hr.overtime.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.overtime.myListDescription');
 
   function handleResetFilters(): void {
     setSearch('');
@@ -333,7 +349,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.employee'),
@@ -450,7 +466,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canManage, canViewHr, currentUserId, router, t],
+    [canManage, canViewHr, canViewTeam, currentUserId, router, t],
   );
 
   if (!canAccess) {
@@ -624,18 +640,15 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             }}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);

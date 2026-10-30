@@ -598,6 +598,7 @@
       "comingSoonTitle": "即将推出",
       "comingSoonDescription": "{{module}} 将在后续版本中提供。",
       "accessDenied": "您无权访问人力资源模块。",
+      "teamListDescription": "您本人的申请以及向您汇报的员工的申请。",
       "reports": {
         "title": "人力资源报表",
         "description": "按所选期间统计人员结构、请假、加班、出行、合同、费用与绩效考核。",

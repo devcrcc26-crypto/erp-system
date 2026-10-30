@@ -31,6 +31,11 @@ export class EvaluationCycleController {
   constructor(private readonly cycleService: EvaluationCycleService) {}
 
   @Get()
+  // Cycle names only - supervisors filter their team's evaluations by cycle.
+  @RequireAnyPermission(
+    { module: 'evaluation', action: 'view' },
+    { module: 'evaluation', action: 'manage' },
+  )
   @ApiOperation({ summary: 'List evaluation cycles' })
   listCycles(@CurrentCompany() companyId: string): Promise<unknown> {
     return this.cycleService.listCycles(companyId);

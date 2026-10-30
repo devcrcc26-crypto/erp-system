@@ -15,9 +15,11 @@ Full guide: [`frontend/components/sidebar/SIDEBAR.md`](frontend/components/sideb
   derived from session capabilities only in `sidebar-permissions.ts`. Items the user cannot
   access are removed, never greyed out. Hidden UI is not security; pages and APIs still check.
 - **Limited navigation.** Users without `hr.view` see only Dashboard, New Request,
-  Approvals, Evaluation Inbox (leads), Announcements, Pay & Travel (Expense Claims and Per Diem only),
-  My Profile and User Guide. This is `limitedNavigation` in `sidebar.config.ts`, applied in `buildSidebarModel`;
-  edit the allowlist there, never in components.
+  Approvals, Evaluation Inbox (leads), Announcements, My Profile and User Guide. Supervisors
+  (anyone with direct reports, token `team.view`) also see Leave Requests, Overtime, Attendance,
+  Site Assignments, Evaluations, Expense Claims and Per Diem for their team. This is
+  `limitedNavigation` (with `extraEntryIds`) in `sidebar.config.ts`, applied in `buildSidebarModel`;
+  edit the allowlists there, never in components.
 - **One selected state.** `aria-current="page"` (or `data-active="true"` on a closed folder)
   on a `.sb-selectable` element, styled once in `sidebar.css`. Do not add a second highlight
   style anywhere in the sidebar.

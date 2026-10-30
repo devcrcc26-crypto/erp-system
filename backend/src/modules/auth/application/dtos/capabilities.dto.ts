@@ -253,6 +253,12 @@ export class CapabilitiesDto {
 
   @ApiProperty({
     description:
+      'True when at least one active employee reports to this user; unlocks the team-scoped HR views.',
+  })
+  hasDirectReports!: boolean;
+
+  @ApiProperty({
+    description:
       'True System Administrator role only (not Project Administrator). Required to assign/revoke System Administrator.',
   })
   isSystemAdmin!: boolean;

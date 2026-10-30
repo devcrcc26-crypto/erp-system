@@ -61,6 +61,10 @@ export function resolveSidebarPermissions(
 
   // Human resources - self-service entries widen beyond hr.view
   grant('hr.view', hr);
+  // Supervisors (anyone with direct reports) get team-scoped HR lists; the
+  // backend scopes the data to their full reporting chain.
+  const team = hr || caps.hasDirectReports;
+  grant('team.view', team);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
   // Direct WFH assignment (no approval) is HR only; others use New Request.
   grant('wfh.assign', hr);
@@ -76,11 +80,11 @@ export function resolveSidebarPermissions(
   // redirects everyone else. Employees submit these via the /approvals/new forms.
   grant('flight.access', hr);
   grant('businessTrip.access', hr);
-  // Expense claims are self-service (see app/(dashboard)/hr/layout.tsx);
-  // every employee can submit and track their own claims.
-  grant('expenseClaims.access', true);
-  // Self-service per diem list and detail (own requests); HR staff also have hr.view.
-  grant('perDiem.access', true);
+  // Expense claim and per diem lists are for HR, admins and supervisors.
+  // Other employees file and track their own via New Request and Approvals.
+  const payTravelLists = team || caps.isSystemAdministrator;
+  grant('expenseClaims.access', payTravelLists);
+  grant('perDiem.access', payTravelLists);
   grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet - the /hr route guard requires hr.view.
   grant(
     'procurement.access',

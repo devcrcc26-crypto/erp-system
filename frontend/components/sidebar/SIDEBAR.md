@@ -68,8 +68,10 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   `<a target="_blank">`. In compact mode the same links stack vertically as icon buttons,
   the account becomes an initials avatar, and every item has a right-side hover/focus tooltip.
 - **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals,
-  Evaluation Inbox (leads), Announcements, Pay & Travel (Expense Claims and Per Diem only), My Profile and
-  User Guide. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
+  Evaluation Inbox (leads), Announcements, My Profile and User Guide. Supervisors (anyone with
+  direct reports, `team.view`) also get the team lists: Leave Requests, Overtime, Attendance, Site
+  Assignments, Evaluations, Expense Claims and Per Diem, scoped by the backend to their reporting
+  chain. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
   separate project column. Widest case (pinned): 72px rail + 272px docked panel = 344px.
@@ -167,11 +169,13 @@ has to read past.
    folders disappear too.
 5. **Limited navigation** (`SIDEBAR_CONFIG.limitedNavigation`): a session without
    `unlessGranted` (`hr.view`) keeps only the entries listed in `entryIds`
-   (`dashboard`, `new-request`, `approvals`, `evaluation-inbox`, `announcements`, `expense-claims`,
-   `per-diem`, `my-profile`, `user-guide`), whatever else it could open. An id can name a top-level entry
-   (an allowlisted folder keeps all its links) or a link inside a folder: the folder is then kept with
-   only its allowlisted links (Pay & Travel → Expense Claims, Per Diem). Change the list in
-   the config; do not special-case it in components. `buildSidebarModel` applies it, so the
+   (`dashboard`, `new-request`, `approvals`, `evaluation-inbox`, `announcements`, `my-profile`,
+   `user-guide`), whatever else it could open. `extraEntryIds` adds ids for sessions holding a
+   token: `team.view` adds `leave-requests`, `overtime`, `attendance`, `site-assignments`,
+   `evaluations`, `expense-claims` and `per-diem`. An id can name a top-level entry (an
+   allowlisted folder keeps all its links) or a link inside a folder: the folder is then kept with
+   only its allowlisted links (Pay & Travel → Expense Claims, Per Diem). Change the lists in
+   the config; do not special-case them in components. `buildSidebarModel` applies it, so the
    desktop sidebar, compact rail and mobile drawer all follow it.
 
 Current mapping (edit `sidebar-permissions.ts` only):
@@ -179,9 +183,10 @@ Current mapping (edit `sidebar-permissions.ts` only):
 | Token | Granted when |
 | --- | --- |
 | `hr.view` | `canViewHr` |
+| `team.view` | `canViewHr` or `hasDirectReports` (supervisor team lists) |
 | `leave.access` / `overtime.access` | `canViewHr` or the module's view/create flag |
 | `flight.access` / `businessTrip.access` | `canViewHr` (the `/hr` list pages are HR-only; employees submit via `/approvals/new`) |
-| `expenseClaims.access` | `canViewHr`, flight access, or business-trip access |
+| `expenseClaims.access` / `perDiem.access` | `team.view` or `isSystemAdministrator` (other employees use New Request and Approvals) |
 | `perDiemRates.manage` | `canViewHr` or `canManageUsers` |
 | `procurement.access`, `fleet.access`, `administration.access` | `canViewHr` (no dedicated backend flag yet; `/hr` routes also require it) |
 | `users.manage` | `canManageUsers` |

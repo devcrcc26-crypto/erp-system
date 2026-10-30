@@ -36,6 +36,12 @@ export class ProfileResponseDto {
   @ApiProperty()
   id!: string;
 
+  @ApiProperty({
+    description:
+      'True when at least one active employee reports to this user (supervisor views)',
+  })
+  hasDirectReports!: boolean;
+
   @ApiProperty()
   email!: string;
 

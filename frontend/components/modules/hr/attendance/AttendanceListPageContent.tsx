@@ -29,7 +29,7 @@ import AttendanceImportModal from '@/components/modules/hr/attendance/Attendance
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
 import AttendanceTable from '@/components/modules/hr/attendance/AttendanceTable';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -55,6 +55,8 @@ const STATUS_COLORS: Record<AttendanceMonthStatus, string> = {
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const canViewHr = useCanViewHr();
+  // Supervisors see their team's records (backend-scoped); HR-only tools stay HR-only.
+  const canViewTeam = useCanViewTeam();
   const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
@@ -95,7 +97,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
   );
 
   const monthName = t(`hr.months.${month}`);
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.attendance.listTitle')
     : t('pages.hr.attendance.myListTitle');
 
@@ -271,7 +273,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
         </div>
 
         <div className="erp-users-filter-bar">
-          {canViewHr ? (
+          {canViewTeam ? (
             <Input
               allowClear
               prefix={<SearchOutlined className="erp-users-search-icon" />}
@@ -324,7 +326,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
           <AttendanceTable
             records={filtered}
             loading={listQuery.isFetching}
-            onViewDailyLogs={canViewHr ? openDailyLogsDrawer : undefined}
+            onViewDailyLogs={canViewTeam ? openDailyLogsDrawer : undefined}
             pagination={{
               current: page,
               pageSize: limit,
@@ -363,7 +365,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      {canViewHr ? (
+      {canViewTeam ? (
         <AttendanceDailyLogsDrawer
           employeeId={drawerEmployeeId}
           month={month}

@@ -192,6 +192,11 @@ export function buildSidebarModel(
   const limited = config.limitedNavigation;
   if (limited && !permissions.has(limited.unlessGranted)) {
     const allowed = new Set(limited.entryIds);
+    for (const extra of limited.extraEntryIds ?? []) {
+      if (permissions.has(extra.whenGranted)) {
+        extra.entryIds.forEach((id) => allowed.add(id));
+      }
+    }
     return {
       primary: limitEntries(primary, allowed),
       utility: limitEntries(utility, allowed),

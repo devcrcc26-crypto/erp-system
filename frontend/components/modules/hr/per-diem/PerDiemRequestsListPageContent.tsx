@@ -33,7 +33,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -62,7 +62,7 @@ import {
   type PerDiemStatusMode,
 } from '@/lib/utils/per-diem-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildPerDiemRequestExportSheets } from '@/lib/utils/per-diem-export';
 
@@ -125,6 +125,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const canViewTeam = useCanViewTeam();
   const messageApi = useAppMessage();
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const importPreview = usePerDiemRequestImportPreview();
@@ -148,6 +149,18 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const draft = allRows.filter((row) =>
@@ -176,11 +189,11 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
       filterPerDiemRequests(allRows, {
         search: appliedSearch,
         statusMode,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
         dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
         dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       }),
-    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewTeam],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -212,7 +225,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? ([
             {
               title: t('hr.table.employee'),
@@ -242,7 +255,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
               {row.requestNumber}
-              {canViewHr
+              {canViewTeam
                 ? ` · ${formatPerDiemEmployeeName(row.employee)}`
                 : ''}
             </p>
@@ -326,7 +339,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ),
       },
     ],
-    [canViewHr, isNarrow, t],
+    [canViewTeam, isNarrow, t],
   );
 
 
@@ -350,12 +363,14 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     employeeId !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.perDiem.listTitle')
     : t('pages.hr.perDiem.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.perDiem.listDescription')
-    : t('pages.hr.perDiem.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.perDiem.myListDescription');
 
   const listTabs = (
     <div className="erp-hr-travel-tabbar-card">
@@ -542,18 +557,15 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             }}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);
