@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Form, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import OvertimeEntryForm, {
+  preferredOvertimeStart,
   type OvertimeEntryFormValues,
 } from '@/components/modules/hr/overtime/OvertimeEntryForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -123,11 +124,21 @@ export default function OvertimeEntryFormDrawer({
           const toMin = (v: string): number =>
             v === '24:00' ? 1440 : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
           const startValid =
-            !start ||
+            Boolean(start) &&
             result.windows.some((w) => {
-              const s = toMin(start);
+              const s = toMin(start!);
               return s >= toMin(w.start) && s < toMin(w.end);
             });
+          const preferred = preferredOvertimeStart(result.windows);
+          // New entry with no start yet: default to the after-work / post-half-day
+          // slot so End lists the full outside-hours period (e.g. 17:45–24:00).
+          if (!editingEntry && !start) {
+            form.setFieldsValue({
+              startTime: preferred,
+              endTime: undefined,
+            });
+            return;
+          }
           const endValid =
             !end ||
             !start ||
@@ -137,8 +148,14 @@ export default function OvertimeEntryFormDrawer({
               return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
             });
           if (start && !startValid) {
-            form.setFieldsValue({ startTime: undefined, endTime: undefined });
-          } else if (end && (!endValid || (start && toMin(end) <= toMin(start)))) {
+            form.setFieldsValue({
+              startTime: preferred,
+              endTime: undefined,
+            });
+          } else if (
+            end &&
+            (!endValid || (start && toMin(end) <= toMin(start)))
+          ) {
             form.setFieldValue('endTime', undefined);
           }
         })
@@ -226,7 +243,7 @@ export default function OvertimeEntryFormDrawer({
     }
     form.setFieldsValue({
       date: nextDate,
-      startTime: '00:00',
+      startTime: preferredOvertimeStart(windows?.windows ?? []) ?? undefined,
       endTime: undefined,
     });
     setPreview(null);

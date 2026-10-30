@@ -90,14 +90,25 @@ export function snapStartPastWeekdayLunch(startTime: string): string {
 }
 
 /**
- * End times after `startTime` that land in selectable OT windows only
- * (scheduled duty is never listed). Covers every OT slot later that day so
- * after-work ends (e.g. 17:45–24:00) stay available — not only the pre-morning
- * fragment when start defaults early.
+ * Prefer the last selectable OT window start (usually after work / after the
+ * half-day morning) so the end picker opens on the long outside-hours slot.
+ */
+export function preferredOvertimeStart(
+  windows: Array<{ start: string; end: string }>,
+): string | undefined {
+  if (windows.length === 0) {
+    return undefined;
+  }
+  return windows[windows.length - 1]?.start;
+}
+
+/**
+ * End times after `startTime` inside the selectable OT window that contains
+ * that start (scheduled duty is never listed). After-work starts (e.g. 17:30)
+ * list ends through the end of that slot (24:00).
  *
- * On weekdays, lunch ticks (12:30–13:30) are omitted, and a start before lunch
- * cannot use an end after 12:30 inside the same continuous morning-side span
- * (later after-work windows remain available only when start is already in them).
+ * On weekdays, a start before lunch is capped at 12:30 so the entry cannot
+ * cross the lunch break (add a separate entry after work instead).
  */
 export function enumerateEndTimesInWindows(
   startTime: string,
