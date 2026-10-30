@@ -78,7 +78,8 @@ export class UpsertOvertimeEntryDto {
 
   @ApiProperty({
     example: '21:00',
-    description: 'HH:mm (24h). Use 24:00 for end of calendar day.',
+    description:
+      'HH:mm (24h). Use 24:00 or 00:00 (after a later start) for end of calendar day.',
   })
   @IsString()
   @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/, {
@@ -128,7 +129,8 @@ export class PreviewOvertimeEntryDto {
 
   @ApiProperty({
     example: '21:00',
-    description: 'HH:mm (24h). Use 24:00 for end of calendar day.',
+    description:
+      'HH:mm (24h). Use 24:00 or 00:00 (after a later start) for end of calendar day.',
   })
   @IsString()
   @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/, {

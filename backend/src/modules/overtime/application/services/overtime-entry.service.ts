@@ -151,6 +151,15 @@ export class OvertimeEntryService {
       onDate,
     );
     const isOvernight = Boolean(options?.isOvernight);
+    // UI midnight end 00:00 (after a later start) = end of calendar day 24:00.
+    if (
+      !isOvernight &&
+      endTime === '00:00' &&
+      startTime !== '00:00' &&
+      startTime !== '24:00'
+    ) {
+      endTime = '24:00';
+    }
     const weekday = schedule.days.find(
       (row) => row.dayOfWeek === onDate.getUTCDay(),
     );

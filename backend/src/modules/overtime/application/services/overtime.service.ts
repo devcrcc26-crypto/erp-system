@@ -521,7 +521,8 @@ export class OvertimeService
       throw new BadRequestException(NEW_OVERNIGHT_NOT_ALLOWED_MESSAGE);
     }
 
-    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime);
+    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime, dto.startTime);
+    const classifiedEnd = this.classifiedEndTime(dto.endTime, endsAtEndOfDay);
     const startTime = this.parseTimeOfDay(dto.startTime);
     const endTime = this.parseTimeOfDay(
       endsAtEndOfDay ? '00:00' : dto.endTime,
@@ -531,7 +532,7 @@ export class OvertimeService
       companyId,
       date,
       dto.startTime,
-      dto.endTime,
+      classifiedEnd,
       {
         holidayOverride: Boolean(options?.allowHolidayOverride && dto.isHoliday),
         isOvernight,
@@ -540,7 +541,7 @@ export class OvertimeService
     this.assertClassifiedHasOvertimeHours(
       classified,
       dto.startTime,
-      dto.endTime,
+      classifiedEnd,
       isOvernight,
     );
 
@@ -640,7 +641,8 @@ export class OvertimeService
       throw new BadRequestException(NEW_OVERNIGHT_NOT_ALLOWED_MESSAGE);
     }
 
-    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime);
+    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime, dto.startTime);
+    const classifiedEnd = this.classifiedEndTime(dto.endTime, endsAtEndOfDay);
     const startTime = this.parseTimeOfDay(dto.startTime);
     const endTime = this.parseTimeOfDay(
       endsAtEndOfDay ? '00:00' : dto.endTime,
@@ -650,13 +652,13 @@ export class OvertimeService
       companyId,
       date,
       dto.startTime,
-      dto.endTime,
+      classifiedEnd,
       { isOvernight },
     );
     this.assertClassifiedHasOvertimeHours(
       classified,
       dto.startTime,
-      dto.endTime,
+      classifiedEnd,
       isOvernight,
     );
 
@@ -1641,8 +1643,25 @@ export class OvertimeService
     return endMinutes;
   }
 
-  private isEndOfDayTime(value: string): boolean {
-    return value === END_OF_DAY_HHMM || value === '24:00';
+  /**
+   * End-of-calendar-day marker. UI may send 00:00 when start is later that day
+   * (e.g. 22:00–00:00 → 2 hours); bare 24:00 is also accepted.
+   */
+  private isEndOfDayTime(endTime: string, startTime?: string): boolean {
+    if (endTime === END_OF_DAY_HHMM || endTime === '24:00') {
+      return true;
+    }
+    return (
+      endTime === '00:00' &&
+      Boolean(startTime) &&
+      startTime !== '00:00' &&
+      startTime !== '24:00'
+    );
+  }
+
+  /** Classify/preview always use 24:00 for end-of-day, never raw 00:00. */
+  private classifiedEndTime(dtoEndTime: string, endsAtEndOfDay: boolean): string {
+    return endsAtEndOfDay ? END_OF_DAY_HHMM : dtoEndTime;
   }
 
   /**

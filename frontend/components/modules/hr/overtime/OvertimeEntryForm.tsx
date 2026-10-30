@@ -33,6 +33,7 @@ export {
   shouldExcludeWeekdayLunchFromWindows as shouldExcludeWeekdayLunch,
   overtimePeriodsOverlap,
   completeOvertimePeriods,
+  calculateOTHours,
 } from '@/components/modules/hr/overtime/overtime-time-periods';
 
 interface OvertimeEntryFormProps {

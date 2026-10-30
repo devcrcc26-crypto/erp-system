@@ -194,6 +194,15 @@ export default function OvertimeEntryFormDrawer({
             v === '24:00'
               ? 1440
               : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+          const endMin = (start: string, end: string): number => {
+            if (end === '24:00') {
+              return 1440;
+            }
+            if (end === '00:00' && toMin(start) > 0) {
+              return 1440;
+            }
+            return toMin(end);
+          };
 
           if (!isEditing && periods.length === 1 && !periods[0]?.startTime) {
             form.setFieldsValue({
@@ -220,7 +229,7 @@ export default function OvertimeEntryFormDrawer({
             }
             const endValid = result.windows.some((w) => {
               const s = toMin(row.startTime!);
-              const e = toMin(row.endTime!);
+              const e = endMin(row.startTime!, row.endTime!);
               return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
             });
             if (!endValid) {

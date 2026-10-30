@@ -205,6 +205,12 @@
   font-weight: 500;
 }
 
+/* End-of-day (24:00) is painted by an overlay; hide the empty input text. */
+.erp-ot-time-picker--end-of-day.ant-picker .ant-picker-input > input {
+  color: transparent;
+  caret-color: transparent;
+}
+
 .erp-ot-task-chips {
   display: flex;
   flex-wrap: wrap;

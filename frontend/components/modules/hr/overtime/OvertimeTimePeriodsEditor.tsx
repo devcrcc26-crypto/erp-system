@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Button, Form, Input, Select } from 'antd';
+import { Alert, Button, Form, Input } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
+import OvertimeHhMmTimePicker from '@/components/modules/hr/overtime/OvertimeHhMmTimePicker';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { SelectableOvertimeWindowsResult } from '@/lib/api/overtime.types';
 import {
@@ -20,15 +21,9 @@ import {
   type OvertimeTimePeriodRow,
 } from '@/components/modules/hr/overtime/overtime-time-periods';
 
-const TIME_SELECT_PROPS = {
-  virtual: false,
-  listHeight: 280,
-} as const;
-
 /**
  * Leave-style multi-period time editor for one overtime day.
- * One period is expanded at a time; others collapse to a time summary.
- * Each period has its own task description.
+ * End picker includes 24:00 as a first-class hour (minutes locked to 00).
  */
 export default function OvertimeTimePeriodsEditor({
   form,
@@ -113,27 +108,16 @@ export default function OvertimeTimePeriodsEditor({
                 start && excludeWeekdayLunch
                   ? snapStartPastWeekdayLunch(start)
                   : start;
-              const startOptions = enumerateStartTimes(periodWindows, {
+              const startAllowed = enumerateStartTimes(periodWindows, {
                 excludeWeekdayLunch,
-              }).map((value) => ({ value, label: value }));
-              const endOptions =
+              });
+              const endAllowed =
                 effectiveStart && periodWindows.length > 0
-                  ? enumerateEndTimesInWindows(
-                      effectiveStart,
-                      periodWindows,
-                      { excludeWeekdayLunch },
-                    ).map((value) => ({
-                      value,
-                      label: value,
-                      title:
-                        excludeWeekdayLunch &&
-                        parseHhMmToMinutes(effectiveStart) <
-                          LUNCH_START_MINUTES &&
-                        parseHhMmToMinutes(value) === LUNCH_START_MINUTES
-                          ? t('hr.labels.lunchBreakOtCapTooltip')
-                          : undefined,
-                    }))
+                  ? enumerateEndTimesInWindows(effectiveStart, periodWindows, {
+                      excludeWeekdayLunch,
+                    })
                   : [];
+              const allowEndOfDay = endAllowed.includes(END_OF_DAY);
               const endsAtMidnight = row?.endTime === END_OF_DAY;
               const isActive = index === activeIndex;
               const timeSummary = formatPeriodTimeSummary(row ?? {});
@@ -206,7 +190,6 @@ export default function OvertimeTimePeriodsEditor({
                     </div>
                   )}
 
-                  {/* Keep fields mounted when collapsed so values/validation remain. */}
                   <div className={isActive ? 'block' : 'hidden'}>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Form.Item
@@ -220,15 +203,14 @@ export default function OvertimeTimePeriodsEditor({
                           },
                         ]}
                       >
-                        <Select
-                          {...TIME_SELECT_PROPS}
-                          className="w-full"
-                          showSearch
-                          optionFilterProp="label"
-                          options={startOptions}
+                        <OvertimeHhMmTimePicker
                           disabled={timesDisabled || windowsLoading}
                           placeholder={t('hr.placeholder.selectStartTime')}
-                          onChange={(value: string) => {
+                          allowedTimes={startAllowed}
+                          onChange={(value) => {
+                            if (!value) {
+                              return;
+                            }
                             const nextStart = excludeWeekdayLunch
                               ? snapStartPastWeekdayLunch(value)
                               : value;
@@ -273,6 +255,13 @@ export default function OvertimeTimePeriodsEditor({
                               const snapped = excludeWeekdayLunch
                                 ? snapStartPastWeekdayLunch(rowStart)
                                 : rowStart;
+                              if (value === snapped) {
+                                return Promise.reject(
+                                  new Error(
+                                    t('hr.validation.overtimeStartEndSame'),
+                                  ),
+                                );
+                              }
                               if (
                                 parseHhMmToMinutes(value) <=
                                 parseHhMmToMinutes(snapped)
@@ -301,19 +290,16 @@ export default function OvertimeTimePeriodsEditor({
                           }),
                         ]}
                       >
-                        <Select
-                          {...TIME_SELECT_PROPS}
+                        <OvertimeHhMmTimePicker
                           key={`${index}-${effectiveStart ?? 'end'}`}
-                          className="w-full"
-                          showSearch
-                          optionFilterProp="label"
-                          options={endOptions}
                           disabled={
                             timesDisabled ||
                             windowsLoading ||
                             !effectiveStart
                           }
                           placeholder={t('hr.placeholder.selectEndTime')}
+                          allowEndOfDay={allowEndOfDay}
+                          allowedTimes={endAllowed}
                         />
                       </Form.Item>
                     </div>

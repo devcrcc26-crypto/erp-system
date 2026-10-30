@@ -4,6 +4,7 @@ export const END_OF_DAY = '24:00';
 export const LUNCH_START_MINUTES = 12 * 60 + 30;
 export const LUNCH_END_MINUTES = 13 * 60 + 30;
 export const LUNCH_END_HHMM = '13:30';
+const MINUTES_PER_DAY = 24 * 60;
 
 export interface OvertimeTimeWindow {
   start: string;
@@ -17,18 +18,31 @@ export interface OvertimeTimePeriodRow {
 }
 
 export function parseHhMmToMinutes(value: string): number {
-  if (value === END_OF_DAY) {
-    return 24 * 60;
+  if (value === END_OF_DAY || value === '24:00') {
+    return MINUTES_PER_DAY;
   }
   const [h, m] = value.split(':').map(Number);
   return h * 60 + m;
 }
 
 export function minutesToHhMm(minutes: number): string {
-  if (minutes >= 24 * 60) {
+  if (minutes >= MINUTES_PER_DAY) {
     return END_OF_DAY;
   }
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Duration in hours. `24:00` is 1440 minutes (exact midnight / end of day).
+ * Example: 22:00→24:00 = (1440−1320)/60 = 2.00
+ */
+export function calculateOTHours(startTime: string, endTime: string): number {
+  const start = parseHhMmToMinutes(startTime);
+  const end = parseHhMmToMinutes(endTime);
+  if (end <= start) {
+    return 0;
+  }
+  return (end - start) / 60;
 }
 
 export function isInsideWeekdayLunch(minutes: number): boolean {
@@ -108,7 +122,7 @@ export function enumerateEndTimesInWindows(
   }
 
   const times: string[] = [];
-  for (let m = start + 15; m <= maxEnd; m += 15) {
+  for (let m = start + 1; m <= maxEnd; m += 1) {
     if (options?.excludeWeekdayLunch && isInsideWeekdayLunch(m)) {
       continue;
     }
@@ -125,7 +139,7 @@ export function enumerateStartTimes(
   for (const window of windows) {
     const ws = parseHhMmToMinutes(window.start);
     const we = parseHhMmToMinutes(window.end);
-    for (let m = ws; m < we; m += 15) {
+    for (let m = ws; m < we; m += 1) {
       if (options?.excludeWeekdayLunch && isInsideWeekdayLunch(m)) {
         continue;
       }
@@ -242,4 +256,43 @@ export function windowsForPeriodIndex(
     )
     .filter((row): row is OvertimeTimeWindow => row != null);
   return subtractOccupiedFromWindows(baseWindows, occupied);
+}
+
+/** Hours that appear in an allow-list of HH:mm / 24:00 values. */
+export function allowedHoursFromTimes(
+  allowed: string[],
+  options?: { includeEndOfDay?: boolean },
+): number[] {
+  const hours = new Set<number>();
+  for (const value of allowed) {
+    if (value === END_OF_DAY) {
+      if (options?.includeEndOfDay) {
+        hours.add(24);
+      }
+      continue;
+    }
+    hours.add(Math.floor(parseHhMmToMinutes(value) / 60));
+  }
+  return [...hours].sort((a, b) => a - b);
+}
+
+/** Minutes allowed for a given hour from an allow-list. Hour 24 → [0] only. */
+export function allowedMinutesForHour(
+  allowed: string[],
+  hour: number,
+): number[] {
+  if (hour === 24) {
+    return allowed.includes(END_OF_DAY) ? [0] : [];
+  }
+  const minutes = new Set<number>();
+  for (const value of allowed) {
+    if (value === END_OF_DAY) {
+      continue;
+    }
+    const total = parseHhMmToMinutes(value);
+    if (Math.floor(total / 60) === hour) {
+      minutes.add(total % 60);
+    }
+  }
+  return [...minutes].sort((a, b) => a - b);
 }
