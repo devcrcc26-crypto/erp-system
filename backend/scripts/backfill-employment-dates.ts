@@ -4,10 +4,9 @@
  * entry). Service years are the fewest that the employee's own leave policy
  * rule needs to grant that entitlement (Standard Staff: 17 → 2, 18 → 4, ...).
  *
- * The proposed date keeps the month/day of the current leave-year anchor
- * (first contract start, else 1 January) and only moves the year back, so
- * leave-year boundaries and existing ledger entries are unchanged. Employees
- * whose imported entry does not sit on that anchor are reported, not changed.
+ * employmentDate only drives service years (entitlement); leave years follow
+ * contract start dates, so this does not move any leave-year boundary. The
+ * proposed date is that many years before the imported leave year's start.
  *
  * Output shows employee code (or user id) only - never names.
  * Dry run by default; --apply writes. SEED_MODE required; non-localhost needs --allow-remote.
@@ -79,7 +78,6 @@ async function main(): Promise<void> {
       skippedNoImportedBalance: 0,
       skippedNoProgressivePolicy: 0,
       skippedUnrecognisedEntitlement: 0,
-      skippedLeaveYearMismatch: 0,
     };
     const plan: Proposal[] = [];
     const review: string[] = [];
@@ -122,20 +120,11 @@ async function main(): Promise<void> {
         orderBy: { startDate: 'asc' },
         select: { startDate: true },
       });
+      // Service years currently count from the first contract start.
       const currentAnchor = firstContract?.startDate ?? null;
-      const yearStartKey = toDateOnlyKey(opening.leaveYearStart);
-      const yearStartYear = Number(yearStartKey.slice(0, 4));
-      const expectedStartKey = currentAnchor
-        ? toDateOnlyKey(anniversaryInYear(currentAnchor, yearStartYear))
-        : `${yearStartYear}-01-01`;
-      if (yearStartKey !== expectedStartKey) {
-        counts.skippedLeaveYearMismatch += 1;
-        review.push(
-          `${code}: imported leave year starts ${yearStartKey}, current anchor expects ${expectedStartKey}`,
-        );
-        continue;
-      }
-
+      const yearStartYear = Number(
+        toDateOnlyKey(opening.leaveYearStart).slice(0, 4),
+      );
       const proposed = anniversaryInYear(
         opening.leaveYearStart,
         yearStartYear - serviceYears,
@@ -162,8 +151,8 @@ async function main(): Promise<void> {
     for (const row of plan) {
       console.log(
         `${row.code}  entitlement=${row.entitlement}  serviceYears>=${row.serviceYears}  ` +
-          `employmentDate=${toDateOnlyKey(row.proposed)}  (anchor was ${
-            row.currentAnchor ? toDateOnlyKey(row.currentAnchor) : '1 January'
+          `employmentDate=${toDateOnlyKey(row.proposed)}  (service counted from ${
+            row.currentAnchor ? toDateOnlyKey(row.currentAnchor) : 'nothing'
           })`,
       );
     }

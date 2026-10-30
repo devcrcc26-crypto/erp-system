@@ -257,9 +257,7 @@ function RenewalLeavePreviewCard({
     const newYearStart = formatProjectDate(preview.newYear.start);
     const intro = preview.alreadyOpen
       ? t(`${k}.alreadyOpen`, { date: newYearStart })
-      : preview.opensLeaveYear
-        ? t(`${k}.opensOnStart`)
-        : t(`${k}.opensOnAnniversary`, { date: newYearStart });
+      : t(`${k}.startsLeaveYear`, { date: newYearStart });
     body = (
       <div className="flex flex-col gap-3">
         <p className="m-0 text-xs" style={{ color: tokens.colorTextSecondary }}>
@@ -299,9 +297,6 @@ function RenewalLeavePreviewCard({
             emphasize
           />
         </div>
-        {preview.carryOverSkippedHrManaged ? (
-          <Alert type="warning" showIcon title={t(`${k}.hrManaged`)} />
-        ) : null}
         {!preview.alreadyOpen ? (
           <p className="m-0 text-xs" style={{ color: tokens.colorTextSecondary }}>
             {t(`${k}.asOfToday`)}

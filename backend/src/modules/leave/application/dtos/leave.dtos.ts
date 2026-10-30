@@ -201,7 +201,7 @@ export class ListLeaveRequestsDto {
 export class LeaveBalanceQueryDto {
   @ApiPropertyOptional({
     description:
-      'Leave year label (employment anniversary year). Defaults to the employee\'s current leave year.',
+      'Leave year label (contract leave year). Defaults to the employee\'s current leave year.',
   })
   @IsOptional()
   @Type(() => Number)
@@ -372,7 +372,7 @@ export class LeaveBalanceSnapshotDto {
 
   @ApiPropertyOptional({
     description:
-      'Leave year label (employment anniversary year). Defaults to the current leave year.',
+      'Leave year label (contract leave year). Defaults to the current leave year.',
   })
   @IsOptional()
   @Type(() => Number)

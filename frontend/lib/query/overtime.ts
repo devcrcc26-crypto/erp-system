@@ -317,7 +317,7 @@ export function useDeleteOvertimeSheet() {
       apiDelete<{ message: string }>(`${OVERTIME_PATH}/${sheetId}`),
     onSuccess: () => {
       invalidateSheetLists(queryClient);
-      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: APPROVALS_QUERY_ROOT });
     },
   });
 }

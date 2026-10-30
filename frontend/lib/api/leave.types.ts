@@ -121,7 +121,7 @@ export interface LeaveBalance {
   remaining: number;
 }
 
-/** Employment-anniversary leave year option for the profile year dropdown. */
+/** Contract leave year option for the profile year dropdown. */
 export interface LeaveYearOption {
   label: number;
   start: string;
@@ -196,7 +196,7 @@ export type LeaveBalanceEntryKind =
   | 'USED'
   | 'EXPIRED';
 
-/** Leave year = employment anniversary year; `label` = year it starts in. */
+/** Leave year = contract year (contract start + anniversaries); `label` = year it starts in. */
 export interface LeaveYearView {
   label: number;
   start: string;

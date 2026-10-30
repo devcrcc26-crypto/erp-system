@@ -157,9 +157,7 @@ export interface RenewalLeaveYear {
 export interface RenewalLeavePreview {
   isRenewal: boolean;
   excluded: boolean;
-  opensLeaveYear: boolean;
   alreadyOpen: boolean;
-  carryOverSkippedHrManaged: boolean;
   currentYear: RenewalLeaveYear;
   currentRemaining: number;
   carryForward: number;

@@ -164,9 +164,9 @@ export class EmployeeContractService {
     ){}
 
     /**
-     * Leave ledger hook: a contract that supersedes another and starts on an
-     * employment anniversary opens a new leave year (idempotent). A failure
-     * here never blocks the contract change.
+     * Leave ledger hook: the contract's start date opens a new leave year
+     * (carry-over from the previous contract + entitlement; idempotent). A
+     * failure here never blocks the contract change.
      */
     private async syncLeaveLedger(
         contractId: string,

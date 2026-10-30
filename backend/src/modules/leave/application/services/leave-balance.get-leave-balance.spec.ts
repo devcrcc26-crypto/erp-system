@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { LeaveType } from '@prisma/client';
 import { LeaveBalanceService } from './leave-balance.service';
 import {
+  buildLeaveCalendar,
   formatLeaveYearRange,
   leaveYearFor,
   toDateOnlyKey,
@@ -18,6 +19,8 @@ describe('LeaveBalanceService.getLeaveBalance + assert', () => {
 
   function buildService(remainingByYear: Record<number, number>): LeaveBalanceService {
     const leaveLedger = {
+      // No contracts: leave years fall back to the employment anniversary.
+      leaveCalendar: jest.fn(async () => buildLeaveCalendar([], employment)),
       ensureLeaveYear: jest.fn(async () => undefined),
       currentYearLabel: jest.fn(async () => 2026),
       yearLabelForDate: jest.fn(async (_e: string, _c: string, date: Date) =>

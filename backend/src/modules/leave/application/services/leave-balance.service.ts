@@ -13,6 +13,7 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   formatLeaveYearRange,
+  leaveCalendarOrigin,
   leaveYearByLabel,
   leaveYearFor,
   roundDays,
@@ -20,6 +21,7 @@ import {
   toDateOnlyKey,
   toDateOnlyUtc,
   type LeaveYear,
+  type LeaveYearAnchor,
 } from '../../../leave-policy/application/utils/leave-year.util';
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { ListLeaveBalancesDto } from '../dtos/leave.dtos';
@@ -38,7 +40,7 @@ export interface LeaveYearCharge {
 }
 
 /**
- * Leave balance rows per employee / leave year (employment anniversary) /
+ * Leave balance rows per employee / leave year (contract start + anniversaries) /
  * leave type. Entitled, brought-forward and used are read from the
  * LeaveBalanceEntry ledger via LeaveLedgerService.getLeaveBalance; pending
  * days live on leave_balance.
@@ -171,7 +173,6 @@ export class LeaveBalanceService {
           email: true,
           chineseName: true,
           gender: true,
-          employmentDate: true,
         },
       }),
       this.prisma.user.count({ where: userWhere }),
@@ -187,7 +188,7 @@ export class LeaveBalanceService {
     for (const employee of employees) {
       const resolved =
         query.year ??
-        leaveYearFor(employee.employmentDate, new Date()).label;
+        (await this.leaveLedger.currentYearLabel(employee.id, companyId));
       yearByEmployee.set(employee.id, resolved);
       await this.ensureBalance(employee.id, resolved, companyId);
     }
@@ -252,11 +253,8 @@ export class LeaveBalanceService {
 
     const label =
       year ?? (await this.leaveLedger.currentYearLabel(employeeId, companyId));
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, label);
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
+    const leaveYear = leaveYearByLabel(calendar, label);
     // Only own-balance buckets (ANNUAL / SICK / MATERNITY). Iterating every
     // LeaveType would map STUDY/EMERGENCY/… onto ANNUAL and duplicate keys.
     const rows = await Promise.all(
@@ -286,15 +284,12 @@ export class LeaveBalanceService {
     current: { label: number; start: string; end: string };
     years: Array<{ label: number; start: string; end: string }>;
   }> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const anchor = employee?.employmentDate ?? null;
+    const anchor = await this.leaveLedger.leaveCalendar(employeeId, companyId);
     const current = leaveYearFor(anchor, new Date());
     const labels = new Set<number>([current.label]);
-    if (anchor) {
-      const first = leaveYearFor(anchor, anchor).label;
+    const origin = leaveCalendarOrigin(anchor);
+    if (origin) {
+      const first = leaveYearFor(anchor, origin).label;
       for (let label = first; label <= current.label + 1; label += 1) {
         labels.add(label);
       }
@@ -335,10 +330,7 @@ export class LeaveBalanceService {
     employeeId: string,
     companyId: string,
   ): Promise<void> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
     const open = await this.prisma.leaveRequest.findMany({
       where: {
         companyId,
@@ -368,7 +360,7 @@ export class LeaveBalanceService {
         employeeId,
         companyId,
         this.periodDaysAsBreakdown(
-          employee?.employmentDate ?? null,
+          calendar,
           leave.periods.map((period) => ({
             startDate: period.startDate,
             endDate: period.endDate,
@@ -468,11 +460,8 @@ export class LeaveBalanceService {
       data: { [field]: new Prisma.Decimal(next) },
     });
 
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
+    const leaveYear = leaveYearByLabel(calendar, year);
     return this.getLeaveBalance(
       employeeId,
       companyId,
@@ -513,15 +502,12 @@ export class LeaveBalanceService {
     fallbackStart?: Date,
     fallbackDays?: number,
   ): Promise<void> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
     const charges = await this.chargeDaysByLeaveYear(
       employeeId,
       companyId,
       this.periodDaysAsBreakdown(
-        employee?.employmentDate ?? null,
+        calendar,
         periods,
         fallbackStart,
         fallbackDays,
@@ -544,7 +530,7 @@ export class LeaveBalanceService {
    * the original schedule breakdown is no longer available.
    */
   private periodDaysAsBreakdown(
-    anchor: Date | null,
+    anchor: LeaveYearAnchor,
     periods: ReadonlyArray<{ startDate: Date; endDate: Date; days: number }>,
     fallbackStart?: Date,
     fallbackDays?: number,
@@ -607,11 +593,7 @@ export class LeaveBalanceService {
     companyId: string,
     breakdown: ReadonlyArray<{ date: Date; weight: number }>,
   ): Promise<LeaveYearCharge[]> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const anchor = employee?.employmentDate ?? null;
+    const anchor = await this.leaveLedger.leaveCalendar(employeeId, companyId);
     const byLabel = new Map<number, LeaveYearCharge>();
     for (const day of breakdown) {
       if (!(day.weight > 0)) {
@@ -638,11 +620,8 @@ export class LeaveBalanceService {
     days: number,
     companyId: string,
   ): Promise<void> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
+    const leaveYear = leaveYearByLabel(calendar, year);
     await this.assertSufficientBalanceForYear(
       employeeId,
       companyId,
@@ -736,11 +715,8 @@ export class LeaveBalanceService {
       actorUserId,
     });
 
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: { employmentDate: true },
-    });
-    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    const calendar = await this.leaveLedger.leaveCalendar(employeeId, companyId);
+    const leaveYear = leaveYearByLabel(calendar, year);
     const balance = await this.getLeaveBalance(
       employeeId,
       companyId,

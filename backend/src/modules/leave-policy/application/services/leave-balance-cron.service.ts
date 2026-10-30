@@ -2,19 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
-import {
-  isEmploymentAnniversary,
-  toDateOnlyUtc,
-} from '../utils/leave-year.util';
+import { toDateOnlyUtc } from '../utils/leave-year.util';
 import { LeaveLedgerService } from './leave-ledger.service';
 import { LeavePolicyService } from './leave-policy.service';
 
 /**
  * Leave balance refresh (ledger):
- * - daily at 06:00: employees whose employment anniversary is today open a new
- *   leave year (entitlement for their service years + annual carry-over /
- *   expiry). Idempotent per leave year, so a renewal contract on the same day
- *   never grants twice.
+ * - daily at 06:00: employees whose leave year starts today - a contract
+ *   start or contract anniversary (employment anniversary without a
+ *   contract) - open it (entitlement for their service years + annual
+ *   carry-over / expiry). Idempotent per leave year, so a contract activated
+ *   the same day never grants twice.
  * - 1 January safety net for employees with no employment date or contract
  */
 @Injectable()
@@ -28,7 +26,8 @@ export class LeaveBalanceCronService {
   ) {}
 
   /**
-   * Opens the new leave year on each employee's employment anniversary.
+   * Opens the new leave year for each employee whose contract starts or has
+   * an anniversary today.
    */
   @Cron('0 6 * * *')
   async refreshAnniversaryBalances(): Promise<void> {
@@ -38,24 +37,25 @@ export class LeaveBalanceCronService {
       where: hrProcessEmployeeWhere({
         isActive: true,
         deletedAt: null,
-        employmentDate: { not: null },
+        OR: [
+          { employmentDate: { not: null } },
+          { employeeContractEmployee: { some: { deletedAt: null } } },
+        ],
       }),
-      select: { id: true, companyId: true, employmentDate: true },
+      select: { id: true, companyId: true },
     });
 
     let refreshed = 0;
     for (const employee of employees) {
-      if (!isEmploymentAnniversary(employee.employmentDate, today)) {
-        continue;
-      }
       try {
-        await this.leaveLedger.openLeaveYearForDate(
+        const opened = await this.leaveLedger.openLeaveYearStartingOn(
           employee.id,
           employee.companyId,
           today,
-          'Leave year opened (employment anniversary)',
         );
-        refreshed += 1;
+        if (opened) {
+          refreshed += 1;
+        }
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Unknown error';

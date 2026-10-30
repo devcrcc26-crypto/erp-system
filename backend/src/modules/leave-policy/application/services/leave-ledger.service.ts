@@ -18,9 +18,10 @@ import { isExcludedFromHrProcesses } from '../../../../shared/prisma/hr-process.
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import {
+  buildLeaveCalendar,
   dateOnlyKey,
   fullServiceYears,
-  isEmploymentAnniversary,
+  isLeaveYearStart,
   leaveYearByLabel,
   leaveYearFor,
   planCarryOver,
@@ -28,6 +29,7 @@ import {
   splitRangeByLeaveYears,
   toDateOnlyKey,
   toDateOnlyUtc,
+  type LeaveCalendar,
   type LeaveYear,
 } from '../utils/leave-year.util';
 import {
@@ -53,8 +55,10 @@ type Db = PrismaClient | Prisma.TransactionClient;
 interface LedgerEmployee {
   id: string;
   companyId: string;
-  /** Leave-year anchor: employmentDate, else first contract start, else none (calendar). */
-  anchor: Date | null;
+  /** Leave years: contract starts and their anniversaries (see leave-year.util). */
+  anchor: LeaveCalendar;
+  /** Service years count from here: employmentDate, else first contract start. */
+  serviceStart: Date | null;
   excluded: boolean;
   gender: Gender | null;
   policyId: string | null;
@@ -118,15 +122,8 @@ export interface RenewalLeavePreview {
   isRenewal: boolean;
   /** Employee is excluded from HR processes: no leave balance is kept. */
   excluded: boolean;
-  /** Start date is the employment anniversary, so the renewal opens `newYear`. */
-  opensLeaveYear: boolean;
-  /** `newYear` already has its entitlement (anniversary job ran); figures are actual. */
+  /** `newYear` already has its entitlement (contract saved before); figures are actual. */
   alreadyOpen: boolean;
-  /**
-   * Previous year holds an HR-entered balance (go-live import / opening
-   * balance), so the ledger does not carry over or expire it automatically.
-   */
-  carryOverSkippedHrManaged: boolean;
   /** Leave year being closed (the one before `newYear`). */
   currentYear: LeaveYearView;
   /** Remaining days in `currentYear` today (entitled + brought forward − used − pending). */
@@ -134,7 +131,7 @@ export interface RenewalLeavePreview {
   carryForward: number;
   /** Unused days beyond the policy carry-over cap. */
   expired: number;
-  /** Leave year opened by the renewal, or by the next anniversary otherwise. */
+  /** Leave year the new contract opens on its start date. */
   newYear: LeaveYearView;
   /** Full service years at the start of `newYear`. */
   serviceYears: number;
@@ -267,13 +264,18 @@ export class LeaveLedgerService {
   }
 
   /**
-   * Contract hook: a contract created/activated that supersedes another and
-   * starts on an employment anniversary opens a new leave year (renewal).
-   * A mid-year change grants nothing. Idempotent per leave year.
+   * Contract hook: the contract's start date opens a new leave year - the
+   * previous leave year (end of the prior contract) carries over and this
+   * year's entitlement is granted. Later contract anniversaries are opened by
+   * the daily job. A start in the future is opened on the day by that job; a
+   * back-dated start whose first leave year is already over is left to the
+   * HR opening balance unless `reopen` (recompute of a year it opened before).
+   * Idempotent per leave year.
    */
   async onContractActivated(
     contractId: string,
     actorUserId: string | null,
+    options: { reopen?: boolean } = {},
   ): Promise<{ renewal: boolean; leaveYear: LeaveYearView | null }> {
     const contract = await this.prisma.employeeContract.findFirst({
       where: activeOnly({ id: contractId }),
@@ -295,29 +297,71 @@ export class LeaveLedgerService {
         startDate: { lt: contract.startDate },
       }),
     });
-    if (supersedes === 0) {
-      return { renewal: false, leaveYear: null };
-    }
+    const renewal = supersedes > 0;
 
     const employee = await this.loadEmployee(
       contract.employeeId,
       contract.companyId,
     );
-    if (
-      employee.excluded ||
-      !isEmploymentAnniversary(employee.anchor, contract.startDate)
-    ) {
-      return { renewal: false, leaveYear: null };
+    const start = toDateOnlyUtc(contract.startDate);
+    const today = toDateOnlyUtc(new Date());
+    if (employee.excluded || start.getTime() > today.getTime()) {
+      return { renewal, leaveYear: null };
+    }
+    const year = leaveYearFor(employee.anchor, start);
+    if (!options.reopen && year.end.getTime() < today.getTime()) {
+      return { renewal, leaveYear: null };
     }
 
-    const year = leaveYearFor(employee.anchor, contract.startDate);
     await this.openLeaveYear(employee, year, {
       leaveTypes: POLICY_BALANCE_LEAVE_TYPES,
       sourceContractId: contract.id,
       actorUserId,
-      reason: 'Contract renewal on employment anniversary',
+      reason: renewal ? 'Contract renewal' : 'Contract start',
     });
-    return { renewal: true, leaveYear: toLeaveYearView(year) };
+    return { renewal, leaveYear: toLeaveYearView(year) };
+  }
+
+  /**
+   * Daily job: opens the leave year that starts on `date` (contract start or
+   * contract anniversary; employment anniversary when there is no contract).
+   * False when no leave year starts that day. Idempotent per leave year.
+   */
+  async openLeaveYearStartingOn(
+    employeeId: string,
+    companyId: string,
+    date: Date,
+  ): Promise<boolean> {
+    const employee = await this.loadEmployee(employeeId, companyId);
+    if (employee.excluded || !isLeaveYearStart(employee.anchor, date)) {
+      return false;
+    }
+    await this.openLeaveYear(employee, leaveYearFor(employee.anchor, date), {
+      leaveTypes: POLICY_BALANCE_LEAVE_TYPES,
+      sourceContractId: null,
+      actorUserId: null,
+      reason:
+        employee.anchor.contractStarts.length > 0
+          ? 'Leave year opened (contract anniversary)'
+          : 'Leave year opened (employment anniversary)',
+    });
+    return true;
+  }
+
+  /** The employee's contract-based leave calendar (for leave-year lookups). */
+  async leaveCalendar(
+    employeeId: string,
+    companyId: string,
+  ): Promise<LeaveCalendar> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    return this.loadLeaveCalendar(
+      employeeId,
+      companyId,
+      user?.employmentDate ?? null,
+    );
   }
 
   /**
@@ -331,25 +375,18 @@ export class LeaveLedgerService {
   ): Promise<RenewalLeavePreview> {
     const leaveType = LeaveType.ANNUAL;
     const employee = await this.loadEmployee(employeeId, companyId);
-    const earlierContracts = await this.prisma.employeeContract.count({
-      where: activeOnly({
-        companyId,
-        employeeId: employee.id,
-        startDate: { lt: startDate },
-      }),
-    });
-    const isRenewal = earlierContracts > 0;
-    const opensLeaveYear =
-      isRenewal &&
-      !employee.excluded &&
-      isEmploymentAnniversary(employee.anchor, startDate);
-
-    const containing = leaveYearFor(employee.anchor, startDate);
-    const newYear = opensLeaveYear
-      ? containing
-      : leaveYearByLabel(employee.anchor, containing.label + 1);
-    const previous = leaveYearByLabel(employee.anchor, newYear.label - 1);
-    const serviceYears = fullServiceYears(employee.anchor, newYear.start);
+    const start = toDateOnlyUtc(startDate);
+    const isRenewal = employee.anchor.contractStarts.some(
+      (existing) => existing.getTime() < start.getTime(),
+    );
+    // Calendar as it will be once the new contract exists.
+    const calendar = buildLeaveCalendar(
+      [...employee.anchor.contractStarts, start],
+      employee.anchor.fallback,
+    );
+    const newYear = leaveYearFor(calendar, start);
+    const previous = leaveYearByLabel(calendar, newYear.label - 1);
+    const serviceYears = fullServiceYears(employee.serviceStart, newYear.start);
 
     const pendingRow = await this.prisma.leaveBalance.findUnique({
       where: {
@@ -370,7 +407,6 @@ export class LeaveLedgerService {
     const base = {
       isRenewal,
       excluded: employee.excluded,
-      opensLeaveYear,
       currentYear: toLeaveYearView(previous),
       currentRemaining,
       newYear: toLeaveYearView(newYear),
@@ -380,7 +416,6 @@ export class LeaveLedgerService {
       return {
         ...base,
         alreadyOpen: false,
-        carryOverSkippedHrManaged: false,
         carryForward: 0,
         expired: 0,
         newEntitlement: 0,
@@ -414,7 +449,6 @@ export class LeaveLedgerService {
       return {
         ...base,
         alreadyOpen,
-        carryOverSkippedHrManaged: false,
         carryForward,
         expired: 0,
         newEntitlement,
@@ -422,16 +456,15 @@ export class LeaveLedgerService {
       };
     }
 
-    const hrManaged = await this.isHrManagedYear(employee, leaveType, previous);
     const cap = employee.rules.get(leaveType)?.maxCarryForwardDays;
-    const plan = hrManaged
-      ? { carriedIn: 0, expired: 0 }
-      : planCarryOver(currentRemaining, cap != null ? Number(cap) : null);
+    const plan = planCarryOver(
+      currentRemaining,
+      cap != null ? Number(cap) : null,
+    );
     const newEntitlement = this.entitlementFor(employee, leaveType, newYear);
     return {
       ...base,
       alreadyOpen,
-      carryOverSkippedHrManaged: hrManaged,
       carryForward: plan.carriedIn,
       expired: plan.expired,
       newEntitlement,
@@ -455,6 +488,7 @@ export class LeaveLedgerService {
         employeeId: true,
         leaveYearStart: true,
         leaveType: true,
+        kind: true,
       },
     });
     if (entries.length > 0) {
@@ -462,7 +496,11 @@ export class LeaveLedgerService {
         where: { sourceContractId: contractId },
       });
     }
-    await this.onContractActivated(contractId, actorUserId);
+    await this.onContractActivated(contractId, actorUserId, {
+      reopen: entries.some(
+        (entry) => entry.kind === LeaveBalanceEntryKind.ENTITLEMENT,
+      ),
+    });
 
     const touched = new Map<string, { companyId: string; employeeId: string; start: Date }>();
     for (const entry of entries) {
@@ -555,7 +593,7 @@ export class LeaveLedgerService {
         days: delta,
         reason:
           current === 0
-            ? `Entitlement (${fullServiceYears(employee.anchor, year.start)} service year(s))`
+            ? `Entitlement (${fullServiceYears(employee.serviceStart, year.start)} service year(s))`
             : `Leave policy changed: entitlement ${current} → ${target}`,
         dedupeKey: `ENTITLEMENT:${employee.id}:${leaveType}:${dateOnlyKey(year.start)}:policy:${employee.policyId ?? 'none'}:${target}`,
         actorUserId,
@@ -605,7 +643,7 @@ export class LeaveLedgerService {
 
   /**
    * Approved leave → USED (−days) per leave year touched by the request
-   * periods (split on employment anniversary).
+   * periods (split at leave-year boundaries).
    */
   async recordLeaveUsed(leaveRequestId: string): Promise<void> {
     const leave = await this.prisma.leaveRequest.findFirst({
@@ -703,7 +741,7 @@ export class LeaveLedgerService {
    * split by calendar-day share of the period.
    */
   private allocateChargesByYear(
-    anchor: Date | null,
+    anchor: LeaveCalendar,
     leave: {
       startDate: Date;
       days: Prisma.Decimal | number | null;
@@ -1374,7 +1412,7 @@ export class LeaveLedgerService {
       return;
     }
     const startKey = dateOnlyKey(year.start);
-    const serviceYears = fullServiceYears(employee.anchor, year.start);
+    const serviceYears = fullServiceYears(employee.serviceStart, year.start);
 
     for (const leaveType of options.leaveTypes) {
       const hasEntitlement =
@@ -1436,13 +1474,6 @@ export class LeaveLedgerService {
       select: { id: true },
     });
     if (already || alreadyExpired) {
-      return;
-    }
-
-    if (await this.isHrManagedYear(employee, leaveType, previous)) {
-      this.logger.log(
-        `Skipping auto close of leave year ${prevKey} for ${employee.id}/${leaveType}: HR-managed balance`,
-      );
       return;
     }
 
@@ -1516,29 +1547,6 @@ export class LeaveLedgerService {
     await this.syncCache(employee, previous, [leaveType]);
   }
 
-  /** HR go-live / snapshot owns this leave year - do not auto carry/expire. */
-  private async isHrManagedYear(
-    employee: LedgerEmployee,
-    leaveType: LeaveType,
-    year: LeaveYear,
-  ): Promise<boolean> {
-    const count = await this.prisma.leaveBalanceEntry.count({
-      where: {
-        employeeId: employee.id,
-        leaveType,
-        leaveYearStart: year.start,
-        kind: {
-          in: [
-            LeaveBalanceEntryKind.OPENING_BALANCE,
-            LeaveBalanceEntryKind.ADJUSTMENT,
-          ],
-        },
-        createdById: { not: null },
-      },
-    });
-    return count > 0;
-  }
-
   private entitlementFor(
     employee: LedgerEmployee,
     leaveType: LeaveType,
@@ -1553,7 +1561,7 @@ export class LeaveLedgerService {
     }
     return entitlementFromPolicyRule(
       rule,
-      fullServiceYears(employee.anchor, year.start),
+      fullServiceYears(employee.serviceStart, year.start),
     );
   }
 
@@ -1796,6 +1804,22 @@ export class LeaveLedgerService {
     }
   }
 
+  private async loadLeaveCalendar(
+    employeeId: string,
+    companyId: string,
+    employmentDate: Date | null,
+  ): Promise<LeaveCalendar> {
+    const contracts = await this.prisma.employeeContract.findMany({
+      where: activeOnly({ companyId, employeeId }),
+      orderBy: { startDate: 'asc' },
+      select: { startDate: true },
+    });
+    return buildLeaveCalendar(
+      contracts.map((contract) => contract.startDate),
+      employmentDate,
+    );
+  }
+
   async loadEmployee(employeeId: string, companyId: string): Promise<LedgerEmployee> {
     const user = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
@@ -1815,19 +1839,17 @@ export class LeaveLedgerService {
     if (!user) {
       throw new NotFoundException('Employee not found in this company');
     }
-    let anchor = user.employmentDate;
-    if (!anchor) {
-      const firstContract = await this.prisma.employeeContract.findFirst({
-        where: activeOnly({ companyId, employeeId }),
-        orderBy: { startDate: 'asc' },
-        select: { startDate: true },
-      });
-      anchor = firstContract?.startDate ?? null;
-    }
+    const anchor = await this.loadLeaveCalendar(
+      employeeId,
+      companyId,
+      user.employmentDate,
+    );
+    const serviceStart = user.employmentDate ?? anchor.contractStarts[0] ?? null;
     return {
       id: user.id,
       companyId: user.companyId,
-      anchor: anchor ? toDateOnlyUtc(anchor) : null,
+      anchor,
+      serviceStart: serviceStart ? toDateOnlyUtc(serviceStart) : null,
       excluded: isExcludedFromHrProcesses(user),
       gender: user.gender,
       policyId: user.leavePolicy ? user.leavePolicyId : null,

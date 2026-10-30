@@ -101,10 +101,9 @@ Overtime hour buckets (`regularHours`, `nightHours`, `weekendHours`, `holidayHou
 Priority, first match wins:
 
 1. **Holiday** - `PublicHoliday` is active and `appliesToNationality` matches the employee (`ALL` for everyone; `ETHIOPIAN` / `CHINESE` only for that nationality; `nationality: null` only gets `ALL`)
-2. **Weekend** - that weekday has `WorkScheduleDay.isWorkingDay = false`
-3. **Half-day overflow** - `isHalfDay` and the block is outside morning hours (e.g. after 12:30 on CRCC Standard Saturday) → counted as **weekend**
-4. **Night** - 22:00–06:00 (hardcoded; not schedule-dependent)
-5. **Regular** - everything else
+2. **Weekend** - that weekday has `WorkScheduleDay.isWorkingDay = false`, **or** `isHalfDay` (e.g. CRCC Standard Saturday — the entire day is Weekend OT, including morning)
+3. **Night** - 22:00–06:00 on a full working day (hardcoded; not schedule-dependent)
+4. **Regular** - everything else on a full working day
 
 Interactive save **ignores** client `isHoliday`. The calendar sets `OvertimeEntry.isHoliday`. The column is kept for historical rows; those rows are not retroactively reclassified.
 

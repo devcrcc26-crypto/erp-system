@@ -176,7 +176,7 @@ export class LeaveController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Leave-year periods for the year dropdown (employment anniversary ranges)',
+      'Leave-year periods for the year dropdown (contract leave-year ranges)',
   })
   async listLeaveYears(
     @CurrentUser() user: AuthenticatedUser,
@@ -249,7 +249,7 @@ export class LeaveController {
         parseDateOnlyUtc(query.forDate),
       );
     }
-    // No year / forDate → the employee's current leave year (employment anniversary).
+    // No year / forDate → the employee's current leave year (contract leave year).
     return this.leaveBalanceService.getBalance(employeeId, year, companyId);
   }
 

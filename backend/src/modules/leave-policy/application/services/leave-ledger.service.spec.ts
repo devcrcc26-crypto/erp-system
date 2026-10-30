@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { LeaveType, Prisma } from '@prisma/client';
 import { LeaveLedgerService } from './leave-ledger.service';
 import {
@@ -77,6 +77,10 @@ function createFakePrisma(seed: {
       },
       count: async ({ where }: { where: Row }) =>
         contracts.filter((c) => matches(c, where) && c.deletedAt == null).length,
+      findMany: async ({ where }: { where: Row }) =>
+        contracts
+          .filter((c) => matches(c, where) && c.deletedAt == null)
+          .sort((a, b) => (a.startDate as Date).getTime() - (b.startDate as Date).getTime()),
     },
     leaveRequest: {
       findFirst: async ({ where }: { where: Row }) => {
@@ -229,38 +233,94 @@ describe('leave year (employment anniversary)', () => {
   });
 });
 
+/** Runs `fn` with "today" set to `key` (activation depends on today's date). */
+async function on<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  jest.setSystemTime(d(key));
+  return fn();
+}
+
+const NO_CARRY_CAP_POLICY = {
+  id: 'policy-2',
+  rules: [{ ...ANNUAL_POLICY.rules[0]!, maxCarryForwardDays: null }],
+};
+
 describe('LeaveLedgerService - contract hook', () => {
-  it('renewal on the anniversary grants entitlement once (re-saving never grants twice)', async () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+    jest.setSystemTime(d('2026-10-30'));
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('a renewal opens a leave year on its start date, once (re-saving never grants twice)', async () => {
     const t = build({
       users: [employee()],
       contracts: [contract('k1', '2024-08-01'), contract('k2', '2025-08-01')],
     });
-    const first = await t.service.onContractActivated('k2', 'hr');
+    const first = await on('2025-08-01', () => t.service.onContractActivated('k2', 'hr'));
     await t.service.onContractActivated('k2', 'hr');
     await t.service.onContractActivated('k2', 'hr');
 
     expect(first.renewal).toBe(true);
+    expect(first.leaveYear?.start).toBe('2025-08-01');
     const grants = t.annual('2025-08-01').filter((e) => e.kind === 'ENTITLEMENT');
     expect(grants).toHaveLength(1);
     expect(grants[0]!.sourceContractId).toBe('k2');
   });
 
-  it('a mid-year contract change grants nothing and keeps the leave year', async () => {
+  it('a mid-year renewal starts a new leave year and carries the previous contract over', async () => {
     const t = build({
       users: [employee()],
       contracts: [contract('k1', '2025-08-01'), contract('k2', '2026-02-15')],
     });
-    const result = await t.service.onContractActivated('k2', 'hr');
-    expect(result).toEqual({ renewal: false, leaveYear: null });
-    expect(t.entries).toHaveLength(0);
+    await on('2025-08-01', () => t.service.onContractActivated('k1', 'hr'));
+    const result = await on('2026-02-15', () => t.service.onContractActivated('k2', 'hr'));
+
+    expect(result.leaveYear).toEqual({ label: 2026, start: '2026-02-15', end: '2027-02-14' });
+    const next = t.annual('2026-02-15');
+    // Service counts from employmentDate 2020-08-01: 5 years → 18 days.
+    expect(t.sum(next.filter((e) => e.kind === 'ENTITLEMENT'))).toBe(18);
+    // k1's year (18 unused) closes: 5 carry (policy cap), 13 expire.
+    expect(t.sum(next.filter((e) => e.kind === 'CARRY_OVER'))).toBe(5);
+    expect(t.sum(t.annual('2025-08-01').filter((e) => e.kind === 'EXPIRED'))).toBe(-13);
   });
 
-  it('the first contract (supersedes nothing) is not a renewal', async () => {
-    const t = build({ users: [employee()], contracts: [contract('k1', '2021-08-01')] });
-    expect((await t.service.onContractActivated('k1', 'hr')).renewal).toBe(false);
+  it('the first contract opens its first leave year', async () => {
+    const t = build({ users: [employee()], contracts: [contract('k1', '2026-03-01')] });
+    const result = await on('2026-03-01', () => t.service.onContractActivated('k1', 'hr'));
+    expect(result.renewal).toBe(false);
+    expect(t.sum(t.annual('2026-03-01').filter((e) => e.kind === 'ENTITLEMENT'))).toBe(18);
   });
 
-  it('service-year step from the policy is applied at the right anniversary', async () => {
+  it('a future start opens nothing until the day; the daily job opens it then', async () => {
+    const t = build({
+      users: [employee()],
+      contracts: [contract('k1', '2025-08-01'), contract('k2', '2026-02-15')],
+    });
+    const early = await on('2026-01-10', () => t.service.onContractActivated('k2', 'hr'));
+    expect(early.leaveYear).toBeNull();
+    expect(t.annual('2026-02-15')).toHaveLength(0);
+
+    expect(await t.service.openLeaveYearStartingOn('e1', COMPANY, d('2026-02-14'))).toBe(false);
+    expect(await t.service.openLeaveYearStartingOn('e1', COMPANY, d('2026-02-15'))).toBe(true);
+    expect(t.annual('2026-02-15').filter((e) => e.kind === 'ENTITLEMENT')).toHaveLength(1);
+  });
+
+  it('contract anniversaries (not employment anniversaries) start each leave year', async () => {
+    // Two-year contract from 2025-03-01; employment anniversary is 1 August.
+    const t = build({ users: [employee()], contracts: [contract('k1', '2025-03-01')] });
+    await on('2025-03-01', () => t.service.onContractActivated('k1', 'hr'));
+
+    expect(await t.service.openLeaveYearStartingOn('e1', COMPANY, d('2025-08-01'))).toBe(false);
+    expect(await t.service.openLeaveYearStartingOn('e1', COMPANY, d('2026-03-01'))).toBe(true);
+    const second = t.annual('2026-03-01');
+    // 5 service years at 2026-03-01 (from 2020-08-01) → 18; first year's 18 unused → 5 carried.
+    expect(t.sum(second.filter((e) => e.kind === 'ENTITLEMENT'))).toBe(18);
+    expect(t.sum(second.filter((e) => e.kind === 'CARRY_OVER'))).toBe(5);
+  });
+
+  it('service-year step from the policy is applied at the right contract year', async () => {
     // 16 base, +1 every 2 service years: 4 yrs → 18, 5 yrs → 18, 6 yrs → 19.
     const t = build({
       users: [employee()],
@@ -271,9 +331,9 @@ describe('LeaveLedgerService - contract hook', () => {
         contract('k6', '2026-08-01'),
       ],
     });
-    await t.service.onContractActivated('k4', 'hr');
-    await t.service.onContractActivated('k5', 'hr');
-    await t.service.onContractActivated('k6', 'hr');
+    await on('2024-08-01', () => t.service.onContractActivated('k4', 'hr'));
+    await on('2025-08-01', () => t.service.onContractActivated('k5', 'hr'));
+    await on('2026-08-01', () => t.service.onContractActivated('k6', 'hr'));
     const grant = (start: string): number =>
       t.sum(t.annual(start).filter((e) => e.kind === 'ENTITLEMENT'));
     expect(grant('2024-08-01')).toBe(18);
@@ -291,13 +351,13 @@ describe('LeaveLedgerService - contract hook', () => {
       ],
     });
     // Previous leave year (2024-08-01): 18 granted, 6 used → 12 unused.
-    await t.service.onContractActivated('k4', 'hr'); // 18 granted
+    await on('2024-08-01', () => t.service.onContractActivated('k4', 'hr'));
     t.entries.push({
       id: 'u1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
       leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
       kind: 'USED', days: -6, dedupeKey: 'USED:x',
     });
-    await t.service.onContractActivated('k5', 'hr');
+    await on('2025-08-01', () => t.service.onContractActivated('k5', 'hr'));
 
     const prev = t.annual('2024-08-01');
     const next = t.annual('2025-08-01');
@@ -308,8 +368,31 @@ describe('LeaveLedgerService - contract hook', () => {
     expect(t.sum(next)).toBe(18 + 5);
   });
 
+  it('an HR-entered (imported) balance carries in full into the next contract', async () => {
+    const t = build({
+      users: [employee({ leavePolicyId: NO_CARRY_CAP_POLICY.id, leavePolicy: NO_CARRY_CAP_POLICY })],
+      contracts: [contract('k4', '2024-08-01'), contract('k5', '2025-08-01')],
+    });
+    t.entries.push({
+      id: 'o1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
+      leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
+      kind: 'OPENING_BALANCE', days: 12.5, dedupeKey: 'OPENING:x', createdById: 'hr',
+    });
+    await on('2025-08-01', () => t.service.onContractActivated('k5', 'hr'));
+
+    const next = t.annual('2025-08-01');
+    expect(t.sum(next.filter((e) => e.kind === 'CARRY_OVER'))).toBe(12.5);
+    expect(t.sum(next)).toBe(12.5 + 18);
+  });
+
+  it('a back-dated contract whose first leave year is over grants nothing', async () => {
+    const t = build({ users: [employee()], contracts: [contract('k1', '2024-01-01')] });
+    const result = await t.service.onContractActivated('k1', 'hr');
+    expect(result.leaveYear).toBeNull();
+    expect(t.entries).toHaveLength(0);
+  });
+
   it('back-dated contract change recomputes only that contract’s entries; adjustments survive', async () => {
-    // Renewal into the current leave year, so recompute's lazy check is a no-op.
     const current = leaveYearFor(d('2020-08-01'), new Date());
     const startKey = current.start.toISOString().slice(0, 10);
     const t = build({
@@ -333,13 +416,25 @@ describe('LeaveLedgerService - contract hook', () => {
     expect(t.audit.create).toHaveBeenCalledTimes(1);
   });
 
+  it('recompute regenerates a past first leave year it had opened', async () => {
+    const t = build({
+      users: [employee()],
+      contracts: [contract('k1', '2024-08-01'), contract('k2', '2025-08-01')],
+    });
+    await on('2025-08-01', () => t.service.onContractActivated('k2', 'hr'));
+    jest.setSystemTime(d('2026-10-30'));
+    await t.service.recomputeContractEntries('k2', 'hr');
+    expect(t.annual('2025-08-01').filter((e) => e.kind === 'ENTITLEMENT')).toHaveLength(1);
+  });
+
   it('excluded (approver-only) users get no entitlement', async () => {
     const t = build({
       users: [employee({ excludedFromHrProcesses: true })],
       contracts: [contract('k1', '2024-08-01'), contract('k2', '2025-08-01')],
     });
-    await t.service.onContractActivated('k2', 'hr');
+    await on('2025-08-01', () => t.service.onContractActivated('k2', 'hr'));
     await t.service.openLeaveYearForDate('e1', COMPANY, d('2025-08-01'), 'cron');
+    expect(await t.service.openLeaveYearStartingOn('e1', COMPANY, d('2026-08-01'))).toBe(false);
     await t.service.ensureLeaveYear('e1', COMPANY, leaveYearFor(d('2020-08-01'), new Date()).label);
     expect(t.entries.filter((e) => e.kind === 'ENTITLEMENT')).toHaveLength(0);
   });
@@ -347,16 +442,17 @@ describe('LeaveLedgerService - contract hook', () => {
 
 describe('LeaveLedgerService - renewal preview', () => {
   /** k4 opened 2024-08-01 with 18 days; 6 used → 12 unused before k5. */
-  async function withUnusedTwelve() {
+  async function withUnusedTwelve(k5Start = '2025-08-01') {
     const t = build({
       users: [employee()],
       contracts: [
         contract('k0', '2020-08-01'),
         contract('k4', '2024-08-01'),
-        contract('k5', '2025-08-01'),
+        contract('k5', k5Start),
       ],
     });
-    await t.service.onContractActivated('k4', 'hr');
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+    await on('2024-08-01', () => t.service.onContractActivated('k4', 'hr'));
     t.entries.push({
       id: 'u1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
       leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
@@ -364,16 +460,17 @@ describe('LeaveLedgerService - renewal preview', () => {
     });
     return t;
   }
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
-  it('anniversary renewal: preview matches what activation then writes', async () => {
+  it('matches what activation then writes', async () => {
     const t = await withUnusedTwelve();
     const entriesBefore = t.entries.length;
     const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
     expect(preview).toMatchObject({
       isRenewal: true,
-      opensLeaveYear: true,
       alreadyOpen: false,
-      carryOverSkippedHrManaged: false,
       currentRemaining: 12,
       carryForward: 5,
       expired: 7,
@@ -384,13 +481,24 @@ describe('LeaveLedgerService - renewal preview', () => {
     expect(preview.newYear.start).toBe('2025-08-01');
     expect(t.entries).toHaveLength(entriesBefore); // preview wrote nothing
 
-    await t.service.onContractActivated('k5', 'hr');
+    await on('2025-08-01', () => t.service.onContractActivated('k5', 'hr'));
     expect(t.sum(t.annual('2025-08-01'))).toBe(preview.projectedOpeningBalance);
+  });
+
+  it('a mid-year renewal previews a leave year starting on the contract start', async () => {
+    const t = await withUnusedTwelve('2025-03-01');
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-03-01'));
+    expect(preview.newYear).toEqual({ label: 2025, start: '2025-03-01', end: '2026-02-28' });
+    expect(preview.currentYear.start).toBe('2024-08-01');
+    expect(preview.serviceYears).toBe(4);
+
+    await on('2025-03-01', () => t.service.onContractActivated('k5', 'hr'));
+    expect(t.sum(t.annual('2025-03-01'))).toBe(preview.projectedOpeningBalance);
   });
 
   it('after the leave year is open, reports the recorded figures', async () => {
     const t = await withUnusedTwelve();
-    await t.service.onContractActivated('k5', 'hr');
+    await on('2025-08-01', () => t.service.onContractActivated('k5', 'hr'));
     const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
     expect(preview).toMatchObject({
       alreadyOpen: true,
@@ -400,49 +508,10 @@ describe('LeaveLedgerService - renewal preview', () => {
     });
   });
 
-  it('mid-year renewal opens nothing; the next anniversary is previewed', async () => {
-    const t = build({
-      users: [employee()],
-      contracts: [contract('k1', '2025-08-01')],
-    });
-    const preview = await t.service.previewRenewal('e1', COMPANY, d('2026-02-15'));
-    expect(preview.isRenewal).toBe(true);
-    expect(preview.opensLeaveYear).toBe(false);
-    expect(preview.newYear.start).toBe('2026-08-01');
-    expect(preview.serviceYears).toBe(6);
-    expect(preview.newEntitlement).toBe(19);
-  });
-
   it('a first contract is not a renewal', async () => {
     const t = build({ users: [employee()], contracts: [] });
     const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
     expect(preview.isRenewal).toBe(false);
-    expect(preview.opensLeaveYear).toBe(false);
-  });
-
-  it('HR-entered previous year: no automatic carry-over, same as activation', async () => {
-    const t = build({
-      users: [employee()],
-      contracts: [contract('k4', '2024-08-01'), contract('k5', '2025-08-01')],
-    });
-    t.entries.push({
-      id: 'o1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
-      leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
-      kind: 'OPENING_BALANCE', days: 12, dedupeKey: 'OPENING:x', createdById: 'hr',
-    });
-    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
-    expect(preview).toMatchObject({
-      carryOverSkippedHrManaged: true,
-      currentRemaining: 12,
-      carryForward: 0,
-      expired: 0,
-      newEntitlement: 18,
-    });
-
-    await t.service.onContractActivated('k5', 'hr');
-    const next = t.annual('2025-08-01');
-    expect(next.filter((e) => e.kind === 'CARRY_OVER')).toHaveLength(0);
-    expect(t.sum(next)).toBe(preview.projectedOpeningBalance);
   });
 });
 
