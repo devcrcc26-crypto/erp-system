@@ -19,6 +19,7 @@ import {
   CreateEmployeeContractDto,
   ListEmployeeContractsDto,
   BonusFromNetDto,
+  RenewalPreviewQueryDto,
   SalaryPreviewDto,
   TerminateEmployeeContractDto,
   UpdateEmployeeContractDto,
@@ -40,7 +41,10 @@ import {
 import type { IStorageService } from "@/shared/storage/storage.interface";
 import { buildPrismaPagination, PaginatedResult, buildPaginatedResult } from "@/shared/utils/pagination.util";
 import { PayrollCalculationService } from "@/modules/payroll/application/services/payroll-calculation.service";
-import { LeaveLedgerService } from "@/modules/leave-policy/application/services/leave-ledger.service";
+import {
+  LeaveLedgerService,
+  type RenewalLeavePreview,
+} from "@/modules/leave-policy/application/services/leave-ledger.service";
 
 type UploadedFile = {
   originalname: string;
@@ -289,6 +293,23 @@ export class EmployeeContractService {
 
         this.logger.log(`Created employee contract ${contractNumber}`);
         return this.getContract(id, companyId, userId);
+    }
+
+    /**
+     * Annual leave effect of a new contract (carry-forward, entitlement) using
+     * the ledger's own renewal rules. Read-only.
+     */
+    async previewRenewal(
+        dto: RenewalPreviewQueryDto,
+        companyId: string,
+        userId: string,
+    ): Promise<RenewalLeavePreview> {
+        await this.assertCanManage(companyId, userId);
+        return this.leaveLedger.previewRenewal(
+            dto.employeeId,
+            companyId,
+            this.parseDateOnly(dto.startDate),
+        );
     }
 
     /**

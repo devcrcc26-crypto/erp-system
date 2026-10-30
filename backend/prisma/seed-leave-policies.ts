@@ -50,8 +50,9 @@ const SAMPLE_POLICIES: SamplePolicy[] = [
         isProgressive: true,
         incrementDays: 1,
         incrementEveryYears: 2,
+        maxDaysCap: 20,
         minimumServiceMonths: 0,
-        maxCarryForwardDays: 8,
+        // No carry-forward cap: the full unused balance moves to the next year.
       },
       {
         leaveType: LeaveType.MATERNITY,

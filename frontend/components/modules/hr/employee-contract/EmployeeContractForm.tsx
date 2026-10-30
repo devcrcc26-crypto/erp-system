@@ -11,6 +11,7 @@ import {
   InputNumber,
   Popover,
   Select,
+  Skeleton,
   Space,
   Spin,
   Tooltip,
@@ -38,6 +39,7 @@ import {
   useAttachEmployeeContractFiles,
   useCreateEmployeeContract,
   useRemoveEmployeeContractAttachment,
+  useRenewalLeavePreview,
   useUpdateEmployeeContract,
 } from '@/lib/query/employee-contract';
 import { useUser } from '@/lib/query/users';
@@ -223,6 +225,96 @@ function PreviewRow({
         {value}
       </span>
     </div>
+  );
+}
+
+/**
+ * Annual leave effect of a renewal (carry-forward + new entitlement), from the
+ * ledger's own rules. Hidden for first contracts; never blocks submit.
+ */
+function RenewalLeavePreviewCard({
+  employeeId,
+  startDate,
+}: {
+  employeeId: string;
+  startDate: string;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const previewQuery = useRenewalLeavePreview(employeeId, startDate);
+  const k = 'pages.hr.employeeContract.renewalPreview';
+  const days = (count: number): string => t(`${k}.days`, { count });
+
+  let body: React.ReactNode;
+  if (previewQuery.isPending) {
+    body = <Skeleton active title={false} paragraph={{ rows: 4 }} />;
+  } else if (previewQuery.isError) {
+    body = <Alert type="warning" showIcon title={t(`${k}.unavailable`)} />;
+  } else {
+    const preview = previewQuery.data;
+    if (!preview.isRenewal || preview.excluded) {
+      return null;
+    }
+    const newYearStart = formatProjectDate(preview.newYear.start);
+    const intro = preview.alreadyOpen
+      ? t(`${k}.alreadyOpen`, { date: newYearStart })
+      : preview.opensLeaveYear
+        ? t(`${k}.opensOnStart`)
+        : t(`${k}.opensOnAnniversary`, { date: newYearStart });
+    body = (
+      <div className="flex flex-col gap-3">
+        <p className="m-0 text-xs" style={{ color: tokens.colorTextSecondary }}>
+          {intro}
+        </p>
+        <div
+          className="flex flex-col gap-2 rounded-xl border border-[#e8ebef] bg-[#f8f9fb] p-4"
+          aria-live="polite"
+        >
+          {!preview.alreadyOpen ? (
+            <PreviewRow
+              label={t(`${k}.currentRemaining`)}
+              value={days(preview.currentRemaining)}
+            />
+          ) : null}
+          <PreviewRow
+            label={t(`${k}.carryForward`)}
+            value={days(preview.carryForward)}
+          />
+          {preview.expired > 0 ? (
+            <PreviewRow
+              label={t(`${k}.expired`)}
+              value={days(preview.expired)}
+            />
+          ) : null}
+          <PreviewRow
+            label={t(`${k}.serviceYears`)}
+            value={t(`${k}.years`, { count: preview.serviceYears })}
+          />
+          <PreviewRow
+            label={t(`${k}.newEntitlement`)}
+            value={days(preview.newEntitlement)}
+          />
+          <PreviewRow
+            label={t(`${k}.openingBalance`, { date: newYearStart })}
+            value={days(preview.projectedOpeningBalance)}
+            emphasize
+          />
+        </div>
+        {preview.carryOverSkippedHrManaged ? (
+          <Alert type="warning" showIcon title={t(`${k}.hrManaged`)} />
+        ) : null}
+        {!preview.alreadyOpen ? (
+          <p className="m-0 text-xs" style={{ color: tokens.colorTextSecondary }}>
+            {t(`${k}.asOfToday`)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <FormLayout variant="pro" dense title={t(`${k}.title`)}>
+      {body}
+    </FormLayout>
   );
 }
 
@@ -1158,6 +1250,15 @@ export default function EmployeeContractForm({
                 </p>
               )}
             </FormLayout>
+
+            {mode === 'create' &&
+            reviewValues.employeeId &&
+            reviewValues.startDate ? (
+              <RenewalLeavePreviewCard
+                employeeId={reviewValues.employeeId}
+                startDate={reviewValues.startDate.format('YYYY-MM-DD')}
+              />
+            ) : null}
           </div>
         ),
       },

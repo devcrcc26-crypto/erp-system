@@ -86,3 +86,23 @@ export function entitlementFromPolicyRule(
 
   return Math.round(days * 10) / 10;
 }
+
+/** Longest service span searched when inverting a policy rule. */
+const MAX_SERVICE_YEARS = 60;
+
+/**
+ * Fewest full service years at which `rule` grants exactly `entitlement`
+ * days (inverse of {@link entitlementFromPolicyRule}). Used to estimate tenure
+ * from imported entitlements. Null when no service length produces it.
+ */
+export function inferMinServiceYears(
+  rule: PolicyRuleRow,
+  entitlement: number,
+): number | null {
+  for (let years = 0; years <= MAX_SERVICE_YEARS; years += 1) {
+    if (entitlementFromPolicyRule(rule, years) === entitlement) {
+      return years;
+    }
+  }
+  return null;
+}

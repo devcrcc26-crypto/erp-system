@@ -2329,6 +2329,23 @@
         "exportSuccess": "Employee contracts Excel downloaded.",
         "exportError": "Could not generate the Excel file. Please try again.",
         "exportSheetName": "Contracts",
+        "renewalPreview": {
+          "title": "Annual leave on renewal",
+          "currentRemaining": "Remaining in current leave year (today)",
+          "carryForward": "Carried forward",
+          "expired": "Expires (above carry-over cap)",
+          "serviceYears": "Service years at new leave year",
+          "newEntitlement": "New annual entitlement",
+          "openingBalance": "Opening balance on {{date}}",
+          "days": "{{count}} days",
+          "years": "{{count}} years",
+          "opensOnStart": "This contract starts on the employment anniversary, so it opens a new leave year.",
+          "opensOnAnniversary": "This contract does not change the leave balance. The next leave year opens on the employment anniversary ({{date}}).",
+          "alreadyOpen": "The leave year starting {{date}} is already open; the figures below are the recorded values.",
+          "hrManaged": "The current leave year holds an HR-entered (imported) balance, so remaining days are not carried forward automatically. Enter the carry-forward on the employee's leave balance.",
+          "asOfToday": "Based on today's balance. Leave taken before then reduces the carry-forward.",
+          "unavailable": "Preview unavailable - the leave balance will be calculated when the contract is created."
+        },
         "stats": {
           "total": "Total",
           "active": "Active",

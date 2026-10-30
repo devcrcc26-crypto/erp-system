@@ -7,6 +7,7 @@ import {
   EmployeeContractListItem,
   ListEmployeeContractsParams,
   MyActiveContract,
+  RenewalLeavePreview,
   SalaryPreviewRequest,
   SalaryPreviewResult,
   TerminateEmployeeContractPayload,
@@ -42,6 +43,8 @@ export const employeeContractKeys = {
   detail: (id: string) => [...employeeContractKeys.details(), id] as const,
   myActive: (contractId?: string) =>
     [...employeeContractKeys.all, "my-active", contractId ?? "active"] as const,
+  renewalPreview: (employeeId: string, startDate: string) =>
+    [...employeeContractKeys.all, "renewal-preview", employeeId, startDate] as const,
 };
 
 function buildListQuery(params: ListEmployeeContractsParams): string {
@@ -180,6 +183,29 @@ export function useMyActiveContract(
       );
     },
     enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Annual leave carry-forward / entitlement for a new contract starting on
+ * `startDate` (YYYY-MM-DD). Read-only.
+ */
+export function useRenewalLeavePreview(
+  employeeId: string | undefined,
+  startDate: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: employeeContractKeys.renewalPreview(
+      employeeId ?? "",
+      startDate ?? "",
+    ),
+    queryFn: () =>
+      apiGet<RenewalLeavePreview>(
+        `${CONTRACT_PATH}/renewal-preview${toQueryString({ employeeId, startDate })}`,
+      ),
+    enabled: enabled && Boolean(employeeId) && Boolean(startDate),
     retry: false,
   });
 }

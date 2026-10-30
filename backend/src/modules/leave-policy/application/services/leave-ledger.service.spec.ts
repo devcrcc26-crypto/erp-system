@@ -345,6 +345,107 @@ describe('LeaveLedgerService - contract hook', () => {
   });
 });
 
+describe('LeaveLedgerService - renewal preview', () => {
+  /** k4 opened 2024-08-01 with 18 days; 6 used → 12 unused before k5. */
+  async function withUnusedTwelve() {
+    const t = build({
+      users: [employee()],
+      contracts: [
+        contract('k0', '2020-08-01'),
+        contract('k4', '2024-08-01'),
+        contract('k5', '2025-08-01'),
+      ],
+    });
+    await t.service.onContractActivated('k4', 'hr');
+    t.entries.push({
+      id: 'u1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
+      leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
+      kind: 'USED', days: -6, dedupeKey: 'USED:x',
+    });
+    return t;
+  }
+
+  it('anniversary renewal: preview matches what activation then writes', async () => {
+    const t = await withUnusedTwelve();
+    const entriesBefore = t.entries.length;
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
+    expect(preview).toMatchObject({
+      isRenewal: true,
+      opensLeaveYear: true,
+      alreadyOpen: false,
+      carryOverSkippedHrManaged: false,
+      currentRemaining: 12,
+      carryForward: 5,
+      expired: 7,
+      serviceYears: 5,
+      newEntitlement: 18,
+      projectedOpeningBalance: 23,
+    });
+    expect(preview.newYear.start).toBe('2025-08-01');
+    expect(t.entries).toHaveLength(entriesBefore); // preview wrote nothing
+
+    await t.service.onContractActivated('k5', 'hr');
+    expect(t.sum(t.annual('2025-08-01'))).toBe(preview.projectedOpeningBalance);
+  });
+
+  it('after the leave year is open, reports the recorded figures', async () => {
+    const t = await withUnusedTwelve();
+    await t.service.onContractActivated('k5', 'hr');
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
+    expect(preview).toMatchObject({
+      alreadyOpen: true,
+      carryForward: 5,
+      newEntitlement: 18,
+      projectedOpeningBalance: 23,
+    });
+  });
+
+  it('mid-year renewal opens nothing; the next anniversary is previewed', async () => {
+    const t = build({
+      users: [employee()],
+      contracts: [contract('k1', '2025-08-01')],
+    });
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2026-02-15'));
+    expect(preview.isRenewal).toBe(true);
+    expect(preview.opensLeaveYear).toBe(false);
+    expect(preview.newYear.start).toBe('2026-08-01');
+    expect(preview.serviceYears).toBe(6);
+    expect(preview.newEntitlement).toBe(19);
+  });
+
+  it('a first contract is not a renewal', async () => {
+    const t = build({ users: [employee()], contracts: [] });
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
+    expect(preview.isRenewal).toBe(false);
+    expect(preview.opensLeaveYear).toBe(false);
+  });
+
+  it('HR-entered previous year: no automatic carry-over, same as activation', async () => {
+    const t = build({
+      users: [employee()],
+      contracts: [contract('k4', '2024-08-01'), contract('k5', '2025-08-01')],
+    });
+    t.entries.push({
+      id: 'o1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,
+      leaveYearStart: d('2024-08-01'), leaveYearEnd: d('2025-07-31'),
+      kind: 'OPENING_BALANCE', days: 12, dedupeKey: 'OPENING:x', createdById: 'hr',
+    });
+    const preview = await t.service.previewRenewal('e1', COMPANY, d('2025-08-01'));
+    expect(preview).toMatchObject({
+      carryOverSkippedHrManaged: true,
+      currentRemaining: 12,
+      carryForward: 0,
+      expired: 0,
+      newEntitlement: 18,
+    });
+
+    await t.service.onContractActivated('k5', 'hr');
+    const next = t.annual('2025-08-01');
+    expect(next.filter((e) => e.kind === 'CARRY_OVER')).toHaveLength(0);
+    expect(t.sum(next)).toBe(preview.projectedOpeningBalance);
+  });
+});
+
 describe('LeaveLedgerService - HR entries and used days', () => {
   it('opening balance + used = expected; the cache matches the ledger', async () => {
     const leave = {

@@ -21,6 +21,7 @@ import {
     CreateEmployeeContractDto,
     ListEmployeeContractsDto,
     BonusFromNetDto,
+    RenewalPreviewQueryDto,
     SalaryPreviewDto,
     TerminateEmployeeContractDto,
     UpdateEmployeeContractDto,
@@ -208,6 +209,28 @@ export class EmployeeContractController {
             companyId,
             user.userId,
             contractId?.trim() || undefined,
+        );
+    }
+
+    @Get('renewal-preview')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'employee-contract', action: 'create' },
+    )
+    @ApiOperation({
+        summary:
+            'Preview annual leave carry-forward and entitlement for a new contract starting on startDate',
+    })
+    async renewalPreview(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Query() query: Record<string, unknown>,
+    ): Promise<unknown> {
+        const dto = await parseDto(RenewalPreviewQueryDto, query);
+        return this.employeeContractService.previewRenewal(
+            dto,
+            companyId,
+            user.userId,
         );
     }
 

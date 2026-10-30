@@ -335,6 +335,17 @@ export class BonusFromNetDto {
   taxableThreshold?: number;
 }
 
+/** Annual leave effect of a new (renewal) contract - read-only preview. */
+export class RenewalPreviewQueryDto {
+  @ApiProperty({ description: 'Employee the new contract is for' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ example: '2026-11-01', description: 'New contract start date' })
+  @IsDateString()
+  startDate!: string;
+}
+
 export class TerminateEmployeeContractDto {
   @ApiPropertyOptional({
     example: '2026-08-17',

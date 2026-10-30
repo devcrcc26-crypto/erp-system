@@ -147,6 +147,29 @@ export interface SalaryPreviewRequest {
   taxableThreshold?: number;
 }
 
+export interface RenewalLeaveYear {
+  label: number;
+  start: string;
+  end: string;
+}
+
+/** Annual leave effect of a new contract (GET /hr/employee-contracts/renewal-preview). */
+export interface RenewalLeavePreview {
+  isRenewal: boolean;
+  excluded: boolean;
+  opensLeaveYear: boolean;
+  alreadyOpen: boolean;
+  carryOverSkippedHrManaged: boolean;
+  currentYear: RenewalLeaveYear;
+  currentRemaining: number;
+  carryForward: number;
+  expired: number;
+  newYear: RenewalLeaveYear;
+  serviceYears: number;
+  newEntitlement: number;
+  projectedOpeningBalance: number;
+}
+
 export interface SalaryPreviewResult {
   basicSalary: number;
   transportationAllowance: number;
