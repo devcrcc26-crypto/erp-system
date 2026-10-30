@@ -10,6 +10,7 @@ import OvertimeEntryForm, {
 import {
   completeOvertimePeriods,
   overtimePeriodsOverlap,
+  parseHhMmToMinutes,
 } from '@/components/modules/hr/overtime/overtime-time-periods';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -22,6 +23,7 @@ import type {
 } from '@/lib/api/overtime.types';
 import {
   useAddOvertimeEntry,
+  useDeleteOvertimeEntry,
   usePreviewOvertimeEntry,
   useSelectableOvertimeWindows,
   useUpdateOvertimeEntry,
@@ -36,6 +38,14 @@ function emptyPeriod(
   taskDescription?: string,
 ): OvertimeEntryFormValues['periods'][number] {
   return { startTime, endTime: undefined, taskDescription };
+}
+
+function sortEntriesByStart(entries: OvertimeEntry[]): OvertimeEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      parseHhMmToMinutes(a.startTime) - parseHhMmToMinutes(b.startTime) ||
+      a.id.localeCompare(b.id),
+  );
 }
 
 function sumPreviews(
@@ -68,6 +78,7 @@ function sumPreviews(
 
 /**
  * Drawer to add or edit an overtime sheet entry without shifting page layout.
+ * Edit mode loads every same-day period and saves them as one day group.
  */
 export default function OvertimeEntryFormDrawer({
   open,
@@ -75,7 +86,7 @@ export default function OvertimeEntryFormDrawer({
   sheetMonth,
   sheetYear,
   employeeId,
-  editingEntry,
+  editingEntries,
   sheetEntries,
   onClose,
 }: {
@@ -84,7 +95,7 @@ export default function OvertimeEntryFormDrawer({
   sheetMonth: number;
   sheetYear: number;
   employeeId: string;
-  editingEntry: OvertimeEntry | null;
+  editingEntries: OvertimeEntry[];
   sheetEntries?: OvertimeEntry[];
   onClose: () => void;
 }): React.ReactNode {
@@ -93,14 +104,25 @@ export default function OvertimeEntryFormDrawer({
   const [form] = Form.useForm<OvertimeEntryFormValues>();
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
+  const deleteMutation = useDeleteOvertimeEntry(sheetId);
   const previewMutation = usePreviewOvertimeEntry();
   const windowsMutation = useSelectableOvertimeWindows();
-  const saving = addMutation.isPending || updateMutation.isPending;
+  const saving =
+    addMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
   const [preview, setPreview] = useState<PreviewOvertimeEntryResult | null>(
     null,
   );
   const [windows, setWindows] =
     useState<SelectableOvertimeWindowsResult | null>(null);
+
+  const isEditing = editingEntries.length > 0;
+  const editingEntryIds = useMemo(
+    () => editingEntries.map((entry) => entry.id),
+    [editingEntries],
+  );
+  const editingEntryIdsKey = editingEntryIds.join(',');
 
   const periodLabel = useMemo(() => {
     const monthName = t(`hr.months.${sheetMonth}`);
@@ -128,16 +150,15 @@ export default function OvertimeEntryFormDrawer({
     if (!open) {
       return;
     }
-    if (editingEntry) {
+    if (isEditing) {
+      const sorted = sortEntriesByStart(editingEntries);
       form.setFieldsValue({
-        date: dayjs(editingEntry.date),
-        periods: [
-          {
-            startTime: editingEntry.startTime,
-            endTime: editingEntry.endTime,
-            taskDescription: editingEntry.taskDescription,
-          },
-        ],
+        date: dayjs(sorted[0]!.date),
+        periods: sorted.map((entry) => ({
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          taskDescription: entry.taskDescription,
+        })),
       });
     } else {
       form.resetFields();
@@ -147,7 +168,7 @@ export default function OvertimeEntryFormDrawer({
       setPreview(null);
       setWindows(null);
     }
-  }, [open, editingEntry, form, sheetMonth, sheetYear]);
+  }, [open, isEditing, editingEntryIdsKey, form, sheetMonth, sheetYear]);
 
   useEffect(() => {
     if (!open || !employeeId || !watchedDate) {
@@ -160,7 +181,7 @@ export default function OvertimeEntryFormDrawer({
           employeeId,
           date: watchedDate.format('YYYY-MM-DD'),
           sheetId,
-          excludeEntryId: editingEntry?.id,
+          excludeEntryIds: isEditing ? editingEntryIds : undefined,
         })
         .then((result) => {
           setWindows(result);
@@ -174,7 +195,7 @@ export default function OvertimeEntryFormDrawer({
               ? 1440
               : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
 
-          if (!editingEntry && periods.length === 1 && !periods[0]?.startTime) {
+          if (!isEditing && periods.length === 1 && !periods[0]?.startTime) {
             form.setFieldsValue({
               periods: [
                 emptyPeriod(preferred, periods[0]?.taskDescription),
@@ -222,7 +243,7 @@ export default function OvertimeEntryFormDrawer({
       window.clearTimeout(handle);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, employeeId, watchedDate, sheetId, editingEntry?.id]);
+  }, [open, employeeId, watchedDate, sheetId, editingEntryIdsKey, isEditing]);
 
   useEffect(() => {
     if (!open || !employeeId || !watchedDate || !watchedPeriods?.length) {
@@ -277,20 +298,70 @@ export default function OvertimeEntryFormDrawer({
     const date = values.date.format('YYYY-MM-DD');
 
     try {
-      if (editingEntry) {
-        const period = periods[0]!;
-        const payload: UpsertOvertimeEntryPayload = {
-          date,
-          startTime: period.startTime,
-          endTime: period.endTime,
-          taskDescription: period.taskDescription,
-        };
-        const result = (await updateMutation.mutateAsync({
-          entryId: editingEntry.id,
-          payload,
-        })) as OvertimeSheetDetail;
+      let restarted = false;
+
+      if (isEditing) {
+        const existing = sortEntriesByStart(editingEntries);
+
+        // Single existing entry: update in place (keeps attachments), then add extras.
+        if (existing.length === 1) {
+          const first = periods[0]!;
+          const result = (await updateMutation.mutateAsync({
+            entryId: existing[0]!.id,
+            payload: {
+              date,
+              startTime: first.startTime,
+              endTime: first.endTime,
+              taskDescription: first.taskDescription,
+            },
+          })) as OvertimeSheetDetail;
+          if (result.restartedApproval) {
+            restarted = true;
+          }
+          for (let i = 1; i < periods.length; i += 1) {
+            const period = periods[i]!;
+            const added = (await addMutation.mutateAsync({
+              date,
+              startTime: period.startTime,
+              endTime: period.endTime,
+              taskDescription: period.taskDescription,
+            })) as OvertimeSheetDetail;
+            if (added.restartedApproval) {
+              restarted = true;
+            }
+          }
+          messageApi.success(
+            restarted
+              ? t('hr.messages.overtimeEntryResubmitted')
+              : t('hr.messages.overtimeEntryUpdated'),
+          );
+          onClose();
+          return;
+        }
+
+        // Multi-period day: replace the whole day to avoid mid-update overlaps.
+        for (const entry of existing) {
+          const result = (await deleteMutation.mutateAsync(
+            entry.id,
+          )) as OvertimeSheetDetail;
+          if (result.restartedApproval) {
+            restarted = true;
+          }
+        }
+        for (const period of periods) {
+          const result = (await addMutation.mutateAsync({
+            date,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            taskDescription: period.taskDescription,
+          })) as OvertimeSheetDetail;
+          if (result.restartedApproval) {
+            restarted = true;
+          }
+        }
+
         messageApi.success(
-          result.restartedApproval
+          restarted
             ? t('hr.messages.overtimeEntryResubmitted')
             : t('hr.messages.overtimeEntryUpdated'),
         );
@@ -298,7 +369,6 @@ export default function OvertimeEntryFormDrawer({
         return;
       }
 
-      let restarted = false;
       for (const period of periods) {
         const result = (await addMutation.mutateAsync({
           date,
@@ -327,7 +397,7 @@ export default function OvertimeEntryFormDrawer({
     }
   }
 
-  const title = editingEntry
+  const title = isEditing
     ? t('hr.form.editEntry')
     : t('hr.buttons.addEntry');
   const leaveBlocked = windows?.blockedReason === 'FULL_DAY_LEAVE';
@@ -383,8 +453,8 @@ export default function OvertimeEntryFormDrawer({
         windowsLoading={windowsMutation.isPending}
         employeeId={employeeId}
         sheetEntries={sheetEntries}
-        excludeEntryId={editingEntry?.id}
-        allowMultiplePeriods={!editingEntry}
+        excludeEntryIds={isEditing ? editingEntryIds : undefined}
+        allowMultiplePeriods
         onFinish={(values) => void handleSubmit(values)}
       />
     </Drawer>

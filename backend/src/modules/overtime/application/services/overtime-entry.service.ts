@@ -75,6 +75,26 @@ export interface SiteDayContext {
   scheduledHoursClaimable: boolean;
 }
 
+/** Merge single + comma-separated exclude ids for occupied-window carving. */
+export function parseExcludeEntryIds(
+  excludeEntryId: string | undefined,
+  excludeEntryIds: string | undefined,
+): string[] {
+  const ids = new Set<string>();
+  if (excludeEntryId?.trim()) {
+    ids.add(excludeEntryId.trim());
+  }
+  if (excludeEntryIds) {
+    for (const part of excludeEntryIds.split(',')) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        ids.add(trimmed);
+      }
+    }
+  }
+  return [...ids];
+}
+
 /**
  * Resolves work-schedule + public-holiday context and classifies overtime hours.
  */
@@ -395,7 +415,7 @@ export class OvertimeEntryService {
       dto.sheetId,
       companyId,
       onDate,
-      dto.excludeEntryId,
+      parseExcludeEntryIds(dto.excludeEntryId, dto.excludeEntryIds),
     );
     if (occupied.length === 0) {
       return base;
@@ -433,7 +453,7 @@ export class OvertimeEntryService {
     sheetId: string,
     companyId: string,
     onDate: Date,
-    excludeEntryId: string | undefined,
+    excludeEntryIds: string[],
   ): Promise<TimeWindowHhMm[]> {
     const sheet = await this.prisma.overtimeSheet.findFirst({
       where: activeOnly({ id: sheetId, companyId }),
@@ -447,7 +467,9 @@ export class OvertimeEntryService {
       where: {
         sheetId,
         date: onDate,
-        ...(excludeEntryId ? { id: { not: excludeEntryId } } : {}),
+        ...(excludeEntryIds.length > 0
+          ? { id: { notIn: excludeEntryIds } }
+          : {}),
       },
       select: {
         startTime: true,

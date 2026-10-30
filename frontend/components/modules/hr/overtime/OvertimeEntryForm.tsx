@@ -47,8 +47,8 @@ interface OvertimeEntryFormProps {
   employeeId?: string;
   /** Other entries on the sheet — shown when the selected date already has OT. */
   sheetEntries?: OvertimeEntry[];
-  excludeEntryId?: string;
-  /** When false, only one period row (edit mode). */
+  /** Entry ids currently being edited (excluded from day-coverage extras). */
+  excludeEntryIds?: string[];
   allowMultiplePeriods?: boolean;
   onFinish?: (values: OvertimeEntryFormValues) => void | Promise<void>;
 }
@@ -125,7 +125,7 @@ export default function OvertimeEntryForm({
   windowsLoading,
   employeeId,
   sheetEntries,
-  excludeEntryId,
+  excludeEntryIds,
   allowMultiplePeriods = true,
   onFinish,
 }: OvertimeEntryFormProps): React.ReactNode {
@@ -135,6 +135,10 @@ export default function OvertimeEntryForm({
     (Form.useWatch('periods', form) as OvertimeTimePeriodRow[] | undefined) ??
     [];
   const dateKey = watchedDate?.format('YYYY-MM-DD') ?? null;
+  const excludeIdSet = useMemo(
+    () => new Set(excludeEntryIds ?? []),
+    [excludeEntryIds],
+  );
 
   const overtimeExtraLines = useMemo(() => {
     if (!dateKey || !sheetEntries?.length) {
@@ -142,8 +146,7 @@ export default function OvertimeEntryForm({
     }
     return sheetEntries
       .filter(
-        (entry) =>
-          entry.date === dateKey && entry.id !== excludeEntryId,
+        (entry) => entry.date === dateKey && !excludeIdSet.has(entry.id),
       )
       .map((entry) =>
         t('hr.dayCoverage.overtimeEntry', {
@@ -152,7 +155,7 @@ export default function OvertimeEntryForm({
           end: entry.endTime,
         }),
       );
-  }, [dateKey, excludeEntryId, sheetEntries, t]);
+  }, [dateKey, excludeIdSet, sheetEntries, t]);
 
   const excludeWeekdayLunch = shouldExcludeWeekdayLunchFromWindows(
     watchedDate,

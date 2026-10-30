@@ -6268,6 +6268,7 @@
       "cancelOvertimeSheetDesc": "This cancels the sheet and any linked approval request.",
       "deleteOvertimeEntryTitle": "Delete entry?",
       "deleteOvertimeEntryDesc": "This entry will be removed and sheet totals recalculated.",
+      "deleteOvertimeDayDesc": "All {{count}} overtime periods on this day will be removed and sheet totals recalculated.",
       "submitExpenseClaimTitle": "Submit expense claim?",
       "submitExpenseClaimDesc": "This will start the approval workflow. You will not be able to edit items until the claim is returned.",
       "submitPurchaseRequestTitle": "Submit purchase request?",

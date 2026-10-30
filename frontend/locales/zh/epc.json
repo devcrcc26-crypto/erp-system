@@ -6267,6 +6267,7 @@
       "cancelOvertimeSheetDesc": "这将取消加班表及所有关联的审批申请。",
       "deleteOvertimeEntryTitle": "删除记录？",
       "deleteOvertimeEntryDesc": "该记录将被删除，表内工时合计将重新计算。",
+      "deleteOvertimeDayDesc": "当天全部 {{count}} 个加班时段将被删除，表内工时合计将重新计算。",
       "submitExpenseClaimTitle": "提交费用报销？",
       "submitPurchaseRequestTitle": "提交采购申请？",
       "submitPurchaseRequestDesc": "将启动审批流程。在申请被退回前，您将无法再编辑明细。",

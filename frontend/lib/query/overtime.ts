@@ -384,6 +384,9 @@ export function useSelectableOvertimeWindows() {
       if (params.excludeEntryId) {
         search.set('excludeEntryId', params.excludeEntryId);
       }
+      if (params.excludeEntryIds && params.excludeEntryIds.length > 0) {
+        search.set('excludeEntryIds', params.excludeEntryIds.join(','));
+      }
       return apiGet<SelectableOvertimeWindowsResult>(
         `${OVERTIME_PATH}/selectable-windows?${search.toString()}`,
       );

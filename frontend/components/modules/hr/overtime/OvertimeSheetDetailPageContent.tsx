@@ -35,6 +35,10 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
+import {
+  groupOvertimeEntriesByDate,
+  type OvertimeDayGroup,
+} from '@/components/modules/hr/overtime/overtime-day-groups';
 import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -151,8 +155,8 @@ export default function OvertimeSheetDetailPageContent({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmDeleteSheet, setConfirmDeleteSheet] = useState(false);
   const [entryDrawerOpen, setEntryDrawerOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
-  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  const [editingEntries, setEditingEntries] = useState<OvertimeEntry[]>([]);
+  const [deleteEntryIds, setDeleteEntryIds] = useState<string[]>([]);
   /** Entry whose newly chosen attachments are uploading (choose = upload). */
   const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null);
   const [pendingRemoveAttachment, setPendingRemoveAttachment] = useState<{
@@ -259,11 +263,11 @@ export default function OvertimeSheetDetailPageContent({
 
   function closeEntryDrawer(): void {
     setEntryDrawerOpen(false);
-    setEditingEntry(null);
+    setEditingEntries([]);
   }
 
   function openAddEntry(): void {
-    setEditingEntry(null);
+    setEditingEntries([]);
     setEntryDrawerOpen(true);
   }
 
@@ -286,23 +290,29 @@ export default function OvertimeSheetDetailPageContent({
     }
   }
 
-  function openEditEntry(entry: OvertimeEntry): void {
-    setEditingEntry(entry);
+  function openEditDay(group: OvertimeDayGroup): void {
+    setEditingEntries(group.entries);
     setEntryDrawerOpen(true);
   }
 
   async function handleDeleteEntry(): Promise<void> {
-    if (!deleteEntryId) {
+    if (deleteEntryIds.length === 0) {
       return;
     }
     try {
-      const result = await deleteMutation.mutateAsync(deleteEntryId);
+      let restarted = false;
+      for (const entryId of deleteEntryIds) {
+        const result = await deleteMutation.mutateAsync(entryId);
+        if (result?.restartedApproval) {
+          restarted = true;
+        }
+      }
       messageApi.success(
-        result?.restartedApproval
+        restarted
           ? t('hr.messages.overtimeEntryResubmitted')
           : t('hr.messages.overtimeEntryDeleted'),
       );
-      setDeleteEntryId(null);
+      setDeleteEntryIds([]);
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -398,14 +408,19 @@ export default function OvertimeSheetDetailPageContent({
     }
   }
 
-  const columns: ColumnsType<OvertimeEntry> = useMemo(
+  const dayGroups = useMemo(
+    () => groupOvertimeEntriesByDate(sheet?.entries ?? []),
+    [sheet?.entries],
+  );
+
+  const columns: ColumnsType<OvertimeDayGroup> = useMemo(
     () => [
       {
         title: t('hr.table.date'),
         dataIndex: 'date',
         key: 'date',
         width: 150,
-        render: (date: string, row: OvertimeEntry) => {
+        render: (date: string, row: OvertimeDayGroup) => {
           const day = dayjs(date);
           const kind =
             row.isHoliday || Number(row.holidayHours) > 0
@@ -430,25 +445,36 @@ export default function OvertimeSheetDetailPageContent({
       {
         title: t('pages.hr.overtime.timeRange'),
         key: 'time',
-        width: 140,
-        render: (_: unknown, row: OvertimeEntry) => (
-          <div>
-            <span className="erp-ot-time">
-              {row.startTime}
-              <span className="erp-ot-time-arrow" aria-hidden>
-                →
-              </span>
-              <span className="sr-only"> – </span>
-              {row.endTime}
-            </span>
-            {row.isOvernight ? (
-              <div className="erp-ot-pills">
-                <span className="erp-ot-pill" data-kind="night">
-                  {t('pages.hr.overtime.overnight')}
+        width: 160,
+        render: (_: unknown, row: OvertimeDayGroup) => (
+          <div className="flex flex-col gap-1">
+            {row.entries.map((entry) => (
+              <div key={entry.id}>
+                <span className="erp-ot-time">
+                  {entry.startTime}
+                  <span className="erp-ot-time-arrow" aria-hidden>
+                    →
+                  </span>
+                  <span className="sr-only"> – </span>
+                  {entry.endTime}
                 </span>
+                {entry.isOvernight ? (
+                  <div className="erp-ot-pills">
+                    <span className="erp-ot-pill" data-kind="night">
+                      {t('pages.hr.overtime.overnight')}
+                    </span>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-            <OvertimeSiteChips entry={row} />
+            ))}
+            <OvertimeSiteChips
+              entry={{
+                siteAssignmentId: row.siteAssignmentId,
+                siteName: row.siteName,
+                siteWithinScheduleHours: row.siteWithinScheduleHours,
+                siteReviewFlag: row.siteReviewFlag,
+              }}
+            />
           </div>
         ),
       },
@@ -456,7 +482,7 @@ export default function OvertimeSheetDetailPageContent({
         title: t('pages.hr.overtime.hoursColumn'),
         key: 'hoursBreakdown',
         width: 230,
-        render: (_: unknown, row: OvertimeEntry) => {
+        render: (_: unknown, row: OvertimeDayGroup) => {
           const parts = (
             [
               ['regular', row.regularHours],
@@ -494,18 +520,25 @@ export default function OvertimeSheetDetailPageContent({
       },
       {
         title: t('hr.labels.taskDescription'),
-        dataIndex: 'taskDescription',
         key: 'taskDescription',
-        render: (text: string, row: OvertimeEntry) => {
-          const fileCount = row.documents?.length ?? 0;
+        render: (_: unknown, row: OvertimeDayGroup) => {
+          const fileCount = row.documents.length;
           return (
-            <div className="min-w-[200px]">
-              <p
-                className={`erp-ot-task${text ? '' : ' erp-ot-task--empty'}`}
-                title={text || undefined}
-              >
-                {text || '—'}
-              </p>
+            <div className="min-w-[200px] flex flex-col gap-1.5">
+              {row.entries.map((entry) => (
+                <p
+                  key={entry.id}
+                  className={`erp-ot-task${entry.taskDescription ? '' : ' erp-ot-task--empty'}`}
+                  title={entry.taskDescription || undefined}
+                >
+                  {row.entries.length > 1 ? (
+                    <span className="erp-ot-task-time">
+                      {entry.startTime}–{entry.endTime}:{' '}
+                    </span>
+                  ) : null}
+                  {entry.taskDescription || '—'}
+                </p>
+              ))}
               {fileCount > 0 || row.attendanceWarning ? (
                 <div className="erp-ot-task-chips">
                   {fileCount > 0 ? (
@@ -537,20 +570,21 @@ export default function OvertimeSheetDetailPageContent({
               key: 'actions',
               width: 56,
               fixed: 'right' as const,
-              render: (_: unknown, row: OvertimeEntry) => {
+              render: (_: unknown, row: OvertimeDayGroup) => {
                 const items: MenuProps['items'] = [
                   {
                     key: 'edit',
                     icon: <EditOutlined />,
                     label: t('common.update'),
-                    onClick: () => openEditEntry(row),
+                    onClick: () => openEditDay(row),
                   },
                   {
                     key: 'delete',
                     icon: <DeleteOutlined />,
                     label: t('common.delete'),
                     danger: true,
-                    onClick: () => setDeleteEntryId(row.id),
+                    onClick: () =>
+                      setDeleteEntryIds(row.entries.map((entry) => entry.id)),
                   },
                 ];
                 return (
@@ -569,7 +603,7 @@ export default function OvertimeSheetDetailPageContent({
                   </div>
                 );
               },
-            } satisfies ColumnsType<OvertimeEntry>[number],
+            } satisfies ColumnsType<OvertimeDayGroup>[number],
           ]
         : []),
     ],
@@ -806,7 +840,7 @@ export default function OvertimeSheetDetailPageContent({
             <h3 id="ot-entries-title" className="erp-ot-entries-title">
               {t('hr.section.entries')}
               <span className="erp-ot-entries-count">
-                {(sheet.entries?.length ?? 0).toLocaleString()}
+                {dayGroups.length.toLocaleString()}
               </span>
             </h3>
             <div className="erp-ot-entries-actions">
@@ -835,57 +869,68 @@ export default function OvertimeSheetDetailPageContent({
               ) : null}
             </div>
           </div>
-          <DataTable<OvertimeEntry>
-            rowKey="id"
+          <DataTable<OvertimeDayGroup>
+            rowKey="key"
             className="erp-pro-table erp-users-table"
             size="middle"
             columns={columns}
-            dataSource={sheet.entries ?? []}
+            dataSource={dayGroups}
             pagination={false}
             scroll={{ x: 760 }}
             expandable={{
-              expandedRowRender: (entry) => (
-                <div className="erp-ot-expanded">
-                  <p className="erp-ot-expanded-title">{t('hr.section.attachments')}</p>
-                  <AttachmentDownloadList
-                    documents={entry.documents}
-                    onRemove={
-                      canEdit
-                        ? (documentId) => {
-                            const doc = entry.documents?.find(
-                              (item) => item.id === documentId,
-                            );
-                            setPendingRemoveAttachment({
-                              entryId: entry.id,
-                              documentId,
-                              name: doc?.name ?? documentId,
-                            });
-                          }
-                        : undefined
-                    }
-                    removingId={
-                      removeAttachmentMutation.isPending
-                        ? pendingRemoveAttachment?.documentId
-                        : null
-                    }
-                    removeLabel={t('hr.buttons.removeItem')}
-                  />
-                  {canEdit ? (
-                    <div aria-live="polite">
-                      <FileUploadInput
-                        files={[]}
-                        onChange={(files) => void handleUploadEntryFiles(entry.id, files)}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        multiple
-                        disabled={uploadingEntryId !== null}
-                        placeholder={
-                          uploadingEntryId === entry.id
-                            ? t('pages.hr.overtime.uploadingFiles')
-                            : t('pages.hr.overtime.attachFiles')
+              expandedRowRender: (group) => (
+                <div className="erp-ot-expanded flex flex-col gap-4">
+                  {group.entries.map((entry) => (
+                    <div key={entry.id}>
+                      <p className="erp-ot-expanded-title">
+                        {t('hr.section.attachments')}
+                        {group.entries.length > 1
+                          ? ` · ${entry.startTime}–${entry.endTime}`
+                          : ''}
+                      </p>
+                      <AttachmentDownloadList
+                        documents={entry.documents}
+                        onRemove={
+                          canEdit
+                            ? (documentId) => {
+                                const doc = entry.documents?.find(
+                                  (item) => item.id === documentId,
+                                );
+                                setPendingRemoveAttachment({
+                                  entryId: entry.id,
+                                  documentId,
+                                  name: doc?.name ?? documentId,
+                                });
+                              }
+                            : undefined
                         }
+                        removingId={
+                          removeAttachmentMutation.isPending
+                            ? pendingRemoveAttachment?.documentId
+                            : null
+                        }
+                        removeLabel={t('hr.buttons.removeItem')}
                       />
+                      {canEdit ? (
+                        <div aria-live="polite">
+                          <FileUploadInput
+                            files={[]}
+                            onChange={(files) =>
+                              void handleUploadEntryFiles(entry.id, files)
+                            }
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            multiple
+                            disabled={uploadingEntryId !== null}
+                            placeholder={
+                              uploadingEntryId === entry.id
+                                ? t('pages.hr.overtime.uploadingFiles')
+                                : t('pages.hr.overtime.attachFiles')
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ))}
                 </div>
               ),
             }}
@@ -953,7 +998,7 @@ export default function OvertimeSheetDetailPageContent({
         sheetMonth={sheet.month}
         sheetYear={sheet.year}
         employeeId={sheet.employeeId}
-        editingEntry={editingEntry}
+        editingEntries={editingEntries}
         sheetEntries={sheet.entries}
         onClose={closeEntryDrawer}
       />
@@ -991,14 +1036,20 @@ export default function OvertimeSheetDetailPageContent({
       />
 
       <ConfirmDialog
-        open={Boolean(deleteEntryId)}
+        open={deleteEntryIds.length > 0}
         title={t('hr.dialog.deleteOvertimeEntryTitle')}
-        description={t('hr.dialog.deleteOvertimeEntryDesc')}
+        description={
+          deleteEntryIds.length > 1
+            ? t('hr.dialog.deleteOvertimeDayDesc', {
+                count: deleteEntryIds.length,
+              })
+            : t('hr.dialog.deleteOvertimeEntryDesc')
+        }
         confirmLabel={t('common.delete')}
         danger
         confirmLoading={deleteMutation.isPending}
         onConfirm={() => void handleDeleteEntry()}
-        onCancel={() => setDeleteEntryId(null)}
+        onCancel={() => setDeleteEntryIds([])}
       />
 
       <ConfirmDialog

@@ -199,6 +199,12 @@
   color: #6b7280;
 }
 
+.erp-ot-task-time {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 .erp-ot-task-chips {
   display: flex;
   flex-wrap: wrap;

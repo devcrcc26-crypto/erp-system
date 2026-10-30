@@ -169,6 +169,14 @@ export class SelectableOvertimeWindowsQueryDto {
   @IsOptional()
   @IsUUID()
   excludeEntryId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Comma-separated entry ids being edited (same-day periods) — their intervals stay selectable',
+  })
+  @IsOptional()
+  @IsString()
+  excludeEntryIds?: string;
 }
 
 /**

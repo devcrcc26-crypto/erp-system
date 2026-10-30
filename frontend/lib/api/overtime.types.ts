@@ -202,6 +202,8 @@ export interface SelectableOvertimeWindowsParams {
   sheetId?: string;
   /** Entry being edited — its own times stay selectable. */
   excludeEntryId?: string;
+  /** Same-day periods being edited — all stay selectable (comma-joined server-side). */
+  excludeEntryIds?: string[];
 }
 
 export interface SelectableOvertimeWindowsResult {
