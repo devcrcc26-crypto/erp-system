@@ -7,6 +7,10 @@ import OvertimeEntryForm, {
   preferredOvertimeStart,
   type OvertimeEntryFormValues,
 } from '@/components/modules/hr/overtime/OvertimeEntryForm';
+import {
+  completeOvertimePeriods,
+  overtimePeriodsOverlap,
+} from '@/components/modules/hr/overtime/overtime-time-periods';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
@@ -26,6 +30,41 @@ import { detailDrawerStyles } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PREVIEW_DEBOUNCE_MS = 300;
+
+function emptyPeriod(
+  startTime?: string,
+  taskDescription?: string,
+): OvertimeEntryFormValues['periods'][number] {
+  return { startTime, endTime: undefined, taskDescription };
+}
+
+function sumPreviews(
+  rows: PreviewOvertimeEntryResult[],
+): PreviewOvertimeEntryResult | null {
+  if (rows.length === 0) {
+    return null;
+  }
+  const first = rows[0]!;
+  return {
+    ...first,
+    isWeekend: rows.some((r) => r.isWeekend),
+    isHalfDay: rows.some((r) => r.isHalfDay),
+    regularHours: rows.reduce((s, r) => s + Number(r.regularHours), 0),
+    nightHours: rows.reduce((s, r) => s + Number(r.nightHours), 0),
+    weekendHours: rows.reduce((s, r) => s + Number(r.weekendHours), 0),
+    holidayHours: rows.reduce((s, r) => s + Number(r.holidayHours), 0),
+    totalHours: rows.reduce((s, r) => s + Number(r.totalHours), 0),
+    siteWithinScheduleHours: rows.reduce(
+      (s, r) => s + Number(r.siteWithinScheduleHours ?? 0),
+      0,
+    ),
+    attendanceWarning:
+      rows.map((r) => r.attendanceWarning).find(Boolean) ?? null,
+    scheduleNote: first.scheduleNote,
+    siteName: first.siteName,
+    holidayName: first.holidayName,
+  };
+}
 
 /**
  * Drawer to add or edit an overtime sheet entry without shifting page layout.
@@ -83,8 +122,7 @@ export default function OvertimeEntryFormDrawer({
   );
 
   const watchedDate = Form.useWatch('date', form);
-  const watchedStart = Form.useWatch('startTime', form);
-  const watchedEnd = Form.useWatch('endTime', form);
+  const watchedPeriods = Form.useWatch('periods', form);
 
   useEffect(() => {
     if (!open) {
@@ -93,12 +131,19 @@ export default function OvertimeEntryFormDrawer({
     if (editingEntry) {
       form.setFieldsValue({
         date: dayjs(editingEntry.date),
-        startTime: editingEntry.startTime,
-        endTime: editingEntry.endTime,
-        taskDescription: editingEntry.taskDescription,
+        periods: [
+          {
+            startTime: editingEntry.startTime,
+            endTime: editingEntry.endTime,
+            taskDescription: editingEntry.taskDescription,
+          },
+        ],
       });
     } else {
       form.resetFields();
+      form.setFieldsValue({
+        periods: [emptyPeriod()],
+      });
       setPreview(null);
       setWindows(null);
     }
@@ -119,45 +164,54 @@ export default function OvertimeEntryFormDrawer({
         })
         .then((result) => {
           setWindows(result);
-          const start = form.getFieldValue('startTime') as string | undefined;
-          const end = form.getFieldValue('endTime') as string | undefined;
-          const toMin = (v: string): number =>
-            v === '24:00' ? 1440 : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
-          const startValid =
-            Boolean(start) &&
-            result.windows.some((w) => {
-              const s = toMin(start!);
-              return s >= toMin(w.start) && s < toMin(w.end);
-            });
+          const periods =
+            (form.getFieldValue('periods') as
+              | OvertimeEntryFormValues['periods']
+              | undefined) ?? [];
           const preferred = preferredOvertimeStart(result.windows);
-          // New entry with no start yet: default to the after-work / post-half-day
-          // slot so End lists the full outside-hours period (e.g. 17:45–24:00).
-          if (!editingEntry && !start) {
+          const toMin = (v: string): number =>
+            v === '24:00'
+              ? 1440
+              : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+
+          if (!editingEntry && periods.length === 1 && !periods[0]?.startTime) {
             form.setFieldsValue({
-              startTime: preferred,
-              endTime: undefined,
+              periods: [
+                emptyPeriod(preferred, periods[0]?.taskDescription),
+              ],
             });
             return;
           }
-          const endValid =
-            !end ||
-            !start ||
-            result.windows.some((w) => {
-              const s = toMin(start);
-              const e = toMin(end);
+
+          const nextPeriods = periods.map((row) => {
+            if (!row.startTime) {
+              return row;
+            }
+            const startValid = result.windows.some((w) => {
+              const s = toMin(row.startTime!);
+              return s >= toMin(w.start) && s < toMin(w.end);
+            });
+            if (!startValid) {
+              return emptyPeriod(preferred, row.taskDescription);
+            }
+            if (!row.endTime) {
+              return row;
+            }
+            const endValid = result.windows.some((w) => {
+              const s = toMin(row.startTime!);
+              const e = toMin(row.endTime!);
               return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
             });
-          if (start && !startValid) {
-            form.setFieldsValue({
-              startTime: preferred,
-              endTime: undefined,
-            });
-          } else if (
-            end &&
-            (!endValid || (start && toMin(end) <= toMin(start)))
-          ) {
-            form.setFieldValue('endTime', undefined);
-          }
+            if (!endValid) {
+              return {
+                startTime: row.startTime,
+                endTime: undefined,
+                taskDescription: row.taskDescription,
+              };
+            }
+            return row;
+          });
+          form.setFieldValue('periods', nextPeriods);
         })
         .catch(() => {
           setWindows(null);
@@ -171,20 +225,28 @@ export default function OvertimeEntryFormDrawer({
   }, [open, employeeId, watchedDate, sheetId, editingEntry?.id]);
 
   useEffect(() => {
-    if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {
+    if (!open || !employeeId || !watchedDate || !watchedPeriods?.length) {
+      return;
+    }
+    const complete = completeOvertimePeriods(watchedPeriods);
+    if (complete.length === 0 || overtimePeriodsOverlap(watchedPeriods)) {
+      setPreview(null);
       return;
     }
 
     const handle = window.setTimeout(() => {
-      void previewMutation
-        .mutateAsync({
-          employeeId,
-          date: watchedDate.format('YYYY-MM-DD'),
-          startTime: watchedStart,
-          endTime: watchedEnd,
-        })
-        .then((result) => {
-          setPreview(result);
+      void Promise.all(
+        complete.map((period) =>
+          previewMutation.mutateAsync({
+            employeeId,
+            date: watchedDate.format('YYYY-MM-DD'),
+            startTime: period.startTime,
+            endTime: period.endTime,
+          }),
+        ),
+      )
+        .then((rows) => {
+          setPreview(sumPreviews(rows));
         })
         .catch(() => {
           setPreview(null);
@@ -195,18 +257,34 @@ export default function OvertimeEntryFormDrawer({
       window.clearTimeout(handle);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, employeeId, watchedDate, watchedStart, watchedEnd]);
+  }, [open, employeeId, watchedDate, watchedPeriods]);
 
   async function handleSubmit(values: OvertimeEntryFormValues): Promise<void> {
-    const payload: UpsertOvertimeEntryPayload = {
-      date: values.date.format('YYYY-MM-DD'),
-      startTime: values.startTime,
-      endTime: values.endTime,
-      taskDescription: values.taskDescription.trim(),
-    };
+    const periods = completeOvertimePeriods(values.periods);
+    if (periods.length === 0) {
+      messageApi.error(t('hr.validation.overtimePeriodRequired'));
+      return;
+    }
+    if (overtimePeriodsOverlap(values.periods)) {
+      messageApi.error(t('hr.validation.overtimePeriodsOverlap'));
+      return;
+    }
+    if (periods.some((period) => !period.taskDescription)) {
+      messageApi.error(t('hr.validation.taskDescriptionRequired'));
+      return;
+    }
+
+    const date = values.date.format('YYYY-MM-DD');
 
     try {
       if (editingEntry) {
+        const period = periods[0]!;
+        const payload: UpsertOvertimeEntryPayload = {
+          date,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          taskDescription: period.taskDescription,
+        };
         const result = (await updateMutation.mutateAsync({
           entryId: editingEntry.id,
           payload,
@@ -216,42 +294,43 @@ export default function OvertimeEntryFormDrawer({
             ? t('hr.messages.overtimeEntryResubmitted')
             : t('hr.messages.overtimeEntryUpdated'),
         );
-      } else {
-        const result = (await addMutation.mutateAsync(
-          payload,
-        )) as OvertimeSheetDetail;
-        messageApi.success(
-          result.restartedApproval
-            ? t('hr.messages.overtimeEntryResubmitted')
-            : t('hr.messages.overtimeEntryAdded'),
-        );
+        onClose();
+        return;
       }
+
+      let restarted = false;
+      for (const period of periods) {
+        const result = (await addMutation.mutateAsync({
+          date,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          taskDescription: period.taskDescription,
+        })) as OvertimeSheetDetail;
+        if (result.restartedApproval) {
+          restarted = true;
+        }
+      }
+      messageApi.success(
+        restarted
+          ? t('hr.messages.overtimeEntryResubmitted')
+          : periods.length > 1
+            ? t('hr.messages.overtimePeriodsAdded', { count: periods.length })
+            : t('hr.messages.overtimeEntryAdded'),
+      );
       onClose();
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.messages.failedToSaveOvertimeEntry'), messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSaveOvertimeEntry'),
+        messageApi,
+      );
     }
-  }
-
-  function handleAddNextDay(nextDate: Dayjs): void {
-    if (
-      nextDate.month() + 1 !== sheetMonth ||
-      nextDate.year() !== sheetYear ||
-      nextDate.isAfter(dayjs().endOf('day'))
-    ) {
-      messageApi.warning(t('hr.messages.nextDayOutsideSheet'));
-      return;
-    }
-    form.setFieldsValue({
-      date: nextDate,
-      startTime: preferredOvertimeStart(windows?.windows ?? []) ?? undefined,
-      endTime: undefined,
-    });
-    setPreview(null);
   }
 
   const title = editingEntry
     ? t('hr.form.editEntry')
     : t('hr.buttons.addEntry');
+  const leaveBlocked = windows?.blockedReason === 'FULL_DAY_LEAVE';
 
   return (
     <Drawer
@@ -280,7 +359,7 @@ export default function OvertimeEntryFormDrawer({
             type="primary"
             loading={saving}
             onClick={() => form.submit()}
-            disabled={windows?.blockedReason === 'FULL_DAY_LEAVE'}
+            disabled={leaveBlocked}
           >
             {t('hr.buttons.save')}
           </Button>
@@ -305,8 +384,8 @@ export default function OvertimeEntryFormDrawer({
         employeeId={employeeId}
         sheetEntries={sheetEntries}
         excludeEntryId={editingEntry?.id}
-        onFinish={handleSubmit}
-        onAddNextDay={handleAddNextDay}
+        allowMultiplePeriods={!editingEntry}
+        onFinish={(values) => void handleSubmit(values)}
       />
     </Drawer>
   );
