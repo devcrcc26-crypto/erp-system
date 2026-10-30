@@ -36,6 +36,7 @@ import {
   useCanAccessFlight,
   useCanCreateFlight,
   useCanViewHr,
+  useCanViewTeam,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -69,7 +70,7 @@ import {
   type FlightStatusMode,
 } from '@/lib/utils/flight-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildFlightApplicationExportSheets } from '@/lib/utils/flight-export';
 
@@ -138,6 +139,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   const canAccess = useCanAccessFlight();
   const canViewHr = useCanViewHr();
+  // Supervisors see their team's rows (backend-scoped); HR tools stay HR-only.
+  const canViewTeam = useCanViewTeam();
   const canCreate = useCanCreateFlight();
   const importPreview = useFlightApplicationImportPreview();
   const importCommit = useFlightApplicationImport();
@@ -166,6 +169,18 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows, (row) => row.submitter),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const pending = allRows.filter((row) =>
@@ -201,7 +216,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             : internationalFilter === 'false'
               ? false
               : undefined,
-        submittedById: canViewHr ? submittedById : undefined,
+        submittedById: canViewTeam ? submittedById : undefined,
         dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
         dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       }),
@@ -213,7 +228,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       internationalFilter,
       submittedById,
       dateRange,
-      canViewHr,
+      canViewTeam,
     ],
   );
 
@@ -246,7 +261,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.submittedBy'),
@@ -275,7 +290,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
               {row.applicationNumber}
-              {canViewHr
+              {canViewTeam
                 ? ` · ${formatFlightSubmitterName(row.submitter)}`
                 : ''}
             </p>
@@ -348,7 +363,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canViewHr, isNarrow, t],
+    [canViewTeam, isNarrow, t],
   );
 
   function handleStatusMode(mode: FlightStatusMode): void {
@@ -384,12 +399,14 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     submittedById !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.flight.listTitle')
     : t('pages.hr.flight.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.flight.listDescription')
-    : t('pages.hr.flight.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.flight.myListDescription');
 
   if (!canAccess) {
     return (
@@ -577,18 +594,15 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={submittedById}
               onChange={(value: string | undefined) => {
                 setSubmittedById(value);

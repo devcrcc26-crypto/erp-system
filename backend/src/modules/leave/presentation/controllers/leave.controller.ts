@@ -14,6 +14,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { isEmployeeInTeamScope } from '../../../../shared/org/team-scope.util';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { canEditLeaveBalances } from '../../application/utils/leave-balance-access.util';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -74,6 +76,7 @@ export class LeaveController {
     private readonly onBehalfService: OnBehalfService,
     private readonly leaveLedger: LeaveLedgerService,
     private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -219,8 +222,19 @@ export class LeaveController {
       'leave',
       'manage',
     );
+    // HR, or a supervisor reading a report's balance (employee profile page).
+    const readsTeamBalance =
+      !canManage &&
+      Boolean(query.employeeId) &&
+      query.employeeId !== user.userId &&
+      (await isEmployeeInTeamScope(
+        this.prisma,
+        user.userId,
+        companyId,
+        query.employeeId as string,
+      ));
     const employeeId =
-      canManage && query.employeeId
+      (canManage || readsTeamBalance) && query.employeeId
         ? query.employeeId
         : await this.onBehalfService.resolveTargetEmployeeId(
             user.userId,

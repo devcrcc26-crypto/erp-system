@@ -29,6 +29,9 @@ import {
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { assertPermissionOrSupervisor } from '../../../../shared/org/team-scope.util';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -123,6 +126,8 @@ export class FlightController {
     private readonly flightService: FlightService,
     private readonly flightApplicationPdfService: FlightApplicationPdfService,
     private readonly flightImportService: FlightImportService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private importCtx(user: AuthenticatedUser): {
@@ -227,15 +232,27 @@ export class FlightController {
   }
 
   @Get()
+  // Module permission, or a supervisor viewing their team's records.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'List flight applications (company-wide for hr.view/flight.manage; own otherwise)',
   })
-  list(
+  async list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListFlightApplicationsDto,
   ): Promise<unknown> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'flight', action: 'view' },
+        { module: 'flight', action: 'create' },
+      ],
+    );
     return this.flightService.listApplications(query, companyId, user.userId);
   }
 
@@ -491,12 +508,26 @@ export class FlightController {
   }
 
   @Get(':id/pdf')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Download flight application as PDF' })
   @ApiProduces('application/pdf')
   async downloadPdf(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @CurrentCompany() companyId: string,
   ): Promise<StreamableFile> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'flight', action: 'view' },
+        { module: 'flight', action: 'create' },
+      ],
+    );
+    // Same visibility as the detail page (owner, approver, team, or manager).
+    await this.flightService.getApplication(id, companyId, user.userId);
     const file = await this.flightApplicationPdfService.getPdf(id, companyId);
     return new StreamableFile(file.buffer, {
       type: file.mimeType,

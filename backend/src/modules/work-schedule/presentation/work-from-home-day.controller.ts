@@ -12,7 +12,11 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
+import { assertPermissionOrSupervisor } from '../../../shared/org/team-scope.util';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
@@ -32,16 +36,30 @@ import { WorkFromHomeDayService } from '../application/services/work-from-home-d
 @UseGuards(PermissionsGuard)
 @Controller('hr/attendance/work-from-home')
 export class WorkFromHomeDayController {
-  constructor(private readonly service: WorkFromHomeDayService) {}
+  constructor(
+    private readonly service: WorkFromHomeDayService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
-  @RequireAnyPermission({ module: 'wfh', action: 'view' })
-  @ApiOperation({ summary: 'List work-from-home days (wfh.manage holders)' })
-  list(
+  // wfh.view, or a supervisor viewing their team's days (service-scoped).
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'List work-from-home days (all for wfh.manage; own and team otherwise)',
+  })
+  async list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListWorkFromHomeDaysDto,
   ): Promise<unknown[]> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [{ module: 'wfh', action: 'view' }],
+    );
     return this.service.listForAssigner(
       companyId,
       user.userId,

@@ -18,7 +18,7 @@ Click **New Request** in the left menu, then click the request type you need. Ev
 
 ## Why is my left menu shorter than a colleague's?
 
-The left menu only shows what your role can use. Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. Anyone with people reporting to them also sees their team's **Leave Requests**, **Overtime**, **Attendance**, **Site Assignments**, **All Evaluations**, **Expense Claims** and **Per Diem**. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
+The left menu only shows what your role can use. Most staff see **Dashboard**, **New Request**, **Approvals**, **Announcements**, **My Profile** and **User Guide**. Team and Discipline Leads also see **My Evaluation Inbox**. Anyone with people reporting to them also sees **My Team** (open a person to see their profile) and their team's **Employee Contracts** (view only), **Leave Requests**, **Overtime**, **Attendance**, **Field Movement Logs**, **Work From Home** (view only), **Site Assignments**, **All Evaluations**, **Expense Claims**, **Per Diem**, **Flight Applications**, **Third-Country Business Trips**, **Vehicle Applications** and **Exit Permit**. HR staff also see the **People**, **Time & Attendance**, **Pay & Travel** and **Operations** folders.
 
 ---
 

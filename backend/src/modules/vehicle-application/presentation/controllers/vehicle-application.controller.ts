@@ -21,6 +21,9 @@ import {
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { assertPermissionOrSupervisor } from '../../../../shared/org/team-scope.util';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -65,6 +68,8 @@ export class VehicleApplicationController {
   constructor(
     private readonly vehicleApplicationService: VehicleApplicationService,
     private readonly vehicleApplicationPdfService: VehicleApplicationPdfService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -87,15 +92,27 @@ export class VehicleApplicationController {
   }
 
   @Get()
+  // Module permission, or a supervisor viewing their team's records.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'List vehicle applications (company-wide for hr.view; own otherwise)',
   })
-  list(
+  async list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListVehicleApplicationsDto,
   ): Promise<unknown> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'vehicle-application', action: 'view' },
+        { module: 'vehicle-application', action: 'create' },
+      ],
+    );
     return this.vehicleApplicationService.listApplications(
       query,
       companyId,
@@ -104,14 +121,26 @@ export class VehicleApplicationController {
   }
 
   @Get(':id')
+  // Module permission, or a supervisor viewing their team's records.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Get a vehicle application with vehicle and approval tiers',
   })
-  getOne(
+  async getOne(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'vehicle-application', action: 'view' },
+        { module: 'vehicle-application', action: 'create' },
+      ],
+    );
     return this.vehicleApplicationService.getApplication(
       id,
       companyId,
@@ -177,12 +206,26 @@ export class VehicleApplicationController {
   }
 
   @Get(':id/pdf')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Download vehicle application as PDF' })
   @ApiProduces('application/pdf')
   async downloadPdf(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @CurrentCompany() companyId: string,
   ): Promise<StreamableFile> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'vehicle-application', action: 'view' },
+        { module: 'vehicle-application', action: 'create' },
+      ],
+    );
+    // Same visibility as the detail page (owner, approver, team, or manager).
+    await this.vehicleApplicationService.getApplication(id, companyId, user.userId);
     const file = await this.vehicleApplicationPdfService.getPdf(id, companyId);
     return new StreamableFile(file.buffer, {
       type: file.mimeType,

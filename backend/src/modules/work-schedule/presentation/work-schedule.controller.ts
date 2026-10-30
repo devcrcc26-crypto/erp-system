@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -12,7 +13,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
+import { isEmployeeInTeamScope } from '../../../shared/org/team-scope.util';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
@@ -29,7 +33,11 @@ import { WorkScheduleService } from '../application/services/work-schedule.servi
 @UseGuards(PermissionsGuard)
 @Controller('hr/work-schedules')
 export class WorkScheduleController {
-  constructor(private readonly workScheduleService: WorkScheduleService) {}
+  constructor(
+    private readonly workScheduleService: WorkScheduleService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post('preview-days')
   @RequireAnyPermission(
@@ -64,14 +72,28 @@ export class WorkScheduleController {
   }
 
   @Get('employees/:employeeId')
-  @RequireAnyPermission({ module: 'work-schedule', action: 'view' })
+  @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'Current work schedule and assignment history for an employee',
+    summary:
+      'Current work schedule and assignment history for an employee (work-schedule.view, or their supervisor)',
   })
-  employeeSchedule(
+  async employeeSchedule(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('employeeId') employeeId: string,
   ): Promise<unknown> {
+    const allowed =
+      (await this.permissionService.hasPermission(
+        user.userId,
+        companyId,
+        'work-schedule',
+        'view',
+      )) ||
+      (employeeId !== user.userId &&
+        (await isEmployeeInTeamScope(this.prisma, user.userId, companyId, employeeId)));
+    if (!allowed) {
+      throw new ForbiddenException("You do not have access to this employee's schedule");
+    }
     return this.workScheduleService.getEmployeeSchedule(employeeId, companyId);
   }
 

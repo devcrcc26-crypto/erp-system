@@ -29,6 +29,9 @@ import {
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { assertPermissionOrSupervisor } from '../../../../shared/org/team-scope.util';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -131,6 +134,8 @@ export class BusinessTripController {
     private readonly businessTripService: BusinessTripService,
     private readonly businessTripImportService: BusinessTripImportService,
     private readonly businessTripPdfService: BusinessTripPdfService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private importCtx(user: AuthenticatedUser): {
@@ -241,15 +246,27 @@ export class BusinessTripController {
   }
 
   @Get()
+  // Module permission, or a supervisor viewing their team's records.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'List business trips (company-wide for hr.view/flight.manage; own otherwise)',
   })
-  list(
+  async list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListBusinessTripsDto,
   ): Promise<unknown> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'business-trip', action: 'view' },
+        { module: 'business-trip', action: 'create' },
+      ],
+    );
     return this.businessTripService.listTrips(query, companyId, user.userId);
   }
 
@@ -504,12 +521,26 @@ export class BusinessTripController {
   }
 
   @Get(':id/pdf')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Download business trip application as PDF' })
   @ApiProduces('application/pdf')
   async downloadPdf(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @CurrentCompany() companyId: string,
   ): Promise<StreamableFile> {
+    await assertPermissionOrSupervisor(
+      this.permissionService,
+      this.prisma,
+      user.userId,
+      companyId,
+      [
+        { module: 'business-trip', action: 'view' },
+        { module: 'business-trip', action: 'create' },
+      ],
+    );
+    // Same visibility as the detail page (owner, approver, team, or manager).
+    await this.businessTripService.getTrip(id, companyId, user.userId);
     const file = await this.businessTripPdfService.getPdf(id, companyId);
     return new StreamableFile(file.buffer, {
       type: file.mimeType,

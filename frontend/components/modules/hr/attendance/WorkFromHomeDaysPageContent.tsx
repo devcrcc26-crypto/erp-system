@@ -39,7 +39,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   createWorkFromHomeDay,
@@ -126,6 +126,8 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const canViewHr = useCanViewHr();
   // Direct assignment (no approval) is HR only (hr.view); others use New Request.
   const canAssign = canViewHr;
+  // Supervisors get a read-only view of their own and their team's days.
+  const canView = useCanViewTeam();
   const queryClient = useQueryClient();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
@@ -146,7 +148,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const listQuery = useQuery({
     queryKey: ['work-from-home', month, year],
     queryFn: () => listWorkFromHomeDays({ month, year }),
-    enabled: canAssign,
+    enabled: canView,
   });
 
   const assignableQuery = useQuery({
@@ -471,30 +473,34 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
           </div>
         ),
       },
-      {
-        title: '',
-        key: 'actions',
-        width: 56,
-        align: 'right',
-        render: (_: unknown, row: WorkFromHomeDay) => (
-          <Dropdown
-            menu={{ items: buildActionMenu(row) }}
-            trigger={['click']}
-            placement="bottomRight"
-          >
-            <Button
-              type="text"
-              icon={<MoreOutlined />}
-              aria-label={t('common.actions')}
-            />
-          </Dropdown>
-        ),
-      },
+      ...(canAssign
+        ? ([
+            {
+              title: '',
+              key: 'actions',
+              width: 56,
+              align: 'right',
+              render: (_: unknown, row: WorkFromHomeDay) => (
+                <Dropdown
+                  menu={{ items: buildActionMenu(row) }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <Button
+                    type="text"
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+              ),
+            },
+          ] satisfies ColumnsType<WorkFromHomeDay>)
+        : []),
     ],
-    [t, departmentNameById, employeeLabelById, isCompact, canAssignCompanyWide],
+    [t, departmentNameById, employeeLabelById, isCompact, canAssignCompanyWide, canAssign],
   );
 
-  if (!canAssign) {
+  if (!canView) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
@@ -845,14 +851,16 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              primary={{
-                label: t('common.add'),
-                icon: <PlusOutlined />,
-                onClick: openCreate,
-              }}
-            />
+            {canAssign ? (
+              <HrListActions
+                compact={isCompact}
+                primary={{
+                  label: t('common.add'),
+                  icon: <PlusOutlined />,
+                  onClick: openCreate,
+                }}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -913,10 +921,12 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
                           label: t('common.reset'),
                           onClick: handleResetPeriod,
                         }
-                      : {
-                          label: t('common.add'),
-                          onClick: openCreate,
-                        }
+                      : canAssign
+                        ? {
+                            label: t('common.add'),
+                            onClick: openCreate,
+                          }
+                        : undefined
                   }
                 />
               ),

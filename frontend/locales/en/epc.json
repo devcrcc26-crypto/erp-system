@@ -148,6 +148,7 @@
       "evaluationTemplates": "Evaluation Templates",
       "evaluationInbox": "My Evaluation Inbox",
       "employeeContract": "Employee Contracts",
+      "myTeam": "My Team",
       "equipmentAndMaterialsExitPermit": "Exit Permit"
     }
   },
@@ -599,6 +600,19 @@
       "comingSoonDescription": "{{module}} will be available in a future update.",
       "accessDenied": "You do not have access to Human Resources.",
       "teamListDescription": "Your own requests and those of the people who report to you.",
+      "myTeam": {
+        "title": "My Team",
+        "description": "Everyone who reports to you, directly or through someone else.",
+        "search": "Search by name or email",
+        "empty": "No one reports to you yet.",
+        "emptyFiltered": "No team members match your search.",
+        "loadFailed": "Could not load your team.",
+        "columns": {
+          "employeeId": "Employee ID",
+          "position": "Position",
+          "reportsTo": "Reports to"
+        }
+      },
       "reports": {
         "title": "HR Reports",
         "description": "Workforce, leave, overtime, travel, contracts, expenses and evaluations for a chosen period.",
@@ -3399,6 +3413,9 @@
     "tabPerDiem": "Per Diem",
     "tabPerDiemShort": "Per Diem",
     "tabEvaluations": "Evaluations",
+    "contractsLoadFailed": "Could not load contracts.",
+    "contractsEmpty": "No contracts yet.",
+    "tabContracts": "Contracts",
     "tabPayroll": "Payroll",
     "primaryRole": "Primary",
     "setAsPrimary": "Set as Primary",

@@ -26,7 +26,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { VehicleApplicationListItem } from '@/lib/api/vehicle-application.types';
@@ -45,7 +45,7 @@ import {
   type VehicleApplicationStatusMode,
 } from '@/lib/utils/vehicle-application-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { vehicleApplicationImportSchema } from '@/lib/utils/hr-import-configs';
@@ -111,6 +111,8 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  // Supervisors see their team's rows (backend-scoped); HR tools stay HR-only.
+  const canViewTeam = useCanViewTeam();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -131,6 +133,18 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const draft = allRows.filter((row) =>
@@ -159,11 +173,11 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
       filterVehicleApplications(allRows, {
         search: appliedSearch,
         statusMode,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
         dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
         dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       }),
-    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewTeam],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -183,12 +197,14 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.vehicleApplication.listTitle')
     : t('pages.hr.vehicleApplication.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.vehicleApplication.listDescription')
-    : t('pages.hr.vehicleApplication.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.vehicleApplication.myListDescription');
 
   function handleResetFilters(): void {
     setSearch('');
@@ -222,7 +238,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.employee'),
@@ -344,7 +360,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canViewHr, isNarrow, t],
+    [canViewTeam, isNarrow, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -488,18 +504,15 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
             }}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);

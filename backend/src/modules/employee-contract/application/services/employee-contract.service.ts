@@ -8,6 +8,11 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 import { activeOnly } from "@/shared/prisma/soft-delete.util";
+import {
+    canViewThroughTeam,
+    resolveTeamScopedEmployeeIds,
+    teamScopeWhere,
+} from "@/shared/org/team-scope.util";
 import { loadPolicySnapshot } from "@/shared/policy/policy-reader.util";
 import { todayInAddisUtc } from "@/shared/employment/separation-dates.util";
 import {
@@ -799,19 +804,33 @@ export class EmployeeContractService {
         return `EC-${String(seq).padStart(4, '0')}`;
     }
 
+    /**
+     * Company-wide contract access. employee-contract.view is granted to every
+     * role (for My Profile), so it cannot mean "HR": HR is hr.view or
+     * employee-contract.create.
+     */
+    private async isContractHr(userId: string, companyId: string): Promise<boolean> {
+        return (
+            (await this.permissionService.hasPermission(userId, companyId, 'hr', 'view')) ||
+            (await this.permissionService.hasPermission(
+                userId,
+                companyId,
+                'employee-contract',
+                'create',
+            ))
+        );
+    }
+
     private async assertCanView(
-        contract: {employeeId: string},
+        contract: {employeeId: string; status: string},
         companyId: string,
         userId: string,
     ): Promise<void>{
-        const canView = await this.permissionService.hasPermission(
-            userId,
-            companyId,
-            'employee-contract',
-            'view',
-        );
-
-        if(canView || contract.employeeId === userId){
+        if (contract.employeeId === userId || (await this.isContractHr(userId, companyId))) {
+            return;
+        }
+        // Supervisors may read (never change) their reports' contracts.
+        if (await canViewThroughTeam(this.prisma, userId, companyId, contract)) {
             return;
         }
         throw new ForbiddenException(
@@ -825,12 +844,17 @@ export class EmployeeContractService {
         userId: string,
         forceOwn: boolean,
     ): Promise<Prisma.EmployeeContractWhereInput>{
-        const isHrViewer = await this.permissionService.hasPermission(
-            userId,
-            companyId,
-            'employee-contract',
-            'view',
-        );
+        const isHrViewer = !forceOwn && (await this.isContractHr(userId, companyId));
+        // Supervisors: own contracts plus their reports' (not drafts).
+        const teamScope =
+            forceOwn || isHrViewer
+                ? null
+                : teamScopeWhere(
+                    userId,
+                    await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+                    filters.employeeId,
+                    ['DRAFT'],
+                );
 
         const statuses = this.normalizeStatuses(filters.status);
         const  expiringCutoff = this.addDays(this.todayUtc(), EXPIRING_SOON_DAYS);
@@ -838,7 +862,8 @@ export class EmployeeContractService {
         return {
             companyId,
             deletedAt: null,
-            ...(forceOwn || !isHrViewer ? { employeeId: userId } : {}),
+            ...(forceOwn ? { employeeId: userId } : {}),
+            ...(teamScope ? { AND: [teamScope] } : {}),
             ...(isHrViewer && !forceOwn && filters.employeeId
                 ? { employeeId: filters.employeeId }
                 : {}),

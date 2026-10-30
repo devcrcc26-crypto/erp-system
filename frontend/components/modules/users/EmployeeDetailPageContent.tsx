@@ -12,6 +12,7 @@ import {
   CalendarOutlined,
   DollarOutlined,
   EditOutlined,
+  FileTextOutlined,
   MailOutlined,
   MoreOutlined,
   PauseCircleOutlined,
@@ -59,8 +60,10 @@ import {
   useCanEditUsers,
   useCanManageEmployeePerDiemRates,
   useCanViewHr,
+  useCanViewTeam,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
+import EmployeeContractsSection from '@/components/modules/hr/employee-contract/EmployeeContractsSection';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -124,6 +127,7 @@ const PROFILE_TABS = [
   'perDiem',
   'payroll',
   'evaluations',
+  'contracts',
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
@@ -143,6 +147,7 @@ const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
   perDiem: <WalletOutlined />,
   payroll: <DollarOutlined />,
   evaluations: <StarOutlined />,
+  contracts: <FileTextOutlined />,
 };
 
 function resolveProfileTab(value: string | null): ProfileTab {
@@ -254,7 +259,12 @@ export default function EmployeeDetailPageContent({
   const resendInvitation = useResendInvitation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const canEditUsers = useCanEditUsers();
-  const employmentQuery = useEmployment(userId, canViewHr || canEditUsers);
+  // HR, or a supervisor opening someone in their reporting chain.
+  const canViewTeam = useCanViewTeam();
+  // Supervisors without HR or users.edit get a read-only profile.
+  const isTeamViewOnly = !canViewHr && !canEditUsers;
+  const listHref = isTeamViewOnly ? '/hr/my-team' : '/users';
+  const employmentQuery = useEmployment(userId, canViewHr || canEditUsers || canViewTeam);
   const employment = employmentQuery.data;
   const [separationOpen, setSeparationOpen] = useState(false);
   const [employmentDialog, setEmploymentDialog] = useState<
@@ -278,9 +288,13 @@ export default function EmployeeDetailPageContent({
   };
   const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
   const showPayrollTab = isOwnProfile || canCreatePayroll;
+  // Read-only contracts for HR and the employee's supervisors.
+  const showContractsTab = canViewTeam && !isOwnProfile;
   const visibleTabs = PROFILE_TABS.filter(
     (tab) =>
-      (tab !== 'perDiem' || showPerDiemTab) && (tab !== 'payroll' || showPayrollTab),
+      (tab !== 'perDiem' || showPerDiemTab) &&
+      (tab !== 'payroll' || showPayrollTab) &&
+      (tab !== 'contracts' || showContractsTab),
   );
   const requestedTab = resolveProfileTab(searchParams.get('tab'));
   const activeTab = visibleTabs.includes(requestedTab) ? requestedTab : 'overview';
@@ -293,6 +307,7 @@ export default function EmployeeDetailPageContent({
     perDiem: isNarrow ? t('users.tabPerDiemShort') : t('users.tabPerDiem'),
     payroll: t('users.tabPayroll'),
     evaluations: t('users.tabEvaluations'),
+    contracts: t('users.tabContracts'),
   };
 
   function setActiveTab(tab: ProfileTab): void {
@@ -408,7 +423,7 @@ export default function EmployeeDetailPageContent({
                 : t('users.detailNotFound')
           }
           action={
-            <Button onClick={() => router.push('/users')}>
+            <Button onClick={() => router.push(listHref)}>
               {t('users.backToList')}
             </Button>
           }
@@ -503,21 +518,23 @@ export default function EmployeeDetailPageContent({
           <Button
             type="text"
             icon={<ArrowLeft size={16} aria-hidden />}
-            onClick={() => router.push('/users')}
+            onClick={() => router.push(listHref)}
             aria-label={isNarrow ? t('users.backToList') : undefined}
             className="erp-employee-toolbar-back"
           >
             {isNarrow ? undefined : t('users.backToList')}
           </Button>
           <div className="erp-employee-toolbar-actions">
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => router.push(`/users/${user.id}/edit`)}
-            >
-              {t('common.edit')}
-            </Button>
-            {overflowItems.length > 0 ? (
+            {isTeamViewOnly ? null : (
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => router.push(`/users/${user.id}/edit`)}
+              >
+                {t('common.edit')}
+              </Button>
+            )}
+            {!isTeamViewOnly && overflowItems.length > 0 ? (
               <Dropdown
                 menu={{ items: overflowItems }}
                 trigger={['click']}
@@ -542,7 +559,7 @@ export default function EmployeeDetailPageContent({
             photoDocumentId={user.photoDocumentId}
             firstName={user.firstName}
             lastName={user.lastName}
-            canEdit
+            canEdit={!isTeamViewOnly}
             size={isNarrow ? 72 : 88}
             variant="hero"
           />
@@ -681,7 +698,7 @@ export default function EmployeeDetailPageContent({
           ) : null}
           {activeTab === 'leave' ? (
             <div className="flex flex-col gap-4">
-              {canViewHr ? (
+              {canViewTeam ? (
                 <EmployeeLeaveProfileSection
                   mode="employee"
                   employeeId={user.id}
@@ -690,7 +707,7 @@ export default function EmployeeDetailPageContent({
               ) : (
                 <EmployeeLeaveProfileSection mode="self" {...periodProps} />
               )}
-              {canViewHr ? (
+              {canViewTeam ? (
                 <EmployeeOvertimeProfileSection
                   mode="employee"
                   employeeId={user.id}
@@ -724,6 +741,8 @@ export default function EmployeeDetailPageContent({
               employeeId={user.id}
               contractPeriod={contractPeriod.selected}
             />
+          ) : activeTab === 'contracts' && showContractsTab ? (
+            <EmployeeContractsSection employeeId={user.id} />
           ) : activeTab === 'evaluations' ? (
             <MyEvaluationsPageContent
               employeeId={isOwnProfile ? undefined : user.id}

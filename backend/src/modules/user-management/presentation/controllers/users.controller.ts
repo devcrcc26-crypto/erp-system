@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -18,7 +19,14 @@ import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import {
+  isEmployeeInTeamScope,
+  resolveTeamMemberIds,
+} from '../../../../shared/org/team-scope.util';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -50,15 +58,18 @@ export class UsersController {
     private readonly userManagementService: UserManagementService,
     private readonly separationService: EmploymentSeparationService,
     private readonly lifecycle: EmploymentLifecycleService,
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get(':id/employment')
-  @RequirePermission('users', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Employment status, periods and current separation' })
-  getEmployment(
+  async getEmployment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await this.assertCanViewUser(user, id);
     return this.separationService.getEmployment(this.ctx(user), id);
   }
 
@@ -91,12 +102,13 @@ export class UsersController {
   }
 
   @Get(':id/inactive-periods')
-  @RequirePermission('users', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Inactive periods (suspension, long leave, other)' })
-  listInactive(
+  async listInactive(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await this.assertCanViewUser(user, id);
     return this.lifecycle.listInactive(this.ctx(user), id);
   }
 
@@ -156,14 +168,57 @@ export class UsersController {
     return { companyId: user.companyId, userId: user.userId };
   }
 
+  private canViewAllUsers(user: AuthenticatedUser): Promise<boolean> {
+    return this.permissionService.hasPermission(
+      user.userId,
+      user.companyId,
+      'users',
+      'view',
+    );
+  }
+
+  /**
+   * users.view sees everyone. A supervisor without it may read the profile of
+   * anyone below them in the reporting chain (not their own - that is
+   * My Profile).
+   */
+  private async assertCanViewUser(
+    user: AuthenticatedUser,
+    employeeId: string,
+  ): Promise<void> {
+    if (await this.canViewAllUsers(user)) {
+      return;
+    }
+    if (
+      employeeId !== user.userId &&
+      (await isEmployeeInTeamScope(
+        this.prisma,
+        user.userId,
+        user.companyId,
+        employeeId,
+      ))
+    ) {
+      return;
+    }
+    throw new ForbiddenException('You do not have access to this employee');
+  }
+
   @Get()
-  @RequirePermission('users', 'view')
-  @ApiOperation({ summary: 'List users' })
-  list(
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'List users (everyone with users.view; a supervisor sees their reports)',
+  })
+  async list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: UsersQueryDto,
   ): Promise<unknown> {
-    return this.userManagementService.listUsers(this.ctx(user), query);
+    const teamIds = (await this.canViewAllUsers(user))
+      ? undefined
+      : await resolveTeamMemberIds(this.prisma, user.userId, user.companyId);
+    if (teamIds && teamIds.length === 0) {
+      throw new ForbiddenException('Missing permission: users.view');
+    }
+    return this.userManagementService.listUsers(this.ctx(user), query, teamIds);
   }
 
   @Get('org-gaps')
@@ -198,12 +253,13 @@ export class UsersController {
   }
 
   @Get(':id/documents')
-  @RequirePermission('users', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List employee profile documents' })
-  listDocuments(
+  async listDocuments(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await this.assertCanViewUser(user, id);
     return this.userManagementService.listUserDocuments(this.ctx(user), id);
   }
 
@@ -259,13 +315,14 @@ export class UsersController {
   }
 
   @Get(':id/documents/:documentId/download-url')
-  @RequirePermission('users', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get presigned download URL for a profile document' })
-  getDocumentDownloadUrl(
+  async getDocumentDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('documentId') documentId: string,
   ): Promise<{ url: string; expiresIn: number }> {
+    await this.assertCanViewUser(user, id);
     return this.userManagementService.getUserDocumentDownloadUrl(
       this.ctx(user),
       id,
@@ -304,12 +361,13 @@ export class UsersController {
   }
 
   @Get(':id/photo/download-url')
-  @RequirePermission('users', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get presigned download URL for profile picture' })
-  getPhotoDownloadUrl(
+  async getPhotoDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<{ url: string; expiresIn: number }> {
+    await this.assertCanViewUser(user, id);
     return this.userManagementService.getUserPhotoDownloadUrl(
       this.ctx(user),
       id,
@@ -328,11 +386,12 @@ export class UsersController {
   }
 
   @Get(':id')
-  @RequirePermission('users', 'view')
-  get(
+  @DelegatePermissionCheck()
+  async get(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await this.assertCanViewUser(user, id);
     return this.userManagementService.getUser(this.ctx(user), id);
   }
 

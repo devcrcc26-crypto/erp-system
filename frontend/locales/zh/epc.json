@@ -148,6 +148,7 @@
       "evaluationInbox": "我的考核收件箱",
       "companyAssets": "公司资产",
       "employeeContract": "劳动合同",
+      "myTeam": "我的团队",
       "equipmentAndMaterialsExitPermit": "设备和材料退出许可"
     }
   },
@@ -599,6 +600,19 @@
       "comingSoonDescription": "{{module}} 将在后续版本中提供。",
       "accessDenied": "您无权访问人力资源模块。",
       "teamListDescription": "您本人的申请以及向您汇报的员工的申请。",
+      "myTeam": {
+        "title": "我的团队",
+        "description": "直接或间接向您汇报的所有员工。",
+        "search": "按姓名或邮箱搜索",
+        "empty": "目前还没有人向您汇报。",
+        "emptyFiltered": "没有符合搜索条件的团队成员。",
+        "loadFailed": "无法加载您的团队。",
+        "columns": {
+          "employeeId": "员工编号",
+          "position": "职位",
+          "reportsTo": "汇报对象"
+        }
+      },
       "reports": {
         "title": "人力资源报表",
         "description": "按所选期间统计人员结构、请假、加班、出行、合同、费用与绩效考核。",
@@ -3399,6 +3413,9 @@
     "tabPerDiem": "差旅补贴",
     "tabPerDiemShort": "补贴",
     "tabEvaluations": "考核",
+    "contractsLoadFailed": "无法加载合同。",
+    "contractsEmpty": "暂无合同。",
+    "tabContracts": "合同",
     "tabPayroll": "工资单",
     "primaryRole": "主角色",
     "setAsPrimary": "设为主角色",

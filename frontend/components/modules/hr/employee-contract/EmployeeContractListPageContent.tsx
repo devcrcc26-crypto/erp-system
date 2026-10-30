@@ -31,7 +31,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -63,7 +63,7 @@ import {
 } from '@/lib/utils/employee-contract-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildEmployeeContractExportSheets } from '@/lib/utils/employee-contract-export';
 
@@ -121,6 +121,8 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const canViewHr = useCanViewHr();
+  // Supervisors read (never change) their reports' contracts.
+  const canViewTeam = useCanViewTeam();
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const deleteMutation = useDeleteEmployeeContractRecord();
   const importPreview = useEmployeeContractImportPreview();
@@ -147,9 +149,9 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     [t],
   );
 
-  const companyListQuery = useEmployeeContractsAll({}, canViewHr);
-  const myListQuery = useMyEmployeeContractsAll({}, !canViewHr);
-  const listQuery = canViewHr ? companyListQuery : myListQuery;
+  const companyListQuery = useEmployeeContractsAll({}, canViewTeam);
+  const myListQuery = useMyEmployeeContractsAll({}, !canViewTeam);
+  const listQuery = canViewTeam ? companyListQuery : myListQuery;
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
@@ -157,6 +159,18 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   );
 
   const allRows = listQuery.data ?? [];
+
+  // HR picks from the directory; supervisors from the people in their list.
+  const employeeOptions = useMemo(
+    () =>
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(allRows),
+    [canViewHr, usersQuery.data, allRows],
+  );
 
   const statusCounts = useMemo(() => {
     const active = allRows.filter((row) => row.status === 'ACTIVE').length;
@@ -180,9 +194,9 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
         search: appliedSearch,
         statusMode,
         contractType,
-        employeeId: canViewHr ? employeeId : undefined,
+        employeeId: canViewTeam ? employeeId : undefined,
       }),
-    [allRows, appliedSearch, statusMode, contractType, employeeId, canViewHr],
+    [allRows, appliedSearch, statusMode, contractType, employeeId, canViewTeam],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -202,12 +216,14 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const pageTitle = canViewHr
+  const pageTitle = canViewTeam
     ? t('pages.hr.employeeContract.listTitle')
     : t('pages.hr.employeeContract.myListTitle');
   const pageDescription = canViewHr
     ? t('pages.hr.employeeContract.listDescription')
-    : t('pages.hr.employeeContract.myListDescription');
+    : canViewTeam
+      ? t('pages.hr.teamListDescription')
+      : t('pages.hr.employeeContract.myListDescription');
 
   function handleResetFilters(): void {
     setSearch('');
@@ -274,7 +290,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
+      ...(canViewTeam
         ? [
             {
               title: t('hr.table.employee'),
@@ -386,7 +402,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           ]
         : []),
     ],
-    [canViewHr, t],
+    [canViewHr, canViewTeam, t],
   );
 
   const hasFilters =
@@ -556,18 +572,15 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          {canViewHr ? (
+          {canViewTeam ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
               className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={(usersQuery.data?.data ?? []).map((user) => ({
-                value: user.id,
-                label: formatUserName(user),
-              }))}
+              loading={canViewHr ? usersQuery.isLoading : listQuery.isLoading}
+              options={employeeOptions}
               value={employeeId}
               onChange={(value: string | undefined) => {
                 setEmployeeId(value);

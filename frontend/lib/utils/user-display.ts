@@ -157,17 +157,21 @@ export function formatUserPickerLabel(user: User): string {
 /**
  * Employee filter options built from list rows (one per person, sorted by
  * name). Supervisors filter their team list this way without needing the
- * company user directory.
+ * company user directory. `person` picks who a row is about (default
+ * `row.employee`; travel lists use the submitter).
  */
-export function teamEmployeeOptions(
-  rows: readonly {
-    employee?: (Parameters<typeof formatUserName>[0] & { id: string }) | null;
-  }[],
+type ListPerson = Parameters<typeof formatUserName>[0] & { id: string };
+
+export function teamEmployeeOptions<T>(
+  rows: readonly T[],
+  person: (row: T) => ListPerson | null | undefined = (row) =>
+    (row as { employee?: ListPerson | null }).employee,
 ): { value: string; label: string }[] {
   const byId = new Map<string, string>();
   for (const row of rows) {
-    if (row.employee && !byId.has(row.employee.id)) {
-      byId.set(row.employee.id, formatUserName(row.employee));
+    const who = person(row);
+    if (who && !byId.has(who.id)) {
+      byId.set(who.id, formatUserName(who));
     }
   }
   return [...byId]

@@ -20,6 +20,7 @@ import { randomUUID } from 'crypto';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { resolveTeamScopedEmployeeIds } from '../../../../shared/org/team-scope.util';
 import { assertWithinEmploymentWindow } from '../../../../shared/employment/employment-guard.util';
 import {
   EXCLUDED_FROM_HR_MESSAGE,
@@ -160,6 +161,8 @@ export class WorkFromHomeDayService
     companyId: string,
     month?: number,
     year?: number,
+    /** Limits rows and their employee lists to these people (team view). */
+    onlyEmployeeIds?: readonly string[],
   ): Promise<unknown[]> {
     const where: Prisma.WorkFromHomeDayWhereInput = activeOnly({ companyId });
     if (month != null && year != null) {
@@ -167,10 +170,34 @@ export class WorkFromHomeDayService
       const end = new Date(Date.UTC(year, month, 0));
       where.date = { gte: start, lte: end };
     }
-    const rows = await this.prisma.workFromHomeDay.findMany({
+    if (onlyEmployeeIds) {
+      const departmentIds = (
+        await this.prisma.user.findMany({
+          where: { companyId, id: { in: [...onlyEmployeeIds] } },
+          select: { departmentId: true },
+        })
+      )
+        .map((user) => user.departmentId)
+        .filter((id): id is string => Boolean(id));
+      // Company-wide days, days for a team member's department, and days
+      // naming a team member.
+      where.OR = [
+        { scope: 'ALL' },
+        { scope: 'DEPARTMENTS', departmentIds: { hasSome: departmentIds } },
+        { scope: 'EMPLOYEES', employeeIds: { hasSome: [...onlyEmployeeIds] } },
+      ];
+    }
+    const found = await this.prisma.workFromHomeDay.findMany({
       where,
       orderBy: { date: 'asc' },
     });
+    const allowed = onlyEmployeeIds ? new Set(onlyEmployeeIds) : null;
+    const rows = allowed
+      ? found.map((row) => ({
+          ...row,
+          employeeIds: row.employeeIds.filter((id) => allowed.has(id)),
+        }))
+      : found;
     const employeeIds = [
       ...new Set(rows.flatMap((row) => row.employeeIds)),
     ];
@@ -222,7 +249,17 @@ export class WorkFromHomeDayService
     month?: number,
     year?: number,
   ): Promise<unknown[]> {
-    return this.list(companyId, month, year);
+    if (await this.permissionService.hasPermission(userId, companyId, 'wfh', 'manage')) {
+      return this.list(companyId, month, year);
+    }
+    // Everyone else (supervisors included) sees only their own and their
+    // team's work-from-home days, never the whole company's.
+    return this.list(
+      companyId,
+      month,
+      year,
+      await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+    );
   }
 
   /**

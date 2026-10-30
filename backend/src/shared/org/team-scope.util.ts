@@ -1,4 +1,6 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { PermissionService } from '../permissions/permission.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { activeOnly } from '../prisma/soft-delete.util';
 
@@ -120,7 +122,7 @@ export async function isEmployeeInTeamScope(
 }
 
 /** Statuses only the owner (and HR) sees: unsent drafts and cancelled requests. */
-const OWNER_ONLY_STATUSES = ['DRAFT', 'CANCELLED'] as const;
+export const OWNER_ONLY_STATUSES = ['DRAFT', 'CANCELLED'] as const;
 type OwnerOnlyStatus = (typeof OWNER_ONLY_STATUSES)[number];
 
 /**
@@ -172,4 +174,63 @@ export async function canViewThroughTeam(
   }
   const subordinates = await resolveTeamScopedEmployeeIds(prisma, viewerId, companyId);
   return subordinates.includes(record.employeeId);
+}
+
+/**
+ * Like `canViewThroughTeam` for records that involve several people (flight
+ * and business-trip passengers, submitter): true when any of them other than
+ * the viewer is in the viewer's team and the record is not a draft or
+ * cancelled.
+ */
+export async function canViewAnyThroughTeam(
+  prisma: PrismaService,
+  viewerId: string,
+  companyId: string,
+  record: { employeeIds: readonly string[]; status: string },
+): Promise<boolean> {
+  if ((OWNER_ONLY_STATUSES as readonly string[]).includes(record.status)) {
+    return false;
+  }
+  const others = record.employeeIds.filter((id) => id !== viewerId);
+  if (others.length === 0) {
+    return false;
+  }
+  const team = await resolveTeamScopedEmployeeIds(prisma, viewerId, companyId);
+  return others.some((id) => team.includes(id));
+}
+
+/** The viewer's team without the viewer (empty for non-supervisors). */
+export async function resolveTeamMemberIds(
+  prisma: PrismaService,
+  viewerId: string,
+  companyId: string,
+): Promise<string[]> {
+  const team = await resolveTeamScopedEmployeeIds(prisma, viewerId, companyId);
+  return team.filter((id) => id !== viewerId);
+}
+
+/**
+ * Route gate for team lists: any of `permissions`, or the caller supervises
+ * someone. Use with `@DelegatePermissionCheck()`; the service still scopes
+ * the rows (own + team for non-managers).
+ */
+export async function assertPermissionOrSupervisor(
+  permissionService: PermissionService,
+  prisma: PrismaService,
+  userId: string,
+  companyId: string,
+  permissions: ReadonlyArray<{
+    module: string;
+    action: Parameters<PermissionService['hasPermission']>[3];
+  }>,
+): Promise<void> {
+  for (const { module, action } of permissions) {
+    if (await permissionService.hasPermission(userId, companyId, module, action)) {
+      return;
+    }
+  }
+  if (await hasDirectReports(prisma, userId, companyId)) {
+    return;
+  }
+  throw new ForbiddenException('Missing permission for this list');
 }

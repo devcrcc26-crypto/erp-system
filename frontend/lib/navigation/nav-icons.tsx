@@ -82,6 +82,7 @@ import {
   Timer,
   TriangleAlert,
   Truck,
+  UserCheck,
   UserCog,
   UserRound,
   Users,
@@ -178,6 +179,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
 
   // ── People ──
   users: lucideNavIcon(Users),
+  'hr-my-team': lucideNavIcon(UserCheck),
   'hr-employee-contract': lucideNavIcon(FileSignature),
   'hr-evaluation-inbox': lucideNavIcon(MailCheck),
   'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),

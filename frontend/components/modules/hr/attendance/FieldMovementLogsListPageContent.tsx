@@ -28,7 +28,7 @@ import {
   formatFieldMovementStatus,
 } from '@/components/modules/attendance/field-movement-display';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type {
@@ -42,7 +42,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { fieldMovementCreateActions } from '@/lib/utils/field-movement-actions';
 import { useUsersDirectory } from '@/lib/query/users';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 
 const STATUS_OPTIONS: FieldMovementStatus[] = [
   'DRAFT',
@@ -93,6 +93,8 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
+  // Supervisors see their team's logs (backend-scoped).
+  const canViewTeam = useCanViewTeam();
   const { params, resetPage, bindMeta } = useTablePagination(20);
   const currentUser = useCurrentUser();
   const eligibleQuery = useOnBehalfEligibleEmployees(
@@ -128,7 +130,13 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     { enabled: canViewHr },
   );
 
-  const allRows = listQuery.data ?? [];
+  const fetchedRows = listQuery.data ?? [];
+  // HR filters on the server; supervisors filter their team list here so the
+  // employee options stay complete.
+  const allRows =
+    canViewHr || !employeeId
+      ? fetchedRows
+      : fetchedRows.filter((row) => row.employee?.id === employeeId);
 
   const statusCounts = useMemo(
     () => ({
@@ -187,11 +195,13 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   const employeeOptions = useMemo(
     () =>
-      (usersQuery.data?.data ?? []).map((user) => ({
-        value: user.id,
-        label: formatUserName(user),
-      })),
-    [usersQuery.data?.data],
+      canViewHr
+        ? (usersQuery.data?.data ?? []).map((user) => ({
+            value: user.id,
+            label: formatUserName(user),
+          }))
+        : teamEmployeeOptions(fetchedRows),
+    [canViewHr, usersQuery.data?.data, fetchedRows],
   );
 
   const monthName =
@@ -313,7 +323,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     [t],
   );
 
-  if (!canViewHr) {
+  if (!canViewTeam) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
         <Alert

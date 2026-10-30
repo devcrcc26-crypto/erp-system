@@ -22,6 +22,11 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  canViewAnyThroughTeam,
+  OWNER_ONLY_STATUSES,
+  resolveTeamMemberIds,
+} from '../../../../shared/org/team-scope.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { isInstantOnPastDay } from '../../../../shared/utils/date-validation.util';
@@ -550,6 +555,11 @@ export class FlightService
       'manage',
     );
 
+    // Supervisors also see their team's (submitted by or travelling), never
+    // the team's drafts or cancelled ones.
+    const teamIds = canViewAll
+      ? []
+      : await resolveTeamMemberIds(this.prisma, userId, companyId);
     const scopeClause: Prisma.FlightApplicationWhereInput[] = canViewAll
       ? []
       : [
@@ -557,6 +567,17 @@ export class FlightService
             OR: [
               { submittedBy: userId },
               { passengers: { some: { employeeId: userId } } },
+              ...(teamIds.length > 0
+                ? [
+                    {
+                      status: { notIn: [...OWNER_ONLY_STATUSES] },
+                      OR: [
+                        { submittedBy: { in: teamIds } },
+                        { passengers: { some: { employeeId: { in: teamIds } } } },
+                      ],
+                    },
+                  ]
+                : []),
             ],
           },
         ];
@@ -1643,7 +1664,15 @@ export class FlightService
       app.status !== 'CANCELLED' &&
       (app.approvalRequest?.tiers?.some((t) => t.approverId === userId) ?? false);
 
-    if (!isSubmitter && !isPassenger && !isTierApprover) {
+    if (
+      !isSubmitter &&
+      !isPassenger &&
+      !isTierApprover &&
+      !(await canViewAnyThroughTeam(this.prisma, userId, companyId, {
+        employeeIds: [app.submittedBy, ...app.passengers.map((p) => p.employeeId)],
+        status: app.status,
+      }))
+    ) {
       throw new ForbiddenException(
         'You do not have access to this flight application',
       );

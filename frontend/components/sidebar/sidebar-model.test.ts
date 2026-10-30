@@ -214,19 +214,45 @@ describe('sidebar permissions and filtering', () => {
     const links = flattenSidebarModel(model).map((entry) => entry.link.id);
     expect(links).toEqual(
       expect.arrayContaining([
+        'my-team',
+        'employee-contract',
         'leave-requests',
         'overtime',
         'attendance',
+        'field-movement-logs',
+        'work-from-home',
         'site-assignments',
         'evaluations',
         'expense-claims',
         'per-diem',
+        'flight-applications',
+        'business-trips',
+        'vehicle-applications',
+        'exit-permit',
       ]),
     );
-    // Team lists only - never HR admin pages or payroll.
-    for (const hrOnly of ['leave-policy', 'attendance-identities', 'payroll', 'employee-per-diem-rates']) {
+    // Team lists only - never HR admin pages, payroll or the full Users list.
+    for (const hrOnly of [
+      'users',
+      'leave-policy',
+      'attendance-identities',
+      'payroll',
+      'employee-per-diem-rates',
+      'vehicle-refueling',
+      'company-vehicles',
+    ]) {
       expect(links).not.toContain(hrOnly);
     }
+  });
+
+  it('shows My Team only to supervisors without the full Users list', () => {
+    const linkIds = (overrides: Partial<Capabilities>): string[] =>
+      flattenSidebarModel(modelFor(overrides)).map((entry) => entry.link.id);
+    expect(linkIds({})).not.toContain('my-team');
+    expect(linkIds({ hasDirectReports: true })).toContain('my-team');
+    const hrManager = linkIds({ canViewHr: true, canManageUsers: true, hasDirectReports: true });
+    expect(hrManager).toContain('users');
+    expect(hrManager).not.toContain('my-team');
   });
 
   it('grants the expense claim and per diem lists to HR, admins and supervisors only', () => {

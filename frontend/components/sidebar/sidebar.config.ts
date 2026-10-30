@@ -20,6 +20,7 @@ export type SidebarPermission =
   | 'users.manage'
   | 'hr.view'
   | 'team.view'
+  | 'team.members'
   | 'evaluation.inbox'
   | 'leave.access'
   | 'wfh.assign'
@@ -201,13 +202,21 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
         // Supervisors see their team's records (scoped by the backend).
         whenGranted: 'team.view',
         entryIds: [
+          'my-team',
+          'employee-contract',
           'leave-requests',
           'overtime',
           'attendance',
+          'field-movement-logs',
+          'work-from-home',
           'site-assignments',
           'evaluations',
           'expense-claims',
           'per-diem',
+          'flight-applications',
+          'business-trips',
+          'vehicle-applications',
+          'exit-permit',
         ],
       },
     ],
@@ -252,7 +261,9 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.sections.employees',
           items: [
             { kind: 'link', id: 'users', labelKey: 'nav.users', icon: 'users', href: '/users', requires: ['users.manage'], keywords: ['employees', 'staff'] },
-            { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: HR },
+            // Supervisors: everyone below them in the reporting chain (HR uses Users).
+            { kind: 'link', id: 'my-team', labelKey: 'nav.hr.myTeam', icon: 'hr-my-team', href: '/hr/my-team', requires: ['team.members'], activePaths: ['/users'], keywords: ['team', 'reports', 'subordinates', 'employees'] },
+            { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: TEAM },
           ],
         },
         {
@@ -314,8 +325,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: TEAM, keywords: ['clock in', 'deli', 'timesheet'] },
             { kind: 'link', id: 'attendance-identities', labelKey: 'nav.hr.attendanceIdentities', icon: 'hr-attendance-identities', href: '/hr/attendance/identities', requires: HR, keywords: ['deli', 'device mapping', 'ignored'] },
-            { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
-            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-work-from-home', href: '/hr/work-from-home', requires: ['wfh.assign'], keywords: ['wfh', 'remote', 'home office'] },
+            { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: TEAM, keywords: ['field visit', 'early departure', 'clock'] },
+            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-work-from-home', href: '/hr/work-from-home', requires: ['wfh.assign', 'team.view'], keywords: ['wfh', 'remote', 'home office'] },
             { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-site-assignments', href: '/hr/site-assignments', requires: TEAM, keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
           ],
         },
@@ -348,8 +359,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'finance-travel',
           labelKey: 'nav.sections.travel',
           items: [
-            { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access'], keywords: ['ticket', 'air'] },
-            { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access'], keywords: ['travel'] },
+            { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access', 'team.view'], keywords: ['ticket', 'air'] },
+            { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access', 'team.view'], keywords: ['travel'] },
             { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: ['perDiem.access'], keywords: ['allowance'] },
             { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
           ],
@@ -376,7 +387,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'ops-fleet-assets',
           labelKey: 'nav.sections.fleetAssets',
           items: [
-            { kind: 'link', id: 'vehicle-applications', labelKey: 'nav.hr.vehicleApplications', icon: 'hr-vehicle', href: '/hr/vehicle-applications', requires: ['fleet.access'], keywords: ['car'] },
+            { kind: 'link', id: 'vehicle-applications', labelKey: 'nav.hr.vehicleApplications', icon: 'hr-vehicle', href: '/hr/vehicle-applications', requires: ['fleet.access', 'team.view'], keywords: ['car'] },
             { kind: 'link', id: 'vehicle-refueling', labelKey: 'nav.hr.vehicleRefueling', icon: 'hr-refueling', href: '/hr/vehicle-refueling', requires: ['fleet.access'], keywords: ['fuel'] },
             { kind: 'link', id: 'inspection-repair', labelKey: 'nav.hr.inspectionRepair', icon: 'hr-inspection', href: '/hr/inspection-repair', requires: ['fleet.access'], keywords: ['maintenance'] },
             { kind: 'link', id: 'company-vehicles', labelKey: 'nav.organization.vehicles', icon: 'hr-company-vehicles', href: '/organization/vehicles', requires: ['org.vehicles'] },
@@ -389,7 +400,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'official-seal', labelKey: 'nav.hr.officialSeal', icon: 'hr-official-seal', href: '/hr/official-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
             { kind: 'link', id: 'project-seal', labelKey: 'nav.hr.projectSeal', icon: 'hr-project-seal', href: '/hr/project-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
-            { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access'], keywords: ['gate pass'] },
+            { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access', 'team.view'], keywords: ['gate pass'] },
             { kind: 'link', id: 'manage-announcements', labelKey: 'announcements.nav.manage', icon: 'announcements-manage', href: '/hr/announcements', requires: ['announcements.manage'], keywords: ['news', 'publish', 'broadcast', "what's new", 'system update'] },
           ],
         },

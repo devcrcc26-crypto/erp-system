@@ -1,5 +1,9 @@
 import type { PrismaService } from '../prisma/prisma.service';
+import { ForbiddenException } from '@nestjs/common';
+import type { PermissionService } from '../permissions/permission.service';
 import {
+  assertPermissionOrSupervisor,
+  canViewAnyThroughTeam,
   canViewThroughTeam,
   getSubordinateIds,
   hasDirectReports,
@@ -85,5 +89,33 @@ describe('team scope', () => {
     ).toEqual({
       OR: [{ employeeId: { in: [] }, status: { notIn: ['CANCELLED'] } }],
     });
+  });
+
+  it('lets a supervisor open a trip where any traveller is in their team', async () => {
+    const trip = (status: string) =>
+      canViewAnyThroughTeam(prisma, 'lead', COMPANY, {
+        employeeIds: ['peer', 'engineer'],
+        status,
+      });
+    await expect(trip('APPROVED')).resolves.toBe(true);
+    await expect(trip('DRAFT')).resolves.toBe(false);
+    await expect(
+      canViewAnyThroughTeam(prisma, 'lead', COMPANY, {
+        employeeIds: ['peer', 'lead'],
+        status: 'APPROVED',
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it('opens team list routes to module users and supervisors only', async () => {
+    const permissions = (granted: boolean) =>
+      ({ hasPermission: async () => granted }) as unknown as PermissionService;
+    const gate = (userId: string, granted: boolean) =>
+      assertPermissionOrSupervisor(permissions(granted), prisma, userId, COMPANY, [
+        { module: 'flight', action: 'view' },
+      ]);
+    await expect(gate('engineer', true)).resolves.toBeUndefined();
+    await expect(gate('lead', false)).resolves.toBeUndefined();
+    await expect(gate('engineer', false)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

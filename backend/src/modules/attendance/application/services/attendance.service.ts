@@ -33,8 +33,10 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
+  canViewThroughTeam,
   isEmployeeInTeamScope,
   resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
 } from '../../../../shared/org/team-scope.util';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
@@ -4859,7 +4861,13 @@ export class AttendanceService
       (log.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
       false);
 
-    if (!isHr && !isOwner && !isCreator && !isApprover) {
+    if (
+      !isHr &&
+      !isOwner &&
+      !isCreator &&
+      !isApprover &&
+      !(await canViewThroughTeam(this.prisma, userId, companyId, log))
+    ) {
       throw new ForbiddenException('You do not have access to this log');
     }
 
@@ -4921,10 +4929,19 @@ export class AttendanceService
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
 
+    // Supervisors also see their team's logs (not drafts or cancelled ones).
+    const teamScope = isHr
+      ? null
+      : teamScopeWhere(
+          userId,
+          await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+          filters.employeeId,
+        );
+
     const where: Prisma.FieldMovementLogWhereInput = {
       companyId,
       deletedAt: null,
-      ...(isHr ? {} : { employeeId: userId }),
+      ...(teamScope ? { AND: [teamScope] } : {}),
       ...(isHr && filters.employeeId ? { employeeId: filters.employeeId } : {}),
       ...(filters.month ? { month: filters.month } : {}),
       ...(filters.year ? { year: filters.year } : {}),

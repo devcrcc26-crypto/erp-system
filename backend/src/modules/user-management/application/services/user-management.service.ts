@@ -110,8 +110,13 @@ export class UserManagementService {
   async listUsers(
     ctx: AuditContext,
     query: UsersQueryDto,
+    /** Supervisor team view: only these users. */
+    onlyIds?: readonly string[],
   ): Promise<PaginatedResult<unknown>> {
     const where: Prisma.UserWhereInput = activeOnly({ companyId: ctx.companyId });
+    if (onlyIds) {
+      where.id = { in: [...onlyIds] };
+    }
     if (query.search) {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },

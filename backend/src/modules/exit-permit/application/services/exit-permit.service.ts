@@ -10,6 +10,11 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../../../shared/prisma/prisma.service";
 import {
+  canViewThroughTeam,
+  resolveTeamScopedEmployeeIds,
+  teamScopeWhere,
+} from "../../../../shared/org/team-scope.util";
+import {
   isDateInPast,
   parseLocalDateOnly,
   startOfToday,
@@ -550,10 +555,20 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       'manage',
     );
 
+    // Own permits plus the team's for supervisors (not their drafts or
+    // cancelled ones).
+    const teamScope = canManage
+        ? null
+        : teamScopeWhere(
+            userId,
+            await resolveTeamScopedEmployeeIds(this.prisma, userId, companyId),
+            filters.employeeId,
+        );
+
     const where: Prisma.ExitPermitWhereInput = {
         companyId,
         deletedAt: null,
-        ...(canManage ? {} : { employeeId: userId }),
+        ...(teamScope ? { AND: [teamScope] } : {}),
         ...(statuses ? { status: { in: statuses } } : {}),
         ...(canManage && filters.employeeId ? { employeeId: filters.employeeId } : {}),
         ...(filters.search?.trim() ? {
@@ -750,7 +765,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       (request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false);
 
-    if (!isTierApprover) {
+    if (
+      !isTierApprover &&
+      !(await canViewThroughTeam(this.prisma, userId, companyId, request))
+    ) {
       throw new ForbiddenException(
         "You do not have access to this exit permit",
       );

@@ -9,6 +9,7 @@ import {
   useCanManageAnnouncements,
   useCanViewHr,
   useCanViewPurchaseRequest,
+  useCanViewTeam,
 } from '@/hooks/use-auth-capabilities';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -18,6 +19,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
  * Full HR (hr.view) can access everything.
  * Employees may open overtime, leave-request, and employee-contract routes
  * for their own records; page-level ownership checks enforce that.
+ * Supervisors also get the team list routes (`isTeamRoute`).
  */
 export default function HrSectionLayout({
   children,
@@ -33,6 +35,7 @@ export default function HrSectionLayout({
   const canManageAnnouncements = useCanManageAnnouncements();
   const canViewPurchaseRequest = useCanViewPurchaseRequest();
   const canCreatePurchaseRequest = useCanCreatePurchaseRequest();
+  const canViewTeam = useCanViewTeam();
 
   const isEmployeeSelfServiceRoute =
     pathname.startsWith('/hr/overtime') ||
@@ -45,6 +48,16 @@ export default function HrSectionLayout({
     pathname.startsWith('/hr/site-assignments') ||
     pathname.startsWith('/hr/evaluations');
 
+  // Supervisor team lists (data scoped to their reporting chain by the API).
+  const isTeamRoute = [
+    '/hr/my-team',
+    '/hr/flight-applications',
+    '/hr/business-trips',
+    '/hr/vehicle-applications',
+    '/hr/equipment-and-materials-exit-permit',
+    '/hr/field-movement-logs',
+  ].some((prefix) => pathname.startsWith(prefix));
+
   const isWfhAssignRoute = pathname.startsWith('/hr/work-from-home');
   const isPayrollRoute = pathname.startsWith('/hr/payroll');
   const isAnnouncementsRoute = pathname.startsWith('/hr/announcements');
@@ -53,6 +66,7 @@ export default function HrSectionLayout({
     canViewHr ||
     isEmployeeSelfServiceRoute ||
     isWfhAssignRoute ||
+    (isTeamRoute && canViewTeam) ||
     (isPayrollRoute && canAccessPayroll) ||
     (isAnnouncementsRoute && canManageAnnouncements) ||
     (isPurchaseRequestRoute &&

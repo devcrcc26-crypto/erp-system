@@ -16,8 +16,10 @@ Full guide: [`frontend/components/sidebar/SIDEBAR.md`](frontend/components/sideb
   access are removed, never greyed out. Hidden UI is not security; pages and APIs still check.
 - **Limited navigation.** Users without `hr.view` see only Dashboard, New Request,
   Approvals, Evaluation Inbox (leads), Announcements, My Profile and User Guide. Supervisors
-  (anyone with direct reports, token `team.view`) also see Leave Requests, Overtime, Attendance,
-  Site Assignments, Evaluations, Expense Claims and Per Diem for their team. This is
+  (anyone with direct reports, token `team.view`) also see My Team, Employee Contracts (read-only),
+  Leave Requests, Overtime, Attendance, Field Movement Logs, Work From Home (read-only), Site
+  Assignments, Evaluations, Expense Claims, Per Diem, Flight Applications, Business Trips, Vehicle
+  Applications and Exit Permits for their team. This is
   `limitedNavigation` (with `extraEntryIds`) in `sidebar.config.ts`, applied in `buildSidebarModel`;
   edit the allowlists there, never in components.
 - **One selected state.** `aria-current="page"` (or `data-active="true"` on a closed folder)

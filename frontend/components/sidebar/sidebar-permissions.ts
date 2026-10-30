@@ -65,6 +65,8 @@ export function resolveSidebarPermissions(
   // backend scopes the data to their full reporting chain.
   const team = hr || caps.hasDirectReports;
   grant('team.view', team);
+  // My Team is the supervisor's employee list; HR has the full Users list.
+  grant('team.members', caps.hasDirectReports && !caps.canManageUsers);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
   // Direct WFH assignment (no approval) is HR only; others use New Request.
   grant('wfh.assign', hr);
