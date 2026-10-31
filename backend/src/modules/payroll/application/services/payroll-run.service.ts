@@ -508,7 +508,9 @@ export class PayrollRunService {
     const existingEntries = await this.prisma.payrollEntry.findMany({
       where: { runId },
       select: {
+        id: true,
         employeeId: true,
+        payrollDays: true,
         bonusTopUp: true,
         bonusTopUpReason: true,
         netTopUp: true,
@@ -519,20 +521,29 @@ export class PayrollRunService {
 
     const captured = new Map<string, CapturedTopUp>();
     for (const entry of existingEntries) {
-      const bonusTopUp = this.toNumber(entry.bonusTopUp);
-      const netTopUp = this.toNumber(entry.netTopUp);
+      // A 0-day override clears top-ups from the entry; its snapshot still has them.
+      const zeroSnapshot =
+        this.toNumber(entry.payrollDays) === 0
+          ? await this.latestZeroDaysSnapshot(entry.id, ctx.companyId)
+          : null;
+      const bonusTopUp = zeroSnapshot?.bonusTopUp ?? this.toNumber(entry.bonusTopUp);
+      const bonusTopUpReason = zeroSnapshot
+        ? zeroSnapshot.bonusTopUpReason
+        : entry.bonusTopUpReason;
+      const netTopUp = zeroSnapshot?.netTopUp ?? this.toNumber(entry.netTopUp);
+      const netTopUpReason = zeroSnapshot ? zeroSnapshot.netTopUpReason : entry.netTopUpReason;
       if (
         bonusTopUp !== 0 ||
-        entry.bonusTopUpReason != null ||
+        bonusTopUpReason != null ||
         netTopUp !== 0 ||
-        entry.netTopUpReason != null ||
+        netTopUpReason != null ||
         entry.notes != null
       ) {
         captured.set(entry.employeeId, {
           bonusTopUp,
-          bonusTopUpReason: entry.bonusTopUpReason,
+          bonusTopUpReason,
           netTopUp,
-          netTopUpReason: entry.netTopUpReason,
+          netTopUpReason,
           notes: entry.notes,
         });
       }
