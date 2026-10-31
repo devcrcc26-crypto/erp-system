@@ -25,8 +25,13 @@ import {
 } from '../dtos/overtime.dtos';
 import {
   calculateOvertimeHoursDetailed,
+  CROSSES_SCHEDULE_MESSAGE,
+  NO_SELECTABLE_OT_MESSAGE,
   OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
+  OVERLAPS_LEAVE_MESSAGE,
   overtimeEntrySpanMinutes,
+  SAME_DAY_END_BEFORE_START_MESSAGE,
+  START_INSIDE_SCHEDULE_MESSAGE,
   totalOvertimeHours,
   SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE,
   WITHIN_SCHEDULE_MESSAGE,
@@ -45,6 +50,7 @@ import {
 import {
   computeSelectableOvertimeWindows,
   entryToSameDayOccupiedWindow,
+  explainOutsideSelectableWindow,
   isSameDayOvertimeIntervalAllowed,
   minutesToHhMm,
   subtractOccupiedFromWindows,
@@ -205,7 +211,13 @@ export class OvertimeEntryService {
         )
       ) {
         throw new BadRequestException(
-          selectable.message ?? OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
+          selectable.message ??
+            this.messageForOutsideSelectable(
+              startTime,
+              endTime,
+              selectable.windows,
+              leaveWindowsStart,
+            ),
         );
       }
       // Weekday lunch 12:30–13:30 is never OT-eligible (after selectable check).
@@ -704,6 +716,37 @@ export class OvertimeEntryService {
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
     return endH * 60 + endM <= startH * 60 + startM;
+  }
+
+  /**
+   * Maps selectable-window rejection to a specific user-facing reason.
+   */
+  private messageForOutsideSelectable(
+    startTime: string,
+    endTime: string,
+    windows: TimeWindowHhMm[],
+    leaveExcludedWindows: Array<{ start: string; end: string }>,
+  ): string {
+    const reason = explainOutsideSelectableWindow(
+      startTime,
+      endTime,
+      windows,
+      leaveExcludedWindows,
+    );
+    switch (reason) {
+      case 'END_BEFORE_START':
+        return SAME_DAY_END_BEFORE_START_MESSAGE;
+      case 'NO_WINDOWS':
+        return NO_SELECTABLE_OT_MESSAGE;
+      case 'OVERLAPS_LEAVE':
+        return OVERLAPS_LEAVE_MESSAGE;
+      case 'START_IN_SCHEDULE':
+        return START_INSIDE_SCHEDULE_MESSAGE;
+      case 'CROSSES_SCHEDULE':
+        return CROSSES_SCHEDULE_MESSAGE;
+      default:
+        return OUTSIDE_SELECTABLE_WINDOW_MESSAGE;
+    }
   }
 
   private async resolvePreviewEmployee(

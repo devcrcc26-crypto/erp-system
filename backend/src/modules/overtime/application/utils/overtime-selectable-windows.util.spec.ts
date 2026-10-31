@@ -3,6 +3,7 @@ import {
   computeSelectableOvertimeWindows,
   entryToSameDayOccupiedWindow,
   enumerateWindowTimes,
+  explainOutsideSelectableWindow,
   isIntervalInsideSelectableWindows,
   isSameDayOvertimeIntervalAllowed,
   subtractOccupiedFromWindows,
@@ -120,6 +121,37 @@ describe('isIntervalInsideSelectableWindows (legacy full-window check)', () => {
     expect(
       isIntervalInsideSelectableWindows('18:00', '22:00', result.windows),
     ).toBe(true);
+  });
+});
+
+describe('explainOutsideSelectableWindow', () => {
+  it('blames schedule — not leave — when start is inside duty hours', () => {
+    const result = computeSelectableOvertimeWindows(FULL);
+    expect(
+      explainOutsideSelectableWindow('09:00', '12:00', result.windows, []),
+    ).toBe('START_IN_SCHEDULE');
+  });
+
+  it('blames crossing schedule when start is OT but end enters duty', () => {
+    const result = computeSelectableOvertimeWindows(FULL);
+    expect(
+      explainOutsideSelectableWindow('06:00', '12:00', result.windows, []),
+    ).toBe('CROSSES_SCHEDULE');
+  });
+
+  it('blames leave only when the interval overlaps leave carve-outs', () => {
+    const result = computeSelectableOvertimeWindows({
+      ...FULL,
+      leaveExcludedWindows: [{ start: '08:30', end: '17:30' }],
+    });
+    expect(
+      isSameDayOvertimeIntervalAllowed('18:00', '20:00', result.windows),
+    ).toBe(true);
+    expect(
+      explainOutsideSelectableWindow('09:00', '12:00', result.windows, [
+        { start: '08:30', end: '17:30' },
+      ]),
+    ).toBe('OVERLAPS_LEAVE');
   });
 });
 

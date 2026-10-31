@@ -13,6 +13,7 @@ import {
   parseHhMmToMinutes,
 } from '@/components/modules/hr/overtime/overtime-time-periods';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   OvertimeEntry,
@@ -101,6 +102,7 @@ export default function OvertimeEntryFormDrawer({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
   const [form] = Form.useForm<OvertimeEntryFormValues>();
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
@@ -134,13 +136,18 @@ export default function OvertimeEntryFormDrawer({
       if (!current) {
         return false;
       }
-      return (
-        current.isAfter(dayjs().endOf('day')) ||
-        current.month() + 1 !== sheetMonth ||
-        current.year() !== sheetYear
-      );
+      const outsideSheetMonth =
+        current.month() + 1 !== sheetMonth || current.year() !== sheetYear;
+      if (outsideSheetMonth) {
+        return true;
+      }
+      // Employees: today and past only. HR may enter future dates in the sheet month.
+      if (canViewHr) {
+        return false;
+      }
+      return current.isAfter(dayjs().endOf('day'));
     },
-    [sheetMonth, sheetYear],
+    [canViewHr, sheetMonth, sheetYear],
   );
 
   const watchedDate = Form.useWatch('date', form);
@@ -190,6 +197,16 @@ export default function OvertimeEntryFormDrawer({
               | OvertimeEntryFormValues['periods']
               | undefined) ?? [];
           const preferred = preferredOvertimeStart(result.windows);
+
+          if (!isEditing && periods.length === 1 && !periods[0]?.startTime) {
+            form.setFieldsValue({
+              periods: [
+                emptyPeriod(preferred, periods[0]?.taskDescription),
+              ],
+            });
+            return;
+          }
+
           const toMin = (v: string): number =>
             v === '24:00'
               ? 1440
@@ -203,15 +220,6 @@ export default function OvertimeEntryFormDrawer({
             }
             return toMin(end);
           };
-
-          if (!isEditing && periods.length === 1 && !periods[0]?.startTime) {
-            form.setFieldsValue({
-              periods: [
-                emptyPeriod(preferred, periods[0]?.taskDescription),
-              ],
-            });
-            return;
-          }
 
           const nextPeriods = periods.map((row) => {
             if (!row.startTime) {

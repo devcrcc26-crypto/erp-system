@@ -16,6 +16,22 @@ import { getAutoApproveModeFromEnv } from './shared/config/auto-approve.mode';
 
 // Async function that starts the application
 
+function parseCorsOrigins(...rawValues: Array<string | undefined>): string[] {
+  const origins = new Set<string>();
+  for (const raw of rawValues) {
+    if (!raw) {
+      continue;
+    }
+    for (const part of raw.split(',')) {
+      const origin = part.trim().replace(/\/+$/, '');
+      if (origin) {
+        origins.add(origin);
+      }
+    }
+  }
+  return [...origins];
+}
+
 async function bootstrap(): Promise<void> {
 
   // Create the Nest application instance
@@ -23,6 +39,37 @@ async function bootstrap(): Promise<void> {
 
   // Get the ConfigService instance from the Nest dependencies injection system
   const config = app.get(ConfigService);
+
+  // CORS must be first — before helmet, prefix, pipes, and filters — so
+  // preflight and error responses (including 401) always carry ACAO headers.
+  const corsOrigins = parseCorsOrigins(
+    config.get<string>('CORS_ORIGIN'),
+    config.get<string>('FRONTEND_URL'),
+  );
+  const allowedOrigins =
+    corsOrigins.length > 0 ? corsOrigins : ['http://localhost:3000'];
+
+  app.enableCors({
+    origin: (
+      requestOrigin: string | undefined,
+      callback: (err: Error | null, allow?: boolean | string) => void,
+    ): void => {
+      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+        callback(null, requestOrigin ?? true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: [
+      'Content-Disposition',
+      'X-Payroll-Bank-Letter-Ref',
+      'X-Payroll-Excluded-Accounts',
+      'X-Payroll-Excluded-Count',
+    ],
+  });
 
   // Get the port from the configuration
   const port = config.get<number>('PORT', 3001);
@@ -35,18 +82,6 @@ async function bootstrap(): Promise<void> {
 
   // Use the helmet middleware to secure the HTTP headers
   app.use(helmet());
-
-  // Enable CORS for the application, this allows the application to be accessed from other domains
-  app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
-    credentials: true,
-    exposedHeaders: [
-      'Content-Disposition',
-      'X-Payroll-Bank-Letter-Ref',
-      'X-Payroll-Excluded-Accounts',
-      'X-Payroll-Excluded-Count',
-    ],
-  });
 
   // Use the ValidationPipe to validate the request data (DTOs)
   app.useGlobalPipes(

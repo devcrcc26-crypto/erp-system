@@ -19,7 +19,19 @@ export const OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE =
   'Overnight entries that cross midnight require the next calendar day schedule context.';
 
 export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
-  'Overtime times must fall on the same calendar day and cannot overlap approved leave or another entry on this sheet.';
+  'Overtime times must stay outside normal working hours and must not cross your schedule or approved leave. Use separate entries for before-work and after-work overtime.';
+
+export const OVERLAPS_LEAVE_MESSAGE =
+  'Overtime times overlap approved leave on this day.';
+
+export const START_INSIDE_SCHEDULE_MESSAGE =
+  'Start time falls within normal working hours. Overtime must start outside your schedule.';
+
+export const CROSSES_SCHEDULE_MESSAGE =
+  'Overtime entry cannot cross normal working hours. Split into separate entries before and after your schedule.';
+
+export const NO_SELECTABLE_OT_MESSAGE =
+  'No overtime times are available for this day (schedule or approved leave).';
 
 /**
  * Schedule-aware overtime hour splitter (15-minute steps; last block may be shorter).

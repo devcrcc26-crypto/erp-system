@@ -13,10 +13,14 @@ import {
   OvertimeImportRowPreviewDto,
 } from '../dtos/overtime-import.dtos';
 import {
+  WITHIN_SCHEDULE_MESSAGE,
+} from '../utils/overtime-hours.util';
+import {
   entryToSameDayOccupiedWindow,
   parseHhMmToMinutesStrict,
   timeIntervalsOverlap,
 } from '../utils/overtime-selectable-windows.util';
+import { OvertimeEntryService } from './overtime-entry.service';
 import { OvertimeService } from './overtime.service';
 
 type AuditContext = { companyId: string; userId: string };
@@ -80,6 +84,7 @@ export class OvertimeImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly overtimeService: OvertimeService,
+    private readonly overtimeEntryService: OvertimeEntryService,
     private readonly workScheduleService: WorkScheduleService,
   ) {}
 
@@ -354,12 +359,16 @@ export class OvertimeImportService {
           sheetId = sheet.id;
         }
 
+        const isOvernight =
+          row.endTime !== '24:00' &&
+          parseHhMmToMinutesStrict(row.endTime) <=
+            parseHhMmToMinutesStrict(row.startTime);
         const dto: UpsertOvertimeEntryDto = {
           date: row.date,
           startTime: row.startTime,
           endTime: row.endTime,
           isHoliday: row.isHoliday ?? false,
-          isOvernight: row.endTime <= row.startTime,
+          isOvernight,
           taskDescription: row.taskDescription,
         };
         await this.overtimeService.addEntry(
@@ -369,7 +378,7 @@ export class OvertimeImportService {
           ctx.userId,
           {
             allowHolidayOverride: Boolean(dto.isHoliday),
-            allowOvernight: Boolean(dto.isOvernight),
+            allowOvernight: isOvernight,
           },
         );
         created += 1;
@@ -634,7 +643,9 @@ export class OvertimeImportService {
     if (!startTimeResult.ok) {
       return { ...base, status: 'error', message: startTimeResult.message };
     }
-    const endTimeResult = this.parseTime(row.endTime, 'endTime');
+    const endTimeResult = this.parseTime(row.endTime, 'endTime', {
+      allowEndOfDay: true,
+    });
     if (!endTimeResult.ok) {
       return { ...base, status: 'error', message: endTimeResult.message };
     }
@@ -648,14 +659,75 @@ export class OvertimeImportService {
     }
 
     const isHoliday = this.parseBoolean(row.isHoliday);
+    const startTime = startTimeResult.value;
+    const endTime = endTimeResult.value;
+    const isOvernight =
+      endTime !== '24:00' &&
+      parseHhMmToMinutesStrict(endTime) <= parseHhMmToMinutesStrict(startTime);
+
+    if (endTime === startTime) {
+      return {
+        ...base,
+        status: 'error',
+        message: 'Start and end time cannot be the same',
+        date: dateResult.value,
+        startTime,
+        endTime,
+        isHoliday,
+        taskDescription: row.taskDescription.trim(),
+      };
+    }
+
+    // Same rules as addEntry — surface schedule / window errors on upload preview.
+    try {
+      const classified = await this.overtimeEntryService.classifyEntry(
+        employeeId,
+        ctx.companyId,
+        parseDateOnly(dateResult.value),
+        startTime,
+        endTime,
+        {
+          holidayOverride: isHoliday,
+          isOvernight,
+          enforceSelectableWindows: !isOvernight,
+        },
+      );
+      if (classified.totalHours <= 0) {
+        return {
+          ...base,
+          status: 'error',
+          message:
+            classified.scheduleNote ?? WITHIN_SCHEDULE_MESSAGE,
+          date: dateResult.value,
+          startTime,
+          endTime,
+          isHoliday,
+          taskDescription: row.taskDescription.trim(),
+        };
+      }
+    } catch (error: unknown) {
+      return {
+        ...base,
+        status: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Invalid overtime times for this employee and date',
+        date: dateResult.value,
+        startTime,
+        endTime,
+        isHoliday,
+        taskDescription: row.taskDescription.trim(),
+      };
+    }
 
     const key = this.rowKey(
       employeeId,
       year,
       month,
       dateResult.value,
-      startTimeResult.value,
-      endTimeResult.value,
+      startTime,
+      endTime,
     );
     if (keysInFile.has(key)) {
       return {
@@ -663,8 +735,8 @@ export class OvertimeImportService {
         status: 'duplicate_in_file',
         message: 'Duplicate overtime entry in this file',
         date: dateResult.value,
-        startTime: startTimeResult.value,
-        endTime: endTimeResult.value,
+        startTime,
+        endTime,
         isHoliday,
         taskDescription: row.taskDescription.trim(),
       };
@@ -675,8 +747,8 @@ export class OvertimeImportService {
         Date.UTC(dateYear, dateMonth - 1, Number(dateParts[3])),
       );
       const candidate = entryToSameDayOccupiedWindow({
-        startHhMm: startTimeResult.value,
-        endHhMm: endTimeResult.value,
+        startHhMm: startTime,
+        endHhMm: endTime,
       });
       if (candidate) {
         const existing = await this.prisma.overtimeEntry.findMany({
@@ -719,8 +791,8 @@ export class OvertimeImportService {
             message:
               'An overlapping overtime entry already exists on this sheet for that date and time',
             date: dateResult.value,
-            startTime: startTimeResult.value,
-            endTime: endTimeResult.value,
+            startTime,
+            endTime,
             isHoliday,
             taskDescription: row.taskDescription.trim(),
           };
@@ -753,8 +825,8 @@ export class OvertimeImportService {
       status,
       message,
       date: dateResult.value,
-      startTime: startTimeResult.value,
-      endTime: endTimeResult.value,
+      startTime,
+      endTime,
       isHoliday,
       taskDescription: row.taskDescription.trim(),
     };
@@ -896,6 +968,7 @@ export class OvertimeImportService {
   private parseTime(
     value: string,
     fieldLabel: string,
+    options?: { allowEndOfDay?: boolean },
   ): { ok: true; value: string } | { ok: false; message: string } {
     if (!value.trim()) {
       return { ok: false, message: `${fieldLabel} is required` };
@@ -908,12 +981,25 @@ export class OvertimeImportService {
     }
     const short = /^(\d{1,2}):(\d{2})$/.exec(normalized);
     if (!short) {
-      return { ok: false, message: `${fieldLabel} must be HH:mm` };
+      return {
+        ok: false,
+        message: options?.allowEndOfDay
+          ? `${fieldLabel} must be HH:mm or 24:00`
+          : `${fieldLabel} must be HH:mm`,
+      };
     }
     const hours = Number(short[1]);
     const minutes = Number(short[2]);
+    if (options?.allowEndOfDay && hours === 24 && minutes === 0) {
+      return { ok: true, value: '24:00' };
+    }
     if (hours > 23 || minutes > 59) {
-      return { ok: false, message: `${fieldLabel} must be HH:mm` };
+      return {
+        ok: false,
+        message: options?.allowEndOfDay
+          ? `${fieldLabel} must be HH:mm or 24:00`
+          : `${fieldLabel} must be HH:mm`,
+      };
     }
     return {
       ok: true,

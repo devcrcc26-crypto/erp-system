@@ -164,7 +164,10 @@ export default function OvertimeEntryForm({
   );
   const blockedLeave = windows?.blockedReason === 'FULL_DAY_LEAVE';
   const timesDisabled =
-    blockedLeave || windowsLoading || !windows?.windows?.length;
+    !dateKey ||
+    blockedLeave ||
+    windowsLoading ||
+    !windows?.windows?.length;
 
   const hasCompletePeriod = watchedPeriods.some(
     (row) => row.startTime && row.endTime,

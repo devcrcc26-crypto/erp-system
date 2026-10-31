@@ -316,6 +316,51 @@ export function isSameDayOvertimeIntervalAllowed(
   });
 }
 
+export type OutsideSelectableReason =
+  | 'END_BEFORE_START'
+  | 'NO_WINDOWS'
+  | 'OVERLAPS_LEAVE'
+  | 'START_IN_SCHEDULE'
+  | 'CROSSES_SCHEDULE'
+  | 'OTHER';
+
+/**
+ * Explains why a same-day interval is rejected against selectable OT windows.
+ * Leave carve-outs are checked explicitly so callers do not blame "overlap with
+ * another entry" when the real issue is schedule or leave.
+ */
+export function explainOutsideSelectableWindow(
+  startHhMm: string,
+  endHhMm: string,
+  windows: TimeWindowHhMm[],
+  leaveExcludedWindows: TimeWindowHhMm[] = [],
+): OutsideSelectableReason {
+  const start = parseHhMmToMinutesStrict(startHhMm);
+  const end = parseHhMmToMinutesStrict(endHhMm);
+  if (end <= start || end > END_OF_DAY_MINUTES) {
+    return 'END_BEFORE_START';
+  }
+  if (windows.length === 0) {
+    return 'NO_WINDOWS';
+  }
+  for (const leave of leaveExcludedWindows) {
+    const ls = parseHhMmToMinutesStrict(leave.start);
+    const le = parseHhMmToMinutesStrict(leave.end);
+    if (timeIntervalsOverlap(start, end, ls, le)) {
+      return 'OVERLAPS_LEAVE';
+    }
+  }
+  const startInWindow = windows.some((w) => {
+    const ws = parseHhMmToMinutesStrict(w.start);
+    const we = parseHhMmToMinutesStrict(w.end);
+    return start >= ws && start < we;
+  });
+  if (!startInWindow) {
+    return 'START_IN_SCHEDULE';
+  }
+  return 'CROSSES_SCHEDULE';
+}
+
 /** 15-minute ticks from window start inclusive to window end inclusive (for end times). */
 export function enumerateWindowTimes(
   window: TimeWindowHhMm,

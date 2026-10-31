@@ -4,6 +4,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios';
+import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { useAuthStore } from '@/stores/auth.store';
 import { toApiRequestError } from './errors';
 import type {
@@ -104,7 +105,15 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return apiClient(originalRequest);
       } catch {
-        useAuthStore.getState().clearAuth();
+        // Refresh failed — clear session/query cache and stop polling by leaving
+        // the app shell. Avoid a second redirect if already on an auth page.
+        signOutLocally();
+        if (typeof window !== 'undefined') {
+          const path = window.location.pathname;
+          if (!path.startsWith('/login') && !path.startsWith('/forgot-password')) {
+            window.location.replace('/login');
+          }
+        }
       }
     }
 

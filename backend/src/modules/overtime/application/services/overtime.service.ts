@@ -514,7 +514,10 @@ export class OvertimeService
   ): Promise<unknown> {
     const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const date = this.parseDateOnly(dto.date);
-    this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+    const isHr = await this.hasHrOvertimePrivileges(userId, companyId);
+    this.assertEntryInSheetMonth(date, sheet.month, sheet.year, {
+      allowFutureDates: isHr,
+    });
 
     const isOvernight = Boolean(dto.isOvernight);
     if (isOvernight && !options?.allowOvernight) {
@@ -634,7 +637,10 @@ export class OvertimeService
     }
 
     const date = this.parseDateOnly(dto.date);
-    this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+    const isHr = await this.hasHrOvertimePrivileges(userId, companyId);
+    this.assertEntryInSheetMonth(date, sheet.month, sheet.year, {
+      allowFutureDates: isHr,
+    });
 
     const isOvernight = Boolean(dto.isOvernight);
     if (isOvernight && !entry.isOvernight) {
@@ -1564,17 +1570,31 @@ export class OvertimeService
     date: Date,
     month: number,
     year: number,
+    options?: { allowFutureDates?: boolean },
   ): void {
     if (date.getUTCMonth() + 1 !== month || date.getUTCFullYear() !== year) {
       throw new BadRequestException(
         `Entry date must fall in sheet period ${year}-${String(month).padStart(2, '0')}`,
       );
     }
-    if (isDateInFuture(date)) {
+    if (!options?.allowFutureDates && isDateInFuture(date)) {
       throw new BadRequestException(
         'Overtime cannot be recorded for future dates',
       );
     }
+  }
+
+  /** HR (hr.view) may enter OT on future dates within the sheet month. */
+  private async hasHrOvertimePrivileges(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    return this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
   }
 
   private async assertNoOverlap(
