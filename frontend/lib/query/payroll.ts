@@ -14,6 +14,7 @@ import {
   getPayrollRun,
   gmApprovePayrollRun,
   getPayrollEmploymentReview,
+  getPayrollEntryAudit,
   listEmployeePayslips,
   listMyPayslips,
   listPayrollRuns,
@@ -24,12 +25,14 @@ import {
   submitPayrollRun,
   updatePayrollCompanySettings,
   updatePayrollEntry,
+  updatePayrollEntryDays,
 } from '@/lib/api/payroll';
 import type {
   ApprovePayrollRunPayload,
   CreatePayrollRunPayload,
   SubmitPayrollRunPayload,
   UpdatePayrollCompanySettingsPayload,
+  UpdatePayrollEntryDaysPayload,
   UpdatePayrollEntryPayload,
 } from '@/lib/api/payroll.types';
 
@@ -225,6 +228,24 @@ export function useUpdatePayrollEntry(runId: string) {
       payload: UpdatePayrollEntryPayload;
     }) => updatePayrollEntry(entryId, payload),
     onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useUpdatePayrollEntryDays(runId: string, entryId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdatePayrollEntryDaysPayload) =>
+      updatePayrollEntryDays(runId, entryId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** Override history of one entry (prefix of the run key, so saves refresh it). */
+export function usePayrollEntryAudit(runId: string, entryId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...payrollKeys.run(runId), 'entry', entryId, 'audit'] as const,
+    queryFn: () => getPayrollEntryAudit(runId, entryId),
+    enabled,
   });
 }
 

@@ -143,6 +143,29 @@ export interface PayrollEntryDetail {
   employee: PayrollEntryEmployee;
   salaryPeriods: PayrollSalaryPeriod[];
   payslip?: PayrollEntryPayslip | null;
+  /** Only returned to HR (payroll.edit). */
+  hasOverride?: boolean;
+}
+
+export interface UpdatePayrollEntryDaysPayload {
+  payrollDays: number;
+  reason?: string;
+}
+
+export interface PayrollEntryAuditRecord {
+  id: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  reason: string | null;
+  changedAt: string;
+  changedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    chineseName: string | null;
+  };
 }
 
 export interface PayslipGenerateResult {

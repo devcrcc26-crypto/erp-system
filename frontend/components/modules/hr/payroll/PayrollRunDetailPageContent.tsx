@@ -43,6 +43,7 @@ import {
 import dayjs from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
+import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
@@ -742,6 +743,8 @@ export default function PayrollRunDetailPageContent({
     canCreate && Boolean(run) && run?.status !== 'PAID' && run?.status !== 'CANCELLED';
   const runInApproval =
     run?.status === 'SUBMITTED' || run?.status === 'APPROVED' || run?.status === 'GM_APPROVED';
+  const canOverrideDays = canEdit && (run?.status === 'DRAFT' || run?.status === 'REVIEWED');
+  const overriddenEntryCount = run?.entries.filter((e) => e.hasOverride).length ?? 0;
 
   async function addSelectedFreelancers(): Promise<void> {
     try {
@@ -824,20 +827,29 @@ export default function PayrollRunDetailPageContent({
           </Tooltip>
         ),
         key: 'paidDays',
-        width: 128,
+        width: canEdit ? 148 : 128,
         align: 'right',
         render: (_, row) => {
           const lines = contractLinesById.get(row.id);
           const total = (
-            <Tooltip
-              title={t('hr.payroll.entry.paidDaysTooltip', {
-                employed: parsePayrollMoney(row.employedDays),
-                absent: parsePayrollMoney(row.absentDays),
-                paid: parsePayrollMoney(row.payrollDays),
-              })}
-            >
-              <span className="erp-payroll-num">{parsePayrollMoney(row.payrollDays)}</span>
-            </Tooltip>
+            <>
+              <Tooltip
+                title={t('hr.payroll.entry.paidDaysTooltip', {
+                  employed: parsePayrollMoney(row.employedDays),
+                  absent: parsePayrollMoney(row.absentDays),
+                  paid: parsePayrollMoney(row.payrollDays),
+                })}
+              >
+                <span className="erp-payroll-num">{parsePayrollMoney(row.payrollDays)}</span>
+              </Tooltip>
+              {canEdit ? (
+                <PayrollPaidDaysControls
+                  runId={runId}
+                  entry={row}
+                  canOverride={canOverrideDays}
+                />
+              ) : null}
+            </>
           );
           if (!lines) {
             return total;
@@ -1119,7 +1131,7 @@ export default function PayrollRunDetailPageContent({
           ]
         : []),
     ],
-    [t, showPayslipColumn, openingPayslipId, contractLinesById],
+    [t, showPayslipColumn, openingPayslipId, contractLinesById, canEdit, canOverrideDays, runId],
   );
 
   function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
@@ -1152,7 +1164,16 @@ export default function PayrollRunDetailPageContent({
         <dl className="erp-payroll-entry-card-grid">
           <div>
             <dt>{t('hr.payroll.entry.paidDays')}</dt>
-            <dd>{parsePayrollMoney(entry.payrollDays)}</dd>
+            <dd>
+              {parsePayrollMoney(entry.payrollDays)}
+              {canEdit ? (
+                <PayrollPaidDaysControls
+                  runId={runId}
+                  entry={entry}
+                  canOverride={canOverrideDays}
+                />
+              ) : null}
+            </dd>
           </div>
           <div>
             <dt>{t('hr.payroll.entry.gross')}</dt>
@@ -1448,9 +1469,18 @@ export default function PayrollRunDetailPageContent({
       case 'recalculate':
         return {
           title: t('hr.payroll.confirm.recalculateTitle'),
-          description: runInApproval
-            ? t('hr.payroll.confirm.recalculateReopenDescription')
-            : t('hr.payroll.confirm.recalculateDescription'),
+          description: [
+            runInApproval
+              ? t('hr.payroll.confirm.recalculateReopenDescription')
+              : t('hr.payroll.confirm.recalculateDescription'),
+            overriddenEntryCount > 0
+              ? t('hr.payroll.confirm.recalculateOverridesWarning', {
+                  count: overriddenEntryCount,
+                })
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
         };
       case 'markReviewed':
         return {

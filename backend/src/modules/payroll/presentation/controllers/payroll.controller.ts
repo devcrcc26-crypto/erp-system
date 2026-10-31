@@ -28,6 +28,7 @@ import {
   CreatePayrollRunDto,
   SubmitPayrollRunDto,
   UpdatePayrollCompanySettingsDto,
+  UpdatePayrollEntryDaysDto,
   UpdatePayrollEntryDto,
 } from '../../application/dtos/payroll.dtos';
 import {
@@ -124,8 +125,15 @@ export class PayrollController {
       'payroll',
       'create',
     );
+    const canEdit = await this.permissionService.hasPermission(
+      user.userId,
+      user.companyId,
+      'payroll',
+      'edit',
+    );
     return this.payrollRunService.getRun(id, user.companyId, {
       maskBank: !canCreate,
+      includeOverrides: canEdit,
     });
   }
 
@@ -202,6 +210,32 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollRunService.removeFreelancerEntry(id, entryId, this.ctx(user));
+  }
+
+  @Patch('runs/:id/entries/:entryId/days')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Override paid days on an entry in a DRAFT or REVIEWED run and recalculate its figures (HR only, audited)',
+  })
+  overrideEntryDays(
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @Body() dto: UpdatePayrollEntryDaysDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.overrideEntryDays(id, entryId, dto, this.ctx(user));
+  }
+
+  @Get('runs/:id/entries/:entryId/audit')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({ summary: 'Override history of an entry, newest first (HR only)' })
+  getEntryAudit(
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.getEntryAudit(id, entryId, user.companyId);
   }
 
   @Post('runs/:id/mark-reviewed')

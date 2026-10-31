@@ -12,6 +12,7 @@ import type {
   EmployeePayslip,
   PayrollCompanySettings,
   PayrollEmploymentReviewEntry,
+  PayrollEntryAuditRecord,
   PayrollEntryDetail,
   PayrollFreelancerOption,
   PayrollRunDetail,
@@ -20,6 +21,7 @@ import type {
   PayslipReleaseResult,
   SubmitPayrollRunPayload,
   UpdatePayrollCompanySettingsPayload,
+  UpdatePayrollEntryDaysPayload,
   UpdatePayrollEntryPayload,
 } from '@/lib/api/payroll.types';
 
@@ -121,6 +123,24 @@ export async function updatePayrollEntry(
   payload: UpdatePayrollEntryPayload,
 ): Promise<PayrollEntryDetail> {
   return apiPatch<PayrollEntryDetail>(`${BASE}/entries/${entryId}`, payload);
+}
+
+export async function updatePayrollEntryDays(
+  runId: string,
+  entryId: string,
+  payload: UpdatePayrollEntryDaysPayload,
+): Promise<PayrollEntryDetail> {
+  return apiPatch<PayrollEntryDetail>(
+    `${BASE}/runs/${runId}/entries/${entryId}/days`,
+    payload,
+  );
+}
+
+export async function getPayrollEntryAudit(
+  runId: string,
+  entryId: string,
+): Promise<PayrollEntryAuditRecord[]> {
+  return apiGet<PayrollEntryAuditRecord[]>(`${BASE}/runs/${runId}/entries/${entryId}/audit`);
 }
 
 /**

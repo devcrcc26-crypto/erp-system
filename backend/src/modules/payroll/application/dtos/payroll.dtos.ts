@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -108,6 +109,24 @@ export class UpdatePayrollEntryDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class UpdatePayrollEntryDaysDto {
+  @ApiProperty({
+    description: 'Paid days on the 30-day payroll month. Half days are allowed.',
+    minimum: 0.5,
+    maximum: 30,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.5)
+  @Max(30)
+  payrollDays!: number;
+
+  @ApiPropertyOptional({ description: 'Why HR changed the paid days' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string;
 }
 
 /** HR-editable payroll letterhead / tax-form company settings. */

@@ -32,6 +32,7 @@ import { resolveEntryAttendanceFlag } from '../utils/payroll-attendance-flag.uti
 import {
   allocateContractPayrollDays,
   employedPayrollDays,
+  PAYROLL_MONTH_DAYS,
   resolveEmploymentSegmentsForMonth,
 } from '../utils/payroll-days.util';
 import { computeContractAllowances } from '../utils/payroll-allowance.util';
@@ -88,6 +89,24 @@ interface ServiceContext {
 
 interface GetRunOptions {
   maskBank?: boolean;
+  /** Adds hasOverride to each entry. HR only: approvers and employees never see it. */
+  includeOverrides?: boolean;
+}
+
+export interface PayrollEntryAuditRecord {
+  id: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  reason: string | null;
+  changedAt: Date;
+  changedBy: {
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    chineseName: string | null;
+  };
 }
 
 interface SubmitRunOptions {
@@ -852,6 +871,18 @@ export class PayrollRunService {
       }
     }
 
+    if (options?.includeOverrides) {
+      const audited = await this.prisma.payrollEntryAudit.findMany({
+        where: { companyId, payrollEntry: { runId } },
+        select: { payrollEntryId: true },
+        distinct: ['payrollEntryId'],
+      });
+      const overridden = new Set(audited.map((a) => a.payrollEntryId));
+      for (const entry of run.entries) {
+        (entry as typeof entry & { hasOverride: boolean }).hasOverride = overridden.has(entry.id);
+      }
+    }
+
     return this.hydrateSalaryPeriodOvertime(run);
   }
 
@@ -1203,6 +1234,223 @@ export class PayrollRunService {
 
     await this.updateRunTotals(entry.runId, ctx);
     return updated;
+  }
+
+  /**
+   * HR override of paid days on an entry in a DRAFT or REVIEWED run. Reprices the
+   * entry from its own snapshot (same formulas as generation) and records the change.
+   * Overtime is left as stored: it does not depend on paid days.
+   */
+  async overrideEntryDays(
+    runId: string,
+    entryId: string,
+    dto: { payrollDays: number; reason?: string },
+    ctx: ServiceContext,
+  ): Promise<PayrollEntry> {
+    const contractSelect = {
+      startDate: true,
+      transportationAllowance: true,
+      monthlyBonus: true,
+    } satisfies Prisma.EmployeeContractSelect;
+    const entry = await this.prisma.payrollEntry.findFirst({
+      where: { id: entryId, runId, companyId: ctx.companyId, run: { deletedAt: null } },
+      include: {
+        run: true,
+        contract: { select: contractSelect },
+        salaryPeriods: {
+          orderBy: { periodStart: 'asc' },
+          include: { contract: { select: contractSelect } },
+        },
+      },
+    });
+    if (!entry) {
+      throw new NotFoundException('Payroll entry not found');
+    }
+    if (entry.run.status !== 'DRAFT' && entry.run.status !== 'REVIEWED') {
+      throw new BadRequestException(
+        `Cannot edit entry in run status: ${entry.run.status}`,
+      );
+    }
+
+    const oldDays = this.toNumber(entry.payrollDays);
+    const newDays = dto.payrollDays;
+    if (oldDays === newDays) {
+      return entry;
+    }
+
+    const employedDays = this.toNumber(entry.employedDays);
+    if (!entry.contract || employedDays <= 0) {
+      throw new BadRequestException(
+        'Paid days cannot be overridden on an entry without a contract in this month',
+      );
+    }
+    // Generation zeroes overtime, allowances and top-ups for these entries, so the
+    // snapshot cannot be repriced. Recalculating from attendance restores all of them.
+    const generatedAsFullyAbsent =
+      oldDays === 0 ||
+      (Boolean(entry.notes?.includes(FULLY_ABSENT_NO_PAY_NOTE)) &&
+        this.toNumber(entry.transportAllowance) === 0 &&
+        this.toNumber(entry.monthlyBonus) === 0);
+    if (generatedAsFullyAbsent) {
+      throw new BadRequestException(
+        'This entry was generated as fully absent. Correct the attendance and recalculate the run instead',
+      );
+    }
+
+    // Stored period days are already scaled by absence: recover the contract split.
+    const oldScale = oldDays / employedDays;
+    const newScale = newDays / employedDays;
+    let allocatedSoFar = 0;
+    const slices =
+      entry.salaryPeriods.length > 0
+        ? entry.salaryPeriods.map((period, index) => {
+            const allocatedDays =
+              index === entry.salaryPeriods.length - 1
+                ? employedDays - allocatedSoFar
+                : Math.round(this.toNumber(period.days) / oldScale);
+            allocatedSoFar += allocatedDays;
+            return {
+              periodId: period.id as string | null,
+              basic: this.toNumber(period.basicSalary),
+              contract: period.contract,
+              allocatedDays,
+            };
+          })
+        : [
+            {
+              periodId: null as string | null,
+              basic: this.toNumber(entry.basicSalary),
+              contract: entry.contract,
+              allocatedDays: employedDays,
+            },
+          ];
+
+    const periodEarned = (slice: { basic: number; allocatedDays: number }): number =>
+      this.round((slice.basic / PAYROLL_MONTH_DAYS) * slice.allocatedDays);
+    const earnedSalary = this.round(
+      slices.reduce((sum, slice) => sum + periodEarned(slice) * newScale, 0),
+    );
+
+    const monthStart = new Date(Date.UTC(entry.run.year, entry.run.month - 1, 1));
+    const policy = await loadPolicySnapshot(this.prisma, ctx.companyId, monthStart);
+    const employmentStart = slices.reduce(
+      (min, slice) =>
+        slice.contract.startDate.getTime() < min.getTime() ? slice.contract.startDate : min,
+      slices[0].contract.startDate,
+    );
+    const allowances = computeContractAllowances(
+      slices.map((slice) => ({
+        transportationAllowance: this.toNumber(slice.contract.transportationAllowance),
+        monthlyBonus: this.toNumber(slice.contract.monthlyBonus),
+        allocatedDays: slice.allocatedDays,
+      })),
+      employedDays,
+      newDays,
+      employedPayrollDays(entry.run.month, entry.run.year, employmentStart, null).days,
+      policy.leaverAllowanceMode,
+      policy.allowancesReducedByAbsence,
+    );
+
+    const result = await this.recalcEntryAmounts(
+      {
+        ...entry,
+        payrollDays: new Decimal(newDays),
+        earnedSalary: new Decimal(earnedSalary),
+        transportAllowance: new Decimal(allowances.transport),
+        monthlyBonus: new Decimal(allowances.monthlyBonus),
+      },
+      entry.run,
+      {
+        bonusTopUp: this.toNumber(entry.bonusTopUp),
+        netTopUp: this.toNumber(entry.netTopUp),
+      },
+    );
+
+    const reason = dto.reason?.trim() || null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.payrollEntry.update({
+        where: { id: entryId },
+        data: {
+          ...this.calculationToEntryUpdate(result),
+          transportAllowance: new Decimal(allowances.transport),
+          monthlyBonus: new Decimal(allowances.monthlyBonus),
+          updatedBy: ctx.userId,
+        },
+      });
+      for (const slice of slices) {
+        if (!slice.periodId) {
+          continue;
+        }
+        await tx.payrollSalaryPeriod.update({
+          where: { id: slice.periodId },
+          data: {
+            days: new Decimal(this.round(slice.allocatedDays * newScale)),
+            earnedSalary: new Decimal(this.round(periodEarned(slice) * newScale)),
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+      await tx.payrollEntryAudit.create({
+        data: {
+          payrollEntryId: entryId,
+          field: 'payrollDays',
+          oldValue: String(oldDays),
+          newValue: String(newDays),
+          reason,
+          changedById: ctx.userId,
+          companyId: ctx.companyId,
+        },
+      });
+      return saved;
+    });
+
+    await this.updateRunTotals(runId, ctx);
+    // Outlives the entry: recalculating the run deletes entries and their override rows.
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'entry_days_overridden',
+        recordType: 'PayrollEntry',
+        recordId: entryId,
+        recordReference: entry.run.runNumber,
+        beforeValue: { employeeId: entry.employeeId, payrollDays: oldDays },
+        afterValue: { employeeId: entry.employeeId, payrollDays: newDays, reason },
+      }),
+    );
+    return updated;
+  }
+
+  /**
+   * Override history of an entry, newest first. HR only.
+   */
+  async getEntryAudit(
+    runId: string,
+    entryId: string,
+    companyId: string,
+  ): Promise<PayrollEntryAuditRecord[]> {
+    return this.prisma.payrollEntryAudit.findMany({
+      where: { payrollEntryId: entryId, companyId, payrollEntry: { runId } },
+      orderBy: { changedAt: 'desc' },
+      select: {
+        id: true,
+        field: true,
+        oldValue: true,
+        newValue: true,
+        reason: true,
+        changedAt: true,
+        changedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+          },
+        },
+      },
+    });
   }
 
   // ── Bulk generation internals ───────────────────────────────────────────

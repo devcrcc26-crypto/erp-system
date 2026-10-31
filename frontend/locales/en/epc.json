@@ -5997,6 +5997,7 @@
         "gmApproveDescription": "Confirm general manager approval for this run.",
         "markPaidTitle": "Mark as paid?",
         "markPaidDescription": "Confirm that salaries for this run have been paid.",
+        "recalculateOverridesWarning": "Warning: manual paid-days overrides on {{count}} employee(s) and their override history will be discarded.",
         "cancelTitle": "Cancel payroll run?",
         "cancelDescription": "Cancel this run so the month can be processed again."
       },
@@ -6009,6 +6010,20 @@
         "groupTax": "Tax & pension",
         "groupPay": "Pay",
         "paidDaysTooltip": "Employed {{employed}} · Absent (incl. unpaid leave) {{absent}} · Paid {{paid}}",
+        "daysOverride": {
+          "action": "Override paid days",
+          "daysLabel": "Paid days (30-day month)",
+          "reasonPlaceholder": "Reason (optional)",
+          "save": "Save",
+          "cancel": "Cancel",
+          "saved": "Paid days updated and figures recalculated.",
+          "edited": "Edited",
+          "historyTitle": "Days Override History",
+          "historyEmpty": "No overrides recorded.",
+          "historyChange": "Changed from {{from}} → {{to}} days",
+          "historyReason": "Reason: {{reason}}",
+          "historyBy": "Changed by: {{name}}"
+        },
         "unpaidLeaveNote": "Unpaid leave: {{days}} days",
         "basic": "Basic",
         "earned": "Earned",

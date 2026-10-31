@@ -5983,6 +5983,7 @@
       "confirm": {
         "confirmButton": "确认",
         "recalculateTitle": "重新计算薪资？",
+        "recalculateOverridesWarning": "警告：{{count}} 名员工的计薪天数手动调整及其调整记录将被清除。",
         "recalculateDescription": "将根据当前合同、考勤、加班和请假重新计算所有明细。奖金补发和备注将保留。",
         "recalculateReopenDescription": "将根据当前合同、考勤、加班和请假重新计算所有明细。奖金补发、备注和已添加的自由职业者将保留。本次薪资将退回草稿，需要重新审核、提交，并由人事和总经理再次审批。已生成的工资单将被删除，审批后需重新生成。",
         "markReviewedTitle": "标记为已复核？",
@@ -6008,6 +6009,20 @@
         "groupTax": "税费与养老金",
         "groupPay": "实发",
         "paidDaysTooltip": "在职 {{employed}} · 缺勤（含无薪假）{{absent}} · 计薪 {{paid}}",
+        "daysOverride": {
+          "action": "调整计薪天数",
+          "daysLabel": "计薪天数（按每月 30 天）",
+          "reasonPlaceholder": "原因（选填）",
+          "save": "保存",
+          "cancel": "取消",
+          "saved": "计薪天数已更新，相关金额已重新计算。",
+          "edited": "已调整",
+          "historyTitle": "天数调整记录",
+          "historyEmpty": "暂无调整记录。",
+          "historyChange": "由 {{from}} 天调整为 {{to}} 天",
+          "historyReason": "原因：{{reason}}",
+          "historyBy": "调整人：{{name}}"
+        },
         "unpaidLeaveNote": "无薪假：{{days}} 天",
         "basic": "基本",
         "earned": "应得",

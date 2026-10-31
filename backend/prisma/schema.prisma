@@ -370,6 +370,7 @@ model Company {
   employeeEvaluations        EmployeeEvaluation[]
   payrollRuns                PayrollRun[]
   payrollEntries             PayrollEntry[]
+  payrollEntryAudits         PayrollEntryAudit[]
   payrollPayslips            PayrollPayslip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -977,6 +978,7 @@ model User {
   payrollEntriesOverridden           PayrollEntry[]              @relation("PayrollEntryOverrider")
   payrollEntriesCreated              PayrollEntry[]              @relation("PayrollEntryCreator")
   parollEntriesUpdated               PayrollEntry[]              @relation("PayrollEntryUpdater")
+  payrollEntryAuditsChanged          PayrollEntryAudit[]         @relation("PayrollEntryAuditChangedBy")
   payrollSalaryPeriodsCreated        PayrollSalaryPeriod[]       @relation("PayrollSalaryPeriodCreator")
   payrollSalaryPeriodsUpdated        PayrollSalaryPeriod[]       @relation("PayrollSalaryPeriodUpdater")
   payrollPayslips                    PayrollPayslip[]            @relation("PayrollPayslipEmployee")
@@ -6789,6 +6791,7 @@ model PayrollEntry {
   updater                  User               @relation("PayrollEntryUpdater", fields: [updatedBy], references: [id])
   salaryPeriods            PayrollSalaryPeriod[]
   payslip                  PayrollPayslip?
+  audits                   PayrollEntryAudit[]
 
 
   @@unique([runId, employeeId], map: "uq_payroll_entry_run_employee")
@@ -6796,6 +6799,28 @@ model PayrollEntry {
   @@index([runId], map: "idx_payroll_entry_run")
   @@index([employeeId], map: "idx_payroll_entry_employee")
   @@map("payroll_entry")
+ }
+
+ /// HR overrides of payroll entry figures. Served by HR-only endpoints; never shown to the employee.
+ model PayrollEntryAudit {
+  id              String        @id @default(uuid())
+  payrollEntryId  String        @map("payroll_entry_id")
+  field           String
+  oldValue        String        @map("old_value")
+  newValue        String        @map("new_value")
+  reason          String?
+  changedById     String        @map("changed_by_id")
+  changedAt       DateTime      @default(now()) @map("changed_at")
+  companyId       String        @map("company_id")
+
+  payrollEntry    PayrollEntry  @relation(fields: [payrollEntryId], references: [id], onDelete: Cascade)
+  changedBy       User          @relation("PayrollEntryAuditChangedBy", fields: [changedById], references: [id])
+  company         Company       @relation(fields: [companyId], references: [id])
+
+  @@index([payrollEntryId], map: "idx_payroll_entry_audit_entry")
+  @@index([companyId], map: "idx_payroll_entry_audit_company")
+  @@index([changedById], map: "idx_payroll_entry_audit_changed_by")
+  @@map("payroll_entry_audit")
  }
 
  model PayrollSalaryPeriod{
