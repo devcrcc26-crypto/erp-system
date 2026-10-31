@@ -273,7 +273,44 @@ async function exportFixture(
   };
   const auditCalls: unknown[] = [];
   const prisma = {
-    payrollRun: { findFirst: async (): Promise<typeof run> => run },
+    payrollRun: {
+      findFirst: async (): Promise<{
+        id: string;
+        runNumber: string;
+        month: number;
+        year: number;
+        status: string;
+      }> => ({
+        id: run.id,
+        runNumber: run.runNumber,
+        month: run.month,
+        year: run.year,
+        status: run.status,
+      }),
+    },
+    payrollEntry: {
+      findMany: async (args: {
+        where?: { runId?: string; id?: { in: string[] } };
+        select?: unknown;
+        include?: unknown;
+      }): Promise<unknown[]> => {
+        if (args.where?.id?.in) {
+          const idSet = new Set(args.where.id.in);
+          return run.entries.filter((e) => idSet.has(e.id));
+        }
+        // Ordered-id pass: lightweight employee fields only.
+        return run.entries.map((e) => ({
+          id: e.id,
+          employee: {
+            firstName: e.employee.firstName,
+            middleName: e.employee.middleName ?? null,
+            lastName: e.employee.lastName,
+            excludedFromHrProcesses: e.employee.excludedFromHrProcesses ?? false,
+            department: e.employee.department,
+          },
+        }));
+      },
+    },
     $queryRaw: async (): Promise<unknown[]> => [],
   };
   const settingsService = {
@@ -368,7 +405,7 @@ function hfNumber(value: unknown): number {
   return Number.NaN;
 }
 
-describe('PayrollExcelExportService - template + formulas', () => {
+describe('PayrollExcelExportService - streaming writer + formulas', () => {
   jest.setTimeout(60_000);
 
   it('writes full first+middle+last names on Data and Payroll', async () => {

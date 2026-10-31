@@ -422,7 +422,7 @@ export class PayrollController {
   @RequireAnyPermission({ module: 'payroll', action: 'export' })
   @ApiOperation({
     summary:
-      'Download payroll run as Excel (HR salary sheet layout). Requires payroll.export plus run list access.',
+      'Download payroll run as Excel (HR salary sheet layout). Requires payroll.export plus run list access. Streams the file to avoid buffering the whole workbook in memory.',
   })
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -430,18 +430,15 @@ export class PayrollController {
   async exportExcel(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<StreamableFile> {
+    @Res() res: Response,
+  ): Promise<void> {
     await this.assertRunListAccess(user);
-
-    const file = await this.payrollExcelExportService.exportRun(
+    await this.payrollExcelExportService.streamExcelExport(
       id,
       user.companyId,
       user.userId,
+      res,
     );
-    return new StreamableFile(file.buffer, {
-      type: file.mimeType,
-      disposition: `attachment; filename="${file.filename}"`,
-    });
   }
 
   @Get('runs/:id/export/bank-letter/preview')
