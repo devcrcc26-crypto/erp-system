@@ -79,7 +79,7 @@ export default function PayrollPaidDaysControls({
       </label>
       <InputNumber
         id={`payroll-days-${entry.id}`}
-        min={0.5}
+        min={0}
         max={30}
         step={0.5}
         precision={2}

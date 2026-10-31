@@ -113,12 +113,13 @@ export class UpdatePayrollEntryDto {
 
 export class UpdatePayrollEntryDaysDto {
   @ApiProperty({
-    description: 'Paid days on the 30-day payroll month. Half days are allowed.',
-    minimum: 0.5,
+    description:
+      'Paid days on the 30-day payroll month. Half days are allowed. 0 means no pay for the month.',
+    minimum: 0,
     maximum: 30,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.5)
+  @Min(0)
   @Max(30)
   payrollDays!: number;
 

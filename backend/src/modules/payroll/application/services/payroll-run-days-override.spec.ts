@@ -75,7 +75,10 @@ function setup(entry: Record<string, unknown> | null, policy: object = POLICY_DE
     employeeContract: {
       findFirst: jest.fn(async () => ({ pensionApplicable: true, taxApplicable: true })),
     },
-    payrollEntryAudit: { findMany: jest.fn(async () => []) },
+    payrollEntryAudit: {
+      findMany: jest.fn(async () => []),
+      findFirst: jest.fn(async (): Promise<{ oldValue: string } | null> => null),
+    },
     $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   const audit = {
@@ -214,6 +217,54 @@ describe('PayrollRunService.overrideEntryDays', () => {
     ]);
   });
 
+  it('pays nothing at 0 days, then restores everything when the days are raised again', async () => {
+    const original = makeEntry({
+      bonusTopUp: new Decimal(200),
+      bonusTopUpReason: 'Site bonus',
+      normalOtHours: new Decimal(5),
+    });
+    const toZero = setup(original);
+    await toZero.service.overrideEntryDays('run-1', 'entry-1', { payrollDays: 0 }, ctx);
+
+    const zeroed = toZero.tx.payrollEntry.update.mock.calls[0][0].data;
+    for (const field of [
+      'payrollDays',
+      'earnedSalary',
+      'transportAllowance',
+      'monthlyBonus',
+      'bonusTopUp',
+      'netTopUp',
+      'normalOtHours',
+      'totalOtPay',
+      'grossIncome',
+      'pensionEmployee',
+      'incomeTax',
+      'netPay',
+    ]) {
+      expect(Number(zeroed[field])).toBe(0);
+    }
+    const auditCalls = toZero.tx.payrollEntryAudit.create.mock.calls as unknown as Array<
+      [{ data: { field: string; oldValue: string } }]
+    >;
+    const snapshotRow = auditCalls.map(([arg]) => arg.data).find((d) => d.field === 'zeroDaysSnapshot');
+    expect(snapshotRow).toBeDefined();
+
+    const back = setup({ ...original, ...zeroed, salaryPeriods: [] });
+    back.prisma.payrollEntryAudit.findFirst.mockResolvedValue({ oldValue: snapshotRow!.oldValue });
+    await back.service.overrideEntryDays('run-1', 'entry-1', { payrollDays: 30 }, ctx);
+
+    const restored = back.tx.payrollEntry.update.mock.calls[0][0].data;
+    expect(Number(restored.earnedSalary)).toBe(30000);
+    expect(Number(restored.transportAllowance)).toBe(3000);
+    expect(Number(restored.monthlyBonus)).toBe(6000);
+    expect(Number(restored.bonusTopUp)).toBe(200);
+    expect(restored.bonusTopUpReason).toBe('Site bonus');
+    expect(Number(restored.netTopUp)).toBe(500);
+    expect(Number(restored.normalOtHours)).toBe(5);
+    expect(Number(restored.totalOtPay)).toBe(1000);
+    expect(Number(restored.netPay)).toBeGreaterThan(0);
+  });
+
   it('does nothing when the days are unchanged', async () => {
     const { service, tx, prisma } = setup(makeEntry());
     await service.overrideEntryDays('run-1', 'entry-1', { payrollDays: 30 }, ctx);
@@ -278,6 +329,7 @@ describe('PayrollRunService.getEntryAudit', () => {
     expect(args.where).toEqual({
       payrollEntryId: 'entry-1',
       companyId: 'co-1',
+      field: 'payrollDays',
       payrollEntry: { runId: 'run-1' },
     });
     expect(args.orderBy).toEqual({ changedAt: 'desc' });

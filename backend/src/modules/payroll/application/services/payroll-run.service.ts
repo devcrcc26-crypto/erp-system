@@ -240,6 +240,29 @@ interface DateWindow {
   windowEnd: Date;
 }
 
+/** Figures an override to 0 days clears, kept so raising the days again can restore them. */
+interface ZeroDaysSnapshot {
+  contractNetBonus: number;
+  bonusTopUp: number;
+  bonusTopUpReason: string | null;
+  netTopUp: number;
+  netTopUpReason: string | null;
+  normalOtHours: number;
+  eveningOtHours: number;
+  sundayOtHours: number;
+  holidayOtHours: number;
+  normalOtPay: number;
+  eveningOtPay: number;
+  sundayOtPay: number;
+  holidayOtPay: number;
+  /** Contract split by salary period id (stored period days are 0 at zero days). */
+  allocatedDays: Record<string, number>;
+}
+
+const PAYROLL_DAYS_AUDIT_FIELD = 'payrollDays';
+/** Internal audit row (oldValue = ZeroDaysSnapshot JSON); not part of the history shown to HR. */
+const ZERO_DAYS_SNAPSHOT_AUDIT_FIELD = 'zeroDaysSnapshot';
+
 const ENTRY_WRITE_CHUNK = 50;
 
 const HR_MANAGER_ROLE = 'HR Manager';
@@ -1239,7 +1262,9 @@ export class PayrollRunService {
   /**
    * HR override of paid days on an entry in a DRAFT or REVIEWED run. Reprices the
    * entry from its own snapshot (same formulas as generation) and records the change.
-   * Overtime is left as stored: it does not depend on paid days.
+   * Overtime is left as stored: it does not depend on paid days. The exception is
+   * 0 days, which pays nothing like a generated zero-day entry; raising the days
+   * again restores what that cleared.
    */
   async overrideEntryDays(
     runId: string,
@@ -1286,8 +1311,10 @@ export class PayrollRunService {
     }
     // Generation zeroes overtime, allowances and top-ups for these entries, so the
     // snapshot cannot be repriced. Recalculating from attendance restores all of them.
+    const zeroSnapshot =
+      oldDays === 0 ? await this.latestZeroDaysSnapshot(entryId, ctx.companyId) : null;
     const generatedAsFullyAbsent =
-      oldDays === 0 ||
+      (oldDays === 0 && !zeroSnapshot) ||
       (Boolean(entry.notes?.includes(FULLY_ABSENT_NO_PAY_NOTE)) &&
         this.toNumber(entry.transportAllowance) === 0 &&
         this.toNumber(entry.monthlyBonus) === 0);
@@ -1307,7 +1334,9 @@ export class PayrollRunService {
             const allocatedDays =
               index === entry.salaryPeriods.length - 1
                 ? employedDays - allocatedSoFar
-                : Math.round(this.toNumber(period.days) / oldScale);
+                : zeroSnapshot
+                  ? (zeroSnapshot.allocatedDays[period.id] ?? 0)
+                  : Math.round(this.toNumber(period.days) / oldScale);
             allocatedSoFar += allocatedDays;
             return {
               periodId: period.id as string | null,
@@ -1338,22 +1367,31 @@ export class PayrollRunService {
         slice.contract.startDate.getTime() < min.getTime() ? slice.contract.startDate : min,
       slices[0].contract.startDate,
     );
-    const allowances = computeContractAllowances(
-      slices.map((slice) => ({
-        transportationAllowance: this.toNumber(slice.contract.transportationAllowance),
-        monthlyBonus: this.toNumber(slice.contract.monthlyBonus),
-        allocatedDays: slice.allocatedDays,
-      })),
-      employedDays,
-      newDays,
-      employedPayrollDays(entry.run.month, entry.run.year, employmentStart, null).days,
-      policy.leaverAllowanceMode,
-      policy.allowancesReducedByAbsence,
-    );
+    const allowances =
+      newDays === 0
+        ? { transport: 0, monthlyBonus: 0 }
+        : computeContractAllowances(
+            slices.map((slice) => ({
+              transportationAllowance: this.toNumber(slice.contract.transportationAllowance),
+              monthlyBonus: this.toNumber(slice.contract.monthlyBonus),
+              allocatedDays: slice.allocatedDays,
+            })),
+            employedDays,
+            newDays,
+            employedPayrollDays(entry.run.month, entry.run.year, employmentStart, null).days,
+            policy.leaverAllowanceMode,
+            policy.allowancesReducedByAbsence,
+          );
+
+    const zeroDayFields = newDays === 0 ? this.zeroDaysEntryFields() : null;
+    const restoredFields = zeroSnapshot ? this.entryFieldsFromSnapshot(zeroSnapshot) : null;
+    const clearedOrRestored: Partial<NonNullable<typeof zeroDayFields>> =
+      zeroDayFields ?? restoredFields ?? {};
 
     const result = await this.recalcEntryAmounts(
       {
         ...entry,
+        ...clearedOrRestored,
         payrollDays: new Decimal(newDays),
         earnedSalary: new Decimal(earnedSalary),
         transportAllowance: new Decimal(allowances.transport),
@@ -1361,8 +1399,8 @@ export class PayrollRunService {
       },
       entry.run,
       {
-        bonusTopUp: this.toNumber(entry.bonusTopUp),
-        netTopUp: this.toNumber(entry.netTopUp),
+        bonusTopUp: this.toNumber(clearedOrRestored.bonusTopUp ?? entry.bonusTopUp),
+        netTopUp: this.toNumber(clearedOrRestored.netTopUp ?? entry.netTopUp),
       },
     );
 
@@ -1372,6 +1410,7 @@ export class PayrollRunService {
         where: { id: entryId },
         data: {
           ...this.calculationToEntryUpdate(result),
+          ...clearedOrRestored,
           transportAllowance: new Decimal(allowances.transport),
           monthlyBonus: new Decimal(allowances.monthlyBonus),
           updatedBy: ctx.userId,
@@ -1393,7 +1432,7 @@ export class PayrollRunService {
       await tx.payrollEntryAudit.create({
         data: {
           payrollEntryId: entryId,
-          field: 'payrollDays',
+          field: PAYROLL_DAYS_AUDIT_FIELD,
           oldValue: String(oldDays),
           newValue: String(newDays),
           reason,
@@ -1401,6 +1440,38 @@ export class PayrollRunService {
           companyId: ctx.companyId,
         },
       });
+      if (newDays === 0) {
+        const snapshot: ZeroDaysSnapshot = {
+          contractNetBonus: this.toNumber(entry.contractNetBonus),
+          bonusTopUp: this.toNumber(entry.bonusTopUp),
+          bonusTopUpReason: entry.bonusTopUpReason,
+          netTopUp: this.toNumber(entry.netTopUp),
+          netTopUpReason: entry.netTopUpReason,
+          normalOtHours: this.toNumber(entry.normalOtHours),
+          eveningOtHours: this.toNumber(entry.eveningOtHours),
+          sundayOtHours: this.toNumber(entry.sundayOtHours),
+          holidayOtHours: this.toNumber(entry.holidayOtHours),
+          normalOtPay: this.toNumber(entry.normalOtPay),
+          eveningOtPay: this.toNumber(entry.eveningOtPay),
+          sundayOtPay: this.toNumber(entry.sundayOtPay),
+          holidayOtPay: this.toNumber(entry.holidayOtPay),
+          allocatedDays: Object.fromEntries(
+            slices.flatMap((slice) =>
+              slice.periodId ? [[slice.periodId, slice.allocatedDays]] : [],
+            ),
+          ),
+        };
+        await tx.payrollEntryAudit.create({
+          data: {
+            payrollEntryId: entryId,
+            field: ZERO_DAYS_SNAPSHOT_AUDIT_FIELD,
+            oldValue: JSON.stringify(snapshot),
+            newValue: '',
+            changedById: ctx.userId,
+            companyId: ctx.companyId,
+          },
+        });
+      }
       return saved;
     });
 
@@ -1431,7 +1502,12 @@ export class PayrollRunService {
     companyId: string,
   ): Promise<PayrollEntryAuditRecord[]> {
     return this.prisma.payrollEntryAudit.findMany({
-      where: { payrollEntryId: entryId, companyId, payrollEntry: { runId } },
+      where: {
+        payrollEntryId: entryId,
+        companyId,
+        field: PAYROLL_DAYS_AUDIT_FIELD,
+        payrollEntry: { runId },
+      },
       orderBy: { changedAt: 'desc' },
       select: {
         id: true,
@@ -1451,6 +1527,70 @@ export class PayrollRunService {
         },
       },
     });
+  }
+
+  /** What the latest override to 0 days cleared; null when no override set this entry to 0. */
+  private async latestZeroDaysSnapshot(
+    entryId: string,
+    companyId: string,
+  ): Promise<ZeroDaysSnapshot | null> {
+    const row = await this.prisma.payrollEntryAudit.findFirst({
+      where: { payrollEntryId: entryId, companyId, field: ZERO_DAYS_SNAPSHOT_AUDIT_FIELD },
+      orderBy: { changedAt: 'desc' },
+      select: { oldValue: true },
+    });
+    return row ? (JSON.parse(row.oldValue) as ZeroDaysSnapshot) : null;
+  }
+
+  private zeroDaysEntryFields(): ReturnType<PayrollRunService['entryFieldsFromSnapshot']> {
+    return this.entryFieldsFromSnapshot({
+      contractNetBonus: 0,
+      bonusTopUp: 0,
+      bonusTopUpReason: null,
+      netTopUp: 0,
+      netTopUpReason: null,
+      normalOtHours: 0,
+      eveningOtHours: 0,
+      sundayOtHours: 0,
+      holidayOtHours: 0,
+      normalOtPay: 0,
+      eveningOtPay: 0,
+      sundayOtPay: 0,
+      holidayOtPay: 0,
+      allocatedDays: {},
+    });
+  }
+
+  private entryFieldsFromSnapshot(snapshot: ZeroDaysSnapshot): {
+    contractNetBonus: Decimal;
+    bonusTopUp: Decimal;
+    bonusTopUpReason: string | null;
+    netTopUp: Decimal;
+    netTopUpReason: string | null;
+    normalOtHours: Decimal;
+    eveningOtHours: Decimal;
+    sundayOtHours: Decimal;
+    holidayOtHours: Decimal;
+    normalOtPay: Decimal;
+    eveningOtPay: Decimal;
+    sundayOtPay: Decimal;
+    holidayOtPay: Decimal;
+  } {
+    return {
+      contractNetBonus: new Decimal(snapshot.contractNetBonus),
+      bonusTopUp: new Decimal(snapshot.bonusTopUp),
+      bonusTopUpReason: snapshot.bonusTopUpReason,
+      netTopUp: new Decimal(snapshot.netTopUp),
+      netTopUpReason: snapshot.netTopUpReason,
+      normalOtHours: new Decimal(snapshot.normalOtHours),
+      eveningOtHours: new Decimal(snapshot.eveningOtHours),
+      sundayOtHours: new Decimal(snapshot.sundayOtHours),
+      holidayOtHours: new Decimal(snapshot.holidayOtHours),
+      normalOtPay: new Decimal(snapshot.normalOtPay),
+      eveningOtPay: new Decimal(snapshot.eveningOtPay),
+      sundayOtPay: new Decimal(snapshot.sundayOtPay),
+      holidayOtPay: new Decimal(snapshot.holidayOtPay),
+    };
   }
 
   // ── Bulk generation internals ───────────────────────────────────────────
