@@ -139,7 +139,7 @@ To end it, click **Reactivate**, set the **Last inactive day (optional)**, and c
 7. Click **Separate**.
 
 
-> **Note:** To undo a separation, click **Cancel separation**. Employment, the contract end date and login go back to how they were.
+> **Note:** To change the leaving date later, click **Edit leaving date** on the banner. To undo a separation, click **Cancel separation**. Employment, the contract end date and login go back to how they were.
 
 > **Note:** If payroll for the month is already approved, tick *"I understand: mark the payroll stale and notify payroll."* Final settlement items such as leave payout or severance are only calculated in payroll when they are switched on in the HR policy settings.
 

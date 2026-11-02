@@ -57,6 +57,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanCreatePayroll,
+  useCanEditHr,
   useCanEditUsers,
   useCanManageEmployeePerDiemRates,
   useCanViewHr,
@@ -259,6 +260,7 @@ export default function EmployeeDetailPageContent({
   const resendInvitation = useResendInvitation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const canEditUsers = useCanEditUsers();
+  const canEditHr = useCanEditHr();
   // HR, or a supervisor opening someone in their reporting chain.
   const canViewTeam = useCanViewTeam();
   // Supervisors without HR or users.edit get a read-only profile.
@@ -433,9 +435,12 @@ export default function EmployeeDetailPageContent({
   }
 
   const fullName = formatUserName(user);
-  // Employment actions: users.edit, HR-process employees only, never protected accounts.
+  // Employment actions: users.edit or hr.edit (HR and above), never protected accounts.
   const canManageEmployment = Boolean(
-    canEditUsers && showDestructiveActions && !user.excludedFromHrProcesses && employment,
+    (canEditUsers || canEditHr) &&
+      showDestructiveActions &&
+      !user.excludedFromHrProcesses &&
+      employment,
   );
   const isSeparated = employment?.employmentStatus === 'SEPARATED';
   const emergencyContacts = user.emergencyContacts ?? [];
@@ -601,7 +606,7 @@ export default function EmployeeDetailPageContent({
           <EmployeeSeparationBanner
             userId={user.id}
             employment={employment}
-            canManage={canEditUsers}
+            canManage={canManageEmployment}
           />
         ) : null}
 

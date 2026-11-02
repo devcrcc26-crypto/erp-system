@@ -229,6 +229,50 @@ describe('EmploymentSeparationService', () => {
     await expect(service.cancel(ctx, EMP)).rejects.toThrow('Cannot cancel');
   });
 
+  it('updateLeavingDate moves the leaving date and keeps the contract in sync', async () => {
+    const state = makeState();
+    state.contract.endDate = d(2026, 12, 31);
+    const { service, audit } = makeService(state);
+    await service.separate(ctx, EMP, {
+      leavingDate: '2026-08-20',
+      separationType: 'RESIGNATION',
+      reason: 'x',
+    });
+
+    await service.updateLeavingDate(ctx, EMP, { leavingDate: '2026-09-15' });
+
+    expect(state.periods[0].endDate).toEqual(d(2026, 9, 15));
+    expect(state.contract).toMatchObject({
+      endDate: d(2026, 9, 15),
+      terminatedAt: d(2026, 9, 15),
+      status: 'TERMINATED',
+    });
+    expect(state.user).toMatchObject({ employmentStatus: 'SEPARATED', isActive: false });
+    expect(audit.create).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'update_leaving_date' }),
+    );
+  });
+
+  it('updateLeavingDate to a future date restores login until the date passes', async () => {
+    const state = makeState();
+    const { service } = makeService(state);
+    await service.separate(ctx, EMP, {
+      leavingDate: '2026-08-20',
+      separationType: 'RESIGNATION',
+      reason: 'x',
+    });
+    expect(state.user.isActive).toBe(false);
+
+    await service.updateLeavingDate(ctx, EMP, { leavingDate: '2099-06-01' });
+
+    expect(state.periods[0]).toMatchObject({
+      endDate: d(2099, 6, 1),
+      loginDisabledBySeparation: false,
+    });
+    expect(state.contract.status).toBe('ACTIVE');
+    expect(state.user).toMatchObject({ employmentStatus: 'ACTIVE', isActive: true });
+  });
+
   it('preview reports pending approvals and submitted requests', async () => {
     const { service } = makeService(makeState());
     const preview = await service.preview(ctx, EMP, '2026-08-20');

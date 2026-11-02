@@ -66,6 +66,10 @@ function payrollEndDayForLeaver(
 /**
  * Paid days for an employment window within a month (before absences).
  *
+ * `employmentEnd` (contract end / terminatedAt / employment-period end) is the
+ * inclusive last paid day — e.g. termination on 20 Sep yields 20 days for
+ * September (1–20), and earned = basic/30×20.
+ *
  * - Full month → 30
  * - Joiner on day d: d ≤ 30 → 30 − (d − 1); d = 31 → 1
  * - Leaver on day d: last calendar day → 30; else min(d, 30)
@@ -82,49 +86,52 @@ export function employedPayrollDays(
   const periodEnd = monthEndUtc(month, year);
   const lastDayOfMonth = lastCalendarDayOfMonth(month, year);
 
-  const start = utcYmdParts(employmentStart);
-  const end = employmentEnd ? utcYmdParts(employmentEnd) : null;
+  // Normalise to UTC date-only so time-of-day never shifts the paid-day boundary.
+  const startParts = utcYmdParts(employmentStart);
+  const startDateOnly = new Date(
+    Date.UTC(startParts.year, startParts.month - 1, startParts.day),
+  );
+  const endParts = employmentEnd ? utcYmdParts(employmentEnd) : null;
+  const endDateOnly = endParts
+    ? new Date(Date.UTC(endParts.year, endParts.month - 1, endParts.day))
+    : null;
 
-  if (employmentStart.getTime() > periodEnd.getTime()) {
+  if (startDateOnly.getTime() > periodEnd.getTime()) {
     return { days: 0, startDay: 0, endDay: 0 };
   }
-  if (end) {
-    const endDate = new Date(Date.UTC(end.year, end.month - 1, end.day));
-    if (endDate.getTime() < periodStart.getTime()) {
-      return { days: 0, startDay: 0, endDay: 0 };
-    }
+  if (endDateOnly && endDateOnly.getTime() < periodStart.getTime()) {
+    return { days: 0, startDay: 0, endDay: 0 };
   }
 
   const joinedThisMonth =
-    start.year === year &&
-    start.month === month &&
-    employmentStart.getTime() >= periodStart.getTime();
+    startParts.year === year &&
+    startParts.month === month &&
+    startDateOnly.getTime() >= periodStart.getTime();
 
+  // Leaving date falls in this month → inclusive last paid day (calendar parts only).
   const leftThisMonth =
-    end != null &&
-    end.year === year &&
-    end.month === month &&
-    employmentEnd != null &&
-    employmentEnd.getTime() <= periodEnd.getTime();
+    endParts != null &&
+    endParts.year === year &&
+    endParts.month === month;
 
   // Joiner on the 31st only (and still employed / leaves later that day).
-  if (joinedThisMonth && start.day === 31) {
-    if (!leftThisMonth || (end != null && end.day >= 31)) {
+  if (joinedThisMonth && startParts.day === 31) {
+    if (!leftThisMonth || (endParts != null && endParts.day >= 31)) {
       return { days: 1, startDay: 31, endDay: 31 };
     }
     return { days: 0, startDay: 0, endDay: 0 };
   }
 
-  const startDay = joinedThisMonth ? start.day : 1;
+  const startDay = joinedThisMonth ? startParts.day : 1;
 
   let endDay: number;
   if (!leftThisMonth) {
     endDay = PAYROLL_MONTH_DAYS;
   } else {
-    endDay = payrollEndDayForLeaver(end!.day, lastDayOfMonth);
+    endDay = payrollEndDayForLeaver(endParts!.day, lastDayOfMonth);
   }
 
-  // Same-month joiner+leaver (and general case): min(end,30) − start + 1.
+  // Inclusive: min(end,30) − start + 1 (termination day is paid).
   if (startDay > PAYROLL_MONTH_DAYS) {
     return { days: 0, startDay: 0, endDay: 0 };
   }

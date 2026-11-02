@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost } from '@/lib/api/client';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
 
 export type EmploymentStatus = 'ACTIVE' | 'INACTIVE' | 'SEPARATED';
 
@@ -178,6 +178,18 @@ export function separateEmployee(
 
 export function cancelSeparation(userId: string): Promise<EmploymentState> {
   return apiDelete<EmploymentState>(`/users/${userId}/separation`);
+}
+
+export interface UpdateLeavingDatePayload {
+  leavingDate: string;
+  confirmLockedPayroll?: boolean;
+}
+
+export function updateLeavingDate(
+  userId: string,
+  payload: UpdateLeavingDatePayload,
+): Promise<EmploymentState> {
+  return apiPatch<EmploymentState>(`/users/${userId}/separation`, payload);
 }
 
 export function listInactivePeriods(userId: string): Promise<InactivePeriod[]> {

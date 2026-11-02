@@ -45,6 +45,7 @@ import {
   SeparateEmployeeDto,
   SeparationPreviewDto,
   SetInactiveDto,
+  UpdateLeavingDateDto,
 } from '../../application/dtos/employment-separation.dtos';
 import { EmploymentLifecycleService } from '../../application/services/employment-lifecycle.service';
 import { EmploymentSeparationService } from '../../application/services/employment-separation.service';
@@ -74,7 +75,10 @@ export class UsersController {
   }
 
   @Post(':id/separation/preview')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({
     summary:
       'Preview a separation: locked payroll months, active contract, pending approvals (no changes)',
@@ -88,7 +92,10 @@ export class UsersController {
   }
 
   @Post(':id/separation')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({
     summary:
       'Separate an employee (leaving date = last working day). Future-dated allowed; locked payroll months need confirmLockedPayroll.',
@@ -99,6 +106,23 @@ export class UsersController {
     @Body() dto: SeparateEmployeeDto,
   ): Promise<unknown> {
     return this.separationService.separate(this.ctx(user), id, dto);
+  }
+
+  @Patch(':id/separation')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({
+    summary:
+      'Update the leaving date on an existing separation (HR and users.edit). Locked payroll months need confirmLockedPayroll.',
+  })
+  updateLeavingDate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateLeavingDateDto,
+  ): Promise<unknown> {
+    return this.separationService.updateLeavingDate(this.ctx(user), id, dto);
   }
 
   @Get(':id/inactive-periods')
@@ -113,7 +137,10 @@ export class UsersController {
   }
 
   @Post(':id/inactive')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({
     summary:
       'Set an employee inactive (suspension / long leave / other). Pay and login follow the inactivePaid / inactiveCanLogin policies.',
@@ -127,7 +154,10 @@ export class UsersController {
   }
 
   @Post(':id/reactivate')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({ summary: 'End the current inactive period' })
   reactivate(
     @CurrentUser() user: AuthenticatedUser,
@@ -138,7 +168,10 @@ export class UsersController {
   }
 
   @Post(':id/rehire')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({
     summary:
       'Rehire a separated employee: new employment period + contract; login re-enabled with a temporary password shown once',
@@ -152,7 +185,10 @@ export class UsersController {
   }
 
   @Delete(':id/separation')
-  @RequirePermission('users', 'edit')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
   @ApiOperation({
     summary:
       'Cancel a separation (allowed while the leaving date is in the future or not inside approved/paid payroll)',

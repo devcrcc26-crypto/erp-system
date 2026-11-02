@@ -11,6 +11,7 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -38,14 +39,15 @@ function currentMonthStart(): dayjs.Dayjs {
 
 /**
  * Opens (or creates) an overtime sheet, then redirects to detail.
- * Plain employees always get the current month (no picker). HR / on-behalf
- * filers can choose a past month.
+ * Plain employees always get the current month (no picker). HR (hr.view)
+ * and on-behalf filers can choose a past month.
  */
 export default function OvertimeNewPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
+  const canViewHr = useCanViewHr();
   const onBehalf = useOnBehalf('OVERTIME_APPLICATION');
   const eligibleQuery = useOnBehalfEligibleEmployees(
     currentUser.data?.id,
@@ -53,7 +55,8 @@ export default function OvertimeNewPageContent(): React.ReactNode {
   );
   const eligibleResolved = Boolean(currentUser.data?.id) && !eligibleQuery.isLoading;
   const hasOnBehalfAccess = (eligibleQuery.data?.length ?? 0) > 0;
-  const canPickPastMonths = hasOnBehalfAccess;
+  // Match backend canOpenPastMonthSheet: HR / overtime managers / on-behalf.
+  const canPickPastMonths = canViewHr || hasOnBehalfAccess;
 
   const openMutation = useOpenOvertimeSheet();
   const [month, setMonth] = useState<dayjs.Dayjs | null>(() =>

@@ -60,6 +60,19 @@ describe('employedPayrollDays', () => {
     ).toBe(30);
   });
 
+  it('termination date is the inclusive last paid day (Sep 20 → 20 days, earned 20k of 30k)', () => {
+    const days = employedPayrollDays(
+      9,
+      2026,
+      d(2025, 1, 1),
+      d(2026, 9, 20),
+    ).days;
+    expect(days).toBe(20);
+    expect(Math.round((30_000 / 30) * days)).toBe(20_000);
+    // Must not treat the leaving date as exclusive (that would yield 19 / 19_000).
+    expect(days).not.toBe(19);
+  });
+
   it('joiner Aug 17 with one absence → employed 14 (payroll days 13 after absence)', () => {
     const employed = employedPayrollDays(8, 2026, d(2026, 8, 17), null);
     expect(employed.days).toBe(14);

@@ -10,9 +10,11 @@ import {
   rehireEmployee,
   separateEmployee,
   setInactive,
+  updateLeavingDate,
   type RehirePayload,
   type SeparateEmployeePayload,
   type SetInactivePayload,
+  type UpdateLeavingDatePayload,
 } from '@/lib/api/employment';
 import { attendanceKeys } from '@/lib/query/attendance';
 import { employeeContractKeys } from '@/lib/query/employee-contract';
@@ -70,6 +72,18 @@ export function useCancelSeparation(userId: string) {
   return useMutation({
     mutationFn: () => cancelSeparation(userId),
     onSuccess: () => invalidate(queryClient, userId),
+  });
+}
+
+export function useUpdateLeavingDate(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateLeavingDatePayload) =>
+      updateLeavingDate(userId, payload),
+    onSuccess: () => {
+      invalidate(queryClient, userId);
+      void queryClient.invalidateQueries({ queryKey: employeeContractKeys.all });
+    },
   });
 }
 

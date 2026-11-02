@@ -1595,22 +1595,42 @@ async function main(): Promise<void> {
   }> = [
     {
       perm: permissions.find((p) => p.module === 'users' && p.action === 'view'),
-      roleNames: ['HR Assistant', 'HR Officer', 'HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+      roleNames: [
+        'HR Assistant',
+        'HR Officer',
+        'HR Manager',
+        'Local HR Manager',
+        'General Manager',
+        'Managing Director',
+        'System Administrator',
+      ],
       flags: viewOnlyFlags(),
     },
     {
       perm: permissions.find((p) => p.module === 'users' && p.action === 'create'),
-      roleNames: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+      roleNames: [
+        'HR Assistant',
+        'HR Officer',
+        'HR Manager',
+        'Local HR Manager',
+        'System Administrator',
+      ],
       flags: viewCreateFlags(),
     },
     {
       perm: permissions.find((p) => p.module === 'users' && p.action === 'edit'),
-      roleNames: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+      roleNames: [
+        'HR Assistant',
+        'HR Officer',
+        'HR Manager',
+        'Local HR Manager',
+        'System Administrator',
+      ],
       flags: { canView: true, canCreate: false, canEdit: true, canDelete: false, canApprove: false, canExport: true },
     },
     {
       perm: permissions.find((p) => p.module === 'users' && p.action === 'delete'),
-      roleNames: ['HR Officer', 'HR Manager', 'System Administrator'],
+      roleNames: ['HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
       flags: { canView: true, canCreate: false, canEdit: false, canDelete: true, canApprove: false, canExport: false },
     },
     {

@@ -107,6 +107,17 @@ export class SeparateEmployeeDto extends SeparationPreviewDto {
   handover?: HandoverDto;
 }
 
+/** Change the leaving date on an existing separation (HR). */
+export class UpdateLeavingDateDto extends SeparationPreviewDto {
+  @ApiPropertyOptional({
+    description:
+      'Required when the new leaving date falls in a month whose payroll is already approved or paid',
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirmLockedPayroll?: boolean;
+}
+
 export class SetInactiveDto {
   @ApiProperty({ enum: InactiveType })
   @IsEnum(InactiveType)

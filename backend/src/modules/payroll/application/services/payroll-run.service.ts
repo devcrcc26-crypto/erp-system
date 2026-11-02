@@ -1888,11 +1888,21 @@ export class PayrollRunService {
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
     for (const { terminatedAt, ...contract } of monthContracts) {
       // Downstream day allocation reads endDate only, so fold termination and the
-      // leaving date into it here.
+      // leaving date into it here. terminatedAt / employment-period end are the
+      // inclusive last paid day — never cap below terminatedAt.
       const window = windowsByEmployee.get(contract.employeeId);
       let endDate = effectiveContractEnd(contract.endDate, terminatedAt);
-      if (window?.end && (!endDate || window.end.getTime() < endDate.getTime())) {
-        endDate = window.end;
+      if (window?.end) {
+        const windowIsEarlierCap =
+          !endDate || window.end.getTime() < endDate.getTime();
+        if (windowIsEarlierCap) {
+          const wouldDropTerminatedAt =
+            terminatedAt != null &&
+            window.end.getTime() < terminatedAt.getTime();
+          if (!wouldDropTerminatedAt) {
+            endDate = window.end;
+          }
+        }
       }
       if (endDate && endDate.getTime() < contract.startDate.getTime()) {
         continue;
@@ -1914,7 +1924,12 @@ export class PayrollRunService {
       }
     }
     for (const [employeeId, window] of windowsByEmployee) {
-      if (window.end) {
+      if (!window.end) {
+        continue;
+      }
+      const existing = employmentEndByEmployee.get(employeeId);
+      // Prefer the later end so termination (last paid day) is never shortened.
+      if (!existing || window.end.getTime() > existing.getTime()) {
         employmentEndByEmployee.set(employeeId, window.end);
       }
     }

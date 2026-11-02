@@ -97,6 +97,12 @@ export interface SeparateEmployeeInput {
   handover?: HandoverInput;
 }
 
+export interface UpdateLeavingDateInput {
+  leavingDate: string;
+  /** Required when the new leaving date falls in (or before) an approved / paid payroll month. */
+  confirmLockedPayroll?: boolean;
+}
+
 export interface LockedPayrollRun {
   id: string;
   runNumber: string;
@@ -369,6 +375,145 @@ export class EmploymentSeparationService {
     );
     this.logger.log(
       `[Separation] ${userId} leaving ${formatDateOnlyUtc(leavingDate)} (${input.separationType}); effective=${effective}`,
+    );
+    return this.getEmployment(ctx, userId);
+  }
+
+  /**
+   * Change the leaving date on the current separation. HR can correct a wrong
+   * date without cancelling and re-separating (cancel may be blocked by payroll).
+   */
+  async updateLeavingDate(
+    ctx: Ctx,
+    userId: string,
+    input: UpdateLeavingDateInput,
+  ): Promise<EmploymentState> {
+    const leavingDate = this.parseLeavingDate(input.leavingDate);
+    const user = await this.requireUser(ctx, userId);
+    const period = await this.prisma.employmentPeriod.findFirst({
+      where: { userId },
+      orderBy: { startDate: 'desc' },
+    });
+    if (!period?.endDate || !period.separationType) {
+      throw new BadRequestException('Employee has no separation to update');
+    }
+    if (leavingDate.getTime() === period.endDate.getTime()) {
+      return this.getEmployment(ctx, userId);
+    }
+    if (leavingDate.getTime() < period.startDate.getTime()) {
+      throw new BadRequestException(
+        `Leaving date cannot be before the employment start (${formatDateOnlyUtc(period.startDate)})`,
+      );
+    }
+
+    const lockedRuns = await this.lockedRunsFrom(ctx.companyId, leavingDate);
+    if (lockedRuns.length > 0 && !input.confirmLockedPayroll) {
+      throw new ConflictException({
+        message:
+          'The leaving date falls in a payroll month that is already approved or paid. Confirm to continue; the run will be marked stale and payroll notified.',
+        code: 'LOCKED_PAYROLL_CONFIRMATION_REQUIRED',
+        lockedPayrollRuns: lockedRuns,
+      });
+    }
+
+    let linkedContract: { id: string; startDate: Date } | null = null;
+    if (period.separationContractId) {
+      linkedContract = await this.prisma.employeeContract.findFirst({
+        where: { id: period.separationContractId, deletedAt: null },
+        select: { id: true, startDate: true },
+      });
+      if (
+        linkedContract &&
+        linkedContract.startDate.getTime() > leavingDate.getTime()
+      ) {
+        throw new BadRequestException(
+          `Leaving date cannot be before the contract start (${formatDateOnlyUtc(linkedContract.startDate)})`,
+        );
+      }
+    }
+
+    const previousLeavingDate = period.endDate;
+    const today = todayInAddisUtc();
+    const effective = separationIsEffective(leavingDate, today);
+    const wasSeparated =
+      user.employmentStatus === 'SEPARATED' || period.loginDisabledBySeparation;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.employmentPeriod.update({
+        where: { id: period.id },
+        data: {
+          endDate: leavingDate,
+          loginDisabledBySeparation: effective && (wasSeparated || user.isActive),
+        },
+      });
+
+      if (linkedContract) {
+        await tx.employeeContract.update({
+          where: { id: linkedContract.id },
+          data: {
+            endDate: minDate(period.separationContractPrevEndDate, leavingDate),
+            terminatedAt: leavingDate,
+            status: effective
+              ? EmployeeContractStatus.TERMINATED
+              : EmployeeContractStatus.ACTIVE,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+
+      if (effective) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            employmentStatus: 'SEPARATED',
+            isActive: false,
+            updatedBy: ctx.userId,
+          },
+        });
+        await tx.userSession.deleteMany({ where: { userId } });
+      } else if (wasSeparated) {
+        // Moved to a future leaving date: restore login until the date passes.
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            employmentStatus: 'ACTIVE',
+            isActive: true,
+            updatedBy: ctx.userId,
+          },
+        });
+        await tx.employmentPeriod.update({
+          where: { id: period.id },
+          data: { loginDisabledBySeparation: false },
+        });
+      }
+    });
+
+    await this.afterPayrollAffectingChange(
+      ctx,
+      user,
+      leavingDate,
+      lockedRuns,
+      'leaving date updated',
+    );
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'users',
+        action: 'update_leaving_date',
+        recordType: 'employment_period',
+        recordId: period.id,
+        beforeValue: { leavingDate: formatDateOnlyUtc(previousLeavingDate) },
+        afterValue: {
+          employeeId: userId,
+          leavingDate: formatDateOnlyUtc(leavingDate),
+          effectiveImmediately: effective,
+          lockedPayrollRuns: lockedRuns.map((r) => r.runNumber),
+        },
+      }),
+    );
+    this.logger.log(
+      `[Separation] ${userId} leaving date ${formatDateOnlyUtc(previousLeavingDate)} → ${formatDateOnlyUtc(leavingDate)}; effective=${effective}`,
     );
     return this.getEmployment(ctx, userId);
   }
