@@ -106,22 +106,52 @@ export default function EmployeeContractDetailPageContent({
     canViewHr &&
     (contract?.status === 'ACTIVE' || contract?.status === 'DRAFT');
   const canTerminate = canViewHr && contract?.status === 'ACTIVE';
+  const canEditTermination =
+    canViewHr && contract?.status === 'TERMINATED' && Boolean(contract.terminatedAt);
   const ETB = 'ETB';
+
+  function openTerminateDialog(): void {
+    terminateForm.setFieldsValue({
+      terminatedAt: undefined,
+      terminationReason: '',
+    });
+    setTerminateOpen(true);
+  }
+
+  function openEditTerminationDialog(): void {
+    if (!contract) {
+      return;
+    }
+    terminateForm.setFieldsValue({
+      terminatedAt: contract.terminatedAt
+        ? dayjs(contract.terminatedAt)
+        : undefined,
+      terminationReason: contract.terminationReason ?? '',
+    });
+    setTerminateOpen(true);
+  }
 
   async function handleTerminate(): Promise<void> {
     const values = await terminateForm.validateFields();
+    const amending = contract?.status === 'TERMINATED';
     try {
       await terminateMutation.mutateAsync({
         terminationReason: values.terminationReason.trim(),
         terminatedAt: values.terminatedAt?.format('YYYY-MM-DD'),
       });
-      messageApi.success(t('hr.messages.employeeContractTerminated'));
+      messageApi.success(
+        amending
+          ? t('hr.messages.employeeContractTerminationUpdated')
+          : t('hr.messages.employeeContractTerminated'),
+      );
       setTerminateOpen(false);
       terminateForm.resetFields();
     } catch (error: unknown) {
       notifyApiError(
         error,
-        t('hr.messages.failedToTerminateEmployeeContract'),
+        amending
+          ? t('hr.messages.failedToUpdateContractTermination')
+          : t('hr.messages.failedToTerminateEmployeeContract'),
         messageApi,
       );
       throw error;
@@ -198,16 +228,25 @@ export default function EmployeeContractDetailPageContent({
               {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
           </div>
-          {canEdit || canTerminate ? (
+          {canEdit || canTerminate || canEditTermination ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
               {canTerminate ? (
                 <Button
                   icon={<StopOutlined />}
                   danger
-                  onClick={() => setTerminateOpen(true)}
+                  onClick={openTerminateDialog}
                   aria-label={t('hr.buttons.terminateContract')}
                 >
                   {isNarrow ? undefined : t('hr.buttons.terminateContract')}
+                </Button>
+              ) : null}
+              {canEditTermination ? (
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={openEditTerminationDialog}
+                  aria-label={t('hr.buttons.editTerminationDate')}
+                >
+                  {isNarrow ? undefined : t('hr.buttons.editTerminationDate')}
                 </Button>
               ) : null}
               {canEdit ? (
@@ -439,10 +478,22 @@ export default function EmployeeContractDetailPageContent({
 
       <ConfirmDialog
         open={terminateOpen}
-        title={t('hr.dialog.terminateContractTitle')}
-        description={t('hr.dialog.terminateContractDesc')}
-        confirmLabel={t('hr.buttons.terminateContract')}
-        danger
+        title={
+          canEditTermination
+            ? t('hr.dialog.editTerminationTitle')
+            : t('hr.dialog.terminateContractTitle')
+        }
+        description={
+          canEditTermination
+            ? t('hr.dialog.editTerminationDesc')
+            : t('hr.dialog.terminateContractDesc')
+        }
+        confirmLabel={
+          canEditTermination
+            ? t('hr.buttons.saveTerminationDate')
+            : t('hr.buttons.terminateContract')
+        }
+        danger={!canEditTermination}
         confirmLoading={terminateMutation.isPending}
         onConfirm={() => handleTerminate()}
         onCancel={() => {
@@ -451,7 +502,20 @@ export default function EmployeeContractDetailPageContent({
         }}
       >
         <Form form={terminateForm} layout="vertical" className="mt-4">
-          <Form.Item name="terminatedAt" label={t('hr.form.terminatedAt')}>
+          <Form.Item
+            name="terminatedAt"
+            label={t('hr.form.terminatedAt')}
+            rules={
+              canEditTermination
+                ? [
+                    {
+                      required: true,
+                      message: t('hr.validation.terminationDateRequired'),
+                    },
+                  ]
+                : undefined
+            }
+          >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item

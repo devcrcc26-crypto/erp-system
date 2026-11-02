@@ -331,7 +331,10 @@ export class EmployeeContractController {
     @RequireAnyPermission(
         { module: 'employee-contract', action: 'edit' },
     )
-    @ApiOperation({ summary: 'Terminate an employee contract' })
+    @ApiOperation({
+        summary:
+            'Terminate an active employee contract, or amend termination date/reason on a terminated one',
+    })
     async terminate(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,

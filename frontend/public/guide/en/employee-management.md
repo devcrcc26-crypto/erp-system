@@ -106,7 +106,7 @@ To add many employees at once, click **Import from Excel** on **Employees**. Eac
 
 > **After you save:** You see *"Employee contract created"*. Payroll uses the active contract's pay.
 
-To end a contract early, open it, click **Terminate**, enter the **Termination Date** and **Termination Reason**, and confirm **Terminate contract?**. This cannot be undone.
+To end a contract early, open it, click **Terminate**, enter the **Termination Date** and **Termination Reason**, and confirm **Terminate contract?**. To correct the date later, open the terminated contract and click **Edit termination date**.
 
 ---
 

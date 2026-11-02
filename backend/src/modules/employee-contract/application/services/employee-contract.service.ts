@@ -689,6 +689,11 @@ export class EmployeeContractService {
         return this.getContract(id, companyId, userId);
     }
 
+    /**
+     * Terminate an ACTIVE contract, or amend termination date/reason on a
+     * TERMINATED one (HR correcting a wrong date). endDate stays aligned with
+     * terminatedAt so payroll and attendance stop on that day.
+     */
     async terminateContract(
         id: string,
         userId: string,
@@ -704,36 +709,79 @@ export class EmployeeContractService {
         if(!contract){
             throw new NotFoundException('Employee contract not found');
         }
-        if(contract.status !== EmployeeContractStatus.ACTIVE){
+        const amending = contract.status === EmployeeContractStatus.TERMINATED;
+        if (
+            !amending &&
+            contract.status !== EmployeeContractStatus.ACTIVE
+        ) {
             throw new BadRequestException(
                 'Only active contracts can be terminated',
             );
         }
         const terminatedAt = dto.terminatedAt
         ? this.parseDateOnly(dto.terminatedAt)
-        : this.todayUtc();
+        : amending && contract.terminatedAt
+          ? contract.terminatedAt
+          : this.todayUtc();
         if (terminatedAt.getTime() < contract.startDate.getTime()) {
             throw new BadRequestException(
                 `Termination date cannot be before the contract start (${toDateOnly(contract.startDate)})`,
             );
         }
-        if (contract.endDate && terminatedAt.getTime() > contract.endDate.getTime()) {
+        // First terminate: do not go past the planned end. Amend skips this —
+        // endDate already equals the previous termination date.
+        if (
+            !amending &&
+            contract.endDate &&
+            terminatedAt.getTime() > contract.endDate.getTime()
+        ) {
             throw new BadRequestException(
                 `Termination date cannot be after the contract end (${toDateOnly(contract.endDate)})`,
             );
         }
-        // endDate is what payroll and attendance read; keep it equal to the termination.
-        await this.prisma.employeeContract.update({
-            where: {id},
-            data: {
-                status: EmployeeContractStatus.TERMINATED,
-                terminatedAt,
-                endDate: terminatedAt,
-                terminationReason: dto.terminationReason.trim() || null,
-                updatedBy: userId,
+        // Prefer the original planned end from a linked separation when amending.
+        if (amending) {
+            const linked = await this.prisma.employmentPeriod.findFirst({
+                where: {
+                    separationContractId: id,
+                    separationContractPrevEndDate: { not: null },
+                },
+                orderBy: { startDate: 'desc' },
+                select: { separationContractPrevEndDate: true },
+            });
+            const plannedEnd = linked?.separationContractPrevEndDate;
+            if (
+                plannedEnd &&
+                terminatedAt.getTime() > plannedEnd.getTime()
+            ) {
+                throw new BadRequestException(
+                    `Termination date cannot be after the contract end (${toDateOnly(plannedEnd)})`,
+                );
             }
+        }
+
+        await this.prisma.$transaction(async (tx) => {
+            await tx.employeeContract.update({
+                where: {id},
+                data: {
+                    status: EmployeeContractStatus.TERMINATED,
+                    terminatedAt,
+                    endDate: terminatedAt,
+                    terminationReason: dto.terminationReason.trim() || null,
+                    updatedBy: userId,
+                },
+            });
+            // Keep employment leaving date in sync when this contract ended a separation.
+            await tx.employmentPeriod.updateMany({
+                where: { separationContractId: id },
+                data: { endDate: terminatedAt },
+            });
         });
-        this.logger.log(`Terminated employee contract ${contract.contractNumber}`);
+        this.logger.log(
+            amending
+                ? `Updated termination date on employee contract ${contract.contractNumber}`
+                : `Terminated employee contract ${contract.contractNumber}`,
+        );
         return this.getContract(id, companyId, userId);
     }
 

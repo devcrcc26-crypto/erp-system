@@ -350,6 +350,8 @@ export function useTerminateEmployeeContract(id: string) {
         queryKey: employeeContractKeys.myLists(),
       });
       void queryClient.setQueryData(employeeContractKeys.detail(id), updated);
+      // Linked employment leaving date may have been synced.
+      void queryClient.invalidateQueries({ queryKey: ['users', 'employment'] });
     },
   });
 }
