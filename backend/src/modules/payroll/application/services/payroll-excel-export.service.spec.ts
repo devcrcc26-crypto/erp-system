@@ -19,8 +19,8 @@ import { round2 } from './payroll-excel-export.formulas';
 const COMPANY_ID = 'company-1';
 const RUN_ID = 'run-1';
 const USER_ID = 'user-1';
-const DATA_FIRST_ROW = 5;
-const PAYROLL_FIRST_ROW = 11;
+const DATA_FIRST_ROW = 6;
+const PAYROLL_FIRST_ROW = 6;
 
 const DATA_COL = {
   name: 5,
@@ -312,6 +312,12 @@ async function exportFixture(
       },
     },
     $queryRaw: async (): Promise<unknown[]> => [],
+    user: {
+      findUnique: async (): Promise<{ firstName: string; lastName: string }> => ({
+        firstName: 'Hana',
+        lastName: 'Preparer',
+      }),
+    },
   };
   const settingsService = {
     getSettings: async (): Promise<PayrollCompanySettings> =>
@@ -419,10 +425,48 @@ describe('PayrollExcelExportService - streaming writer + formulas', () => {
     expect(payroll.getCell(PAYROLL_FIRST_ROW, 3).value).toBe(
       'Abebe Tadesse Kebede',
     );
-    expect(data.getCell(2, 4).value).toBe('Month August,2026');
+    expect(data.getCell(2, 4).value).toBe('Salary Sheet (Data) - August 2026');
     expect(String(payroll.getCell(2, 1).value)).toContain(
       'PAYROLL FOR THE MONTH OF August 2026',
     );
+  });
+
+  it('uses the document layout and sizes columns so no number shows #####', async () => {
+    const { workbook } = await exportFixture(makeFixtureEntries());
+    for (const name of ['Data', 'Payroll']) {
+      const sheet = workbook.getWorksheet(name)!;
+      expect(sheet.views[0]).toMatchObject({ state: 'frozen', showGridLines: false });
+      const headerRow = DATA_FIRST_ROW - 1;
+      const firstCol = name === 'Data' ? 4 : 1;
+      expect(sheet.getCell(headerRow, firstCol).font).toMatchObject({
+        name: 'Arial',
+        bold: true,
+      });
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= headerRow) return;
+        row.eachCell((cell, col) => {
+          const value = cell.value;
+          const num =
+            typeof value === 'number'
+              ? value
+              : value && typeof value === 'object' && 'result' in value
+                ? Number(value.result ?? 0)
+                : null;
+          if (num == null) return;
+          const shown = num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          const width = sheet.getColumn(col).width ?? 8.43;
+          expect({ sheet: name, rowNumber, col, fits: width >= shown.length + 1 }).toEqual({
+            sheet: name,
+            rowNumber,
+            col,
+            fits: true,
+          });
+        });
+      });
+    }
   });
 
   it('splits renewal into two Data rows with identity merge and first-row aggregates', async () => {

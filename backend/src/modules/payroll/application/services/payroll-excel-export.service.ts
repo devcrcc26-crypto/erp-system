@@ -17,6 +17,12 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { formatEnglishName } from '../../../../shared/utils/user-display.util';
 import {
+  DOCUMENT_STYLE,
+  documentFooter,
+  documentMetaRichText,
+  formatGeneratedAt,
+} from '../../../../shared/utils/excel-document.util';
+import {
   allowanceFormulaOrValue,
   colLetter,
   dataCellFormula,
@@ -42,11 +48,32 @@ const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const MONEY_FORMAT = '#,##0.00';
+/** Hours / days: `30` → `30.0`, `12.5` → `12.5`, `7.25` → `7.25`. */
+const QUANTITY_FORMAT = '#,##0.0#';
 /** Page size for entry fetches — never load a full run into memory. */
 const ENTRY_PAGE_SIZE = 50;
 
-const DATA_FIRST_ROW = 5;
-const PAYROLL_FIRST_ROW = 11;
+/*
+ * Both sheets follow the shared document layout (excel-document.util.ts):
+ * row 1 company, row 2 title, row 3 metadata + rule, row 4 spacer,
+ * row 5 column headers, data from row 6.
+ */
+const HEADER_ROW = 5;
+const DATA_FIRST_ROW = HEADER_ROW + 1;
+const PAYROLL_FIRST_ROW = HEADER_ROW + 1;
+
+const DOC = DOCUMENT_STYLE;
+const BODY_FONT: Partial<ExcelJS.Font> = {
+  name: DOC.font,
+  size: 9,
+  color: { argb: DOC.body },
+};
+const STRONG_FONT: Partial<ExcelJS.Font> = {
+  name: DOC.font,
+  size: 9,
+  bold: true,
+  color: { argb: DOC.ink },
+};
 
 const MONTH_NAMES = [
   'January',
@@ -137,6 +164,43 @@ const PCOL = {
   advance: 14,
   netPay: 15,
 } as const;
+
+/** Data columns that hold hours or days rather than money. */
+const DATA_QUANTITY_COLS = new Set<number>([
+  COL.payrollDays,
+  COL.normalHr,
+  COL.eveningHr,
+  COL.sundayHr,
+  COL.holidayHr,
+]);
+
+/*
+ * Column widths. Money columns are wide enough for a bold run total of
+ * 99,999,999.99 in 9pt Arial so Excel never shows `#####`.
+ */
+const MONEY_WIDTH = 15;
+const DATA_WIDTHS: Record<number, number> = {
+  1: 2,
+  2: 2,
+  3: 2,
+  [COL.sn]: 6,
+  [COL.name]: 30,
+  [COL.position]: 24,
+  [COL.employDate]: 13,
+  [COL.payrollDays]: 9,
+  [COL.normalHr]: 10,
+  [COL.eveningHr]: 10,
+  [COL.sundayHr]: 10,
+  [COL.holidayHr]: 10,
+  [COL.netPay]: 16,
+};
+const PAYROLL_WIDTHS: Record<number, number> = {
+  [PCOL.sn]: 6,
+  [PCOL.tin]: 14,
+  [PCOL.name]: 30,
+  [PCOL.employDate]: 13,
+  [PCOL.netPay]: 16,
+};
 
 type Numeric = Decimal | number;
 
@@ -341,7 +405,13 @@ export class PayrollExcelExportService {
       throw new BadRequestException('Cannot export a cancelled payroll run');
     }
 
-    await this.companySettings.getSettings(companyId);
+    const [settings, exporter] = await Promise.all([
+      this.companySettings.getSettings(companyId),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true },
+      }),
+    ]);
 
     const orderedIds = await this.loadOrderedEntryIds(runId, companyId);
     const mm = String(run.month).padStart(2, '0');
@@ -351,16 +421,42 @@ export class PayrollExcelExportService {
 
     this.applyDownloadHeaders(stream, filename);
 
+    const doc: SheetDocument = {
+      companyName: settings.orgNameTax,
+      meta: [
+        ['Period', `${monthName} ${run.year}`],
+        ['Run', run.runNumber],
+        ['Generated', formatGeneratedAt(new Date())],
+        ...(exporter
+          ? ([
+              ['Prepared by', `${exporter.firstName} ${exporter.lastName}`.trim()],
+            ] as Array<[string, string]>)
+          : []),
+        ['Employees', orderedIds.length.toLocaleString('en-US')],
+      ],
+    };
+    const dataTitle = `Salary Sheet (Data) - ${monthName} ${run.year}`;
+    const payrollTitle = `PAYROLL FOR THE MONTH OF ${monthName} ${run.year}`;
+
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream,
       useStyles: true,
       useSharedStrings: false,
     });
-    const dataSheet = workbook.addWorksheet('Data');
-    const payrollSheet = workbook.addWorksheet('Payroll');
+    workbook.creator = settings.orgNameTax;
+    const dataSheet = workbook.addWorksheet(
+      'Data',
+      documentSheetOptions(doc.companyName, dataTitle, HEADER_ROW, COL.name),
+    );
+    const payrollSheet = workbook.addWorksheet(
+      'Payroll',
+      documentSheetOptions(doc.companyName, payrollTitle, HEADER_ROW, PCOL.name),
+    );
+    applyColumnWidths(dataSheet, COL.netPay, DATA_WIDTHS);
+    applyColumnWidths(payrollSheet, PCOL.netPay, PAYROLL_WIDTHS);
 
-    await this.writeStreamingDataHeaders(dataSheet, monthName, run.year);
-    await this.writeStreamingPayrollHeaders(payrollSheet, monthName, run.year);
+    await this.writeStreamingDataHeaders(dataSheet, doc, dataTitle);
+    await this.writeStreamingPayrollHeaders(payrollSheet, doc, payrollTitle);
 
     const dataSums = new Map<number, number>();
     const payrollSums = new Map<number, number>();
@@ -401,6 +497,9 @@ export class PayrollExcelExportService {
             columnSums: dataSums,
           });
         }
+        for (let r = firstRow; r <= lastRow; r += 1) {
+          styleBodyRow(dataSheet, r, COL.sn, COL.netPay);
+        }
         if (rowCount > 1) {
           for (const col of IDENTITY_COLS) {
             dataSheet.mergeCells(firstRow, col, lastRow, col);
@@ -417,6 +516,7 @@ export class PayrollExcelExportService {
           payrollSums,
         );
         postTaxTopUpCount += topUps;
+        styleBodyRow(payrollSheet, payrollRow, PCOL.sn, PCOL.netPay);
         await payrollSheet.getRow(payrollRow).commit();
 
         dataRow = lastRow + 1;
@@ -772,14 +872,10 @@ export class PayrollExcelExportService {
 
   private async writeStreamingDataHeaders(
     sheet: ExcelJS.Worksheet,
-    monthName: string,
-    year: number,
+    doc: SheetDocument,
+    title: string,
   ): Promise<void> {
-    sheet.getCell(1, COL.sn).value = 'Salary Sheet (Data)';
-    await sheet.getRow(1).commit();
-    sheet.getCell(2, COL.sn).value = `Month ${monthName},${year}`;
-    await sheet.getRow(2).commit();
-    await sheet.getRow(3).commit();
+    await writeDocumentHeader(sheet, doc, title, COL.sn, COL.netPay);
     const headers: Array<[number, string]> = [
       [COL.sn, 'S/N'],
       [COL.name, 'Name'],
@@ -807,31 +903,15 @@ export class PayrollExcelExportService {
       [COL.totalDeduction, 'Total Deduction'],
       [COL.netPay, 'Net Pay'],
     ];
-    for (const [col, label] of headers) {
-      const cell = sheet.getCell(4, col);
-      cell.value = label;
-      cell.font = { bold: true };
-    }
-    await sheet.getRow(4).commit();
+    await writeTableHeaderRow(sheet, headers);
   }
 
   private async writeStreamingPayrollHeaders(
     sheet: ExcelJS.Worksheet,
-    monthName: string,
-    year: number,
+    doc: SheetDocument,
+    title: string,
   ): Promise<void> {
-    sheet.getCell(2, 1).value =
-      `PAYROLL FOR THE MONTH OF ${monthName} ${year}`;
-    await sheet.getRow(1).commit();
-    await sheet.getRow(2).commit();
-    await sheet.getRow(3).commit();
-    await sheet.getRow(4).commit();
-    sheet.getCell(5, 12).value = `Month: ${monthName}`;
-    sheet.getCell(5, 15).value = `Year ${year}`;
-    await sheet.getRow(5).commit();
-    for (let r = 6; r <= 9; r += 1) {
-      await sheet.getRow(r).commit();
-    }
+    await writeDocumentHeader(sheet, doc, title, PCOL.sn, PCOL.netPay);
     const headers: Array<[number, string]> = [
       [PCOL.sn, 'S/N'],
       [PCOL.tin, 'TIN'],
@@ -849,12 +929,7 @@ export class PayrollExcelExportService {
       [PCOL.advance, 'Advance'],
       [PCOL.netPay, 'Net Pay'],
     ];
-    for (const [col, label] of headers) {
-      const cell = sheet.getCell(10, col);
-      cell.value = label;
-      cell.font = { bold: true };
-    }
-    await sheet.getRow(10).commit();
+    await writeTableHeaderRow(sheet, headers);
   }
 
   private writeDataEmployeeRow(
@@ -1063,9 +1138,10 @@ export class PayrollExcelExportService {
       } else {
         cell.value = 0;
       }
-        cell.numFmt = MONEY_FORMAT;
-      cell.font = { ...(cell.font ?? {}), bold: true };
+      cell.numFmt = DATA_QUANTITY_COLS.has(col) ? QUANTITY_FORMAT : MONEY_FORMAT;
     }
+    sheet.getCell(totalsRow, COL.name).value = 'Total';
+    styleTotalsRow(sheet, totalsRow, COL.sn, COL.netPay);
   }
 
   /**
@@ -1187,21 +1263,186 @@ export class PayrollExcelExportService {
         cell.value = 0;
       }
       cell.numFmt = MONEY_FORMAT;
-      cell.font = { ...(cell.font ?? {}), bold: true };
     }
-    sheet.getCell(totalsRow, PCOL.sn).value = 'Total Amount';
+    sheet.getCell(totalsRow, PCOL.name).value = 'Total Amount';
+    styleTotalsRow(sheet, totalsRow, PCOL.sn, PCOL.netPay);
   }
 
+  /** Sign-off block: three labels with a signature rule beneath each. */
   private async writePayrollFooter(
     sheet: ExcelJS.Worksheet,
     startRow: number,
   ): Promise<void> {
-    sheet.getCell(startRow, 1).value = 'Prepared By';
+    const blocks: Array<[string, number, number]> = [
+      ['Prepared By', PCOL.sn, PCOL.name],
+      ['Checked By', PCOL.basic, PCOL.overTime],
+      ['Approved By', PCOL.ssfEmployer, PCOL.taxWithheld],
+    ];
+    for (const [label, from] of blocks) {
+      const cell = sheet.getCell(startRow, from);
+      cell.value = label;
+      cell.font = STRONG_FONT;
+    }
     await sheet.getRow(startRow).commit();
-    sheet.getCell(startRow + 1, 10).value = 'Checked By';
     await sheet.getRow(startRow + 1).commit();
-    sheet.getCell(startRow + 2, 14).value = 'Approved By';
-    await sheet.getRow(startRow + 2).commit();
+    const signRow = startRow + 2;
+    sheet.getRow(signRow).height = 24;
+    for (const [, from, to] of blocks) {
+      for (let col = from; col <= to; col += 1) {
+        sheet.getCell(signRow, col).border = { bottom: DOC.ruleThin };
+      }
+    }
+    await sheet.getRow(signRow).commit();
+  }
+}
+
+interface SheetDocument {
+  companyName: string;
+  meta: Array<[string, string]>;
+}
+
+/** Frozen header + identity columns, no gridlines, A4 landscape, document footer. */
+function documentSheetOptions(
+  companyName: string,
+  title: string,
+  headerRow: number,
+  frozenThroughCol: number,
+): Partial<ExcelJS.AddWorksheetOptions> {
+  return {
+    views: [
+      {
+        state: 'frozen',
+        xSplit: frozenThroughCol,
+        ySplit: headerRow,
+        topLeftCell: `${colLetter(frozenThroughCol + 1)}${headerRow + 1}`,
+        activeCell: `${colLetter(frozenThroughCol + 1)}${headerRow + 1}`,
+        showGridLines: false,
+      },
+    ],
+    pageSetup: {
+      paperSize: 9, // A4
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      horizontalCentered: true,
+      margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.75, header: 0.3, footer: 0.3 },
+    },
+    headerFooter: {
+      differentFirst: false,
+      differentOddEven: false,
+      oddFooter: documentFooter(companyName, title),
+    },
+  };
+}
+
+function applyColumnWidths(
+  sheet: ExcelJS.Worksheet,
+  lastCol: number,
+  widths: Record<number, number>,
+): void {
+  for (let col = 1; col <= lastCol; col += 1) {
+    sheet.getColumn(col).width = widths[col] ?? MONEY_WIDTH;
+  }
+}
+
+/** Rows 1–4: company, title, metadata line over a strong rule, spacer. */
+async function writeDocumentHeader(
+  sheet: ExcelJS.Worksheet,
+  doc: SheetDocument,
+  title: string,
+  firstCol: number,
+  lastCol: number,
+): Promise<void> {
+  const company = sheet.getCell(1, firstCol);
+  company.value = doc.companyName.toUpperCase();
+  company.font = { name: DOC.font, size: 8, bold: true, color: { argb: DOC.muted } };
+  await sheet.getRow(1).commit();
+
+  sheet.getRow(2).height = 28;
+  const titleCell = sheet.getCell(2, firstCol);
+  titleCell.value = title;
+  titleCell.font = { name: DOC.font, size: 16, bold: true, color: { argb: DOC.ink } };
+  titleCell.alignment = { vertical: 'middle' };
+  await sheet.getRow(2).commit();
+
+  sheet.getRow(3).height = 22;
+  const metaCell = sheet.getCell(3, firstCol);
+  metaCell.value = documentMetaRichText(doc.meta);
+  metaCell.alignment = { vertical: 'top' };
+  for (let col = firstCol; col <= lastCol; col += 1) {
+    sheet.getCell(3, col).border = { bottom: DOC.ruleStrong };
+  }
+  await sheet.getRow(3).commit();
+
+  sheet.getRow(4).height = 12;
+  await sheet.getRow(4).commit();
+}
+
+async function writeTableHeaderRow(
+  sheet: ExcelJS.Worksheet,
+  headers: Array<[number, string]>,
+): Promise<void> {
+  const row = sheet.getRow(HEADER_ROW);
+  row.height = 36;
+  for (const [col, label] of headers) {
+    const cell = row.getCell(col);
+    cell.value = label;
+    cell.font = STRONG_FONT;
+    cell.alignment = { vertical: 'middle', wrapText: true };
+    cell.border = { bottom: DOC.ruleThin };
+  }
+  await row.commit();
+}
+
+function isNumericCell(value: ExcelJS.CellValue): boolean {
+  return (
+    typeof value === 'number' ||
+    (value != null && typeof value === 'object' && 'formula' in value)
+  );
+}
+
+/** Body row: 9pt Arial, hairline divider, numbers right-aligned. */
+function styleBodyRow(
+  sheet: ExcelJS.Worksheet,
+  rowNumber: number,
+  firstCol: number,
+  lastCol: number,
+): void {
+  for (let col = firstCol; col <= lastCol; col += 1) {
+    const cell = sheet.getCell(rowNumber, col);
+    const value = cell.value;
+    const numeric = isNumericCell(value);
+    cell.font = BODY_FONT;
+    cell.border = { bottom: DOC.ruleHair };
+    if (typeof value === 'number' && !cell.numFmt) {
+      cell.numFmt = Number.isInteger(value) ? '#,##0' : QUANTITY_FORMAT;
+    }
+    cell.alignment = {
+      vertical: 'top',
+      horizontal: numeric ? 'right' : 'left',
+      wrapText: !numeric,
+    };
+  }
+}
+
+/** Totals row: bold, rule above and below. */
+function styleTotalsRow(
+  sheet: ExcelJS.Worksheet,
+  rowNumber: number,
+  firstCol: number,
+  lastCol: number,
+): void {
+  sheet.getRow(rowNumber).height = 20;
+  for (let col = firstCol; col <= lastCol; col += 1) {
+    const cell = sheet.getCell(rowNumber, col);
+    const numeric = isNumericCell(cell.value);
+    cell.font = STRONG_FONT;
+    cell.border = { top: DOC.ruleThin, bottom: DOC.ruleStrong };
+    cell.alignment = {
+      vertical: 'middle',
+      horizontal: numeric ? 'right' : 'left',
+    };
   }
 }
 

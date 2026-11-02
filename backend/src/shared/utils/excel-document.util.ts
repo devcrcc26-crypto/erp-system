@@ -27,6 +27,41 @@ const RULE_STRONG: Partial<ExcelJS.Border> = { style: 'medium', color: { argb: I
 const RULE_THIN: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: INK } };
 const RULE_HAIR: Partial<ExcelJS.Border> = { style: 'hair', color: { argb: HAIRLINE } };
 
+/**
+ * The document palette, for exports that cannot use `startDocumentSheet` /
+ * `finishDocumentSheet` (e.g. streamed workbooks whose rows are committed as
+ * they are written) but must look the same.
+ */
+export const DOCUMENT_STYLE = {
+  font: FONT,
+  ink: INK,
+  body: BODY,
+  muted: MUTED,
+  ruleStrong: RULE_STRONG,
+  ruleThin: RULE_THIN,
+  ruleHair: RULE_HAIR,
+} as const;
+
+/** Page footer used by document sheets: `Company - Title … Page x of y`. */
+export function documentFooter(companyName: string, title: string): string {
+  return `&L&"${FONT}"&8&K6B6B6B${footerText(`${companyName} - ${title}`)}&R&"${FONT}"&8&K6B6B6BPage &P of &N`;
+}
+
+/** Metadata line (`Generated … Records …`) as rich text, muted labels / bold values. */
+export function documentMetaRichText(
+  parts: Array<[string, string]>,
+): ExcelJS.CellRichTextValue {
+  return {
+    richText: parts.flatMap(([label, value], index) => [
+      {
+        text: `${index > 0 ? '      ' : ''}${label}  `,
+        font: { name: FONT, size: 8, color: { argb: MUTED } },
+      },
+      { text: value, font: { name: FONT, size: 8, bold: true, color: { argb: INK } } },
+    ]),
+  };
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Row of the first table header row (company, title, metadata, spacer above). */
@@ -49,7 +84,7 @@ export interface DocumentSheetLayout {
 }
 
 /** `26 Oct 2026, 09:05` */
-function formatGeneratedAt(date: Date): string {
+export function formatGeneratedAt(date: Date): string {
   const pad = (part: number): string => String(part).padStart(2, '0');
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -142,15 +177,7 @@ export function finishDocumentSheet(
     ...(meta.details ?? []),
   ];
   const metaCell = sheet.getCell(3, 1);
-  metaCell.value = {
-    richText: metaParts.flatMap(([label, value], index) => [
-      {
-        text: `${index > 0 ? '      ' : ''}${label}  `,
-        font: { name: FONT, size: 8, color: { argb: MUTED } },
-      },
-      { text: value, font: { name: FONT, size: 8, bold: true, color: { argb: INK } } },
-    ]),
-  };
+  metaCell.value = documentMetaRichText(metaParts);
   metaCell.alignment = { vertical: 'top' };
 
   if (recordCount === 0) {
@@ -206,6 +233,6 @@ export function finishDocumentSheet(
   };
   sheet.headerFooter = {
     ...sheet.headerFooter,
-    oddFooter: `&L&"${FONT}"&8&K6B6B6B${footerText(`${meta.companyName} - ${meta.title}`)}&R&"${FONT}"&8&K6B6B6BPage &P of &N`,
+    oddFooter: documentFooter(meta.companyName, meta.title),
   };
 }
