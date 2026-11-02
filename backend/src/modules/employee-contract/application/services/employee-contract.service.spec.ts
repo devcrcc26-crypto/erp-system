@@ -198,7 +198,7 @@ describe('EmployeeContractService leave ledger hook', () => {
 });
 
 describe('EmployeeContractService convert to freelancer', () => {
-  it('new contract in the same employment period (no separation), pension 0 by default', async () => {
+  it('new contract in the same employment period (no separation), pension always on for freelancers', async () => {
     const created: Array<Record<string, unknown>> = [];
     const superseded: Array<Record<string, unknown>> = [];
     const tx = {
@@ -246,6 +246,6 @@ describe('EmployeeContractService convert to freelancer', () => {
     );
 
     expect(superseded[0]).toMatchObject({ status: EmployeeContractStatus.SUPERSEDED });
-    expect(created[0]).toMatchObject({ pensionApplicable: false, status: EmployeeContractStatus.ACTIVE });
+    expect(created[0]).toMatchObject({ pensionApplicable: true, status: EmployeeContractStatus.ACTIVE });
   });
 });

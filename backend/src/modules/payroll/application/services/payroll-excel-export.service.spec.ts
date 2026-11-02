@@ -494,6 +494,45 @@ describe('PayrollExcelExportService - streaming writer + formulas', () => {
     expect(cellResult(data, expatRow, DATA_COL.pensionEmp)).toBe(0);
   });
 
+  it('always writes pension formulas for freelancers, even if the contract opts out', async () => {
+    const freelancer = makeEntry({
+      employee: { firstName: 'Free', middleName: 'L', lastName: 'Ancer', employeeType: 'FREELANCER' },
+      contract: { startDate: utc(2025, 1, 1), pensionApplicable: false },
+    });
+    const { workbook } = await exportFixture([freelancer]);
+    const data = workbook.getWorksheet('Data')!;
+    const row = findDataRowByName(data, 'Free L Ancer');
+    expect(cellFormula(data, row, DATA_COL.pensionEmr)).toBe(`ROUND(SUM(J${row}:J${row})*11%,2)`);
+    expect(cellFormula(data, row, DATA_COL.pensionEmp)).toBe(`ROUND(SUM(J${row}:J${row})*7%,2)`);
+  });
+
+  it('lists employees alphabetically by full name, ignoring department', async () => {
+    const { workbook } = await exportFixture(makeFixtureEntries());
+    const data = workbook.getWorksheet('Data')!;
+    const payroll = workbook.getWorksheet('Payroll')!;
+    const payrollNames: string[] = [];
+    for (let row = PAYROLL_FIRST_ROW; ; row += 1) {
+      const name = payroll.getCell(row, 3).value;
+      if (typeof name !== 'string' || name === 'Total Amount') break;
+      payrollNames.push(name);
+    }
+    const dataNames: string[] = [];
+    for (let row = DATA_FIRST_ROW; row < DATA_FIRST_ROW + 50; row += 1) {
+      const name = data.getCell(row, DATA_COL.name).value;
+      if (name === 'Total') break;
+      // A multi-contract employee's merged name cell reads back on each row.
+      if (typeof name === 'string' && name !== dataNames[dataNames.length - 1]) {
+        dataNames.push(name);
+      }
+    }
+    const sorted = [...payrollNames].sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' }),
+    );
+    expect(payrollNames.length).toBeGreaterThan(1);
+    expect(payrollNames).toEqual(sorted);
+    expect(dataNames).toEqual(sorted);
+  });
+
   it('audit-logs the export and reports post-tax top-up count', async () => {
     const { result, auditCalls } = await exportFixture(makeFixtureEntries());
     expect(result.postTaxTopUpCount).toBe(1);

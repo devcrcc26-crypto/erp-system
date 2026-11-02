@@ -255,7 +255,7 @@ export interface PayrollExportEntry {
   incomeTax: Numeric;
   totalDeductions: Numeric;
   netPay: Numeric;
-  /** False for expatriate / freelancer contracts (pension formulas write 0). */
+  /** False for expatriate contracts (pension formulas write 0). Always true for freelancers. */
   pensionApplicable?: boolean;
   employee: {
     firstName: string;
@@ -595,26 +595,18 @@ export class PayrollExcelExportService {
             middleName: true,
             lastName: true,
             excludedFromHrProcesses: true,
-            department: { select: { name: true } },
           },
         },
       },
     });
     return light
       .filter((e) => e.employee.excludedFromHrProcesses !== true)
-      .sort((a, b) => {
-        const deptA = a.employee.department?.name ?? '';
-        const deptB = b.employee.department?.name ?? '';
-        const deptCmp = deptA.localeCompare(deptB, undefined, {
+      // Alphabetical by full name (first, middle, last) on both sheets.
+      .sort((a, b) =>
+        fullName(a.employee).localeCompare(fullName(b.employee), undefined, {
           sensitivity: 'base',
-        });
-        if (deptCmp !== 0) {
-          return deptCmp;
-        }
-        return fullName(a.employee).localeCompare(fullName(b.employee), undefined, {
-          sensitivity: 'base',
-        });
-      })
+        }),
+      )
       .map((e) => e.id);
   }
 
@@ -787,7 +779,7 @@ export class PayrollExcelExportService {
       contract: raw.contract,
       pensionApplicable:
         raw.employee.employeeType === 'FREELANCER'
-          ? false
+          ? true
           : (raw.contract?.pensionApplicable ?? true),
       salaryPeriods: raw.salaryPeriods.map((p) => ({
         periodStart: p.periodStart,
@@ -1461,10 +1453,11 @@ function toNumber(value: Numeric | null | undefined): number {
 }
 
 function isPensionExempt(entry: PayrollExportEntry): boolean {
-  if (entry.pensionApplicable === false) {
-    return true;
-  }
+  // Freelancers always pay pension.
   if (entry.employee.employeeType === 'FREELANCER') {
+    return false;
+  }
+  if (entry.pensionApplicable === false) {
     return true;
   }
   // Expatriate contracts store pensionApplicable=false; treat zero pensions as exempt.

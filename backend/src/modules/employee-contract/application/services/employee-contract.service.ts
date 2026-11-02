@@ -202,8 +202,9 @@ export class EmployeeContractService {
         if(!employee){
             throw new NotFoundException('Employee not found');
         }
-        // Freelancers have no pension unless HR says otherwise (convert-to-freelancer contracts).
-        const defaultPension = employee.employeeType !== 'FREELANCER';
+        // Freelancers always pay pension; everyone else defaults to it unless HR opts out.
+        const pensionApplicable =
+            employee.employeeType === 'FREELANCER' ? true : (dto.pensionApplicable ?? true);
 
         const signedAt = this.parseDateOnly(dto.signedAt);
         const startDate = this.parseDateOnly(dto.startDate);
@@ -216,7 +217,7 @@ export class EmployeeContractService {
             transportationAllowance: dto.transportationAllowance ?? 0,
             monthlyBonus: dto.monthlyBonus ?? 0,
             monthlyNetBonus: dto.monthlyNetBonus ?? 0,
-            pensionApplicable: dto.pensionApplicable ?? defaultPension,
+            pensionApplicable,
             taxApplicable: dto.taxApplicable ?? true,
         });
 
@@ -615,6 +616,16 @@ export class EmployeeContractService {
             dto.pensionApplicable !== undefined ||
             dto.taxApplicable !== undefined;
 
+        // Freelancers always pay pension, so their contracts cannot opt out.
+        const freelancer =
+            salaryTouched &&
+            (
+                await this.prisma.user.findFirst({
+                    where: {id: contract.employeeId, companyId},
+                    select: {employeeType: true},
+                })
+            )?.employeeType === 'FREELANCER';
+
         const salary = salaryTouched
             ? this.resolveSalaryFields({
                   basicSalary:
@@ -632,7 +643,7 @@ export class EmployeeContractService {
                       dto.monthlyNetBonus ??
                       this.payrollCalc.toNumber(contract.monthlyNetBonus),
                   pensionApplicable:
-                      dto.pensionApplicable ?? contract.pensionApplicable,
+                      freelancer || (dto.pensionApplicable ?? contract.pensionApplicable),
                   taxApplicable: dto.taxApplicable ?? contract.taxApplicable,
               })
             : null;

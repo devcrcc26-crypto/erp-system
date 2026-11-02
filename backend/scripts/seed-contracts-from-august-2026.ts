@@ -1040,7 +1040,8 @@ async function main(): Promise<void> {
       }
       void usedSource;
 
-      const pensionApplicable = user.employeeType !== EmployeeType.FREELANCER;
+      // Freelancers always pay pension.
+      const pensionApplicable = true;
       const contracts: Omit<PlannedContract, 'contractNumber'>[] = [];
 
       if (group.length === 1) {

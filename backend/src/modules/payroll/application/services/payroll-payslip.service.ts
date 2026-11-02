@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createRequire } from 'module';
+import type { EmployeeType } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { Archiver } from 'archiver';
 import { PassThrough } from 'stream';
@@ -131,6 +132,7 @@ type PayslipWithRelations = {
     netTopUp: Decimal;
     netTopUpReason: string | null;
     grossIncome: Decimal;
+    employeeCategory: EmployeeType | null;
     pensionEmployee: Decimal;
     pensionEmployer: Decimal;
     incomeTax: Decimal;
@@ -487,7 +489,10 @@ export class PayrollPayslipService {
       netTopUp: this.toNumber(entry.netTopUp),
       netTopUpReason: entry.netTopUpReason,
       grossIncome: this.toNumber(entry.grossIncome),
-      pensionApplicable: entry.contract?.pensionApplicable ?? true,
+      // Freelancers always pay pension.
+      pensionApplicable:
+        entry.employeeCategory === 'FREELANCER' ||
+        (entry.contract?.pensionApplicable ?? true),
       pensionEmployee: this.toNumber(entry.pensionEmployee),
       pensionEmployer: this.toNumber(entry.pensionEmployer),
       incomeTax: this.toNumber(entry.incomeTax),

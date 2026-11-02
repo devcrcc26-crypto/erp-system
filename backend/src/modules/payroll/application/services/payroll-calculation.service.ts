@@ -198,7 +198,7 @@ export class PayrollCalculationService {
       earnedSalary + totalOtPay + totalBonus + taxableTransport + settlementTaxable,
     );
 
-    // Pension % of earned salary (expatriates/freelancers: caller sets pensionApplicable false).
+    // Pension % of earned salary (expatriates: caller sets pensionApplicable false; freelancers always pay).
     const pensionEmployee = pensionApplicable
       ? this.round(earnedSalary * (policy.pensionEmployeePct / 100))
       : 0;

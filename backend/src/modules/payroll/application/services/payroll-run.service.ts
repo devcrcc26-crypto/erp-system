@@ -2516,7 +2516,10 @@ export class PayrollRunService {
     let contractNetBonus = this.toNumber(monthEndContract?.monthlyNetBonus);
     let effectiveBonusTopUp = bonusTopUp;
     let effectiveNetTopUp = netTopUp;
-    let pensionApplicable = monthEndContract?.pensionApplicable ?? true;
+    // Freelancers always pay pension, whatever the contract flag says.
+    let pensionApplicable =
+      employee.employeeType === 'FREELANCER' ||
+      (monthEndContract?.pensionApplicable ?? true);
     const taxApplicable = monthEndContract?.taxApplicable ?? true;
     // Full month unpaid / zero paid days: no transport, bonuses, pension, or OT.
     // TODO(HR): confirm whether any fixed contractual allowances should still pay.
@@ -2911,6 +2914,10 @@ export class PayrollRunService {
         pensionApplicable = contract.pensionApplicable;
         taxApplicable = contract.taxApplicable;
       }
+    }
+    // Freelancers always pay pension, whatever the contract flag says.
+    if (entry.employeeCategory === 'FREELANCER') {
+      pensionApplicable = true;
     }
 
     // Preserve stored final-settlement lines (severance may be untaxed per policy).
