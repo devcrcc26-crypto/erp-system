@@ -19,6 +19,7 @@ export const APPROVAL_CATEGORY_PERMISSION_MODULE: Readonly<
   PER_DIEM_SETTLEMENT: 'per-diem',
   PURCHASE_REQUEST: 'purchase-request',
   MATERIAL_REQUISITION: 'material-requisition',
+  ASSET_REQUEST: 'material-requisition',
   CONSUMABLES_REQUISITION: 'consumables',
   EXIT_PERMIT: 'exit-permit',
   VEHICLE_APPLICATION: 'vehicle-application',

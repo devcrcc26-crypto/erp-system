@@ -334,7 +334,7 @@ const CATEGORIES: CategorySeedDef[] = [
     icon: 'LaptopOutlined',
     sortOrder: 45,
     isUserRequestable: true,
-    permissionModule: 'company-asset',
+    permissionModule: 'material-requisition',
     formSchema: {
       fields: [
         {
