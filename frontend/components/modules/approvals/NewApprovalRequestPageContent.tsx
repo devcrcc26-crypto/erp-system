@@ -46,6 +46,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   PER_DIEM_SETTLEMENT: '/approvals/new/per-diem-settlement',
   PURCHASE_REQUEST: '/approvals/new/purchase-request',
   MATERIAL_REQUISITION: '/approvals/new/material-requisition',
+  ASSET_REQUEST: '/approvals/new/asset-request',
   EXIT_PERMIT: '/approvals/new/equipment-and-materials-exit-permit',
   CONSUMABLES_REQUISITION: '/approvals/new/consumables',
   VEHICLE_APPLICATION: '/approvals/new/vehicle-application',

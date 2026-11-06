@@ -326,6 +326,39 @@ const CATEGORIES: CategorySeedDef[] = [
     ],
   },
   {
+    code: 'ASSET_REQUEST',
+    name: 'Asset Request',
+    description: 'Request for a company asset such as a laptop, phone or office furniture.',
+    module: 'INVENTORY',
+    numberPrefix: 'ASR',
+    icon: 'LaptopOutlined',
+    sortOrder: 45,
+    isUserRequestable: true,
+    permissionModule: 'material-requisition',
+    formSchema: {
+      fields: [
+        {
+          name: 'assetCategory',
+          label: 'Asset Category',
+          type: 'text',
+          required: true,
+        },
+        { name: 'assetType', label: 'Asset Type / Model', type: 'text' },
+        { name: 'reason', label: 'Reason', type: 'textarea', required: true },
+        { name: 'requiredByDate', label: 'Required By', type: 'date' },
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('Warehouse Manager', 'WAREHOUSE_MANAGER', 2),
+        ],
+      },
+    ],
+  },
+  {
     code: 'CONSUMABLES_REQUISITION',
     name: 'Low-Value Consumables Requisition',
     description: 'Request for low-value office or site consumables.',

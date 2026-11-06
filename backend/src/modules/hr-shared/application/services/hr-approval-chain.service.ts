@@ -692,12 +692,6 @@ export class HrApprovalChainService {
     });
   }
 
-  /**
-   * Builds (without persisting) the approval chain a module would open for `employeeId`.
-   * Value-dependent tiers (purchase > 10k ETB, overtime > 4h) assume the widest chain,
-   * so callers see every tier the employee could need. Modules with no approval
-   * workflow (inspection & repair) return an empty chain.
-   */
   async buildChainForModule(
     moduleCode: HrOnBehalfModuleCode,
     employeeId: string,

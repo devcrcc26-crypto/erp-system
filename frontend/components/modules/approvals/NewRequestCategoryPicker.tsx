@@ -17,6 +17,7 @@ import {
   Fuel,
   History,
   Home,
+  Laptop,
   MapPin,
   Package,
   PackageMinus,
@@ -53,6 +54,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   PER_DIEM_SETTLEMENT: CircleDollarSign,
   PURCHASE_REQUEST: ShoppingCart,
   MATERIAL_REQUISITION: Package,
+  ASSET_REQUEST: Laptop,
   CONSUMABLES_REQUISITION: PackageOpen,
   EXIT_PERMIT: PackageMinus,
   VEHICLE_APPLICATION: Car,
@@ -100,6 +102,7 @@ const REQUEST_GROUPS: RequestGroup[] = [
     codes: [
       'PURCHASE_REQUEST',
       'MATERIAL_REQUISITION',
+      'ASSET_REQUEST',
       'CONSUMABLES_REQUISITION',
       'EXIT_PERMIT',
     ],
