@@ -46,6 +46,7 @@ export default function ExitPermitEditPageContent({
             <ExitPermitForm
               initialRecord={record}
               onSuccess={() => router.push(backHref)}
+              onCancel={() => router.push(backHref)}
             />
           </RequestEditPageShell>
         ) : null

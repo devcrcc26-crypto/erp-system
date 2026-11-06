@@ -41,8 +41,8 @@ export default function EditEmployeeFormContent({
 
   if (userQuery.isLoading) {
     return (
-      <div className={FORM_ROOT}>
-        <div className="erp-pro-card p-6">
+      <div className={`${FORM_ROOT} min-w-0 max-w-full`}>
+        <div className="erp-pro-card p-4 sm:p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -50,15 +50,21 @@ export default function EditEmployeeFormContent({
   }
 
   return (
-    <div className={FORM_ROOT}>
+    <div className={`${FORM_ROOT} min-w-0 max-w-full`}>
       <HrFormPageShell
         title={t('pages.users.edit')}
         description={t('users.form.editEmployeeDescription')}
         cancelLabel={t('users.form.cancel')}
         cancelHref={`/users/${userId}`}
-        backLabel={t('hr.buttons.back')}
+        backLabel={t('users.backToList')}
+        showCancelButton={false}
       >
-        <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
+        <AddEmployeeForm
+          userId={userId}
+          onSuccess={handleSuccess}
+          onCancel={() => router.push(`/users/${userId}`)}
+          cancelLabel={t('users.form.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );

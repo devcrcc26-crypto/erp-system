@@ -42,6 +42,9 @@ interface SettlementFormValues {
 }
 
 interface PerDiemSettlementFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: PerDiemSettlementDetail) => void;
 }
 
@@ -63,6 +66,8 @@ const TRIP_FIELDS = [
  */
 export default function PerDiemSettlementForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: PerDiemSettlementFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -551,6 +556,8 @@ export default function PerDiemSettlementForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={() => {

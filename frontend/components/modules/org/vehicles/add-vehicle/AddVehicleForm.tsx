@@ -30,6 +30,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
 
 export interface AddVehicleFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   vehicleId?: string;
   onSuccess: (vehicleId: string) => void;
 }
@@ -37,6 +40,8 @@ export interface AddVehicleFormProps {
 export default function AddVehicleForm({
   vehicleId,
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: AddVehicleFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -191,6 +196,8 @@ export default function AddVehicleForm({
       ) : null}
 
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         contentVariant="sections"
         isSubmitting={
           createMutation.isPending ||

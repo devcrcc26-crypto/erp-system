@@ -200,7 +200,7 @@ export function EmployeeProfileFormFields({
               name="dateOfBirth"
               rules={dateOfBirthRules(t)}
             >
-              <DatePicker style={{ width: '100%' }} disabledDate={disableFutureDates} />
+              <DatePicker className="!w-full" disabledDate={disableFutureDates} />
             </Form.Item>
             <Form.Item
               label={t('users.form.nationalId')}
@@ -306,6 +306,7 @@ export function EmployeeProfileFormFields({
             <Form.Item label={t('users.form.nationality')} name="nationality">
               <Select
                 allowClear
+                className="!w-full"
                 placeholder={t('common.select')}
                 options={NATIONALITY_OPTIONS.map((value) => ({
                   value,
@@ -316,6 +317,7 @@ export function EmployeeProfileFormFields({
             <Form.Item label={t('users.form.employeeType')} name="employeeType">
               <Select
                 allowClear
+                className="!w-full"
                 placeholder={t('common.select')}
                 options={EMPLOYEE_TYPE_OPTIONS.map((value) => ({
                   value,
@@ -330,7 +332,7 @@ export function EmployeeProfileFormFields({
               rules={employmentDateRules(t)}
             >
               <DatePicker
-                style={{ width: '100%' }}
+                className="!w-full"
                 disabledDate={disableExperienceDates(dateOfBirth)}
               />
             </Form.Item>
@@ -349,6 +351,7 @@ export function EmployeeProfileFormFields({
             <Form.Item label={t('users.form.educationLevel')} name="educationLevel">
               <Select
                 allowClear
+                className="!w-full"
                 placeholder={t('common.select')}
                 options={EDUCATION_LEVEL_OPTIONS.map((value) => ({
                   value,
@@ -389,7 +392,7 @@ export function EmployeeProfileFormFields({
                 max={YEARS_OF_EXPERIENCE_MAX}
                 step={0.5}
                 precision={1}
-                style={{ width: '100%' }}
+                className="!w-full"
                 placeholder={t('users.form.yearsOfExperiencePlaceholder')}
               />
             </Form.Item>
@@ -408,6 +411,7 @@ export function EmployeeProfileFormFields({
             <Form.Item label={t('users.form.leavePolicy')} name="leavePolicyId">
               <Select
                 allowClear
+                className="!w-full"
                 loading={leavePoliciesQuery.isLoading}
                 placeholder={
                   leavePolicyOptions.length === 0
@@ -426,6 +430,7 @@ export function EmployeeProfileFormFields({
               <Select
                 allowClear={mode === 'create'}
                 showSearch
+                className="!w-full"
                 loading={workSchedulesQuery.isLoading}
                 placeholder={
                   workScheduleOptions.length === 0
@@ -467,6 +472,7 @@ export function EmployeeProfileFormFields({
           >
             <Select
               disabled={!canEditHr}
+              className="!w-full"
               options={[
                 {
                   value: 'SCANNER',

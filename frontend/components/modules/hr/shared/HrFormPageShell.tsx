@@ -17,6 +17,11 @@ export interface HrFormPageShellProps {
   /** Label for the back link under the banner. Defaults to cancelHref destination. */
   backLabel?: string;
   onCancel?: () => void;
+  /**
+   * When false, keep the back link / cancelHref but hide the banner Cancel button
+   * (e.g. Cancel lives in the stepper footer next to Back).
+   */
+  showCancelButton?: boolean;
   /** Extra controls next to Cancel in the banner. */
   headerExtra?: React.ReactNode;
   children: React.ReactNode;
@@ -33,6 +38,7 @@ export default function HrFormPageShell({
   cancelHref,
   backLabel,
   onCancel,
+  showCancelButton = true,
   headerExtra,
   children,
 }: HrFormPageShellProps): React.ReactNode {
@@ -50,13 +56,14 @@ export default function HrFormPageShell({
     }
   }
 
-  const showCancel = Boolean(onCancel || cancelHref);
+  const showCancel =
+    showCancelButton && Boolean(onCancel || cancelHref);
   const backHref = cancelHref;
 
   return (
     <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
-        <div className="min-w-0">
+      <section className="flex min-w-0 flex-col gap-3 rounded-2xl bg-white px-4 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:px-5">
+        <div className="min-w-0 flex-1">
           {backHref ? (
             <Link
               href={backHref}
@@ -66,16 +73,16 @@ export default function HrFormPageShell({
               {backLabel ?? cancelLabel}
             </Link>
           ) : null}
-          <h1 className="m-0 text-xl font-semibold tracking-tight text-slate-900">
+          <h1 className="m-0 break-words text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 mb-0 max-w-3xl text-[13px] leading-snug text-slate-500">
+            <p className="mt-1 mb-0 max-w-3xl break-words text-[13px] leading-snug text-slate-500">
               {description}
             </p>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center [&>.ant-btn]:w-full sm:[&>.ant-btn]:w-auto">
           {headerExtra}
           {showCancel ? (
             <Button onClick={handleCancel}>{cancelLabel}</Button>

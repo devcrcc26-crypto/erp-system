@@ -24,6 +24,9 @@ interface FormValues {
 }
 
 interface AssetRequestFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   /** Called with the created draft; the caller submits it for approval. */
   onSuccess: (result: AssetRequestDetail) => void;
 }
@@ -32,6 +35,8 @@ const DETAILS_FIELDS = ['assetCategory', 'reason'] as const;
 
 export default function AssetRequestForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: AssetRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('ASSET_REQUEST');
@@ -229,6 +234,8 @@ export default function AssetRequestForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

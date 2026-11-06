@@ -47,6 +47,7 @@ export default function BusinessTripEditPageContent({
             <BusinessTripForm
               initialRecord={record}
               onSuccess={() => router.push(backHref)}
+              onCancel={() => router.push(backHref)}
             />
           </RequestEditPageShell>
         ) : null

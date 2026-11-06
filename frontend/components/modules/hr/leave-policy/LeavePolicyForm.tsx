@@ -164,6 +164,9 @@ function ReviewItem({
 }
 
 interface LeavePolicyFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   policy?: LeavePolicy;
   isSubmitting?: boolean;
   submitLabel: string;
@@ -178,6 +181,8 @@ export default function LeavePolicyForm({
   isSubmitting = false,
   submitLabel,
   onSubmit,
+  onCancel,
+  cancelLabel,
 }: LeavePolicyFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const [form] = Form.useForm<LeavePolicyFormValues>();
@@ -591,6 +596,8 @@ export default function LeavePolicyForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

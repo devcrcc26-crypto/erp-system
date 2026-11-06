@@ -94,10 +94,13 @@ export default function EmployeeContractFormContent({
         cancelLabel={t('common.cancel')}
         cancelHref="/hr/employee-contract"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
         <EmployeeContractForm
           mode={isEdit ? 'edit' : 'create'}
           contract={isEdit ? detailQuery.data : undefined}
+          onCancel={() => router.push('/hr/employee-contract')}
+          cancelLabel={t('common.cancel')}
           onSuccess={handleSuccess}
         />
       </HrFormPageShell>

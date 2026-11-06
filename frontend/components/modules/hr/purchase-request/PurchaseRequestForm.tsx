@@ -71,6 +71,9 @@ interface ClientItem extends AddPurchaseRequestItemPayload {
 }
 
 interface PurchaseRequestFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: PurchaseRequestDetail) => void;
 }
 
@@ -87,6 +90,8 @@ function nextKey(): string {
  */
 export default function PurchaseRequestForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: PurchaseRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('PURCHASE_REQUEST');
@@ -685,6 +690,8 @@ export default function PurchaseRequestForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

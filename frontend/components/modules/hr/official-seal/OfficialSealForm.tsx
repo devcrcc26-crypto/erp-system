@@ -43,6 +43,9 @@ interface FormValues {
 }
 
 interface OfficialSealFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: OfficialSealDetail) => void;
 }
 
@@ -53,6 +56,8 @@ const DETAILS_FIELDS = ['fileName', 'description', 'urgency', 'dateNeeded'] as c
  */
 export default function OfficialSealForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: OfficialSealFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('OFFICIAL_SEAL_USAGE');
@@ -363,6 +368,8 @@ export default function OfficialSealForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

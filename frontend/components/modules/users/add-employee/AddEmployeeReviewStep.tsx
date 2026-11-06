@@ -634,7 +634,7 @@ export default function AddEmployeeReviewStep({
           className="erp-pro-table erp-users-table erp-employee-review-table"
           size="middle"
           pagination={false}
-          scroll={false}
+          scroll={{ x: 'max-content' }}
           columns={emergencyColumns}
           dataSource={emergencyRows}
           locale={{

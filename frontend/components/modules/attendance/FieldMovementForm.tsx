@@ -354,13 +354,20 @@ function Notice({
  */
 export default function FieldMovementForm({
   onBehalf = false,
+  onCancel,
+  cancelLabel,
 }: {
   /** "Add on behalf": pick the employee, then explain their flagged days. */
   onBehalf?: boolean;
+  onCancel?: () => void;
+  cancelLabel?: string;
 } = {}): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
   const { t } = useEpcTranslation();
+  const resolvedCancel =
+    onCancel ?? (() => router.push('/approvals/new'));
+  const resolvedCancelLabel = cancelLabel ?? t('hr.buttons.cancel');
   const currentUser = useCurrentUser();
   const eligibleQuery = useOnBehalfEligibleEmployees(
     currentUser.data?.id,
@@ -1507,6 +1514,8 @@ export default function FieldMovementForm({
       </div>
       <div className="erp-stepper-form">
         <StepperForm
+        onCancel={resolvedCancel}
+        cancelLabel={resolvedCancelLabel}
           contentVariant="sections"
           steps={steps}
           onSubmit={handleSubmit}

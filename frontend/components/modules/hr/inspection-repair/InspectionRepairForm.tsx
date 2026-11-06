@@ -44,6 +44,9 @@ interface FormValues {
 }
 
 interface InspectionRepairFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: InspectionRepairDetail) => void;
 }
 
@@ -59,6 +62,8 @@ const DETAILS_FIELDS = [
  */
 export default function InspectionRepairForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: InspectionRepairFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('INSPECTION_REPAIR');
@@ -519,6 +524,8 @@ export default function InspectionRepairForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

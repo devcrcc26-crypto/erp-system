@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Skeleton, Switch } from 'antd';
+import { CheckCircle2, Info } from 'lucide-react';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -54,6 +55,12 @@ import {
   useSeniorityLevels,
 } from '@/lib/query/org';
 import { useRoles } from '@/lib/query/roles';
+
+/** Small sub-heading for a group of fields inside one form card. */
+const FORM_GROUP_LABEL_CLASS =
+  'm-0 mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600';
+/** Separates a field group from the one above it. */
+const FORM_GROUP_DIVIDER_CLASS = 'mt-2 border-t border-slate-100 pt-5';
 
 function resolveRoleAssignments(user: UserDetail): RoleAssignment[] {
   return (user.userRoles ?? []).map((assignment) => ({
@@ -136,6 +143,9 @@ async function syncUserRoles(params: {
 
 export interface AddEmployeeFormProps {
   userId?: string;
+  /** Leave the form without saving — shown in the stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: {
     userId: string;
     email: string | null;
@@ -148,6 +158,8 @@ export interface AddEmployeeFormProps {
 
 export default function AddEmployeeForm({
   userId,
+  onCancel,
+  cancelLabel,
   onSuccess,
 }: AddEmployeeFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -264,22 +276,6 @@ export default function AddEmployeeForm({
     setPrimaryRole.isPending ||
     uploadDocuments.isPending ||
     uploadPhoto.isPending;
-
-  function resetForm(): void {
-    if (isEdit && userQuery.data) {
-      form.setFieldsValue(buildFormValuesFromUser(userQuery.data));
-    } else {
-      form.resetFields();
-      form.setFieldsValue({
-        isActive: true,
-        emergencyContacts: [],
-        roleAssignments: [],
-      });
-    }
-    setPendingDocuments([]);
-    setPendingPhoto(null);
-    setError(null);
-  }
 
   async function validateStep(stepIndex: number): Promise<boolean> {
     const fields = ADD_EMPLOYEE_STEP_FIELDS[stepIndex] ?? [];
@@ -476,17 +472,9 @@ export default function AddEmployeeForm({
         title: t('users.steps.account'),
         content: (
           <div className="erp-employee-form-sections">
-            <FormLayout
-              variant="pro"
-              title={t('users.sectionAccountIdentity')}
-              description={
-                isEdit
-                  ? undefined
-                  : hasEmail
-                    ? t('users.form.accountInviteHelp')
-                    : t('users.form.accountRecordOnlyHelp')
-              }
-            >
+            <FormLayout variant="pro" title={t('users.sectionNameIdentity')}>
+              {/* Row 1: first / middle / last. Row 2: Chinese name (2 columns) + gender,
+                  so both rows are full on 3-column screens; one column on phones. */}
               <div className="erp-form-grid-3">
                 <Form.Item
                   label={t('users.form.firstName')}
@@ -512,11 +500,18 @@ export default function AddEmployeeForm({
                 >
                   <Input />
                 </Form.Item>
-              </div>
-              <div className="erp-form-grid-3">
+                <Form.Item
+                  label={t('users.form.chineseName')}
+                  name="chineseName"
+                  rules={chineseNameRules(t)}
+                  className="md:col-span-2"
+                >
+                  <Input placeholder={t('users.form.chineseNamePlaceholder')} />
+                </Form.Item>
                 <Form.Item label={t('users.form.gender')} name="gender">
                   <Select
                     allowClear
+                    className="!w-full"
                     placeholder={t('common.select')}
                     options={GENDER_OPTIONS.map((value) => ({
                       value,
@@ -524,46 +519,24 @@ export default function AddEmployeeForm({
                     }))}
                   />
                 </Form.Item>
-                <Form.Item
-                  label={t('users.form.chineseName')}
-                  name="chineseName"
-                  rules={chineseNameRules(t)}
-                >
-                  <Input placeholder={t('users.form.chineseNamePlaceholder')} />
-                </Form.Item>
               </div>
             </FormLayout>
 
             <FormLayout variant="pro" title={t('users.sectionAccountAccess')}>
-              <div className="erp-form-grid-3">
+              {/* Group 1 - sign-in: email + login name side by side. */}
+              <p className={FORM_GROUP_LABEL_CLASS}>{t('users.form.groupSignIn')}</p>
+              <div className="erp-form-grid-2">
                 <Form.Item
                   label={t('users.form.email')}
                   name="email"
                   normalize={(value: string) => value?.trim() ?? ''}
                   rules={isEdit ? undefined : [optionalEmailRule(t('common.invalidEmail'))]}
-                  extra={
-                    isEdit ? t('users.form.emailReadOnlyHint') : t('users.form.emailHint')
-                  }
+                  extra={isEdit ? t('users.form.emailReadOnlyHint') : undefined}
                 >
                   <Input
                     placeholder={t('users.form.emailPlaceholder')}
                     disabled={isEdit}
                   />
-                </Form.Item>
-                <Form.Item
-                  label={t('users.form.phone')}
-                  name="phone"
-                  rules={phoneRules(t)}
-                  extra={t('users.form.phoneFormatHint')}
-                >
-                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
-                </Form.Item>
-                <Form.Item
-                  label={t('users.form.secondaryPhone')}
-                  name="secondaryPhone"
-                  rules={phoneRules(t)}
-                >
-                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
                 </Form.Item>
                 {showLoginName ? (
                   <Form.Item
@@ -600,6 +573,56 @@ export default function AddEmployeeForm({
                   </Form.Item>
                 ) : null}
               </div>
+              {!isEdit ? (
+                /* Live status: changes as the email field is filled or cleared. */
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={`mb-6 flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] leading-snug ${
+                    hasEmail
+                      ? 'bg-emerald-50 text-emerald-800'
+                      : 'bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  {hasEmail ? (
+                    <CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden />
+                  ) : (
+                    <Info size={16} className="mt-0.5 shrink-0" aria-hidden />
+                  )}
+                  <span className="min-w-0">
+                    {hasEmail
+                      ? t('users.form.accountInviteHelp')
+                      : t('users.form.accountRecordOnlyHelp')}
+                  </span>
+                </div>
+              ) : null}
+
+              {/* Group 2 - contact numbers side by side. */}
+              <p className={`${FORM_GROUP_LABEL_CLASS} ${FORM_GROUP_DIVIDER_CLASS}`}>
+                {t('users.form.groupContact')}
+              </p>
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  label={t('users.form.phone')}
+                  name="phone"
+                  rules={phoneRules(t)}
+                  extra={t('users.form.phoneFormatHint')}
+                >
+                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
+                </Form.Item>
+                <Form.Item
+                  label={t('users.form.secondaryPhone')}
+                  name="secondaryPhone"
+                  rules={phoneRules(t)}
+                >
+                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
+                </Form.Item>
+              </div>
+
+              {/* Group 3 - roles on their own row, then the two status switches. */}
+              <p className={`${FORM_GROUP_LABEL_CLASS} ${FORM_GROUP_DIVIDER_CLASS}`}>
+                {t('users.form.groupRolesStatus')}
+              </p>
               <Form.Item
                 label={t('users.form.roles')}
                 name="roleAssignments"
@@ -631,7 +654,7 @@ export default function AddEmployeeForm({
                   loading={rolesQuery.isLoading}
                 />
               </Form.Item>
-              <div className="erp-form-grid-3">
+              <div className="erp-form-grid-2">
                 <Form.Item
                   label={t('users.form.activeAccount')}
                   name="isActive"
@@ -657,6 +680,7 @@ export default function AddEmployeeForm({
                     label={t('users.approverOnlyReason')}
                     name="excludedReason"
                     rules={[{ max: 500 }]}
+                    className="md:col-span-2"
                   >
                     <Input placeholder={t('users.approverOnlyReasonPlaceholder')} />
                   </Form.Item>
@@ -693,6 +717,7 @@ export default function AddEmployeeForm({
                 <Form.Item label={t('users.form.department')} name="departmentId">
                   <Select
                     allowClear
+                    className="!w-full"
                     loading={departmentsQuery.isLoading}
                     placeholder={t('users.filterDepartment')}
                     options={departmentOptions}
@@ -702,6 +727,7 @@ export default function AddEmployeeForm({
                 <Form.Item label={t('users.form.position')} name="positionId">
                   <Select
                     allowClear
+                    className="!w-full"
                     loading={positionsQuery.isLoading}
                     placeholder={t('users.filterPosition')}
                     options={positionOptions}
@@ -711,6 +737,7 @@ export default function AddEmployeeForm({
                 <Form.Item label={t('users.form.seniority')} name="seniorityLevelId">
                   <Select
                     allowClear
+                    className="!w-full"
                     loading={seniorityLevelsQuery.isLoading}
                     placeholder={
                       seniorityOptions.length === 0
@@ -728,6 +755,7 @@ export default function AddEmployeeForm({
                 >
                   <Select
                     allowClear
+                    className="!w-full"
                     loading={disciplinesLoading}
                     placeholder={t('common.selectDiscipline')}
                     options={disciplineOptions}
@@ -887,7 +915,7 @@ export default function AddEmployeeForm({
     <Form<AddEmployeeFormValues>
       form={form}
       layout="vertical"
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col"
       initialValues={{
         isActive: true,
         emergencyContacts: [],
@@ -907,7 +935,8 @@ export default function AddEmployeeForm({
       <StepperForm
         steps={steps}
         onSubmit={handleSubmit}
-        onReset={resetForm}
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         isSubmitting={isSubmitting}
         contentVariant="sections"
         submitLabel={

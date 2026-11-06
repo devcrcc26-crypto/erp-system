@@ -73,6 +73,9 @@ export interface EmployeeContractFormValues {
 }
 
 interface EmployeeContractFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   mode?: 'create' | 'edit';
   contract?: EmployeeContractDetail;
   onSuccess: (result: EmployeeContractDetail) => void;
@@ -320,6 +323,8 @@ export default function EmployeeContractForm({
   mode = 'create',
   contract,
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: EmployeeContractFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -1304,6 +1309,8 @@ export default function EmployeeContractForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

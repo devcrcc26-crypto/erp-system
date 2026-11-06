@@ -655,6 +655,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
         cancelLabel={t('common.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
       <Form<SiteAssignmentFormValues>
         form={form}
@@ -667,6 +668,8 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
           steps={steps}
           onSubmit={handleSubmit}
           onReset={resetForm}
+          onCancel={() => router.push('/approvals/new')}
+          cancelLabel={t('common.cancel')}
           isSubmitting={submitMutation.isPending}
           contentVariant="sections"
           submitLabel={t('pages.hr.siteAssignments.form.submit')}

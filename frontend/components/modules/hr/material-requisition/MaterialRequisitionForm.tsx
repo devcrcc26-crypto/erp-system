@@ -65,6 +65,9 @@ interface ClientItem extends AddMaterialRequisitionItemPayload {
 }
 
 interface MaterialRequisitionFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: MaterialRequisitionDetail) => void;
   /** Edit mode: the employee's own DRAFT / RETURNED requisition, prefilled. */
   initialRecord?: MaterialRequisitionDetail;
@@ -108,6 +111,8 @@ function clientItemsFrom(record: MaterialRequisitionDetail): ClientItem[] {
 export default function MaterialRequisitionForm({
   onSuccess,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: MaterialRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('MATERIAL_REQUISITION');
@@ -632,6 +637,8 @@ export default function MaterialRequisitionForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

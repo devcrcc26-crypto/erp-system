@@ -110,11 +110,15 @@ export default function PublicHolidayForm({
   isSubmitting,
   submitLabel,
   onSubmit,
+  onCancel,
+  cancelLabel,
 }: {
   holiday?: PublicHoliday;
   isSubmitting: boolean;
   submitLabel: string;
   onSubmit: (values: PublicHolidayFormValues) => Promise<void>;
+  onCancel?: () => void;
+  cancelLabel?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const [form] = Form.useForm<PublicHolidayFormValues>();
@@ -354,6 +358,8 @@ export default function PublicHolidayForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

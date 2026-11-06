@@ -422,6 +422,7 @@ export default function WorkFromHomeRequestFormContent({
             ? t('hr.buttons.back')
             : t('pages.hr.workFromHome.request.backToPicker')
         }
+        showCancelButton={false}
       >
       {editRequest?.status === 'RETURNED' ? (
         <ReturnedRequestCallout approvalRequestId={editRequest.id} />
@@ -438,6 +439,12 @@ export default function WorkFromHomeRequestFormContent({
           steps={steps}
           onSubmit={handleSubmit}
           onReset={resetForm}
+          onCancel={() =>
+            router.push(
+              editRequest ? `/approvals/${editRequest.id}` : '/approvals/new',
+            )
+          }
+          cancelLabel={t('common.cancel')}
           isSubmitting={submitMutation.isPending || updateMutation.isPending}
           contentVariant="sections"
           submitLabel={

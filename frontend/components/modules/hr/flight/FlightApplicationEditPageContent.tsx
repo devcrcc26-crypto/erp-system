@@ -47,6 +47,7 @@ export default function FlightApplicationEditPageContent({
             <FlightApplicationForm
               initialRecord={record}
               onSuccess={() => router.push(backHref)}
+              onCancel={() => router.push(backHref)}
             />
           </RequestEditPageShell>
         ) : null

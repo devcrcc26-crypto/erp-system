@@ -52,6 +52,9 @@ interface PerDiemFormValues {
 }
 
 interface PerDiemRequestFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: PerDiemRequestDetail) => void;
   /** Edit mode: the employee's own DRAFT / RETURNED request, prefilled. */
   initialRecord?: PerDiemRequestDetail;
@@ -110,6 +113,8 @@ function calcInclusiveCalendarDays(
 export default function PerDiemRequestForm({
   onSuccess,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: PerDiemRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('PER_DIEM');
@@ -968,6 +973,8 @@ export default function PerDiemRequestForm({
       ) : null}
 
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

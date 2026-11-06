@@ -33,6 +33,7 @@ export default function RequestEditPageShell({
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref={backHref}
         backLabel={t('hr.buttons.back')}
+        showCancelButton={false}
       >
         {status === 'RETURNED' ? (
           <ReturnedRequestCallout approvalRequestId={approvalRequestId} />

@@ -28,8 +28,13 @@ export default function PerDiemSettlementFormContent(): React.ReactNode {
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
-        <PerDiemSettlementForm onSuccess={handleSuccess} />
+        <PerDiemSettlementForm
+          onSuccess={handleSuccess}
+          onCancel={() => router.push('/approvals/new')}
+          cancelLabel={t('hr.buttons.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );

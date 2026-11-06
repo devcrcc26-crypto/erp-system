@@ -52,6 +52,9 @@ interface FormValues {
 }
 
 interface VehicleRefuelingFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: VehicleRefuelingDetail) => void;
 }
 
@@ -77,6 +80,8 @@ function computeTotalCostEtb(
  */
 export default function VehicleRefuelingForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: VehicleRefuelingFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('VEHICLE_REFUELING');
@@ -507,6 +512,8 @@ export default function VehicleRefuelingForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

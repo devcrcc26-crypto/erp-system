@@ -36,8 +36,13 @@ export default function ProjectSealFormContent(): React.ReactNode {
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
-        <ProjectSealForm onSuccess={(created) => void handleSuccess(created)} />
+        <ProjectSealForm
+          onSuccess={(created) => void handleSuccess(created)}
+          onCancel={() => router.push('/approvals/new')}
+          cancelLabel={t('hr.buttons.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );

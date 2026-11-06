@@ -64,6 +64,9 @@ interface ClientItem extends AddExpenseClaimItemPayload {
 }
 
 interface ExpenseClaimFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: ExpenseClaimDetail) => void;
 }
 
@@ -122,6 +125,8 @@ function DrawerSection({
  */
 export default function ExpenseClaimForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: ExpenseClaimFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('EXPENSE_CLAIM');
@@ -649,6 +654,8 @@ export default function ExpenseClaimForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

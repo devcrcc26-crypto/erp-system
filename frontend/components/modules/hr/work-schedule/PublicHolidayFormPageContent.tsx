@@ -95,12 +95,15 @@ export default function PublicHolidayFormPageContent({
         cancelLabel={t('common.cancel')}
         cancelHref={backHref}
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
         <PublicHolidayForm
           holiday={holidayQuery.data}
           isSubmitting={saving}
           submitLabel={t('common.save')}
           onSubmit={handleSubmit}
+          onCancel={() => router.push(backHref)}
+          cancelLabel={t('common.cancel')}
         />
       </HrFormPageShell>
     </div>

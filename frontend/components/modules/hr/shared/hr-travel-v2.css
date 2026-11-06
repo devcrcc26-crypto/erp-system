@@ -362,14 +362,17 @@
 }
 
 /*
- * Even field columns that fill the section — override the global
- * left-aligned 20rem stubs that leave an empty right side.
+ * Even field columns that fill the section.
+ * Rulebook §3.1: 2 cols from md; 3 cols only from xl.
  */
 @media (min-width: 768px) {
-  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-2 {
+  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-2,
+  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
+@media (min-width: 1280px) {
   .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

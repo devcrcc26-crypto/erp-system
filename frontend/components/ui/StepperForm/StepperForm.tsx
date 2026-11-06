@@ -1,9 +1,10 @@
 'use client';
 
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Button, Steps } from 'antd';
 import { tokens } from '@/lib/theme/tokens';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useIsMdUp } from '@/hooks/useMediaQuery';
 
 export interface StepperFormStep {
   title: string;
@@ -16,6 +17,9 @@ export interface StepperFormProps {
   steps: StepperFormStep[];
   onSubmit: () => Promise<void>;
   onReset?: () => void;
+  /** Leave / abandon form — rendered on the same row as Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   submitLabel?: string;
   resetLabel?: string;
   isSubmitting?: boolean;
@@ -69,11 +73,15 @@ function useMainContentBounds(enabled: boolean): MainBounds | null {
 
 /**
  * Full-height multi-step form shell with sticky Steps header and nav footer.
+ * Below md: compact progress strip (not sticky) + single-row footer so the
+ * form keeps most of the viewport.
  */
 export function StepperForm({
   steps,
   onSubmit,
   onReset,
+  onCancel,
+  cancelLabel,
   submitLabel,
   resetLabel,
   isSubmitting = false,
@@ -82,12 +90,38 @@ export function StepperForm({
   extraActions,
 }: StepperFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const isMdUp = useIsMdUp();
   const resolvedSubmitLabel = submitLabel ?? t('hr.buttons.submitRequest');
   const resolvedResetLabel = resetLabel ?? t('hr.buttons.reset');
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel');
   const [current, setCurrent] = useState(0);
   const [validating, setValidating] = useState(false);
   const isSections = contentVariant === 'sections';
   const mainBounds = useMainContentBounds(isSections);
+  const stepsScrollRef = useRef<HTMLDivElement>(null);
+  const showCompactProgress = !isMdUp;
+
+  // Desktop horizontal strip: keep the active step in view without jumping the page.
+  useEffect(() => {
+    if (showCompactProgress) {
+      return;
+    }
+    const strip = stepsScrollRef.current;
+    if (!strip || strip.scrollWidth <= strip.clientWidth) {
+      return;
+    }
+    const activeItem = strip.querySelectorAll<HTMLElement>('.ant-steps-item')[current];
+    if (!activeItem) {
+      return;
+    }
+    const stripRect = strip.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    strip.scrollBy({
+      left: itemRect.left - stripRect.left - (stripRect.width - itemRect.width) / 2,
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  }, [current, showCompactProgress]);
 
   async function handleNext(): Promise<void> {
     setValidating(true);
@@ -123,9 +157,12 @@ export function StepperForm({
     return null;
   }
 
+  const progressPct =
+    steps.length > 0 ? Math.round(((current + 1) / steps.length) * 100) : 0;
+
   const footer = (
     <div
-      className="erp-stepper-form__footer flex flex-wrap items-center justify-between gap-3 border-t px-3 py-3 sm:px-6"
+      className="erp-stepper-form__footer flex min-w-0 items-center gap-2 border-t px-3 py-2 sm:justify-between sm:gap-3 sm:px-6 sm:py-3"
       style={{
         borderColor: 'rgba(0,0,0,0.06)',
         background: 'rgba(255, 255, 255, 0.4)',
@@ -148,19 +185,33 @@ export function StepperForm({
             }),
       }}
     >
-      <Button
-        onClick={handleBack}
-        disabled={current === 0 || isSubmitting || validating}
-        style={{ borderRadius: 8 }}
-      >
-        {t('hr.buttons.back')}
-      </Button>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 shrink-0 items-center gap-2">
+        {onCancel ? (
+          <Button
+            onClick={onCancel}
+            disabled={isSubmitting || validating}
+            className="min-w-0 shrink !px-3 sm:!px-4"
+            style={{ borderRadius: 8 }}
+          >
+            {resolvedCancelLabel}
+          </Button>
+        ) : null}
+        <Button
+          onClick={handleBack}
+          disabled={current === 0 || isSubmitting || validating}
+          className="min-w-0 shrink !px-3 sm:!px-4"
+          style={{ borderRadius: 8 }}
+        >
+          {t('hr.buttons.back')}
+        </Button>
+      </div>
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
         {extraActions}
         {onReset ? (
           <Button
             onClick={handleReset}
             disabled={isSubmitting || validating}
+            className="min-w-0 shrink !px-3 sm:!px-4"
             style={{ borderRadius: 8 }}
           >
             {resolvedResetLabel}
@@ -172,6 +223,7 @@ export function StepperForm({
             onClick={() => void handleNext()}
             loading={validating}
             disabled={isSubmitting}
+            className="min-w-0 shrink !px-3 sm:!px-4"
             style={{ borderRadius: 8 }}
           >
             {t('hr.buttons.next')}
@@ -182,6 +234,7 @@ export function StepperForm({
             onClick={() => void handleSubmit()}
             loading={isSubmitting}
             disabled={validating}
+            className="min-w-0 max-w-[55%] truncate !px-3 sm:max-w-none sm:!px-4"
             style={{ borderRadius: 8 }}
           >
             {resolvedSubmitLabel}
@@ -195,7 +248,9 @@ export function StepperForm({
     <div
       className={`erp-stepper-form flex w-full min-h-0 min-w-0 max-w-full flex-1 flex-col ${
         isSections ? 'erp-advanced-form' : ''
-      } ${compact ? 'erp-stepper-form--compact' : ''}`}
+      } ${compact ? 'erp-stepper-form--compact' : ''} ${
+        showCompactProgress ? 'erp-stepper-form--mobile' : ''
+      }`}
       style={{
         minHeight: compact
           ? undefined
@@ -207,27 +262,56 @@ export function StepperForm({
       }}
     >
       <div
-        className={`sticky top-0 z-10 shrink-0 px-0 ${
-          compact ? 'pb-3 pt-1' : 'pb-4 pt-2'
+        className={`shrink-0 px-0 ${
+          showCompactProgress
+            ? 'relative z-0'
+            : `sticky top-0 z-10 ${compact ? 'pb-3 pt-1' : 'pb-4 pt-2'}`
         } ${isSections ? 'erp-stepper-form__steps-shell' : 'border-b bg-white px-4 sm:px-6'}`}
         style={isSections ? undefined : { borderColor: 'rgba(0,0,0,0.06)' }}
       >
-        <div className="min-w-0 overflow-x-auto">
-          <Steps
-            current={current}
-            size="small"
-            responsive={false}
-            items={steps.map((step) => ({
-              title: step.title,
-              icon: step.icon,
-            }))}
-          />
-        </div>
+        {showCompactProgress ? (
+          <div className="erp-stepper-form__mobile-progress min-w-0">
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+              <p className="m-0 min-w-0 truncate text-sm font-semibold text-slate-900">
+                {active.title}
+              </p>
+              <p className="m-0 shrink-0 text-xs font-medium tabular-nums text-slate-500">
+                {current + 1} / {steps.length}
+              </p>
+            </div>
+            <div
+              className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+              role="progressbar"
+              aria-valuenow={current + 1}
+              aria-valuemin={1}
+              aria-valuemax={steps.length}
+              aria-label={`${current + 1} / ${steps.length}`}
+            >
+              <div
+                className="h-full rounded-full bg-emerald-600 transition-[width] duration-200 ease-out"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div ref={stepsScrollRef} className="min-w-0 overflow-x-auto">
+            <Steps
+              current={current}
+              size="small"
+              orientation="horizontal"
+              responsive={false}
+              items={steps.map((step) => ({
+                title: step.title,
+                icon: step.icon,
+              }))}
+            />
+          </div>
+        )}
       </div>
 
       <div
         className={`min-h-0 min-w-0 max-w-full ${compact ? 'shrink-0' : 'flex-1'} overflow-y-auto overflow-x-hidden px-0 ${
-          compact ? 'py-2' : 'py-4'
+          compact ? 'py-2' : showCompactProgress ? 'py-3' : 'py-4'
         }`}
         style={{ background: isSections ? 'transparent' : tokens.colorPageBg }}
       >

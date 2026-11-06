@@ -697,6 +697,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
       <Form<LeaveFormValues>
         form={form}
@@ -721,6 +722,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
           steps={steps}
           onSubmit={handleSubmit}
           onReset={resetForm}
+          onCancel={() => router.push('/approvals/new')}
+          cancelLabel={t('hr.buttons.cancel')}
           isSubmitting={submitting || submitMutation.isPending}
           contentVariant="sections"
           submitLabel={t('hr.buttons.submitRequest')}

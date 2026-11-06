@@ -41,6 +41,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface FlightApplicationFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess?: (created: FlightApplicationDetail) => void;
   submitLabel?: string;
   /** Edit mode: the employee's own DRAFT / RETURNED application, prefilled. */
@@ -115,6 +118,8 @@ export function FlightApplicationForm({
   onSuccess,
   submitLabel,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: FlightApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('FLIGHT_APPLICATION');
@@ -458,6 +463,8 @@ export function FlightApplicationForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         submitLabel={resolvedSubmitLabel}

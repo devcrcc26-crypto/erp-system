@@ -43,6 +43,9 @@ interface FormValues {
 }
 
 interface ProjectSealFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: ProjectSealDetail) => void;
 }
 
@@ -53,6 +56,8 @@ const DETAILS_FIELDS = ['fileName', 'description', 'urgency', 'dateNeeded'] as c
  */
 export default function ProjectSealForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: ProjectSealFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('PROJECT_SEAL_USAGE');
@@ -363,6 +368,8 @@ export default function ProjectSealForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

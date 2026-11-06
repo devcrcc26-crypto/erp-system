@@ -68,11 +68,14 @@ export default function CompanyAssetFormContent({
         cancelLabel={t('hr.assetButtons.cancel')}
         cancelHref={LIST_PATH}
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
         <CompanyAssetForm
           mode={isEdit ? 'edit' : 'create'}
           asset={isEdit ? detailQuery.data : undefined}
           onSuccess={handleSuccess}
+          onCancel={() => router.push(LIST_PATH)}
+          cancelLabel={t('hr.assetButtons.cancel')}
         />
       </HrFormPageShell>
     </div>

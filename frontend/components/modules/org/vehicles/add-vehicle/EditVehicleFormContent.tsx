@@ -51,8 +51,14 @@ export default function EditVehicleFormContent({
         cancelLabel={t('common.cancel')}
         cancelHref={`/organization/vehicles/${vehicleId}`}
         backLabel={t('hr.buttons.back')}
+        showCancelButton={false}
       >
-        <AddVehicleForm vehicleId={vehicleId} onSuccess={handleSuccess} />
+        <AddVehicleForm
+          vehicleId={vehicleId}
+          onSuccess={handleSuccess}
+          onCancel={() => router.push(`/organization/vehicles/${vehicleId}`)}
+          cancelLabel={t('common.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );

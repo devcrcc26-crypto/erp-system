@@ -45,15 +45,20 @@ export default function AddEmployeeFormContent(): React.ReactNode {
   }
 
   return (
-    <div className={FORM_ROOT}>
+    <div className={`${FORM_ROOT} min-w-0 max-w-full`}>
       <HrFormPageShell
         title={t('pages.users.new')}
         description={t('users.form.addEmployeeDescription')}
         cancelLabel={t('users.form.cancel')}
         cancelHref="/users"
         backLabel={t('users.backToList')}
+        showCancelButton={false}
       >
-        <AddEmployeeForm onSuccess={handleSuccess} />
+        <AddEmployeeForm
+          onSuccess={handleSuccess}
+          onCancel={() => router.push('/users')}
+          cancelLabel={t('users.form.cancel')}
+        />
       </HrFormPageShell>
 
       <Modal
@@ -65,6 +70,7 @@ export default function AddEmployeeFormContent(): React.ReactNode {
         onCancel={closeTempPasswordModal}
         mask={{ closable: false }}
         destroyOnHidden
+        width={{ xs: '100%', sm: 480 }}
         rootClassName="erp-hr-travel-modal"
         className="erp-hr-travel-modal"
       >

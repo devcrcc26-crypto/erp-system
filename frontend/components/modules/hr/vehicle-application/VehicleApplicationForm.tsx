@@ -58,6 +58,9 @@ interface VehicleApplicationFormValues {
 }
 
 interface VehicleApplicationFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: VehicleApplicationDetail) => void;
   /** Edit mode: the employee's own DRAFT / RETURNED application, prefilled. */
   initialRecord?: VehicleApplicationDetail;
@@ -107,6 +110,8 @@ function resolveVehicleDriverId(
 export default function VehicleApplicationForm({
   onSuccess,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: VehicleApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   // HR / full access may record past trips; everyone else books ahead.
@@ -791,6 +796,8 @@ export default function VehicleApplicationForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

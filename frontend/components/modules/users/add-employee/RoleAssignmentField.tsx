@@ -92,7 +92,7 @@ export default function RoleAssignmentField({
         return (
           <div
             key={`${assignment.roleId}-${index}`}
-            className="flex min-w-0 items-center gap-2"
+            className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"
           >
             <Select
               showSearch
@@ -103,7 +103,7 @@ export default function RoleAssignmentField({
                 value: role.id,
                 label: formatRoleDisplayName(role.name),
               }))}
-              className="min-w-0 flex-1"
+              className="min-w-0 flex-1 basis-full sm:basis-0"
               disabled={disabled}
               loading={loading}
               aria-label={t('users.form.role')}

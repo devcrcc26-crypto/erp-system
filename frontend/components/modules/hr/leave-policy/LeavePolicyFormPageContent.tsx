@@ -111,12 +111,15 @@ export default function LeavePolicyFormPageContent({
         cancelLabel={t('common.cancel')}
         cancelHref={backHref}
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
         <LeavePolicyForm
           policy={policyQuery.data}
           isSubmitting={saving}
           submitLabel={t('common.save')}
           onSubmit={handleSubmit}
+          onCancel={() => router.push(backHref)}
+          cancelLabel={t('common.cancel')}
         />
       </HrFormPageShell>
     </div>

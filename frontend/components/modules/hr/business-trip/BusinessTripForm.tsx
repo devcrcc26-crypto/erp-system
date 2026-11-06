@@ -41,6 +41,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface BusinessTripFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess?: (created: BusinessTripDetail) => void;
   submitLabel?: string;
   /** Edit mode: the employee's own DRAFT / RETURNED trip, prefilled. */
@@ -124,6 +127,8 @@ export function BusinessTripForm({
   onSuccess,
   submitLabel,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: BusinessTripFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('BUSINESS_TRIP');
@@ -435,6 +440,8 @@ export function BusinessTripForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         submitLabel={resolvedSubmitLabel}

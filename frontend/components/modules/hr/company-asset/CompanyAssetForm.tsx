@@ -47,6 +47,9 @@ interface FormValues {
 }
 
 interface CompanyAssetFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   mode?: 'create' | 'edit';
   asset?: CompanyAssetDetail;
   onSuccess: (result: CompanyAssetDetail) => void;
@@ -109,6 +112,8 @@ export default function CompanyAssetForm({
   mode = 'create',
   asset,
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: CompanyAssetFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -668,6 +673,8 @@ export default function CompanyAssetForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

@@ -81,6 +81,9 @@ interface ClientItem extends AddExitPermitItemPayload {
 }
 
 interface ExitPermitFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: ExitPermitDetail) => void;
   /** Edit mode: the employee's own DRAFT / RETURNED permit, prefilled. */
   initialRecord?: ExitPermitDetail;
@@ -125,6 +128,8 @@ function toItemPayload(
 export default function ExitPermitForm({
   onSuccess,
   initialRecord,
+  onCancel,
+  cancelLabel,
 }: ExitPermitFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('EXIT_PERMIT');
@@ -722,6 +727,8 @@ export default function ExitPermitForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

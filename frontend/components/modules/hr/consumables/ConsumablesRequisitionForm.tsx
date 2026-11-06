@@ -64,6 +64,9 @@ interface ClientItem extends AddConsumablesRequisitionItemPayload {
 }
 
 interface ConsumablesRequisitionFormProps {
+  /** Leave form — shown in stepper footer beside Back. */
+  onCancel?: () => void;
+  cancelLabel?: string;
   onSuccess: (result: ConsumablesRequisitionDetail) => void;
 }
 
@@ -80,6 +83,8 @@ function nextKey(): string {
  */
 export default function ConsumablesRequisitionForm({
   onSuccess,
+  onCancel,
+  cancelLabel,
 }: ConsumablesRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('CONSUMABLES_REQUISITION');
@@ -704,6 +709,8 @@ export default function ConsumablesRequisitionForm({
         />
       ) : null}
       <StepperForm
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
         steps={steps}
         onSubmit={handleSubmit}
         onReset={resetForm}

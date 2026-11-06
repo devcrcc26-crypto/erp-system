@@ -26,8 +26,13 @@ export default function AddVehicleFormContent(): React.ReactNode {
         cancelLabel={t('common.cancel')}
         cancelHref="/organization/vehicles"
         backLabel={t('vehicles.backToList')}
+        showCancelButton={false}
       >
-        <AddVehicleForm onSuccess={handleSuccess} />
+        <AddVehicleForm
+          onSuccess={handleSuccess}
+          onCancel={() => router.push('/organization/vehicles')}
+          cancelLabel={t('common.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );

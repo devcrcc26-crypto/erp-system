@@ -36,8 +36,13 @@ export default function ExitPermitFormContent(): React.ReactNode {
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
+        showCancelButton={false}
       >
-        <ExitPermitForm onSuccess={(created) => void handleSuccess(created)} />
+        <ExitPermitForm
+          onSuccess={(created) => void handleSuccess(created)}
+          onCancel={() => router.push('/approvals/new')}
+          cancelLabel={t('hr.buttons.cancel')}
+        />
       </HrFormPageShell>
     </div>
   );
