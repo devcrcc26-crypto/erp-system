@@ -239,6 +239,7 @@ export class HrApprovalChainService {
     const isDisciplineLeadOrAbove =
       [
         'Discipline Lead',
+        'Department Head',
         ...HR_OR_FULL_ACCESS_ROLES,
       ].includes(primaryRole) || employee.ledDisciplines.length > 0;
 
@@ -880,6 +881,7 @@ export class HrApprovalChainService {
     const isDisciplineLeadOrAbove =
       [
         'Discipline Lead',
+        'Department Head',
         'HR Officer',
         'HR Manager',
         'General Manager',
