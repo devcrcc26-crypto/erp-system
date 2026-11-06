@@ -40,8 +40,8 @@ export default function NewAssetRequestPage(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
       <HrFormPageShell
-        title="New Asset Request"
-        description="Request a company asset such as a laptop, phone or office furniture."
+        title={t('pages.hr.assetRequest.new')}
+        description={t('pages.hr.assetRequest.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}

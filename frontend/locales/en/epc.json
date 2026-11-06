@@ -256,6 +256,10 @@
           "name": "Material Requisition",
           "description": "Request to issue stock materials from warehouse to a project or department."
         },
+        "ASSET_REQUEST": {
+          "name": "Asset Request",
+          "description": "Request for a company asset such as a laptop, phone or office furniture."
+        },
         "CONSUMABLES_REQUISITION": {
           "name": "Low-Value Consumables Requisition",
           "description": "Request for low-value office or site consumables."
@@ -1981,6 +1985,10 @@
           "approved": "Approved",
           "rejected": "Rejected"
         }
+      },
+      "assetRequest": {
+        "new": "New Asset Request",
+        "formDescription": "Describe the asset you need, then review and submit for approval."
       },
       "materialRequisition": {
         "new": "New Material Requisition",

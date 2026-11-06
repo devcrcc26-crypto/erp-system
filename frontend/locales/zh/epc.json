@@ -256,6 +256,10 @@
           "name": "领料申请",
           "description": "从仓库向项目或部门发放库存材料。"
         },
+        "ASSET_REQUEST": {
+          "name": "资产申请",
+          "description": "申请笔记本电脑、手机或办公家具等公司资产。"
+        },
         "CONSUMABLES_REQUISITION": {
           "name": "低值易耗品申请",
           "description": "申请低值办公或现场耗材。"
@@ -1862,6 +1866,10 @@
           "approved": "已批准",
           "rejected": "已拒绝"
         }
+      },
+      "assetRequest": {
+        "new": "新建资产申请",
+        "formDescription": "填写所需资产详情，确认后提交审批。"
       },
       "materialRequisition": {
         "new": "新建材料领用",
