@@ -347,7 +347,7 @@ export default function FlightTicketAssignmentPanel({
       <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex flex-wrap items-center gap-2 mb-0.5">
               <FileText
                 size={15}
                 className="text-[var(--color-text-tertiary)] flex-shrink-0"

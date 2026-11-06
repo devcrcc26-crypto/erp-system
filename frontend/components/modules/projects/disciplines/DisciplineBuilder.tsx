@@ -81,7 +81,7 @@ export default function DisciplineBuilder({
   function renderFooter(): React.ReactNode {
     if (step === 0) {
       return (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button type="primary" onClick={() => void handleNext()}>
             Next: assign roles
@@ -91,7 +91,7 @@ export default function DisciplineBuilder({
     }
 
     return (
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button onClick={() => setStep(0)}>Back</Button>
         <Button onClick={onClose}>Cancel</Button>
         <Button

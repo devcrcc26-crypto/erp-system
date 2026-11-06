@@ -186,7 +186,7 @@ function ValueEditor({
     case 'multipliers': {
       const m = value as Record<string, number>;
       return (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {MULTIPLIER_KEYS.map((k) => (
             <label key={k} className="flex flex-col gap-1 text-sm">
               {t(`${P}.multiplier.${k}`)}
@@ -256,7 +256,7 @@ function ValueEditor({
           {bands.map((band, index) => {
             const last = index === bands.length - 1;
             return (
-              <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+              <div key={index} className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
                 <label className="flex flex-col gap-1 text-xs">
                   {t(`${P}.bandUpTo`)}
                   {last ? (

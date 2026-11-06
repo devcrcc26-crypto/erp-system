@@ -121,6 +121,7 @@ export default function EmployeeWorkScheduleSection({
             pagination={false}
             columns={historyColumns}
             dataSource={history}
+            scroll={{ x: 'max-content' }}
             locale={{
               emptyText: t('hr.workSchedule.noHistory'),
             }}

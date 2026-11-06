@@ -236,6 +236,7 @@ export default function ExpenseClaimEditPageContent({
             size="small"
             pagination={false}
             dataSource={claim.items}
+            scroll={{ x: 'max-content' }}
             locale={{ emptyText: t('hr.empty.noItems') }}
             columns={[
               {

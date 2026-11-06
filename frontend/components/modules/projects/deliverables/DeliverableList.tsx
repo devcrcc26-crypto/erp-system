@@ -197,6 +197,7 @@ export default function DeliverableList({
                 showHeader={false}
                 rowKey={(row) => String(row)}
                 dataSource={[1, 2, 3]}
+                scroll={{ x: 'max-content' }}
                 columns={[
                   {
                     key: 'skeleton',

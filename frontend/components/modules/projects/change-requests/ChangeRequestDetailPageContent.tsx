@@ -416,6 +416,7 @@ export default function ChangeRequestDetailPageContent({
                   rowKey="id"
                   pagination={false}
                   dataSource={affectedDocs}
+                  scroll={{ x: 'max-content' }}
                   columns={affectedDocsColumns}
                   locale={{ emptyText: 'No affected documents' }}
                 />

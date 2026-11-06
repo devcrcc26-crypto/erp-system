@@ -64,7 +64,7 @@ export default function ProfileContractPeriodSelect({
       </span>
       <Select
         size="small"
-        className="erp-leave-year-select min-w-[260px]"
+        className="erp-leave-year-select w-full max-sm:!min-w-0"
         value={value ?? undefined}
         placeholder={t('hr.leave.contractPeriodPlaceholder')}
         options={periods.map((period) => ({

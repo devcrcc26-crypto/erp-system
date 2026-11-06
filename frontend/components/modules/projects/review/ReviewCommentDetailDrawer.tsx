@@ -312,7 +312,7 @@ export default function ReviewCommentDetailDrawer({
         onClose={onClose}
         footer={
           canEdit || (canDelete && onDelete) || reviewModeUrl ? (
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button onClick={onClose}>Close</Button>
               {reviewModeUrl ? (
                 <Link href={reviewModeUrl}>

@@ -267,7 +267,7 @@ export default function DesignPackageBuilder({
   function renderFooter(): React.ReactNode {
     if (step === 0) {
       return (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button type="primary" onClick={() => void handleNextFromDetails()}>
             Next: assign roles
@@ -278,7 +278,7 @@ export default function DesignPackageBuilder({
 
     if (step === 1) {
       return (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={() => setStep(0)}>Back</Button>
           <Button onClick={onClose}>Cancel</Button>
           <Button type="primary" onClick={handleNextFromRoles}>
@@ -289,7 +289,7 @@ export default function DesignPackageBuilder({
     }
 
     return (
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button onClick={() => setStep(1)}>Back</Button>
         <Button onClick={onClose}>Cancel</Button>
         <Button

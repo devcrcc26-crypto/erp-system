@@ -607,6 +607,7 @@ export default function EmployeeAttendanceProfileSection({
               pagination={false}
               columns={columns}
               dataSource={records}
+              scroll={{ x: 'max-content' }}
               expandable={{
                 expandedRowKeys: expandedKeys,
                 onExpandedRowsChange: setExpandedKeys,

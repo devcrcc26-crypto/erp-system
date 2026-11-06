@@ -540,6 +540,7 @@ export default function TaskDetailContent({
             size="small"
             columns={disciplineColumns}
             dataSource={disciplines}
+            scroll={{ x: 'max-content' }}
             pagination={false}
           />
         )}

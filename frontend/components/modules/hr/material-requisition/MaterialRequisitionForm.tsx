@@ -480,6 +480,7 @@ export default function MaterialRequisitionForm({
               className="erp-pro-table erp-users-table"
               columns={itemColumns}
               dataSource={items}
+              scroll={{ x: 'max-content' }}
               pagination={false}
               locale={{
                 emptyText: (
@@ -562,6 +563,7 @@ export default function MaterialRequisitionForm({
                 size="small"
                 columns={reviewItemColumns}
                 dataSource={items}
+                scroll={{ x: 'max-content' }}
                 pagination={false}
                 locale={{ emptyText: t('hr.empty.noItems') }}
               />
