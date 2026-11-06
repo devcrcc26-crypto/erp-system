@@ -5,6 +5,7 @@ import { useCanEditHr } from '@/hooks/use-auth-capabilities';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useMemo } from 'react';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormFieldGroupLabel from '@/components/modules/users/FormFieldGroupLabel';
 import EmergencyContactsField, {
   normalizeEmergencyContacts,
 } from '@/components/modules/users/EmergencyContactsField';
@@ -202,6 +203,17 @@ export function EmployeeProfileFormFields({
             >
               <DatePicker className="!w-full" disabledDate={disableFutureDates} />
             </Form.Item>
+            <Form.Item label={t('users.form.nationality')} name="nationality">
+              <Select
+                allowClear
+                className="!w-full"
+                placeholder={t('common.select')}
+                options={NATIONALITY_OPTIONS.map((value) => ({
+                  value,
+                  label: t(`hr.nationality.${value}`),
+                }))}
+              />
+            </Form.Item>
             <Form.Item
               label={t('users.form.nationalId')}
               name="nationalId"
@@ -303,17 +315,6 @@ export function EmployeeProfileFormFields({
                 placeholder={mode === 'create' ? t('users.form.employeeIdPlaceholder') : undefined}
               />
             </Form.Item>
-            <Form.Item label={t('users.form.nationality')} name="nationality">
-              <Select
-                allowClear
-                className="!w-full"
-                placeholder={t('common.select')}
-                options={NATIONALITY_OPTIONS.map((value) => ({
-                  value,
-                  label: t(`hr.nationality.${value}`),
-                }))}
-              />
-            </Form.Item>
             <Form.Item label={t('users.form.employeeType')} name="employeeType">
               <Select
                 allowClear
@@ -407,7 +408,7 @@ export function EmployeeProfileFormFields({
           showSectionTitles={showSectionTitles}
           t={t}
         >
-          <div className="erp-form-grid-3">
+          <div className="erp-form-grid-2">
             <Form.Item label={t('users.form.leavePolicy')} name="leavePolicyId">
               <Select
                 allowClear
@@ -452,40 +453,45 @@ export function EmployeeProfileFormFields({
           showSectionTitles={showSectionTitles}
           t={t}
         >
-          <p className="erp-users-cell-sub mb-3 mt-0">
+          <p className="erp-users-cell-sub mb-4 mt-0">
             {t('users.form.payrollDetailsHint')}
           </p>
-          <Form.Item
-            name="includeInPayroll"
-            valuePropName="checked"
-            initialValue={true}
-          >
-            <Checkbox disabled={!canEditHr}>
-              {t('users.form.includeInPayroll')}
-            </Checkbox>
-          </Form.Item>
-          <Form.Item
-            label={t('users.form.attendanceMode')}
-            name="attendanceMode"
-            initialValue="SCANNER"
-            extra={t('users.form.attendanceModeHint')}
-          >
-            <Select
-              disabled={!canEditHr}
-              className="!w-full"
-              options={[
-                {
-                  value: 'SCANNER',
-                  label: t('users.form.attendanceModeScanner'),
-                },
-                {
-                  value: 'EXEMPT',
-                  label: t('users.form.attendanceModeExempt'),
-                },
-              ]}
-            />
-          </Form.Item>
-          <div className="erp-form-grid-3">
+          <FormFieldGroupLabel>{t('users.form.groupPayrollSettings')}</FormFieldGroupLabel>
+          <div className="erp-form-grid-2">
+            <Form.Item
+              label={t('users.form.payrollInclusion')}
+              name="includeInPayroll"
+              valuePropName="checked"
+              initialValue={true}
+            >
+              <Checkbox disabled={!canEditHr}>
+                {t('users.form.includeInPayroll')}
+              </Checkbox>
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.attendanceMode')}
+              name="attendanceMode"
+              initialValue="SCANNER"
+              extra={t('users.form.attendanceModeHint')}
+            >
+              <Select
+                disabled={!canEditHr}
+                className="!w-full"
+                options={[
+                  {
+                    value: 'SCANNER',
+                    label: t('users.form.attendanceModeScanner'),
+                  },
+                  {
+                    value: 'EXEMPT',
+                    label: t('users.form.attendanceModeExempt'),
+                  },
+                ]}
+              />
+            </Form.Item>
+          </div>
+          <FormFieldGroupLabel divider>{t('users.form.groupBankTax')}</FormFieldGroupLabel>
+          <div className="erp-form-grid-2">
             <Form.Item label={t('users.form.bankName')} name="bankName">
               <Input maxLength={120} />
             </Form.Item>

@@ -390,6 +390,12 @@ export default function AddEmployeeReviewStep({
         <ReviewSection title={t('users.sectionAccountAccess')}>
           <div className="erp-review-fields">
             <ReviewField label={t('users.form.email')} value={emailDisplay} />
+            {values.loginName?.trim() ? (
+              <ReviewField
+                label={t('users.loginName')}
+                value={values.loginName.trim()}
+              />
+            ) : null}
             <ReviewField
               label={t('users.form.phone')}
               value={values.phone?.trim() || '-'}
@@ -426,6 +432,16 @@ export default function AddEmployeeReviewStep({
                 values.isActive ? t('common.active') : t('common.inactive')
               }
             />
+            {values.excludedFromHrProcesses ? (
+              <ReviewField
+                label={t('users.approverOnlySwitch')}
+                value={
+                  values.excludedReason?.trim()
+                    ? `${t('common.yes')} - ${values.excludedReason.trim()}`
+                    : t('common.yes')
+                }
+              />
+            ) : null}
           </div>
         </ReviewSection>
 
@@ -444,16 +460,16 @@ export default function AddEmployeeReviewStep({
               }
             />
             <ReviewField
-              label={t('users.form.nationalId')}
-              value={values.nationalId?.trim() || '-'}
-            />
-            <ReviewField
               label={t('users.form.nationality')}
               value={
                 values.nationality
                   ? t(`hr.nationality.${values.nationality}`)
                   : '-'
               }
+            />
+            <ReviewField
+              label={t('users.form.nationalId')}
+              value={values.nationalId?.trim() || '-'}
             />
           </div>
         </ReviewSection>
@@ -492,7 +508,7 @@ export default function AddEmployeeReviewStep({
           </div>
         </ReviewSection>
 
-        <ReviewSection title={t('users.sectionOrganizationAssignment')}>
+        <ReviewSection title={t('users.sectionEmploymentDetails')}>
           <div className="erp-review-fields">
             <ReviewField
               label={t('users.form.employeeId')}
@@ -514,6 +530,11 @@ export default function AddEmployeeReviewStep({
                   : '-'
               }
             />
+          </div>
+        </ReviewSection>
+
+        <ReviewSection title={t('users.sectionOrganizationAssignment')}>
+          <div className="erp-review-fields">
             <ReviewField
               label={t('users.form.department')}
               value={departmentName}
@@ -533,14 +554,44 @@ export default function AddEmployeeReviewStep({
             <ReviewField
               label={t('users.form.reportsTo')}
               value={reportsToName}
+              wide
+            />
+          </div>
+        </ReviewSection>
+
+        <ReviewSection title={t('users.sectionPayrollDetails')}>
+          <div className="erp-review-fields">
+            <ReviewField
+              label={t('users.form.includeInPayroll')}
+              value={
+                values.includeInPayroll ?? true
+                  ? t('common.yes')
+                  : t('common.no')
+              }
             />
             <ReviewField
-              label={t('users.form.leavePolicy')}
-              value={leavePolicyName}
+              label={t('users.form.attendanceMode')}
+              value={
+                (values.attendanceMode ?? 'SCANNER') === 'EXEMPT'
+                  ? t('users.form.attendanceModeExempt')
+                  : t('users.form.attendanceModeScanner')
+              }
             />
             <ReviewField
-              label={t('users.form.workSchedule')}
-              value={workScheduleName}
+              label={t('users.form.bankName')}
+              value={values.bankName?.trim() || '-'}
+            />
+            <ReviewField
+              label={t('users.form.bankBranch')}
+              value={values.bankBranch?.trim() || '-'}
+            />
+            <ReviewField
+              label={t('users.form.bankAccountNumber')}
+              value={values.bankAccountNumber?.trim() || '-'}
+            />
+            <ReviewField
+              label={t('users.form.tin')}
+              value={values.tin?.trim() || '-'}
             />
           </div>
         </ReviewSection>
@@ -566,6 +617,19 @@ export default function AddEmployeeReviewStep({
                   ? t('users.yearsValue', { years: values.yearsOfExperience })
                   : '-'
               }
+            />
+          </div>
+        </ReviewSection>
+
+        <ReviewSection title={t('users.sectionLeavePolicy')}>
+          <div className="erp-review-fields">
+            <ReviewField
+              label={t('users.form.leavePolicy')}
+              value={leavePolicyName}
+            />
+            <ReviewField
+              label={t('users.form.workSchedule')}
+              value={workScheduleName}
             />
           </div>
         </ReviewSection>

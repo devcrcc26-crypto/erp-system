@@ -12,6 +12,7 @@ import {
   employeeProfileInitialValues,
   GENDER_OPTIONS,
 } from '@/components/modules/users/EmployeeProfileFormFields';
+import FormFieldGroupLabel from '@/components/modules/users/FormFieldGroupLabel';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import AddEmployeePendingDocuments, {
@@ -55,12 +56,6 @@ import {
   useSeniorityLevels,
 } from '@/lib/query/org';
 import { useRoles } from '@/lib/query/roles';
-
-/** Small sub-heading for a group of fields inside one form card. */
-const FORM_GROUP_LABEL_CLASS =
-  'm-0 mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600';
-/** Separates a field group from the one above it. */
-const FORM_GROUP_DIVIDER_CLASS = 'mt-2 border-t border-slate-100 pt-5';
 
 function resolveRoleAssignments(user: UserDetail): RoleAssignment[] {
   return (user.userRoles ?? []).map((assignment) => ({
@@ -524,7 +519,7 @@ export default function AddEmployeeForm({
 
             <FormLayout variant="pro" title={t('users.sectionAccountAccess')}>
               {/* Group 1 - sign-in: email + login name side by side. */}
-              <p className={FORM_GROUP_LABEL_CLASS}>{t('users.form.groupSignIn')}</p>
+              <FormFieldGroupLabel>{t('users.form.groupSignIn')}</FormFieldGroupLabel>
               <div className="erp-form-grid-2">
                 <Form.Item
                   label={t('users.form.email')}
@@ -598,9 +593,7 @@ export default function AddEmployeeForm({
               ) : null}
 
               {/* Group 2 - contact numbers side by side. */}
-              <p className={`${FORM_GROUP_LABEL_CLASS} ${FORM_GROUP_DIVIDER_CLASS}`}>
-                {t('users.form.groupContact')}
-              </p>
+              <FormFieldGroupLabel divider>{t('users.form.groupContact')}</FormFieldGroupLabel>
               <div className="erp-form-grid-2">
                 <Form.Item
                   label={t('users.form.phone')}
@@ -620,9 +613,7 @@ export default function AddEmployeeForm({
               </div>
 
               {/* Group 3 - roles on their own row, then the two status switches. */}
-              <p className={`${FORM_GROUP_LABEL_CLASS} ${FORM_GROUP_DIVIDER_CLASS}`}>
-                {t('users.form.groupRolesStatus')}
-              </p>
+              <FormFieldGroupLabel divider>{t('users.form.groupRolesStatus')}</FormFieldGroupLabel>
               <Form.Item
                 label={t('users.form.roles')}
                 name="roleAssignments"
@@ -766,6 +757,7 @@ export default function AddEmployeeForm({
                   label={t('users.form.reportsTo')}
                   name="reportsToUserId"
                   extra={t('users.form.reportsToHint')}
+                  className="md:col-span-2"
                 >
                   <UserSelect
                     placeholder={t('users.form.reportsToPlaceholder')}

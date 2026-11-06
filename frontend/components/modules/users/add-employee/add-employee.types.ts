@@ -51,6 +51,7 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
   ],
   [
     'dateOfBirth',
+    'nationality',
     'nationalId',
     'addressCountry',
     'addressRegion',
@@ -62,7 +63,6 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
   ],
   [
     'employeeId',
-    'nationality',
     'employeeType',
     'employmentDate',
     'departmentId',
