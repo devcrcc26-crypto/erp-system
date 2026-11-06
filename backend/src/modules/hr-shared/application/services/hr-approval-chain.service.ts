@@ -707,8 +707,14 @@ export class HrApprovalChainService {
       case 'LEAVE_REQUEST':
       case 'OVERTIME_APPLICATION':
       case 'FIELD_MOVEMENT_LOG':
-      case 'EXIT_PERMIT':
         return this.buildOrgApprovalChain(employeeId, companyId, false);
+
+      case 'EXIT_PERMIT':
+        // Only membership checks (on-behalf: actor ≠ employee) reach here, and
+        // ExitPermitService builds on-behalf permits with submittedOnBehalf.
+        return this.buildExitPermitApprovalChain(employeeId, companyId, {
+          submittedOnBehalf: true,
+        });
 
       case 'EXPENSE_CLAIM':
         return this.buildOrgApprovalChain(employeeId, companyId, true);
