@@ -1988,7 +1988,17 @@
       },
       "assetRequest": {
         "new": "New Asset Request",
-        "formDescription": "Describe the asset you need, then review and submit for approval."
+        "formDescription": "Describe the asset you need, then review and submit for approval.",
+        "detailsTitle": "Asset Request Details",
+        "detailsDescription": "Describe the asset you need",
+        "reviewTitle": "Review Asset Request",
+        "reviewDescription": "Check the details before submitting for approval",
+        "assetCategory": "Asset Category",
+        "assetTypeModel": "Asset Type / Model",
+        "assetType": "Asset Type",
+        "assetCategoryPlaceholder": "e.g. Laptop, Office Chair, Phone",
+        "assetTypePlaceholder": "e.g. Dell Latitude 5540, 14-inch",
+        "reasonPlaceholder": "Explain why you need this asset"
       },
       "materialRequisition": {
         "new": "New Material Requisition",
@@ -5299,6 +5309,9 @@
       "purchaseRequestReturned": "This request was returned for revision.",
       "materialRequisitionSubmitted": "Material requisition submitted for approval",
       "materialRequisitionSubmitFailed": "Failed to submit material requisition",
+      "assetRequestSubmitted": "Asset request submitted for approval",
+      "assetRequestCreateFailed": "Failed to create asset request",
+      "assetRequestSubmitFailed": "Asset request saved as a draft but could not be submitted",
       "exitPermitSubmitted": "Exit permit submitted for approval",
       "exitPermitSubmitFailed": "Failed to submit exit permit",
       "exitPermitLoadFailed": "Failed to load exit permits",
@@ -6248,6 +6261,8 @@
       "directionRequired": "Select entrance or exit",
       "completeMaterialDetails": "Complete requisition details before submitting",
       "purposeRequired": "Enter the purpose for this requisition",
+      "assetCategoryRequired": "Asset category is required",
+      "assetRequestReasonRequired": "Reason is required",
       "addConsumablesItem": "Add at least one line item",
       "completeConsumablesDetails": "Complete request details before submitting",
       "consumablesMaxItems": "Maximum {{count}} items per requisition",

@@ -1869,7 +1869,17 @@
       },
       "assetRequest": {
         "new": "新建资产申请",
-        "formDescription": "填写所需资产详情，确认后提交审批。"
+        "formDescription": "填写所需资产详情，确认后提交审批。",
+        "detailsTitle": "资产申请详情",
+        "detailsDescription": "描述您需要的资产",
+        "reviewTitle": "确认资产申请",
+        "reviewDescription": "提交审批前请确认申请详情",
+        "assetCategory": "资产类别",
+        "assetTypeModel": "资产类型/型号",
+        "assetType": "资产类型",
+        "assetCategoryPlaceholder": "例如：笔记本电脑、办公椅、手机",
+        "assetTypePlaceholder": "例如：Dell Latitude 5540，14 英寸",
+        "reasonPlaceholder": "说明您需要该资产的原因"
       },
       "materialRequisition": {
         "new": "新建材料领用",
@@ -5299,6 +5309,9 @@
       "purchaseRequestReturned": "该申请已退回修改。",
       "materialRequisitionSubmitted": "材料领用已提交审批",
       "materialRequisitionSubmitFailed": "提交材料领用失败",
+      "assetRequestSubmitted": "资产申请已提交审批",
+      "assetRequestCreateFailed": "创建资产申请失败",
+      "assetRequestSubmitFailed": "资产申请已保存为草稿，但提交失败",
       "exitPermitSubmitted": "出入证已提交审批",
       "exitPermitSubmitFailed": "提交出入证失败",
       "exitPermitLoadFailed": "加载出入证失败",
@@ -6247,6 +6260,8 @@
       "directionRequired": "请选择进场或出场",
       "completeMaterialDetails": "提交前请先完成领用详情",
       "purposeRequired": "请填写领用用途",
+      "assetCategoryRequired": "请填写资产类别",
+      "assetRequestReasonRequired": "请填写申请原因",
       "addConsumablesItem": "请至少添加一条明细",
       "completeConsumablesDetails": "提交前请先完成申请详情",
       "consumablesMaxItems": "每份申请最多 {{count}} 项",

@@ -123,9 +123,13 @@ function collectCheckedKeys(): Set<string> {
   const reversedObjectPattern =
     /action:\s*['"](\w+)['"]\s*,\s*module:\s*['"]([\w-]+)['"]/g;
   const callPattern = /hasPermission\(\s*[^)]*?['"]([\w-]+)['"]\s*,\s*['"](\w+)['"]\s*,?\s*\)/g;
+  // @RequirePermission('module', 'action') takes positional strings.
+  const decoratorPattern =
+    /RequirePermission\(\s*['"]([\w-]+)['"]\s*,\s*['"](\w+)['"]/g;
 
   for (const file of listSourceFiles(SRC_ROOT)) {
     const text = fs.readFileSync(file, 'utf8');
+    for (const m of text.matchAll(decoratorPattern)) keys.add(`${m[1]}.${m[2]}`);
     for (const m of text.matchAll(objectPattern)) keys.add(`${m[1]}.${m[2]}`);
     for (const m of text.matchAll(reversedObjectPattern)) keys.add(`${m[2]}.${m[1]}`);
     for (const m of text.matchAll(callPattern)) keys.add(`${m[1]}.${m[2]}`);

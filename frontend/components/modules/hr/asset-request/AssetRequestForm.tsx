@@ -24,6 +24,7 @@ interface FormValues {
 }
 
 interface AssetRequestFormProps {
+  /** Called with the created draft; the caller submits it for approval. */
   onSuccess: (result: AssetRequestDetail) => void;
 }
 
@@ -64,11 +65,11 @@ export default function AssetRequestForm({
     const assetCategory = stored.assetCategory?.trim();
     const reason = stored.reason?.trim();
     if (!assetCategory) {
-      messageApi.error('Please enter an asset category');
+      messageApi.error(t('hr.validation.assetCategoryRequired'));
       return;
     }
     if (!reason) {
-      messageApi.error('Please enter a reason for the request');
+      messageApi.error(t('hr.validation.assetRequestReasonRequired'));
       return;
     }
 
@@ -82,10 +83,9 @@ export default function AssetRequestForm({
         requiredByDate: stored.requiredByDate?.format('YYYY-MM-DD') ?? undefined,
         notes: stored.notes?.trim() || undefined,
       });
-      messageApi.success('Asset request created');
       onSuccess(result);
     } catch (error: unknown) {
-      const fallback = 'Failed to create asset request';
+      const fallback = t('hr.messages.assetRequestCreateFailed');
       const friendly = getFriendlyApiErrorMessage(error, fallback, t);
       notifyApiError(error, fallback, messageApi, t);
       setFormError(friendly);
@@ -97,50 +97,57 @@ export default function AssetRequestForm({
   const steps = useMemo(
     () => [
       {
-        title: 'Request Details',
+        title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
           <div className="flex flex-col gap-4">
             <OnBehalfSection state={onBehalf} />
             <FormLayout
               variant="pro"
-              title="Asset Request Details"
-              description="Describe the asset you need"
+              title={t('pages.hr.assetRequest.detailsTitle')}
+              description={t('pages.hr.assetRequest.detailsDescription')}
             >
               <div className="erp-form-grid-2">
                 <Form.Item
                   name="assetCategory"
-                  label="Asset Category"
-                  rules={[{ required: true, message: 'Asset category is required' }]}
+                  label={t('pages.hr.assetRequest.assetCategory')}
+                  rules={[
+                    { required: true, message: t('hr.validation.assetCategoryRequired') },
+                  ]}
                 >
                   <Input
                     maxLength={200}
-                    placeholder="e.g. Laptop, Office Chair, Phone"
+                    placeholder={t('pages.hr.assetRequest.assetCategoryPlaceholder')}
                   />
                 </Form.Item>
-                <Form.Item name="assetType" label="Asset Type / Model">
+                <Form.Item
+                  name="assetType"
+                  label={t('pages.hr.assetRequest.assetTypeModel')}
+                >
                   <Input
                     maxLength={200}
-                    placeholder="e.g. Dell Latitude 5540, 14-inch"
+                    placeholder={t('pages.hr.assetRequest.assetTypePlaceholder')}
                   />
                 </Form.Item>
               </div>
 
               <Form.Item
                 name="reason"
-                label="Reason"
-                rules={[{ required: true, message: 'Reason is required' }]}
+                label={t('hr.labels.reason')}
+                rules={[
+                  { required: true, message: t('hr.validation.assetRequestReasonRequired') },
+                ]}
               >
                 <Input.TextArea
                   rows={3}
                   maxLength={2000}
                   showCount
-                  placeholder="Explain why you need this asset"
+                  placeholder={t('pages.hr.assetRequest.reasonPlaceholder')}
                 />
               </Form.Item>
 
               <div className="erp-form-grid-2">
-                <Form.Item name="requiredByDate" label="Required By Date">
+                <Form.Item name="requiredByDate" label={t('hr.form.requiredByDate')}>
                   <DatePicker
                     className="w-full"
                     format="YYYY-MM-DD"
@@ -149,12 +156,12 @@ export default function AssetRequestForm({
                 </Form.Item>
               </div>
 
-              <Form.Item name="notes" label="Additional Notes">
+              <Form.Item name="notes" label={t('hr.labels.notes')}>
                 <Input.TextArea
                   rows={2}
                   maxLength={2000}
                   showCount
-                  placeholder="Any other relevant information"
+                  placeholder={t('hr.placeholder.enterNotes')}
                 />
               </Form.Item>
             </FormLayout>
@@ -162,34 +169,37 @@ export default function AssetRequestForm({
         ),
       },
       {
-        title: 'Review',
+        title: t('hr.form.reviewSubmit'),
         validate: () => true,
         content: (
           <FormLayout
             variant="pro"
-            title="Review Asset Request"
-            description="Check the details before saving"
+            title={t('pages.hr.assetRequest.reviewTitle')}
+            description={t('pages.hr.assetRequest.reviewDescription')}
           >
             <div className="erp-form-grid-2">
               <ReviewItem
-                label="Asset Category"
+                label={t('pages.hr.assetRequest.assetCategory')}
                 value={formValues?.assetCategory?.trim() || '-'}
               />
               <ReviewItem
-                label="Asset Type"
+                label={t('pages.hr.assetRequest.assetType')}
                 value={formValues?.assetType?.trim() || '-'}
               />
               <ReviewItem
-                label="Required By"
+                label={t('hr.form.requiredByDate')}
                 value={
                   formValues?.requiredByDate
                     ? formatProjectDate(formValues.requiredByDate.toISOString())
                     : '-'
                 }
               />
-              <ReviewItem label="Reason" value={formValues?.reason?.trim() || '-'} />
+              <ReviewItem
+                label={t('hr.labels.reason')}
+                value={formValues?.reason?.trim() || '-'}
+              />
               {formValues?.notes?.trim() ? (
-                <ReviewItem label="Notes" value={formValues.notes.trim()} />
+                <ReviewItem label={t('hr.labels.notes')} value={formValues.notes.trim()} />
               ) : null}
             </div>
           </FormLayout>
@@ -197,7 +207,7 @@ export default function AssetRequestForm({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onBehalf, formValues],
+    [onBehalf, formValues, t],
   );
 
   return (
@@ -224,7 +234,7 @@ export default function AssetRequestForm({
         onReset={resetForm}
         isSubmitting={submitting}
         contentVariant="sections"
-        submitLabel="Save Draft"
+        submitLabel={t('hr.buttons.submitRequest')}
       />
     </Form>
   );

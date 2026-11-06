@@ -27,9 +27,10 @@ export default function NewAssetRequestPage(): React.ReactNode {
     try {
       await apiPost<AssetRequestDetail>(`/hr/asset-requests/${created.id}/submit`, {});
     } catch (error: unknown) {
-      notifyApiError(error, 'Asset request saved as draft but could not be submitted', messageApi, t);
+      notifyApiError(error, t('hr.messages.assetRequestSubmitFailed'), messageApi, t);
       return;
     }
+    messageApi.success(t('hr.messages.assetRequestSubmitted'));
     await navigateAfterRequestSubmit({
       queryClient,
       router,
