@@ -2106,17 +2106,15 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Full-width section cards so field grids can use rulebook 1 → 2@md → 3@xl. */
 .erp-review-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
-  align-items: start;
 }
 
-@media (max-width: 900px) {
-  .erp-review-grid {
-    grid-template-columns: 1fr;
-  }
+.erp-review-grid > .erp-review-section {
+  min-width: 0;
 }
 
 .erp-review-section {
@@ -2135,7 +2133,7 @@ main::-webkit-scrollbar,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 20px 12px;
+  padding: 14px 20px 10px;
   border-bottom: 1px solid #eef1f4;
   background: #fff;
 }
@@ -2155,24 +2153,43 @@ main::-webkit-scrollbar,
 }
 
 .erp-review-section-body {
-  padding: 16px 20px 20px;
+  padding: 14px 20px 16px;
 }
 
+/* A titled part of a merged review card, divided from the part above it. */
+.erp-review-subsection + .erp-review-subsection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eef1f4;
+}
+
+.erp-review-subsection-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4b5563;
+}
+
+/* Rulebook §3.1: 1 → 2@md → 3@xl (same as erp-form-grid-3). */
 .erp-review-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: 1fr;
+  column-gap: 16px;
+  row-gap: 12px;
 }
 
 @media (min-width: 768px) {
   .erp-review-fields {
-    grid-template-columns: repeat(2, minmax(0, 20rem));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
   }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 1280px) {
   .erp-review-fields {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

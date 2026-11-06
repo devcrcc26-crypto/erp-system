@@ -69,6 +69,22 @@ function ReviewField({
   );
 }
 
+/** A titled part of a merged review card; parts are divided by a rule. */
+function ReviewSubsection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="erp-review-subsection">
+      <h4 className="erp-review-subsection-title">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
 function ReviewSection({
   title,
   count,
@@ -258,7 +274,7 @@ export default function AddEmployeeReviewStep({
       <div className="erp-review-notice">{reviewHint}</div>
 
       {mode === 'create' && hasEmail ? (
-        <section className="erp-review-section mb-4">
+        <section className="erp-review-section">
           <div className="erp-review-section-header">
             <h3 className="erp-review-section-title">
               {t('users.form.accountAccessMethod')}
@@ -445,155 +461,156 @@ export default function AddEmployeeReviewStep({
           </div>
         </ReviewSection>
 
-        <ReviewSection title={t('users.sectionPersonalInformation')}>
-          <div className="erp-review-fields">
-            <ReviewField
-              label={t('users.form.gender')}
-              value={values.gender ? t(`hr.gender.${values.gender}`) : '-'}
-            />
-            <ReviewField
-              label={t('users.form.dateOfBirth')}
-              value={
-                values.dateOfBirth
-                  ? dayjs(values.dateOfBirth).format('YYYY-MM-DD')
-                  : '-'
-              }
-            />
-            <ReviewField
-              label={t('users.form.nationality')}
-              value={
-                values.nationality
-                  ? t(`hr.nationality.${values.nationality}`)
-                  : '-'
-              }
-            />
-            <ReviewField
-              label={t('users.form.nationalId')}
-              value={values.nationalId?.trim() || '-'}
-            />
-          </div>
+        <ReviewSection title={t('users.reviewPersonalContact')}>
+          <ReviewSubsection title={t('users.sectionPersonalInformation')}>
+            <div className="erp-review-fields">
+              <ReviewField
+                label={t('users.form.gender')}
+                value={values.gender ? t(`hr.gender.${values.gender}`) : '-'}
+              />
+              <ReviewField
+                label={t('users.form.dateOfBirth')}
+                value={
+                  values.dateOfBirth
+                    ? dayjs(values.dateOfBirth).format('YYYY-MM-DD')
+                    : '-'
+                }
+              />
+              <ReviewField
+                label={t('users.form.nationality')}
+                value={
+                  values.nationality
+                    ? t(`hr.nationality.${values.nationality}`)
+                    : '-'
+                }
+              />
+              <ReviewField
+                label={t('users.form.nationalId')}
+                value={values.nationalId?.trim() || '-'}
+              />
+            </div>
+          </ReviewSubsection>
+          <ReviewSubsection title={t('users.sectionAddress')}>
+            <div className="erp-review-fields">
+              <ReviewField
+                label={t('users.form.addressCountry')}
+                value={values.addressCountry?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.addressRegion')}
+                value={values.addressRegion?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.addressCity')}
+                value={values.addressCity?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.addressSubcity')}
+                value={values.addressSubcity?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.addressWoreda')}
+                value={values.addressWoreda?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.addressHouseNumber')}
+                value={values.addressHouseNumber?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.detailFullAddress')}
+                value={address}
+                wide
+              />
+            </div>
+          </ReviewSubsection>
         </ReviewSection>
 
-        <ReviewSection title={t('users.sectionAddress')}>
-          <div className="erp-review-fields">
-            <ReviewField
-              label={t('users.form.addressCountry')}
-              value={values.addressCountry?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.addressRegion')}
-              value={values.addressRegion?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.addressCity')}
-              value={values.addressCity?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.addressSubcity')}
-              value={values.addressSubcity?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.addressWoreda')}
-              value={values.addressWoreda?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.addressHouseNumber')}
-              value={values.addressHouseNumber?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.detailFullAddress')}
-              value={address}
-              wide
-            />
-          </div>
-        </ReviewSection>
-
-        <ReviewSection title={t('users.sectionEmploymentDetails')}>
-          <div className="erp-review-fields">
-            <ReviewField
-              label={t('users.form.employeeId')}
-              value={employeeIdDisplay}
-            />
-            <ReviewField
-              label={t('users.form.employeeType')}
-              value={
-                values.employeeType
-                  ? t(`hr.employeeType.${values.employeeType}`)
-                  : '-'
-              }
-            />
-            <ReviewField
-              label={t('users.form.employmentDate')}
-              value={
-                values.employmentDate
-                  ? dayjs(values.employmentDate).format('YYYY-MM-DD')
-                  : '-'
-              }
-            />
-          </div>
-        </ReviewSection>
-
-        <ReviewSection title={t('users.sectionOrganizationAssignment')}>
-          <div className="erp-review-fields">
-            <ReviewField
-              label={t('users.form.department')}
-              value={departmentName}
-            />
-            <ReviewField
-              label={t('users.form.position')}
-              value={positionName}
-            />
-            <ReviewField
-              label={t('users.form.seniority')}
-              value={seniorityName}
-            />
-            <ReviewField
-              label={t('users.form.discipline')}
-              value={disciplineName}
-            />
-            <ReviewField
-              label={t('users.form.reportsTo')}
-              value={reportsToName}
-              wide
-            />
-          </div>
-        </ReviewSection>
-
-        <ReviewSection title={t('users.sectionPayrollDetails')}>
-          <div className="erp-review-fields">
-            <ReviewField
-              label={t('users.form.includeInPayroll')}
-              value={
-                values.includeInPayroll ?? true
-                  ? t('common.yes')
-                  : t('common.no')
-              }
-            />
-            <ReviewField
-              label={t('users.form.attendanceMode')}
-              value={
-                (values.attendanceMode ?? 'SCANNER') === 'EXEMPT'
-                  ? t('users.form.attendanceModeExempt')
-                  : t('users.form.attendanceModeScanner')
-              }
-            />
-            <ReviewField
-              label={t('users.form.bankName')}
-              value={values.bankName?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.bankBranch')}
-              value={values.bankBranch?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.bankAccountNumber')}
-              value={values.bankAccountNumber?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.tin')}
-              value={values.tin?.trim() || '-'}
-            />
-          </div>
+        <ReviewSection title={t('users.reviewEmploymentCompensation')}>
+          <ReviewSubsection title={t('users.sectionEmploymentDetails')}>
+            <div className="erp-review-fields">
+              <ReviewField
+                label={t('users.form.employeeId')}
+                value={employeeIdDisplay}
+              />
+              <ReviewField
+                label={t('users.form.employeeType')}
+                value={
+                  values.employeeType
+                    ? t(`hr.employeeType.${values.employeeType}`)
+                    : '-'
+                }
+              />
+              <ReviewField
+                label={t('users.form.employmentDate')}
+                value={
+                  values.employmentDate
+                    ? dayjs(values.employmentDate).format('YYYY-MM-DD')
+                    : '-'
+                }
+              />
+            </div>
+          </ReviewSubsection>
+          <ReviewSubsection title={t('users.sectionOrganizationAssignment')}>
+            <div className="erp-review-fields">
+              <ReviewField
+                label={t('users.form.department')}
+                value={departmentName}
+              />
+              <ReviewField
+                label={t('users.form.position')}
+                value={positionName}
+              />
+              <ReviewField
+                label={t('users.form.seniority')}
+                value={seniorityName}
+              />
+              <ReviewField
+                label={t('users.form.discipline')}
+                value={disciplineName}
+              />
+              <ReviewField
+                label={t('users.form.reportsTo')}
+                value={reportsToName}
+                wide
+              />
+            </div>
+          </ReviewSubsection>
+          <ReviewSubsection title={t('users.sectionPayrollDetails')}>
+            <div className="erp-review-fields">
+              <ReviewField
+                label={t('users.form.includeInPayroll')}
+                value={
+                  values.includeInPayroll ?? true
+                    ? t('common.yes')
+                    : t('common.no')
+                }
+              />
+              <ReviewField
+                label={t('users.form.attendanceMode')}
+                value={
+                  (values.attendanceMode ?? 'SCANNER') === 'EXEMPT'
+                    ? t('users.form.attendanceModeExempt')
+                    : t('users.form.attendanceModeScanner')
+                }
+              />
+              <ReviewField
+                label={t('users.form.bankName')}
+                value={values.bankName?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.bankBranch')}
+                value={values.bankBranch?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.bankAccountNumber')}
+                value={values.bankAccountNumber?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.tin')}
+                value={values.tin?.trim() || '-'}
+              />
+            </div>
+          </ReviewSubsection>
         </ReviewSection>
 
         <ReviewSection title={t('users.sectionEducationExperience')}>

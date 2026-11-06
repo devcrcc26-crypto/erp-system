@@ -3660,6 +3660,8 @@
     "sectionNameIdentity": "Name & Identity",
     "sectionAccountAccess": "Login & Access",
     "sectionOrganizationAssignment": "Organization Assignment",
+    "reviewPersonalContact": "Personal & Contact Info",
+    "reviewEmploymentCompensation": "Employment & Compensation",
     "sectionEmploymentDetails": "Employment Details",
     "sectionEducationExperience": "Education & Experience",
     "sectionLeavePolicy": "Leave Policy & Work Schedule",
