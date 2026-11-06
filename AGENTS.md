@@ -3,6 +3,12 @@
 Project-wide rules live in `.cursorrules`. This file records conventions that override or
 extend it for specific areas. Read the linked docs before changing those areas.
 
+## Responsive layout (all pages)
+
+Rulebook: [`docs/RESPONSIVE_RULEBOOK.md`](docs/RESPONSIVE_RULEBOOK.md). Read it before fixing overflow
+or small-screen issues: breakpoint scales, form layout, table patterns, standard `Col` spans,
+overflow fixes, and shell rules.
+
 ## Sidebar navigation (`frontend/components/sidebar/`)
 
 Full guide: [`frontend/components/sidebar/SIDEBAR.md`](frontend/components/sidebar/SIDEBAR.md).

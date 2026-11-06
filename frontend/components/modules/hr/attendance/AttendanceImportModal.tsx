@@ -1097,7 +1097,7 @@ export default function AttendanceImportModal({
               columns={matchedColumns}
               dataSource={matchedRows}
               pagination={false}
-              scroll={{ y: 220 }}
+              scroll={{ x: 'max-content', y: 220 }}
             />
           ),
         },
@@ -1222,6 +1222,7 @@ export default function AttendanceImportModal({
                   rowKey={(row) => `ignored-preview-${row.ignoredIndex}`}
                   pagination={false}
                   dataSource={previewIgnoredRows}
+                  scroll={{ x: 'max-content' }}
                   columns={[
                     {
                       title: t(
@@ -1273,6 +1274,7 @@ export default function AttendanceImportModal({
                   rowKey={(row) => `ignored-local-${row.rejectedIndex}`}
                   pagination={false}
                   dataSource={locallyIgnoredRows}
+                  scroll={{ x: 'max-content' }}
                   columns={[
                     {
                       title: t(

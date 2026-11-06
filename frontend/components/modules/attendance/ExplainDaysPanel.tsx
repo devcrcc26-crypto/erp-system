@@ -776,6 +776,7 @@ export default function ExplainDaysPanel({
             dataSource={tableRows}
             pagination={false}
             size="middle"
+            scroll={{ x: 'max-content' }}
           />
         </div>
       </section>
