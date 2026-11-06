@@ -7,6 +7,7 @@ import { CalendarOutlined } from '@ant-design/icons';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import type { AttendanceRecord } from '@/lib/api/attendance.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useIsMdUp } from '@/hooks/useMediaQuery';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const AVATAR_COLORS = [
@@ -76,14 +77,15 @@ export default function AttendanceTable({
   onViewDailyLogs,
 }: AttendanceTableProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const isMdUp = useIsMdUp();
 
   const columns: ColumnsType<AttendanceRecord> = useMemo(
     () => [
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        width: 260,
-        fixed: 'left',
+        width: isMdUp ? 260 : 160,
+        fixed: isMdUp ? 'left' : undefined,
         sorter: (a, b) =>
           compareText(formatUserName(a.employee), formatUserName(b.employee)),
         render: (_: unknown, row: AttendanceRecord) => {
@@ -251,9 +253,9 @@ export default function AttendanceTable({
             {
               title: t('common.actions'),
               key: 'actions',
-              width: 72,
+              width: isMdUp ? 72 : 80,
               align: 'center' as const,
-              fixed: 'right' as const,
+              fixed: isMdUp ? ('right' as const) : undefined,
               render: (_: unknown, row: AttendanceRecord) => (
                 <div className="erp-table-row-actions flex items-center justify-center">
                   <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
@@ -273,7 +275,13 @@ export default function AttendanceTable({
           ]
         : []),
     ],
-    [onViewDailyLogs, t],
+    [onViewDailyLogs, t, isMdUp],
+  );
+
+  // Keep scroll.x equal to the column total so fixed columns stay aligned.
+  const scrollX = columns.reduce(
+    (sum, column) => sum + (typeof column.width === 'number' ? column.width : 0),
+    0,
   );
 
   return (
@@ -283,7 +291,7 @@ export default function AttendanceTable({
       columns={columns}
       dataSource={records}
       loading={loading}
-      scroll={{ x: 980 }}
+      scroll={{ x: scrollX }}
       locale={emptyText ? { emptyText } : undefined}
       pagination={{
         current: pagination.current,

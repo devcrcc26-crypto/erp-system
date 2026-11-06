@@ -38,6 +38,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useIsMdUp } from '@/hooks/useMediaQuery';
 import {
   getAttendanceImportBatchDetails,
   resolveAttendanceImportMissing,
@@ -258,13 +259,15 @@ export default function AttendanceReviewPageContent({
     approval?.importBatch?.totalRows ??
     records.length;
 
+  const isMdUp = useIsMdUp();
+
   const columns: ColumnsType<AttendanceRecord> = useMemo(
     () => [
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        width: 260,
-        fixed: 'left',
+        width: isMdUp ? 260 : 160,
+        fixed: isMdUp ? 'left' : undefined,
         render: (_: unknown, row: AttendanceRecord) => {
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '-';
@@ -518,9 +521,9 @@ export default function AttendanceReviewPageContent({
       {
         title: t('common.actions'),
         key: 'actions',
-        width: 72,
+        width: isMdUp ? 72 : 80,
         align: 'center',
-        fixed: 'right',
+        fixed: isMdUp ? 'right' : undefined,
         render: (_: unknown, row: AttendanceRecord) => (
           <div className="erp-table-row-actions flex items-center justify-center">
             <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
@@ -536,7 +539,13 @@ export default function AttendanceReviewPageContent({
         ),
       },
     ],
-    [t],
+    [t, isMdUp],
+  );
+
+  // Keep scroll.x equal to the column total so fixed columns stay aligned.
+  const scrollX = columns.reduce(
+    (sum, column) => sum + (typeof column.width === 'number' ? column.width : 0),
+    0,
   );
 
   function handleMarkReviewed(): void {
@@ -708,7 +717,7 @@ export default function AttendanceReviewPageContent({
                 </Tag>
               ) : null}
             </div>
-            <p className="erp-att-review-meta">
+            <p className="erp-att-review-meta break-words">
               {t('pages.hr.attendance.review.importMeta', {
                 date: importedAt,
                 file: fileName,
@@ -716,8 +725,11 @@ export default function AttendanceReviewPageContent({
               })}
             </p>
           </div>
-          <div className="erp-att-review-actions">
-            <Space.Compact>
+          <div className="erp-att-review-actions w-full md:w-auto">
+            <Space.Compact
+              block={!isMdUp}
+              orientation={isMdUp ? 'horizontal' : 'vertical'}
+            >
               {approval?.status === 'PENDING_REVIEW' ? (
                 <Button
                   icon={<EditOutlined />}
@@ -838,7 +850,7 @@ export default function AttendanceReviewPageContent({
             columns={columns}
             dataSource={records}
             loading={listQuery.isFetching}
-            scroll={{ x: 1250 }}
+            scroll={{ x: scrollX }}
             locale={{
               emptyText: (
                 <TableEmptyState
@@ -869,154 +881,157 @@ export default function AttendanceReviewPageContent({
           </div>
           <div className="erp-pro-table-card-body space-y-4 py-3">
             {pendingMissing.length > 0 ? (
-              <Table<AttendanceImportMissing>
-                size="small"
-                rowKey="id"
-                pagination={false}
-                dataSource={pendingMissing}
-                columns={[
-                  {
-                    title: t('pages.hr.attendance.importModal.colErpName'),
-                    key: 'name',
-                    render: (_: unknown, row: AttendanceImportMissing) =>
-                      formatUserName(row.user),
-                  },
-                  {
-                    title: t('pages.hr.attendance.importModal.colEmployeeId'),
-                    key: 'employeeId',
-                    render: (_: unknown, row: AttendanceImportMissing) =>
-                      row.user.employeeId ?? '-',
-                  },
-                  {
-                    title: t(
-                      'pages.hr.attendance.importModal.missingCoverageColumn',
-                    ),
-                    key: 'coverage',
-                    width: 200,
-                    render: (_: unknown, row: AttendanceImportMissing) => {
-                      const note = row.note?.trim();
-                      if (note) {
-                        return (
-                          <Tag className="m-0 rounded-full">{note}</Tag>
-                        );
-                      }
-                      return '-';
+              <div className="min-w-0 overflow-x-auto">
+                <Table<AttendanceImportMissing>
+                  size="small"
+                  rowKey="id"
+                  pagination={false}
+                  dataSource={pendingMissing}
+                  scroll={{ x: 'max-content' }}
+                  columns={[
+                    {
+                      title: t('pages.hr.attendance.importModal.colErpName'),
+                      key: 'name',
+                      render: (_: unknown, row: AttendanceImportMissing) =>
+                        formatUserName(row.user),
                     },
-                  },
-                  {
-                    title: t('pages.hr.attendance.importModal.colPresence'),
-                    key: 'actions',
-                    width: 360,
-                    render: (_: unknown, row: AttendanceImportMissing) => (
-                      <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-                        <Select
-                          size="small"
-                          style={{ width: '100%' }}
-                          placeholder={t(
-                            'pages.hr.attendance.importModal.missingActionNone',
-                          )}
-                          options={[
-                            {
-                              value: 'MARKED_EXEMPT',
-                              label: t(
-                                'pages.hr.attendance.importModal.missingActionExempt',
-                              ),
-                            },
-                            {
-                              value: 'MANUAL_PRESENT',
-                              label: t(
-                                'pages.hr.attendance.importModal.missingActionPresent',
-                              ),
-                            },
-                            {
-                              value: 'NEEDS_ENROLMENT',
-                              label: t(
-                                'pages.hr.attendance.importModal.missingActionEnrolment',
-                              ),
-                            },
-                          ]}
-                          loading={missingResolvingId === row.id}
-                          onChange={(resolution) => {
-                            void (async () => {
-                              if (!batchId) {
-                                return;
-                              }
-                              const note = missingNotes[row.id]?.trim() ?? '';
-                              if (
-                                resolution === 'MANUAL_PRESENT' &&
-                                note.length < 3
-                              ) {
-                                message.error(
-                                  t(
-                                    'pages.hr.attendance.importModal.missingPresentReasonRequired',
-                                  ),
-                                );
-                                return;
-                              }
-                              setMissingResolvingId(row.id);
-                              try {
-                                await resolveAttendanceImportMissing(
-                                  batchId,
-                                  row.id,
-                                  {
-                                    resolution,
-                                    ...(note ? { note } : {}),
-                                  },
-                                );
-                                message.success('Resolved');
-                                await queryClient.invalidateQueries({
-                                  queryKey: [
-                                    'attendance-import-batch-details',
+                    {
+                      title: t('pages.hr.attendance.importModal.colEmployeeId'),
+                      key: 'employeeId',
+                      render: (_: unknown, row: AttendanceImportMissing) =>
+                        row.user.employeeId ?? '-',
+                    },
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.missingCoverageColumn',
+                      ),
+                      key: 'coverage',
+                      width: 200,
+                      render: (_: unknown, row: AttendanceImportMissing) => {
+                        const note = row.note?.trim();
+                        if (note) {
+                          return (
+                            <Tag className="m-0 rounded-full">{note}</Tag>
+                          );
+                        }
+                        return '-';
+                      },
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colPresence'),
+                      key: 'actions',
+                      width: 360,
+                      render: (_: unknown, row: AttendanceImportMissing) => (
+                        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+                          <Select
+                            size="small"
+                            style={{ width: '100%' }}
+                            placeholder={t(
+                              'pages.hr.attendance.importModal.missingActionNone',
+                            )}
+                            options={[
+                              {
+                                value: 'MARKED_EXEMPT',
+                                label: t(
+                                  'pages.hr.attendance.importModal.missingActionExempt',
+                                ),
+                              },
+                              {
+                                value: 'MANUAL_PRESENT',
+                                label: t(
+                                  'pages.hr.attendance.importModal.missingActionPresent',
+                                ),
+                              },
+                              {
+                                value: 'NEEDS_ENROLMENT',
+                                label: t(
+                                  'pages.hr.attendance.importModal.missingActionEnrolment',
+                                ),
+                              },
+                            ]}
+                            loading={missingResolvingId === row.id}
+                            onChange={(resolution) => {
+                              void (async () => {
+                                if (!batchId) {
+                                  return;
+                                }
+                                const note = missingNotes[row.id]?.trim() ?? '';
+                                if (
+                                  resolution === 'MANUAL_PRESENT' &&
+                                  note.length < 3
+                                ) {
+                                  message.error(
+                                    t(
+                                      'pages.hr.attendance.importModal.missingPresentReasonRequired',
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setMissingResolvingId(row.id);
+                                try {
+                                  await resolveAttendanceImportMissing(
                                     batchId,
-                                  ],
-                                });
-                                await listQuery.refetch();
-                              } catch (error) {
-                                message.error(
-                                  error instanceof ApiRequestError
-                                    ? error.message
-                                    : 'Resolve failed',
-                                );
-                              } finally {
-                                setMissingResolvingId(null);
-                              }
-                            })();
-                          }}
-                        />
-                        <Input
-                          size="small"
-                          placeholder={t(
-                            'pages.hr.attendance.importModal.missingPresentReasonPlaceholder',
-                          )}
-                          value={missingNotes[row.id] ?? ''}
-                          onChange={(event) => {
-                            const note = event.target.value;
-                            setMissingNotes((prev) => ({
-                              ...prev,
-                              [row.id]: note,
-                            }));
-                          }}
-                        />
-                        <Button
-                          type="link"
-                          size="small"
-                          className="h-auto p-0 text-[12px]"
-                          onClick={() => {
-                            setMissingScheduleTarget({
-                              id: row.userId,
-                              name: formatUserName(row.user),
-                            });
-                          }}
-                        >
-                          {t(
-                            'pages.hr.attendance.importModal.submitSiteAssignment',
-                          )}
-                        </Button>
-                      </Space>
-                    ),
-                  },
-                ]}
-              />
+                                    row.id,
+                                    {
+                                      resolution,
+                                      ...(note ? { note } : {}),
+                                    },
+                                  );
+                                  message.success('Resolved');
+                                  await queryClient.invalidateQueries({
+                                    queryKey: [
+                                      'attendance-import-batch-details',
+                                      batchId,
+                                    ],
+                                  });
+                                  await listQuery.refetch();
+                                } catch (error) {
+                                  message.error(
+                                    error instanceof ApiRequestError
+                                      ? error.message
+                                      : 'Resolve failed',
+                                  );
+                                } finally {
+                                  setMissingResolvingId(null);
+                                }
+                              })();
+                            }}
+                          />
+                          <Input
+                            size="small"
+                            placeholder={t(
+                              'pages.hr.attendance.importModal.missingPresentReasonPlaceholder',
+                            )}
+                            value={missingNotes[row.id] ?? ''}
+                            onChange={(event) => {
+                              const note = event.target.value;
+                              setMissingNotes((prev) => ({
+                                ...prev,
+                                [row.id]: note,
+                              }));
+                            }}
+                          />
+                          <Button
+                            type="link"
+                            size="small"
+                            className="h-auto p-0 text-[12px]"
+                            onClick={() => {
+                              setMissingScheduleTarget({
+                                id: row.userId,
+                                name: formatUserName(row.user),
+                              });
+                            }}
+                          >
+                            {t(
+                              'pages.hr.attendance.importModal.submitSiteAssignment',
+                            )}
+                          </Button>
+                        </Space>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
             ) : null}
             {unmatchedRows.length > 0 ? (
               <div>
@@ -1024,33 +1039,36 @@ export default function AttendanceReviewPageContent({
                   {t('pages.hr.attendance.importModal.rejectedSection')} (
                   {unmatchedRows.length})
                 </p>
-                <Table
-                  size="small"
-                  rowKey="id"
-                  pagination={false}
-                  dataSource={unmatchedRows}
-                  columns={[
-                    {
-                      title: t(
-                        'pages.hr.attendance.importModal.colAttendanceName',
-                      ),
-                      dataIndex: 'attendanceName',
-                      key: 'attendanceName',
-                    },
-                    {
-                      title: t(
-                        'pages.hr.attendance.importModal.colIdInSystem',
-                      ),
-                      dataIndex: 'attendanceId',
-                      key: 'attendanceId',
-                    },
-                    {
-                      title: t('pages.hr.attendance.importModal.colReason'),
-                      dataIndex: 'status',
-                      key: 'status',
-                    },
-                  ]}
-                />
+                <div className="min-w-0 overflow-x-auto">
+                  <Table
+                    size="small"
+                    rowKey="id"
+                    pagination={false}
+                    dataSource={unmatchedRows}
+                    scroll={{ x: 'max-content' }}
+                    columns={[
+                      {
+                        title: t(
+                          'pages.hr.attendance.importModal.colAttendanceName',
+                        ),
+                        dataIndex: 'attendanceName',
+                        key: 'attendanceName',
+                      },
+                      {
+                        title: t(
+                          'pages.hr.attendance.importModal.colIdInSystem',
+                        ),
+                        dataIndex: 'attendanceId',
+                        key: 'attendanceId',
+                      },
+                      {
+                        title: t('pages.hr.attendance.importModal.colReason'),
+                        dataIndex: 'status',
+                        key: 'status',
+                      },
+                    ]}
+                  />
+                </div>
               </div>
             ) : null}
           </div>

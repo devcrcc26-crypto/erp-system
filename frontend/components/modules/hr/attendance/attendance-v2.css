@@ -323,8 +323,10 @@
 
 /* ── Review page (5 stats) ── */
 
+/* Columns follow the space the bar actually has (sidebar pinned or not), not the viewport:
+   as many 200px+ cards as fit, up to 5 on wide content, 1 on a phone. */
 .erp-attendance-v2.erp-attendance-review-page .erp-users-stat-bar {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 .erp-attendance-v2 .erp-att-review-hero {
@@ -390,12 +392,6 @@
 .erp-attendance-v2 .erp-att-review-hero .ant-alert {
   border: 0;
   border-radius: 12px;
-}
-
-@media (max-width: 1100px) {
-  .erp-attendance-v2.erp-attendance-review-page .erp-users-stat-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 /* ── Daily logs drawer: Tailwind in AttendanceDailyLogsDrawer.tsx; correction modal below ── */

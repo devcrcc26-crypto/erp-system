@@ -652,6 +652,7 @@ export default function ExitPermitForm({
                 columns={reviewItemColumns}
                 dataSource={items}
                 pagination={false}
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: t('hr.empty.noItems') }}
               />
             </FormLayout>
