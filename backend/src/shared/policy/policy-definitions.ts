@@ -110,7 +110,7 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   holidayHoursDivisor: 196,
   multipliers: { regular: 1.5, night: 1.75, weekend: 2, holiday: 2.5 },
   lunchCountsAsOvertime: false,
-  siteDayScheduledHoursClaimable: true,
+  siteDayScheduledHoursClaimable: false,
   allowedInitiators: {
     SITE_ASSIGNMENT: ['SUPERVISOR', 'DELEGATE'],
     WORK_FROM_HOME: ['SELF', 'SUPERVISOR', 'DELEGATE'],

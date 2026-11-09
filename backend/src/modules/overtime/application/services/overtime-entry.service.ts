@@ -295,7 +295,7 @@ export class OvertimeEntryService {
     );
 
     let scheduleNote: string | null = null;
-    if (siteDay.siteAssignmentId) {
+    if (siteDay.siteAssignmentId && siteDay.scheduledHoursClaimable) {
       scheduleNote = siteDay.siteName
         ? `${SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE} (${siteDay.siteName})`
         : SITE_ASSIGNMENT_FULL_DAY_OT_MESSAGE;
@@ -321,7 +321,9 @@ export class OvertimeEntryService {
 
   /**
    * Approved (not deleted) site assignment whose inclusive date range covers
-   * `onDate`. Scheduled office hours are claimable as OT on that day.
+   * `onDate`. Scheduled office hours are claimable as OT only when the
+   * `siteDayScheduledHoursClaimable` policy is on (default: off — same
+   * outside-schedule rule as office days for all employees).
    */
   async resolveSiteDay(
     employeeId: string,
@@ -348,10 +350,16 @@ export class OvertimeEntryService {
         scheduledHoursClaimable: false,
       };
     }
+    const scheduledHoursClaimable = await getPolicy(
+      this.prisma,
+      companyId,
+      'siteDayScheduledHoursClaimable',
+      day,
+    );
     return {
       siteAssignmentId: assignment.id,
       siteName: assignment.siteName,
-      scheduledHoursClaimable: true,
+      scheduledHoursClaimable: Boolean(scheduledHoursClaimable),
     };
   }
 

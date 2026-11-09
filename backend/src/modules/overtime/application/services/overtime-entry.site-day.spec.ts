@@ -5,7 +5,8 @@ import type { WorkScheduleService } from '../../../work-schedule/application/ser
 import { OvertimeEntryService } from './overtime-entry.service';
 
 /**
- * Site-assignment rule, end to end through classifyEntry / getSelectableWindows.
+ * Site-assignment days use the same outside-schedule OT rule as office days
+ * unless `siteDayScheduledHoursClaimable` is explicitly turned on.
  * September 2026: Tue 1st … Mon 7, Tue 8, … Fri 11, Sat 12, … Sat 19, Sun 20, Mon 21.
  */
 const COMPANY_ID = 'company-1';
@@ -174,24 +175,36 @@ describe('OvertimeEntryService – site assignment days', () => {
     expect(result.siteWithinScheduleHours).toBe(0);
   });
 
-  it('site day 09:00–12:00 → claimable as normal OT, all within scheduled hours', async () => {
-    const result = await classify('2026-09-09', '09:00', '12:00');
+  it('site day duty hours 09:00–12:00 → rejected (same as office; default policy off)', async () => {
+    await expect(classify('2026-09-09', '09:00', '12:00')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    const priced = await classify('2026-09-09', '09:00', '12:00', {
+      enforceSelectableWindows: false,
+    });
+    expect(priced.totalHours).toBe(0);
+    expect(priced.siteAssignmentId).toBe('sa-a');
+    expect(priced.siteName).toBe('Dam site');
+    expect(priced.siteWithinScheduleHours).toBe(0);
+  });
+
+  it('site day evening 18:00–20:00 → normal OT, labelled with site', async () => {
+    const result = await classify('2026-09-09', '18:00', '20:00');
     expect(result).toMatchObject({
-      regularHours: 3,
-      nightHours: 0,
-      weekendHours: 0,
-      holidayHours: 0,
-      totalHours: 3,
+      regularHours: 2,
       siteAssignmentId: 'sa-a',
       siteName: 'Dam site',
-      siteWithinScheduleHours: 3,
+      siteWithinScheduleHours: 0,
     });
   });
 
-  it('site day 07:00–09:30 → 2.5h normal, 1h of it within scheduled hours', async () => {
-    const result = await classify('2026-09-09', '07:00', '09:30');
-    expect(result.regularHours).toBe(2.5);
-    expect(result.siteWithinScheduleHours).toBe(1);
+  it('site day 07:00–08:30 → before schedule is claimable; crossing into duty is rejected', async () => {
+    const before = await classify('2026-09-09', '07:00', '08:30');
+    expect(before.regularHours).toBe(1.5);
+    expect(before.siteWithinScheduleHours).toBe(0);
+    await expect(classify('2026-09-09', '07:00', '09:30')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('site day 23:00–02:00 → night OT', async () => {
@@ -206,41 +219,31 @@ describe('OvertimeEntryService – site assignment days', () => {
     });
   });
 
-  it('site day lunch 12:30–13:30 stays under lunchCountsAsOvertime (off → not claimable)', async () => {
-    const priced = await classify('2026-09-09', '12:30', '13:30');
-    expect(priced.totalHours).toBe(0);
+  it('site day lunch 12:30–13:30 → rejected when lunchCountsAsOvertime is off', async () => {
+    await expect(classify('2026-09-09', '12:30', '13:30')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     const windows = await service.getSelectableWindows(
       { employeeId: EMPLOYEE_ID, date: '2026-09-09' } as never,
       COMPANY_ID,
       EMPLOYEE_ID,
     );
-    expect(windows.windows).toEqual([{ start: '00:00', end: '24:00' }]);
+    expect(windows.windows).toEqual([
+      { start: '00:00', end: '08:30' },
+      { start: '17:30', end: '24:00' },
+    ]);
   });
 
-  it('site day lunch with lunchCountsAsOvertime on → normal OT, not in the site subtotal', async () => {
-    service = buildService({
-      assignments: [SITE_A],
-      policyRows: [
-        { key: 'lunchCountsAsOvertime', value: true, effectiveFrom: d('2026-01-01') },
-      ],
-    });
-    const result = await classify('2026-09-09', '12:30', '13:30');
-    expect(result.regularHours).toBe(1);
-    expect(result.siteWithinScheduleHours).toBe(0);
-  });
-
-  it('site Saturday 08:30–12:30 → normal OT; after 12:30 → weekend as today', async () => {
-    const morning = await classify('2026-09-19', '08:30', '12:30');
-    expect(morning).toMatchObject({
-      regularHours: 4,
-      weekendHours: 0,
-      siteWithinScheduleHours: 4,
-    });
+  it('site Saturday morning duty → rejected; after morning → weekend OT', async () => {
+    await expect(classify('2026-09-19', '08:30', '12:30')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     const afternoon = await classify('2026-09-19', '12:30', '14:00');
     expect(afternoon).toMatchObject({
       regularHours: 0,
       weekendHours: 1.5,
       siteWithinScheduleHours: 0,
+      siteAssignmentId: 'sa-w',
     });
   });
 
@@ -271,8 +274,8 @@ describe('OvertimeEntryService – site assignment days', () => {
   });
 
   it('assignment first and last day are inclusive; the days either side are not', async () => {
-    expect((await classify('2026-09-08', '09:00', '10:00')).regularHours).toBe(1);
-    expect((await classify('2026-09-11', '16:00', '17:30')).regularHours).toBe(1.5);
+    expect((await classify('2026-09-08', '18:00', '19:00')).regularHours).toBe(1);
+    expect((await classify('2026-09-11', '18:00', '19:30')).regularHours).toBe(1.5);
     await expect(classify('2026-09-07', '09:00', '10:00')).rejects.toBeInstanceOf(
       BadRequestException,
     );
@@ -288,9 +291,8 @@ describe('OvertimeEntryService – site assignment days', () => {
         { ...SITE_A, id: 'sa-c', status: 'CANCELLED' },
       ],
     });
-    await expect(classify('2026-09-09', '09:00', '12:00')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    const result = await classify('2026-09-09', '18:00', '19:00');
+    expect(result.siteAssignmentId).toBeNull();
   });
 
   it('leave on a site day stays excluded', async () => {
@@ -301,18 +303,38 @@ describe('OvertimeEntryService – site assignment days', () => {
     await expect(classify('2026-09-09', '09:00', '12:00')).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    const afternoon = await classify('2026-09-09', '14:00', '15:00');
-    expect(afternoon.regularHours).toBe(1);
-    expect(afternoon.siteWithinScheduleHours).toBe(1);
+    // Afternoon duty still inside schedule → rejected under default policy.
+    await expect(classify('2026-09-09', '14:00', '15:00')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    const evening = await classify('2026-09-09', '18:00', '19:00');
+    expect(evening.regularHours).toBe(1);
+    expect(evening.siteWithinScheduleHours).toBe(0);
   });
 
-  it('site day scheduled hours are claimable regardless of siteDayScheduledHoursClaimable policy', async () => {
+  it('site day scheduled hours stay blocked when siteDayScheduledHoursClaimable is off', async () => {
     service = buildService({
       assignments: [SITE_A],
       policyRows: [
         {
           key: 'siteDayScheduledHoursClaimable',
           value: false,
+          effectiveFrom: d('2026-09-01'),
+        },
+      ],
+    });
+    await expect(classify('2026-09-09', '09:00', '12:00')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('site day scheduled hours become claimable when siteDayScheduledHoursClaimable is on', async () => {
+    service = buildService({
+      assignments: [SITE_A],
+      policyRows: [
+        {
+          key: 'siteDayScheduledHoursClaimable',
+          value: true,
           effectiveFrom: d('2026-09-01'),
         },
       ],
@@ -325,13 +347,17 @@ describe('OvertimeEntryService – site assignment days', () => {
     });
   });
 
-  it('site day pickers offer scheduled hours; office day pickers do not', async () => {
+  it('site and office weekday pickers both exclude scheduled duty (default policy)', async () => {
     const site = await service.getSelectableWindows(
-      { employeeId: EMPLOYEE_ID, date: '2026-09-19' } as never,
+      { employeeId: EMPLOYEE_ID, date: '2026-09-09' } as never,
       COMPANY_ID,
       EMPLOYEE_ID,
     );
-    expect(site.windows).toEqual([{ start: '00:00', end: '24:00' }]);
+    expect(site.windows).toEqual([
+      { start: '00:00', end: '08:30' },
+      { start: '17:30', end: '24:00' },
+    ]);
+    expect(site.siteAssignmentDay).toBe(true);
 
     const office = await service.getSelectableWindows(
       { employeeId: EMPLOYEE_ID, date: '2026-09-14' } as never,

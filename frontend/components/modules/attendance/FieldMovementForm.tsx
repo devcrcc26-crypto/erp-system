@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -1509,20 +1510,28 @@ export default function FieldMovementForm({
 
   return (
     <div className={pageClassName}>
-      <div className="flex shrink-0 justify-end">
-        <Button onClick={() => router.push('/approvals/new')}>Cancel</Button>
-      </div>
-      <div className="erp-stepper-form">
-        <StepperForm
-        onCancel={resolvedCancel}
+      {/* Same banner as the other request forms. Cancel lives in the stepper footer. */}
+      <HrFormPageShell
+        title={t('pages.approvals.categories.FIELD_MOVEMENT_LOG.name')}
+        description={t('pages.approvals.categories.FIELD_MOVEMENT_LOG.description')}
         cancelLabel={resolvedCancelLabel}
-          contentVariant="sections"
-          steps={steps}
-          onSubmit={handleSubmit}
-          isSubmitting={submitting}
-          submitLabel="Submit for Approval"
-        />
-      </div>
+        cancelHref="/approvals/new"
+        backLabel={t('hr.buttons.backToList')}
+        onCancel={resolvedCancel}
+        showCancelButton={false}
+      >
+        <div className="erp-stepper-form">
+          <StepperForm
+            onCancel={resolvedCancel}
+            cancelLabel={resolvedCancelLabel}
+            contentVariant="sections"
+            steps={steps}
+            onSubmit={handleSubmit}
+            isSubmitting={submitting}
+            submitLabel="Submit for Approval"
+          />
+        </div>
+      </HrFormPageShell>
     </div>
   );
 }

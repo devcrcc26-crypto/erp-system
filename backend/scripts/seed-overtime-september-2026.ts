@@ -325,11 +325,10 @@ function baseDayContext(
 function dayContext(
   date: Date,
   holidayKeys: Set<string>,
-  siteDay: boolean,
+  _siteDay: boolean,
 ): OvertimeDayContext {
-  const base = baseDayContext(date, holidayKeys);
-  if (!siteDay) return base;
-  return { ...base, scheduledHoursClaimable: true };
+  // Site days use the same outside-schedule rule as office days by default.
+  return baseDayContext(date, holidayKeys);
 }
 
 function selectableInput(ctx: OvertimeDayContext) {
@@ -349,14 +348,14 @@ function selectableInput(ctx: OvertimeDayContext) {
 }
 
 /**
- * Category time slots for a calendar day (CRCC Standard + optional site day).
- * Site days unlock scheduled duty as Normal OT; holiday still wins classification.
+ * Category time slots for a calendar day (CRCC Standard).
+ * Site and office days both exclude scheduled duty (default policy).
  */
 function categorySlots(
   category: OtCategory,
   date: Date,
   holidayKeys: Set<string>,
-  siteDay: boolean,
+  _siteDay: boolean,
 ): SlotSpec[] {
   const key = iso(date);
   const isHol = holidayKeys.has(key);
@@ -370,23 +369,9 @@ function categorySlots(
 
   if (category === 'normal') {
     if (dow >= 1 && dow <= 5) {
-      if (siteDay) {
-        // Lunch 12:30–13:30 excluded (policy lunchCountsAsOvertime=false).
-        return [
-          { start: '06:00', end: '12:30', capacityHours: 6.5 },
-          { start: '13:30', end: '22:00', capacityHours: 8.5 },
-        ];
-      }
       return [
         { start: '17:30', end: '22:00', capacityHours: 4.5 },
         { start: '06:00', end: '08:30', capacityHours: 2.5 },
-      ];
-    }
-    if (dow === 6 && siteDay) {
-      // Half-day morning becomes Normal on site; after morningEnd is Weekend.
-      return [
-        { start: '06:00', end: '08:30', capacityHours: 2.5 },
-        { start: '08:30', end: '12:30', capacityHours: 4 },
       ];
     }
     return [];

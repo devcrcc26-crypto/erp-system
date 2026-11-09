@@ -1120,8 +1120,8 @@
           },
           "siteDayScheduledHoursClaimable": {
             "title": "Office hours claimable as overtime on site days",
-            "description": "When on, scheduled office hours on days inside an approved site assignment can be claimed as overtime, classified like any other time. Only a System Administrator can change it.",
-            "example": "On: site day 09:00-12:00 = 3h normal overtime. Off: not claimable, as on an office day."
+            "description": "Default off: site and office days use the same rule — only time outside the work schedule is overtime. When on, scheduled office hours on an approved site-assignment day can also be claimed. Only a System Administrator can change it.",
+            "example": "Off (default): site day 09:00-12:00 is not claimable. On: that window = 3h normal overtime."
           },
           "lunchCountsAsOvertime": {
             "title": "Lunch break counts as overtime",
@@ -5606,7 +5606,7 @@
       "selectableWindowsLoading": "Loading selectable overtime times…",
       "approvedLeaveNoOvertime": "You're on approved leave this day.",
       "noSelectableWindows": "No overtime times are available for this day.",
-      "siteAssignmentFullDayOt": "On site assignment — full day OT eligible (regular schedule does not apply).",
+      "siteAssignmentFullDayOt": "On site assignment — overtime is still only outside your normal working hours.",
       "lunchBreakOtExcluded": "Note: 12:30–13:30 lunch break is excluded from OT",
       "lunchBreakOtCapTooltip": "Lunch break (12:30–13:30) is not counted as OT",
       "workedPastMidnight": "Worked past midnight? Add the rest on {{date}}.",

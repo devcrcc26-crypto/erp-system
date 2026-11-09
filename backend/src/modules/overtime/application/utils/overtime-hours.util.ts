@@ -52,10 +52,10 @@ export const NO_SELECTABLE_OT_MESSAGE =
  * Overnight: each block uses the calendar day it falls on (start-day context, then
  * nextDayContext for minutes on the following day).
  *
- * Site-assignment day (`scheduledHoursClaimable`): scheduled morning/afternoon
- * blocks are not skipped; they fall through to Night/Regular like any other time
- * (a half-day morning is Regular). Lunch (lunchCountsAsOvertime) and leave
- * windows stay excluded. Such blocks are also counted in `withinScheduleHours`.
+ * When `scheduledHoursClaimable` is on (site-day policy), scheduled morning/
+ * afternoon blocks are not skipped; they fall through to Night/Regular. Lunch
+ * (`lunchCountsAsOvertime`) and leave windows stay excluded. Such blocks are
+ * also counted in `withinScheduleHours`. Default policy is off for all employees.
  */
 
 export interface OvertimeDayContext {

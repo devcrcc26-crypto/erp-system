@@ -19,7 +19,7 @@ You record overtime on one sheet per month. You add an entry each time you work 
 - Only time **outside your normal working hours** counts. If you pick hours inside your schedule, you see *"These hours are within your normal working hours."*
 - From Monday to Friday, **12:30–13:30 is lunch** and is never overtime.
 - On a day with **approved leave**, the hours the leave covers cannot be claimed.
-- On an **approved site assignment** day, your whole day can be claimed. The form shows *"On site assignment — full day OT eligible (regular schedule does not apply)."*
+- On an **approved site assignment** day, overtime is still only outside your normal working hours (same rule as an office day), unless HR has turned on “office hours claimable on site days”.
 - You **cannot open a sheet for a future month** or record a day that has not happened yet.
 - Each entry must be on **one calendar day**. If you work past midnight, end the first entry at 24:00 and add a second entry on the next day starting at 00:00.
 - Two entries on the same day cannot overlap.

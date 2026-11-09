@@ -414,7 +414,7 @@ export class HrApprovalChainService {
    * Site assignment: Employee → Reports to only.
    * No Department Head / HR Manager / GM fallbacks.
    * GM / Managing Director / System Administrator → HR Manager (never an empty
-   * chain: approved assignments make scheduled hours claimable as OT).
+   * chain).
    * Missing Reports to → HR Manager fallback (approver-only / unassigned subjects).
    */
   async buildSiteAssignmentApprovalChain(

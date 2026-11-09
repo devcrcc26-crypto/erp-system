@@ -1120,8 +1120,8 @@
           },
           "siteDayScheduledHoursClaimable": {
             "title": "现场派驻日的办公时间可计为加班",
-            "description": "开启时，已批准现场派驻期间的排班办公时间可以申报为加班，并按其他时间相同的规则分类。仅系统管理员可修改。",
-            "example": "开：派驻日 09:00-12:00 = 3 小时平时加班。关：与办公日相同，不能申报。"
+            "description": "默认关闭：派驻日与办公日相同，仅正常工作时间以外可计加班。开启后，已批准派驻日的排班办公时间也可申报。仅系统管理员可修改。",
+            "example": "关（默认）：派驻日 09:00-12:00 不能申报。开：该时段 = 3 小时平时加班。"
           },
           "lunchCountsAsOvertime": {
             "title": "午休计入加班",
@@ -5605,7 +5605,7 @@
       "selectableWindowsLoading": "正在加载可选加班时段…",
       "approvedLeaveNoOvertime": "您当天已获批准休假。",
       "noSelectableWindows": "当天没有可选的加班时段。",
-      "siteAssignmentFullDayOt": "现场派驻日 — 全天工时均可计加班（不适用常规定班）。",
+      "siteAssignmentFullDayOt": "现场派驻日 — 加班仍仅限正常工作时间以外。",
       "lunchBreakOtExcluded": "注意：工作日 12:30–13:30 午餐时间不计加班",
       "lunchBreakOtCapTooltip": "午餐休息（12:30–13:30）不计为加班",
       "workedPastMidnight": "工作跨过午夜？请在 {{date}} 补录剩余时段。",
