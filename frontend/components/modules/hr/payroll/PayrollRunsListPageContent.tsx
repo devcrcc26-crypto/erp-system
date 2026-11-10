@@ -258,15 +258,33 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         title: t('hr.payroll.list.status'),
         dataIndex: 'status',
         key: 'status',
-        width: isNarrow ? 108 : 130,
-        render: (status: PayrollRunListItem['status']) => (
-          <Tag
-            variant="filled"
-            className="erp-payroll-status"
-            style={payrollStatusTagStyle(status)}
-          >
-            {t(payrollStatusLabelKey(status))}
-          </Tag>
+        width: isNarrow ? 140 : 180,
+        render: (status: PayrollRunListItem['status'], row) => (
+          <div className="flex flex-wrap items-center gap-1">
+            {row.type === 'CORRECTION' && status === 'SUPERSEDED' ? (
+              <Tag variant="filled" className="erp-payroll-status" style={payrollStatusTagStyle('SUPERSEDED')}>
+                {t('hr.payroll.list.badgeVoided')}
+              </Tag>
+            ) : null}
+            {row.type === 'CORRECTION' && status !== 'SUPERSEDED' && status !== 'CANCELLED' ? (
+              <Tag
+                variant="filled"
+                className="erp-payroll-status"
+                style={{ color: '#9A3412', background: '#FFF7ED' }}
+              >
+                {t('hr.payroll.list.badgeCorrection')}
+              </Tag>
+            ) : null}
+            {status !== 'SUPERSEDED' || row.type !== 'CORRECTION' ? (
+              <Tag
+                variant="filled"
+                className="erp-payroll-status"
+                style={payrollStatusTagStyle(status)}
+              >
+                {t(payrollStatusLabelKey(status))}
+              </Tag>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -575,6 +593,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
                 'GM_APPROVED',
                 'PAID',
                 'CANCELLED',
+                'SUPERSEDED',
               ] as const
             ).map((status) => ({
               value: status,

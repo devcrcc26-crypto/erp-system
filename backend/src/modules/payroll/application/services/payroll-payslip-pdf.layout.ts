@@ -56,6 +56,13 @@ export interface PayslipPdfModel {
   incomeTax: number;
   totalDeductions: number;
   netPay: number;
+  /** When set, payslip is a correction slip for a locked month. */
+  correction?: {
+    originalAmount: number;
+    correctedAmount: number;
+    deltaAmount: number;
+    note: string | null;
+  } | null;
 }
 
 export type PayslipLine =
@@ -165,9 +172,21 @@ function sanitizeFileToken(value: string): string {
  * Overtime rows with zero hours and a zero bonus top-up are omitted.
  */
 export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
+  const isCorrection = Boolean(model.correction);
   const lines: PayslipLine[] = [
-    { kind: 'brand', left: 'CCECC Ethiopia Branch', right: 'PAYSLIP / 工资单' },
-    { kind: 'right', text: formatPayslipMonth(model.month, model.year) },
+    {
+      kind: 'brand',
+      left: 'CCECC Ethiopia Branch',
+      right: isCorrection
+        ? 'PAYROLL CORRECTION / 工资更正单'
+        : 'PAYSLIP / 工资单',
+    },
+    {
+      kind: 'right',
+      text: isCorrection
+        ? `Payroll Correction — ${formatPayslipMonth(model.month, model.year)}`
+        : formatPayslipMonth(model.month, model.year),
+    },
     { kind: 'rule' },
     {
       kind: 'pair',
@@ -294,6 +313,44 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
     label: 'NET PAY / 实发工资',
     amount: `ETB ${formatEtb(model.netPay)}`,
   });
+
+  if (model.correction) {
+    const delta = model.correction.deltaAmount;
+    const deltaLabel =
+      delta >= 0
+        ? 'Amount to Pay / 应补发'
+        : 'Amount to Recover / 应追回';
+    lines.push({ kind: 'rule' });
+    lines.push({
+      kind: 'section',
+      label: 'CORRECTION / 更正',
+      trailing: 'Amount (ETB)',
+    });
+    lines.push({
+      kind: 'amount',
+      indent: 1,
+      label: 'Original amount paid / 原发放金额',
+      amount: formatEtb(model.correction.originalAmount),
+    });
+    lines.push({
+      kind: 'amount',
+      indent: 1,
+      label: 'Corrected amount / 更正后金额',
+      amount: formatEtb(model.correction.correctedAmount),
+    });
+    lines.push({
+      kind: 'total',
+      label: deltaLabel,
+      amount: formatEtb(Math.abs(delta)),
+    });
+    if (model.correction.note?.trim()) {
+      lines.push({
+        kind: 'note',
+        text: `Reason / 原因: ${model.correction.note.trim()}`,
+      });
+    }
+  }
+
   lines.push({ kind: 'rule' });
   lines.push({
     kind: 'note',
@@ -307,7 +364,12 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
     kind: 'note',
     text: `Run ${model.runNumber} · Generated ${formatGeneratedDate(model.generatedAt)}`,
   });
-  lines.push({ kind: 'note', text: 'This payslip is system-generated.' });
+  lines.push({
+    kind: 'note',
+    text: isCorrection
+      ? 'This correction payslip is system-generated.'
+      : 'This payslip is system-generated.',
+  });
   return lines;
 }
 

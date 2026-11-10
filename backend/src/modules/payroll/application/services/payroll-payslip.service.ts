@@ -103,7 +103,14 @@ type PayslipWithRelations = {
   generatedAt: Date | null;
   releasedAt: Date | null;
   downloadedAt: Date | null;
-  run: { id: string; runNumber: string; month: number; year: number };
+  run: {
+    id: string;
+    runNumber: string;
+    month: number;
+    year: number;
+    type: string;
+    notes: string | null;
+  };
   employee: {
     firstName: string;
     lastName: string;
@@ -138,6 +145,9 @@ type PayslipWithRelations = {
     incomeTax: Decimal;
     totalDeductions: Decimal;
     netPay: Decimal;
+    originalAmount: Decimal | null;
+    correctedAmount: Decimal | null;
+    deltaAmount: Decimal | null;
     bankName: string | null;
     bankAccountNumber: string | null;
     contract: { pensionApplicable: boolean } | null;
@@ -417,7 +427,16 @@ export class PayrollPayslipService {
 
   private payslipInclude() {
     return {
-      run: { select: { id: true, runNumber: true, month: true, year: true } },
+      run: {
+        select: {
+          id: true,
+          runNumber: true,
+          month: true,
+          year: true,
+          type: true,
+          notes: true,
+        },
+      },
       employee: {
         select: {
           firstName: true,
@@ -502,6 +521,20 @@ export class PayrollPayslipService {
 
   private toPdfModel(payslip: PayslipWithRelations): PayslipPdfModel {
     const item = this.toListItem(payslip);
+    const entry = payslip.entry;
+    const isCorrection = payslip.run.type === 'CORRECTION';
+    const correction =
+      isCorrection &&
+      entry.originalAmount != null &&
+      entry.correctedAmount != null &&
+      entry.deltaAmount != null
+        ? {
+            originalAmount: this.toNumber(entry.originalAmount),
+            correctedAmount: this.toNumber(entry.correctedAmount),
+            deltaAmount: this.toNumber(entry.deltaAmount),
+            note: payslip.run.notes,
+          }
+        : null;
     return {
       month: item.month,
       year: item.year,
@@ -538,6 +571,7 @@ export class PayrollPayslipService {
       incomeTax: item.incomeTax,
       totalDeductions: item.totalDeductions,
       netPay: item.netPay,
+      correction,
     };
   }
 

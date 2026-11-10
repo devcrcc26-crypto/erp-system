@@ -8,6 +8,7 @@ import {
 } from '@/lib/api/client';
 import type {
   ApprovePayrollRunPayload,
+  CreatePayrollCorrectionPayload,
   CreatePayrollRunPayload,
   EmployeePayslip,
   PayrollCompanySettings,
@@ -116,6 +117,19 @@ export async function cancelPayrollRun(
   runId: string,
 ): Promise<PayrollRunDetail> {
   return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/cancel`);
+}
+
+export async function createPayrollCorrection(
+  runId: string,
+  payload: CreatePayrollCorrectionPayload = {},
+): Promise<PayrollRunDetail> {
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/correction`, payload);
+}
+
+export async function unlockPayrollRun(
+  runId: string,
+): Promise<PayrollRunDetail> {
+  return apiPatch<PayrollRunDetail>(`${BASE}/runs/${runId}/unlock`);
 }
 
 export async function updatePayrollEntry(

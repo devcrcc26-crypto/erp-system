@@ -25,6 +25,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddPayrollFreelancersDto,
   ApprovePayrollRunDto,
+  CreatePayrollCorrectionDto,
   CreatePayrollRunDto,
   SubmitPayrollRunDto,
   UpdatePayrollCompanySettingsDto,
@@ -323,6 +324,37 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollRunService.cancelRun(id, this.ctx(user));
+  }
+
+  @Post('runs/:id/correction')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary:
+      'Create a correction draft for a GM_APPROVED/PAID regular run (HR Manager / System Administrator)',
+  })
+  createCorrection(
+    @Param('id') id: string,
+    @Body() dto: CreatePayrollCorrectionDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.createCorrectionRun(
+      id,
+      this.ctx(user),
+      dto.note,
+    );
+  }
+
+  @Patch('runs/:id/unlock')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary:
+      'Unlock a GM_APPROVED/PAID regular run back to DRAFT and void payslips (HR Manager / System Administrator)',
+  })
+  unlockRun(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.unlockRun(id, this.ctx(user));
   }
 
   @Patch('entries/:id')

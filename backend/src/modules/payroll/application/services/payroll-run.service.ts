@@ -14,6 +14,7 @@ import {
   type PayrollEntryFlag,
   type PayrollRun,
 } from '@prisma/client';
+import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -371,7 +372,13 @@ export class PayrollRunService {
     }
 
     const existing = await this.prisma.payrollRun.findFirst({
-      where: { companyId: ctx.companyId, month, year, deletedAt: null },
+      where: {
+        companyId: ctx.companyId,
+        month,
+        year,
+        type: 'REGULAR',
+        deletedAt: null,
+      },
     });
 
     let runId: string;
@@ -427,6 +434,7 @@ export class PayrollRunService {
           runNumber,
           month,
           year,
+          type: 'REGULAR',
           status: 'DRAFT',
           notes: notes ?? null,
           createdBy: ctx.userId,
@@ -730,7 +738,11 @@ export class PayrollRunService {
   }
 
   private assertRunEditable(run: PayrollRun): void {
-    if (run.status === 'PAID' || run.status === 'CANCELLED') {
+    if (
+      run.status === 'PAID' ||
+      run.status === 'CANCELLED' ||
+      run.status === 'SUPERSEDED'
+    ) {
       throw new BadRequestException(`Cannot change a run in ${run.status} status`);
     }
   }
@@ -854,6 +866,16 @@ export class PayrollRunService {
     const run = await this.prisma.payrollRun.findFirst({
       where: { id: runId, companyId, deletedAt: null },
       include: {
+        originalRun: {
+          select: {
+            id: true,
+            runNumber: true,
+            month: true,
+            year: true,
+            status: true,
+            type: true,
+          },
+        },
         entries: {
           include: {
             employee: {
@@ -1174,7 +1196,11 @@ export class PayrollRunService {
    */
   async cancelRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
     const run = await this.requireRun(runId, ctx.companyId);
-    if (run.status === 'GM_APPROVED' || run.status === 'PAID') {
+    if (
+      run.status === 'GM_APPROVED' ||
+      run.status === 'PAID' ||
+      run.status === 'SUPERSEDED'
+    ) {
       throw new BadRequestException(
         `Cannot cancel a run in ${run.status} status`,
       );
@@ -1187,6 +1213,262 @@ export class PayrollRunService {
         updatedBy: ctx.userId,
       },
     });
+  }
+
+  /**
+   * Creates a CORRECTION draft for a locked REGULAR run (GM_APPROVED / PAID).
+   * Recalculates with current inputs via the same entry builder, diffs net pay
+   * against the original, and keeps only employees with a non-zero delta.
+   * Prior DRAFT corrections are replaced; finalized corrections are SUPERSEDED.
+   */
+  async createCorrectionRun(
+    originalRunId: string,
+    ctx: ServiceContext,
+    note?: string,
+  ): Promise<PayrollRun> {
+    await this.assertHrManagerOrSystemAdmin(ctx);
+
+    const original = await this.requireRun(originalRunId, ctx.companyId);
+    if (original.type !== 'REGULAR') {
+      throw new BadRequestException(
+        'Corrections can only be created from a regular payroll run',
+      );
+    }
+    if (original.status !== 'GM_APPROVED' && original.status !== 'PAID') {
+      throw new BadRequestException(
+        'Original run must be GM_APPROVED or PAID before creating a correction',
+      );
+    }
+
+    const priorCorrections = await this.prisma.payrollRun.findMany({
+      where: {
+        companyId: ctx.companyId,
+        originalRunId,
+        type: 'CORRECTION',
+        deletedAt: null,
+      },
+      select: { id: true, status: true, runNumber: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    for (const prior of priorCorrections) {
+      if (prior.status === 'DRAFT' || prior.status === 'REVIEWED') {
+        await this.deleteCorrectionRunCascade(prior.id, ctx);
+      } else if (
+        prior.status === 'SUBMITTED' ||
+        prior.status === 'APPROVED' ||
+        prior.status === 'GM_APPROVED' ||
+        prior.status === 'PAID'
+      ) {
+        await this.voidPayslipsForRun(prior.id, ctx);
+        await this.prisma.payrollRun.update({
+          where: { id: prior.id },
+          data: { status: 'SUPERSEDED', updatedBy: ctx.userId },
+        });
+      }
+    }
+
+    const correctionCount = await this.prisma.payrollRun.count({
+      where: {
+        companyId: ctx.companyId,
+        originalRunId,
+        type: 'CORRECTION',
+      },
+    });
+    const runNumber = this.generateCorrectionRunNumber(
+      original.month,
+      original.year,
+      correctionCount + 1,
+    );
+
+    const correctionRun = await this.prisma.payrollRun.create({
+      data: {
+        id: randomUUID(),
+        companyId: ctx.companyId,
+        runNumber,
+        month: original.month,
+        year: original.year,
+        type: 'CORRECTION',
+        originalRunId: original.id,
+        status: 'DRAFT',
+        taxableThreshold: original.taxableThreshold,
+        notes: note?.trim() ? note.trim() : null,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    const originalEntries = await this.prisma.payrollEntry.findMany({
+      where: { runId: original.id, companyId: ctx.companyId },
+      select: { employeeId: true, netPay: true },
+    });
+    const originalNetByEmployee = new Map(
+      originalEntries.map((entry) => [
+        entry.employeeId,
+        this.toNumber(entry.netPay),
+      ]),
+    );
+
+    const includeFreelancerIds = new Set<string>([
+      ...(await this.includedFreelancerIds(original.id)),
+      ...originalEntries.map((entry) => entry.employeeId),
+    ]);
+
+    const drafts = await this.buildEntryDrafts(correctionRun, ctx, new Map(), {
+      includeFreelancerIds,
+    });
+
+    const deltaDrafts: EntryDraft[] = [];
+    const seenEmployees = new Set<string>();
+
+    for (const draft of drafts) {
+      const employeeId = draft.entry.employeeId as string;
+      seenEmployees.add(employeeId);
+      const correctedAmount = this.toNumber(
+        draft.entry.netPay as Decimal | number | null | undefined,
+      );
+      const originalAmount = originalNetByEmployee.get(employeeId) ?? 0;
+      const deltaAmount =
+        Math.round((correctedAmount - originalAmount) * 100) / 100;
+      if (deltaAmount === 0) {
+        continue;
+      }
+      deltaDrafts.push({
+        entry: {
+          ...draft.entry,
+          originalAmount: new Decimal(originalAmount),
+          correctedAmount: new Decimal(correctedAmount),
+          deltaAmount: new Decimal(deltaAmount),
+        },
+        salaryPeriods: draft.salaryPeriods,
+      });
+    }
+
+    // Employees on the original run who drop out of the recalculation.
+    for (const [employeeId, originalAmount] of originalNetByEmployee) {
+      if (seenEmployees.has(employeeId) || originalAmount === 0) {
+        continue;
+      }
+      const deltaAmount = Math.round((0 - originalAmount) * 100) / 100;
+      if (deltaAmount === 0) {
+        continue;
+      }
+      const originalEntry = await this.prisma.payrollEntry.findFirst({
+        where: {
+          runId: original.id,
+          employeeId,
+          companyId: ctx.companyId,
+        },
+      });
+      if (!originalEntry) {
+        continue;
+      }
+      deltaDrafts.push({
+        entry: {
+          id: randomUUID(),
+          companyId: ctx.companyId,
+          runId: correctionRun.id,
+          employeeId,
+          contractId: originalEntry.contractId,
+          attendanceRecordId: null,
+          overtimeSheetId: null,
+          scheduledDays: originalEntry.scheduledDays,
+          presentDays: originalEntry.presentDays,
+          absentDays: originalEntry.absentDays,
+          employedDays: originalEntry.employedDays,
+          payrollDays: new Decimal(0),
+          basicSalary: originalEntry.basicSalary,
+          transportAllowance: new Decimal(0),
+          monthlyBonus: new Decimal(0),
+          contractNetBonus: new Decimal(0),
+          earnedSalary: new Decimal(0),
+          normalOtHours: new Decimal(0),
+          eveningOtHours: new Decimal(0),
+          sundayOtHours: new Decimal(0),
+          holidayOtHours: new Decimal(0),
+          normalOtPay: new Decimal(0),
+          eveningOtPay: new Decimal(0),
+          sundayOtPay: new Decimal(0),
+          holidayOtPay: new Decimal(0),
+          totalOtPay: new Decimal(0),
+          taxableTransport: new Decimal(0),
+          nonTaxableTransport: new Decimal(0),
+          grossIncome: new Decimal(0),
+          taxableIncome: new Decimal(0),
+          pensionEmployee: new Decimal(0),
+          pensionEmployer: new Decimal(0),
+          incomeTax: new Decimal(0),
+          totalDeductions: new Decimal(0),
+          netPay: new Decimal(0),
+          unusedLeavePayout: new Decimal(0),
+          severancePay: new Decimal(0),
+          noticePay: new Decimal(0),
+          bonusTopUp: new Decimal(0),
+          netTopUp: new Decimal(0),
+          originalAmount: new Decimal(originalAmount),
+          correctedAmount: new Decimal(0),
+          deltaAmount: new Decimal(deltaAmount),
+          flag: 'NONE',
+          bankName: originalEntry.bankName,
+          bankAccountNumber: originalEntry.bankAccountNumber,
+          employeeCategory: originalEntry.employeeCategory,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+        salaryPeriods: [],
+      });
+    }
+
+    await this.persistEntryDrafts(deltaDrafts, ctx);
+    await this.updateRunTotals(correctionRun.id, ctx);
+
+    this.logger.log(
+      `[PayrollRun] Created correction ${runNumber} for ${original.runNumber} with ${deltaDrafts.length} delta entries`,
+    );
+
+    return this.getRun(correctionRun.id, ctx.companyId);
+  }
+
+  /**
+   * Unlocks a locked REGULAR run (GM_APPROVED / PAID) back to DRAFT and voids
+   * its payslips. Does not create a correction — for re-editing from scratch.
+   */
+  async unlockRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
+    await this.assertHrManagerOrSystemAdmin(ctx);
+
+    const run = await this.requireRun(runId, ctx.companyId);
+    if (run.type !== 'REGULAR') {
+      throw new BadRequestException('Only regular payroll runs can be unlocked');
+    }
+    if (run.status !== 'GM_APPROVED' && run.status !== 'PAID') {
+      throw new BadRequestException(
+        'Only GM_APPROVED or PAID runs can be unlocked',
+      );
+    }
+
+    await this.voidPayslipsForRun(runId, ctx);
+
+    await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        approvedAt: null,
+        approvedBy: null,
+        gmApprovedAt: null,
+        gmApprovedBy: null,
+        paidAt: null,
+        paidBy: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    this.logger.log(
+      `[PayrollRun] Unlocked ${run.runNumber} from ${run.status} to DRAFT`,
+    );
+
+    return this.getRun(runId, ctx.companyId);
   }
 
   /**
@@ -3063,13 +3345,73 @@ export class PayrollRunService {
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
+  private generateCorrectionRunNumber(
+    month: number,
+    year: number,
+    sequence: number,
+  ): string {
+    const m = String(month).padStart(2, '0');
+    return `PR-${year}-${m}-C${sequence}`;
+  }
+
+  private async assertHrManagerOrSystemAdmin(
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const roles = await this.prisma.userRole.findMany({
+      where: {
+        userId: ctx.userId,
+        deletedAt: null,
+        role: { companyId: ctx.companyId, deletedAt: null },
+      },
+      select: { role: { select: { name: true } } },
+    });
+    const roleNames = roles.map((row) => row.role.name);
+    if (
+      isTrueSystemAdministrator(roleNames) ||
+      roleNames.includes(HR_MANAGER_ROLE)
+    ) {
+      return;
+    }
+    throw new ForbiddenException(
+      'Only HR Manager or System Administrator can perform this action',
+    );
+  }
+
+  private async voidPayslipsForRun(
+    runId: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    await this.prisma.payrollPayslip.deleteMany({
+      where: { runId, companyId: ctx.companyId },
+    });
+  }
+
+  private async deleteCorrectionRunCascade(
+    runId: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    await this.voidPayslipsForRun(runId, ctx);
+    await this.prisma.payrollSalaryPeriod.deleteMany({
+      where: { entry: { runId } },
+    });
+    await this.prisma.payrollEntryAudit.deleteMany({
+      where: { payrollEntry: { runId }, companyId: ctx.companyId },
+    });
+    await this.prisma.payrollEntry.deleteMany({
+      where: { runId, companyId: ctx.companyId },
+    });
+    await this.prisma.payrollRun.delete({ where: { id: runId } });
+  }
+
   private generateRunNumber(month: number, year: number): string {
     const m = String(month).padStart(2, '0');
     return `PR-${year}-${m}`;
   }
 
-  private toNumber(value: Decimal | number | null | undefined): number {
-    if (value == null) {
+  private toNumber(
+    value: Decimal | number | string | null | undefined,
+  ): number {
+    if (value == null || value === '') {
       return 0;
     }
     return Number(value);

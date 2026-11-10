@@ -5,7 +5,10 @@ export type PayrollRunStatus =
   | 'APPROVED'
   | 'GM_APPROVED'
   | 'PAID'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'SUPERSEDED';
+
+export type PayrollRunType = 'REGULAR' | 'CORRECTION';
 
 export type PayrollEntryFlag =
   | 'NONE'
@@ -27,6 +30,8 @@ export interface PayrollRunListItem {
   runNumber: string;
   month: number;
   year: number;
+  type?: PayrollRunType;
+  originalRunId?: string | null;
   status: PayrollRunStatus;
   totalEmployees: number;
   totalGross: MoneyField;
@@ -131,6 +136,9 @@ export interface PayrollEntryDetail {
   incomeTax: MoneyField;
   totalDeductions: MoneyField;
   netPay: MoneyField;
+  originalAmount?: MoneyField | null;
+  correctedAmount?: MoneyField | null;
+  deltaAmount?: MoneyField | null;
   bonusTopUp: MoneyField;
   bonusTopUpReason: string | null;
   netTopUp: MoneyField;
@@ -230,6 +238,16 @@ export interface PayrollRunDetail {
   runNumber: string;
   month: number;
   year: number;
+  type?: PayrollRunType;
+  originalRunId?: string | null;
+  originalRun?: {
+    id: string;
+    runNumber: string;
+    month: number;
+    year: number;
+    status: PayrollRunStatus;
+    type: PayrollRunType;
+  } | null;
   status: PayrollRunStatus;
   totalEmployees: number;
   totalGross: MoneyField;
@@ -253,6 +271,10 @@ export interface PayrollRunDetail {
   createdAt: string;
   updatedAt: string;
   entries: PayrollEntryDetail[];
+}
+
+export interface CreatePayrollCorrectionPayload {
+  note?: string;
 }
 
 export interface CreatePayrollRunPayload {

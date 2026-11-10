@@ -6605,8 +6605,17 @@ enum PayrollRunStatus {
   GM_APPROVED
   PAID
   CANCELLED
+  /// Prior correction run superseded by a newer correction (audit trail only).
+  SUPERSEDED
 
   @@map("payroll_run_status")
+}
+
+enum PayrollRunType {
+  REGULAR
+  CORRECTION
+
+  @@map("payroll_run_type")
 }
 
 enum PayrollEntryFlag{
@@ -6635,6 +6644,9 @@ model PayrollRun{
   runNumber               String                              @map("run_number")
   month                   Int
   year                    Int
+  type                    PayrollRunType                      @default(REGULAR)
+  /// Correction runs point at the locked REGULAR run they adjust.
+  originalRunId           String?                             @map("original_run_id")
   status                  PayrollRunStatus                    @default(DRAFT)
   totalEmployees          Int                                 @default(0) @map("total_employees")
   totalGross              Decimal                             @default(0) @map("total_gross") @db.Decimal(14, 2)
@@ -6664,7 +6676,7 @@ model PayrollRun{
   updatedBy               String                              @map("updated_by")
   deletedAt               DateTime?                           @map("deleted_at")
   deletedBy               String?                             @map("deleted_by")
- 
+
 
   company                 Company                             @relation(fields: [companyId], references: [id])
   creator                 User                                @relation("PayrollRunCreator", fields: [createdBy], references: [id])
@@ -6673,12 +6685,16 @@ model PayrollRun{
   approver                User?                               @relation("PayrollRunApprover", fields: [approvedBy], references: [id])
   gmApprover              User?                               @relation("PayrollRunGMApprover", fields: [gmApprovedBy], references: [id])
   payer                   User?                               @relation("PayrollRunPayer", fields: [paidBy], references: [id])
+  originalRun             PayrollRun?                         @relation("PayrollCorrections", fields: [originalRunId], references: [id])
+  corrections             PayrollRun[]                        @relation("PayrollCorrections")
   entries                 PayrollEntry[]
   payslips                PayrollPayslip[]
 
 
-  @@unique([companyId, month, year], map: "uq_payroll_run_company_month_year")
+  /// One active REGULAR run per company/month (enforced in SQL partial unique index).
+  @@index([companyId, month, year], map: "idx_payroll_run_company_month_year")
   @@index([companyId], map: "idx_payroll_run_company")
+  @@index([originalRunId], map: "idx_payroll_run_original")
   @@map("payroll_run")
 }
 
@@ -6741,6 +6757,13 @@ model PayrollEntry {
 
   // Net Pay
   netPay                   Decimal             @default(0) @map("net_pay") @db.Decimal(14, 2)
+
+  /// Correction-run only: net pay from the original locked run (0 if employee was absent then).
+  originalAmount           Decimal?            @map("original_amount") @db.Decimal(14, 2)
+  /// Correction-run only: recalculated net pay (same as netPay for correction entries).
+  correctedAmount          Decimal?            @map("corrected_amount") @db.Decimal(14, 2)
+  /// Correction-run only: correctedAmount - originalAmount (positive = owed, negative = recover).
+  deltaAmount              Decimal?            @map("delta_amount") @db.Decimal(14, 2)
 
   // Final settlement (leaver final month, only when enabled in policy for that month)
   unusedLeavePayout        Decimal             @default(0) @map("unused_leave_payout") @db.Decimal(14, 2)

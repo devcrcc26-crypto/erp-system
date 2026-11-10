@@ -32,6 +32,16 @@ export class CreatePayrollRunDto {
   notes?: string;
 }
 
+export class CreatePayrollCorrectionDto {
+  @ApiPropertyOptional({
+    description: 'Optional reason for the correction (stored on the correction run notes)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+}
+
 export class AddPayrollFreelancersDto {
   @ApiProperty({ type: [String], description: 'Freelancer user ids to add to this run' })
   @IsArray()

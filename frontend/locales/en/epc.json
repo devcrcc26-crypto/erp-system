@@ -5836,7 +5836,8 @@
         "APPROVED": "HR Approved",
         "GM_APPROVED": "GM Approved",
         "PAID": "Paid",
-        "CANCELLED": "Cancelled"
+        "CANCELLED": "Cancelled",
+        "SUPERSEDED": "Superseded"
       },
       "employmentReview": {
         "title": "{{count}} employee(s) need an employment review before you continue",
@@ -5881,7 +5882,22 @@
         "emptyTitle": "No payroll runs yet",
         "emptyDescription": "Create a run for a month to generate entries from contracts, attendance, and overtime.",
         "emptyFilteredTitle": "No runs match your filters",
-        "emptyFilteredDescription": "Try clearing search or status filters."
+        "emptyFilteredDescription": "Try clearing search or status filters.",
+        "badgeCorrection": "Correction",
+        "badgeVoided": "Voided"
+      },
+      "correction": {
+        "bannerTitle": "Correction run for {{period}}",
+        "bannerBody": "Only employees with a changed amount are shown.",
+        "viewOriginal": "View original run {{runNumber}}",
+        "createHint": "This will re-run payroll for {{period}} using current data and calculate the difference. A correction payslip will be generated for affected employees.",
+        "rerunWarning": "A correction run already exists for this month. Running again will supersede it. The previous correction payslips will be voided.",
+        "reasonLabel": "Reason for correction",
+        "reasonPlaceholder": "Optional — why this correction is needed",
+        "unlockHint": "Unlocking this run will void all generated payslips for this month and set the run back to Draft. Are you sure?",
+        "originalAmount": "Original",
+        "correctedAmount": "Corrected",
+        "deltaAmount": "Delta"
       },
       "create": {
         "title": "New payroll run",
@@ -5949,7 +5965,14 @@
         "approveSuccess": "Run approved by HR.",
         "gmApproveSuccess": "Run approved by GM.",
         "markPaidSuccess": "Run marked as paid.",
-        "cancelSuccess": "Run cancelled."
+        "cancelSuccess": "Run cancelled.",
+        "createCorrection": "Create Correction",
+        "rerunCorrection": "Re-run Correction",
+        "runCorrection": "Run Correction",
+        "correctionSuccess": "Correction run created.",
+        "unlockRun": "Unlock Run",
+        "unlockConfirm": "Unlock",
+        "unlockSuccess": "Payroll run unlocked."
       },
       "companySettings": {
         "title": "Payroll company settings",

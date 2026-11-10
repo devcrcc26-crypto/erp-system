@@ -41,6 +41,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
@@ -51,6 +52,7 @@ import {
   useCanCreatePayroll,
   useCanEditPayroll,
   useCanExportPayroll,
+  useIsHrManager,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -63,6 +65,7 @@ import {
   previewPayrollBankLetter,
 } from '@/lib/api/payroll';
 import type {
+  MoneyField,
   PayrollEntryDetail,
   PayrollEntryFlag,
   PayrollRunStatus,
@@ -73,15 +76,18 @@ import {
   useRemovePayrollFreelancerEntry,
   useApprovePayrollRun,
   useCancelPayrollRun,
+  useCreatePayrollCorrection,
   useGeneratePayslips,
   useGmApprovePayrollRun,
   usePayrollEmploymentReview,
   useMarkPayrollRunPaid,
   useMarkPayrollRunReviewed,
   usePayrollRun,
+  usePayrollRuns,
   useRecalculatePayrollRun,
   useReleasePayslips,
   useSubmitPayrollRun,
+  useUnlockPayrollRun,
   useUpdatePayrollEntry,
 } from '@/lib/query/payroll';
 import { useFullUsersDirectory } from '@/lib/query/users';
@@ -299,6 +305,7 @@ export default function PayrollRunDetailPageContent({
   runId: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
   const messageApi = useAppMessage();
   const canAccess = useCanAccessPayroll();
   const canCreate = useCanCreatePayroll();
@@ -306,8 +313,11 @@ export default function PayrollRunDetailPageContent({
   const canApprove = useCanApprovePayroll();
   const canExport = useCanExportPayroll();
   const isSysAdmin = useIsSystemAdmin();
+  const isHrManager = useIsHrManager();
+  const canManageCorrections = isSysAdmin || isHrManager;
 
   const detailQuery = usePayrollRun(runId, canAccess);
+  const runsQuery = usePayrollRuns(canAccess && canManageCorrections);
   const usersQuery = useFullUsersDirectory({ enabled: canAccess });
   const screens = Grid.useBreakpoint();
   const isPhone = screens.md === false;
@@ -318,6 +328,8 @@ export default function PayrollRunDetailPageContent({
   const gmApproveMutation = useGmApprovePayrollRun(runId);
   const markPaidMutation = useMarkPayrollRunPaid(runId);
   const cancelMutation = useCancelPayrollRun(runId);
+  const createCorrectionMutation = useCreatePayrollCorrection(runId);
+  const unlockMutation = useUnlockPayrollRun(runId);
   const updateEntryMutation = useUpdatePayrollEntry(runId);
   const generatePayslipsMutation = useGeneratePayslips(runId);
   const releasePayslipsMutation = useReleasePayslips(runId);
@@ -332,6 +344,9 @@ export default function PayrollRunDetailPageContent({
   );
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
+  const [correctionNote, setCorrectionNote] = useState('');
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [submitAcknowledge, setSubmitAcknowledge] = useState(false);
   // Submit / HR approve / GM approve need an explicit review of employment-flagged entries.
   const reviewStep =
@@ -738,13 +753,35 @@ export default function PayrollRunDetailPageContent({
   }
 
   const showPayslipColumn =
-    canCreate && (run?.status === 'GM_APPROVED' || run?.status === 'PAID');
+    canCreate &&
+    (run?.status === 'GM_APPROVED' || run?.status === 'PAID');
   const canChangeRun =
-    canCreate && Boolean(run) && run?.status !== 'PAID' && run?.status !== 'CANCELLED';
+    canCreate &&
+    Boolean(run) &&
+    run?.status !== 'PAID' &&
+    run?.status !== 'CANCELLED' &&
+    run?.status !== 'SUPERSEDED';
   const runInApproval =
     run?.status === 'SUBMITTED' || run?.status === 'APPROVED' || run?.status === 'GM_APPROVED';
   const canOverrideDays = canEdit && (run?.status === 'DRAFT' || run?.status === 'REVIEWED');
   const overriddenEntryCount = run?.entries.filter((e) => e.hasOverride).length ?? 0;
+  const isCorrectionRun = run?.type === 'CORRECTION';
+  const isLockedRegular =
+    run?.type !== 'CORRECTION' &&
+    (run?.status === 'GM_APPROVED' || run?.status === 'PAID');
+  const existingCorrection = useMemo(() => {
+    if (!run || !runsQuery.data) {
+      return null;
+    }
+    return (
+      runsQuery.data.find(
+        (item) =>
+          item.type === 'CORRECTION' &&
+          item.originalRunId === run.id &&
+          item.status !== 'CANCELLED',
+      ) ?? null
+    );
+  }, [run, runsQuery.data]);
 
   async function addSelectedFreelancers(): Promise<void> {
     try {
@@ -1088,6 +1125,37 @@ export default function PayrollRunDetailPageContent({
             className: 'erp-payroll-col-net',
             render: (v) => <MoneyCell value={v} strong />,
           },
+          ...(isCorrectionRun
+            ? [
+                {
+                  title: t('hr.payroll.correction.originalAmount'),
+                  dataIndex: 'originalAmount' as const,
+                  align: 'right' as const,
+                  width: 112,
+                  render: (v: MoneyField | null | undefined) => (
+                    <MoneyCell value={v ?? 0} />
+                  ),
+                },
+                {
+                  title: t('hr.payroll.correction.correctedAmount'),
+                  dataIndex: 'correctedAmount' as const,
+                  align: 'right' as const,
+                  width: 112,
+                  render: (v: MoneyField | null | undefined) => (
+                    <MoneyCell value={v ?? 0} />
+                  ),
+                },
+                {
+                  title: t('hr.payroll.correction.deltaAmount'),
+                  dataIndex: 'deltaAmount' as const,
+                  align: 'right' as const,
+                  width: 112,
+                  render: (v: MoneyField | null | undefined) => (
+                    <MoneyCell value={v ?? 0} strong />
+                  ),
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -1131,7 +1199,16 @@ export default function PayrollRunDetailPageContent({
           ]
         : []),
     ],
-    [t, showPayslipColumn, openingPayslipId, contractLinesById, canEdit, canOverrideDays, runId],
+    [
+      t,
+      showPayslipColumn,
+      openingPayslipId,
+      contractLinesById,
+      canEdit,
+      canOverrideDays,
+      runId,
+      isCorrectionRun,
+    ],
   );
 
   function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
@@ -1651,8 +1728,37 @@ export default function PayrollRunDetailPageContent({
     if (status === 'APPROVED' && (canApprove || isSysAdmin)) {
       add('gm', t('hr.payroll.actions.gmApprove'), 'gmApprove', 'primary');
     }
-    if (status === 'GM_APPROVED' && canCreate) {
+    if (status === 'GM_APPROVED' && canCreate && !isCorrectionRun) {
       add('paid', t('hr.payroll.actions.markPaid'), 'markPaid', 'primary');
+    }
+    if (status === 'SUPERSEDED') {
+      return null;
+    }
+    if (isLockedRegular && canManageCorrections) {
+      buttons.push(
+        <Button
+          key="unlock"
+          onClick={() => setUnlockModalOpen(true)}
+          loading={unlockMutation.isPending}
+        >
+          {t('hr.payroll.actions.unlockRun')}
+        </Button>,
+      );
+      buttons.push(
+        <Button
+          key="correction"
+          type="primary"
+          onClick={() => {
+            setCorrectionNote('');
+            setCorrectionModalOpen(true);
+          }}
+          loading={createCorrectionMutation.isPending}
+        >
+          {existingCorrection
+            ? t('hr.payroll.actions.rerunCorrection')
+            : t('hr.payroll.actions.createCorrection')}
+        </Button>,
+      );
     }
 
     if (buttons.length === 0) {
@@ -1821,6 +1927,84 @@ export default function PayrollRunDetailPageContent({
             label: `${formatUserName(u)}${u.employeeId ? ` · ${u.employeeId}` : ''}`,
           }))}
         />
+      </Modal>
+
+      <Modal
+        title={
+          existingCorrection
+            ? t('hr.payroll.actions.rerunCorrection')
+            : t('hr.payroll.actions.createCorrection')
+        }
+        open={correctionModalOpen}
+        onCancel={() => setCorrectionModalOpen(false)}
+        okText={t('hr.payroll.actions.runCorrection')}
+        confirmLoading={createCorrectionMutation.isPending}
+        onOk={() => {
+          void (async () => {
+            try {
+              const created = await createCorrectionMutation.mutateAsync({
+                note: correctionNote.trim() || undefined,
+              });
+              messageApi.success(t('hr.payroll.actions.correctionSuccess'));
+              setCorrectionModalOpen(false);
+              router.push(`/hr/payroll/${created.id}`);
+            } catch (error) {
+              notifyApiError(
+                error,
+                t('hr.payroll.actions.createCorrection'),
+                messageApi,
+                t,
+              );
+            }
+          })();
+        }}
+        destroyOnHidden
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">
+          {existingCorrection
+            ? t('hr.payroll.correction.rerunWarning')
+            : t('hr.payroll.correction.createHint', {
+                period: run
+                  ? formatPayrollPeriod(run.month, run.year)
+                  : '',
+              })}
+        </p>
+        <Form layout="vertical">
+          <Form.Item label={t('hr.payroll.correction.reasonLabel')}>
+            <Input.TextArea
+              rows={3}
+              value={correctionNote}
+              onChange={(event) => setCorrectionNote(event.target.value)}
+              placeholder={t('hr.payroll.correction.reasonPlaceholder')}
+              maxLength={2000}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={t('hr.payroll.actions.unlockRun')}
+        open={unlockModalOpen}
+        onCancel={() => setUnlockModalOpen(false)}
+        okText={t('hr.payroll.actions.unlockConfirm')}
+        okButtonProps={{ danger: true }}
+        confirmLoading={unlockMutation.isPending}
+        onOk={() => {
+          void (async () => {
+            try {
+              await unlockMutation.mutateAsync();
+              messageApi.success(t('hr.payroll.actions.unlockSuccess'));
+              setUnlockModalOpen(false);
+            } catch (error) {
+              notifyApiError(error, t('hr.payroll.actions.unlockRun'), messageApi, t);
+            }
+          })();
+        }}
+        destroyOnHidden
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">{t('hr.payroll.correction.unlockHint')}</p>
       </Modal>
 
       <ConfirmDialog
@@ -2095,13 +2279,33 @@ export default function PayrollRunDetailPageContent({
             </Link>
             <div className="erp-payroll-hero-title-row">
               <h2 className="erp-payroll-hero-title">{run.runNumber}</h2>
-              <Tag
-                variant="filled"
-                className="erp-payroll-status"
-                style={payrollStatusTagStyle(run.status)}
-              >
-                {t(payrollStatusLabelKey(run.status))}
-              </Tag>
+              {isCorrectionRun && run.status === 'SUPERSEDED' ? (
+                <Tag
+                  variant="filled"
+                  className="erp-payroll-status"
+                  style={payrollStatusTagStyle('SUPERSEDED')}
+                >
+                  {t('hr.payroll.list.badgeVoided')}
+                </Tag>
+              ) : null}
+              {isCorrectionRun && run.status !== 'SUPERSEDED' ? (
+                <Tag
+                  variant="filled"
+                  className="erp-payroll-status"
+                  style={{ color: '#9A3412', background: '#FFF7ED' }}
+                >
+                  {t('hr.payroll.list.badgeCorrection')}
+                </Tag>
+              ) : null}
+              {!(isCorrectionRun && run.status === 'SUPERSEDED') ? (
+                <Tag
+                  variant="filled"
+                  className="erp-payroll-status"
+                  style={payrollStatusTagStyle(run.status)}
+                >
+                  {t(payrollStatusLabelKey(run.status))}
+                </Tag>
+              ) : null}
             </div>
             <p className="erp-payroll-hero-meta">
               <span>
@@ -2121,6 +2325,32 @@ export default function PayrollRunDetailPageContent({
           </div>
           {renderActionButtons(run.status)}
         </div>
+
+        {isCorrectionRun ? (
+          <Alert
+            className="mt-3"
+            type="info"
+            showIcon
+            title={t('hr.payroll.correction.bannerTitle', {
+              period: formatPayrollPeriod(
+                run.originalRun?.month ?? run.month,
+                run.originalRun?.year ?? run.year,
+              ),
+            })}
+            description={
+              <div className="flex flex-col gap-1">
+                <span>{t('hr.payroll.correction.bannerBody')}</span>
+                {run.originalRunId ? (
+                  <Link href={`/hr/payroll/${run.originalRunId}`}>
+                    {t('hr.payroll.correction.viewOriginal', {
+                      runNumber: run.originalRun?.runNumber ?? run.originalRunId,
+                    })}
+                  </Link>
+                ) : null}
+              </div>
+            }
+          />
+        ) : null}
 
         {run.attendanceSnapshotStale ? (
           <Alert

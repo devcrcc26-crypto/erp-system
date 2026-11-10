@@ -56,6 +56,8 @@ export function payrollStatusVariant(status: PayrollRunStatus): StatusBadgeVaria
       return 'success';
     case 'CANCELLED':
       return 'error';
+    case 'SUPERSEDED':
+      return 'default';
     default:
       return 'default';
   }
@@ -78,6 +80,8 @@ export function payrollStatusTagStyle(status: PayrollRunStatus): CSSProperties {
       return { color: '#14532D', background: '#DCFCE7' };
     case 'CANCELLED':
       return { color: '#DC2626', background: '#FEE2E2' };
+    case 'SUPERSEDED':
+      return { color: '#6B7280', background: '#F3F4F6' };
     default:
       return { color: '#6B7280', background: '#F3F4F6' };
   }

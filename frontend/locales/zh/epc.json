@@ -5835,7 +5835,8 @@
         "APPROVED": "人力已批",
         "GM_APPROVED": "总经理已批",
         "PAID": "已发放",
-        "CANCELLED": "已取消"
+        "CANCELLED": "已取消",
+        "SUPERSEDED": "已替代"
       },
       "employmentReview": {
         "title": "有 {{count}} 名员工需要先核对雇佣状态才能继续",
@@ -5880,7 +5881,22 @@
         "emptyTitle": "暂无薪资运行",
         "emptyDescription": "选择月份创建运行，系统将根据合同、考勤和加班生成明细。",
         "emptyFilteredTitle": "没有符合筛选条件的运行",
-        "emptyFilteredDescription": "请尝试清除搜索或状态筛选。"
+        "emptyFilteredDescription": "请尝试清除搜索或状态筛选。",
+        "badgeCorrection": "更正",
+        "badgeVoided": "已作废"
+      },
+      "correction": {
+        "bannerTitle": "更正运行 — {{period}}",
+        "bannerBody": "仅显示金额有变化的员工。",
+        "viewOriginal": "查看原运行 {{runNumber}}",
+        "createHint": "将使用当前数据重新计算 {{period}} 的工资并得出差额。受影响员工会生成单独的更正工资单。",
+        "rerunWarning": "本月已有更正运行。再次运行将替代它，之前的更正工资单将作废。",
+        "reasonLabel": "更正原因",
+        "reasonPlaceholder": "可选 — 说明为何需要更正",
+        "unlockHint": "解锁此运行将作废本月已生成的全部工资单，并将状态改回草稿。确定继续？",
+        "originalAmount": "原金额",
+        "correctedAmount": "更正后",
+        "deltaAmount": "差额"
       },
       "create": {
         "title": "新建薪资运行",
@@ -5948,7 +5964,14 @@
         "approveSuccess": "人力已批准。",
         "gmApproveSuccess": "总经理已批准。",
         "markPaidSuccess": "已标记为已发放。",
-        "cancelSuccess": "运行已取消。"
+        "cancelSuccess": "运行已取消。",
+        "createCorrection": "创建更正",
+        "rerunCorrection": "重新更正",
+        "runCorrection": "运行更正",
+        "correctionSuccess": "更正运行已创建。",
+        "unlockRun": "解锁运行",
+        "unlockConfirm": "解锁",
+        "unlockSuccess": "薪资运行已解锁。"
       },
       "companySettings": {
         "title": "工资公司设置",

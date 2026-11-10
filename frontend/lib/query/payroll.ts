@@ -7,6 +7,7 @@ import {
   removePayrollFreelancerEntry,
   approvePayrollRun,
   cancelPayrollRun,
+  createPayrollCorrection,
   createPayrollRun,
   generatePayrollEntries,
   generatePayslips,
@@ -23,12 +24,14 @@ import {
   recalculatePayrollRun,
   releasePayslips,
   submitPayrollRun,
+  unlockPayrollRun,
   updatePayrollCompanySettings,
   updatePayrollEntry,
   updatePayrollEntryDays,
 } from '@/lib/api/payroll';
 import type {
   ApprovePayrollRunPayload,
+  CreatePayrollCorrectionPayload,
   CreatePayrollRunPayload,
   SubmitPayrollRunPayload,
   UpdatePayrollCompanySettingsPayload,
@@ -176,6 +179,29 @@ export function useCancelPayrollRun(runId: string) {
   return useMutation({
     mutationFn: () => cancelPayrollRun(runId),
     onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useCreatePayrollCorrection(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreatePayrollCorrectionPayload = {}) =>
+      createPayrollCorrection(runId, payload),
+    onSuccess: (run) => {
+      invalidateRun(queryClient, runId);
+      invalidateRun(queryClient, run.id);
+    },
+  });
+}
+
+export function useUnlockPayrollRun(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unlockPayrollRun(runId),
+    onSuccess: () => {
+      invalidateRun(queryClient, runId);
+      invalidatePayslips(queryClient);
+    },
   });
 }
 
