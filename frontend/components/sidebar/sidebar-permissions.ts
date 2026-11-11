@@ -53,7 +53,13 @@ export function resolveSidebarPermissions(
   // Cross-cutting
   grant('approvals.view', global('/approvals', true));
   grant('audit.view', caps.canViewAuditLogs);
-  grant('settings.manage', caps.canManageRoles || caps.canEditRoles);
+  // Settings (roles & permissions) is hidden from HR; System Administrators keep it.
+  // Keep in step with app/(dashboard)/settings/layout.tsx.
+  grant(
+    'settings.manage',
+    (caps.canManageRoles || caps.canEditRoles) &&
+      (!caps.canViewHr || caps.isSystemAdministrator),
+  );
   grant('users.manage', caps.canManageUsers);
 
   // Evaluation inbox for non-HR leads (HR users get it under Performance).

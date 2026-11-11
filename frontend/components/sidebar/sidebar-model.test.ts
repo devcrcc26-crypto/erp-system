@@ -103,11 +103,8 @@ describe('sidebar permissions and filtering', () => {
       'operations',
       'user-guide',
     ]);
-    expect(ids(model.utility)).toEqual([
-      'my-profile',
-      'audit-logs',
-      'settings',
-    ]);
+    // Settings is hidden from HR even with role permissions.
+    expect(ids(model.utility)).toEqual(['my-profile', 'audit-logs']);
     expect(folder(model, 'people')?.groups.map((group) => group.id)).toEqual(
       expect.arrayContaining(['people-employees', 'people-performance', 'people-reports']),
     );
@@ -121,6 +118,16 @@ describe('sidebar permissions and filtering', () => {
       'ops-fleet-assets',
       'ops-administration',
     ]);
+  });
+
+  it('shows Settings to System Administrators, not to HR', () => {
+    const utility = (overrides: Partial<Capabilities>): string[] =>
+      ids(modelFor(overrides).utility);
+    expect(utility({ canViewHr: true, canEditRoles: true })).not.toContain('settings');
+    expect(
+      utility({ canViewHr: true, canManageRoles: true, isSystemAdministrator: true }),
+    ).toContain('settings');
+    expect(utility({})).not.toContain('settings');
   });
 
   it('keeps every rail panel short', () => {
