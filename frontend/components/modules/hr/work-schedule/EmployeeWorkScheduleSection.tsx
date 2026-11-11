@@ -114,7 +114,8 @@ export default function EmployeeWorkScheduleSection({
             {t('hr.workSchedule.history')}
           </h3>
         </div>
-        <div className="erp-employee-section-body">
+        {/* Flush: the table reaches the card edges (like Leave history). */}
+        <div className="erp-employee-section-body erp-employee-section-body--flush">
           <Table<ScheduleAssignmentHistoryItem>
             rowKey="id"
             size="small"

@@ -85,9 +85,12 @@ import {
   userStatusLabel,
   userStatusVariant,
 } from '@/lib/utils/user-status';
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 
-const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-hr-travel-v2 ${DETAIL_PAGE_V2}`;
+// No DETAIL_PAGE_V2: profile-v2.css + employee-detail-v2.css carry the look
+// (brand banner, tab card, sections) and DETAIL_PAGE_V2's !important
+// utilities would override it. Same base as My Profile, which never used it.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-hr-travel-v2';
 
 const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
   success: '#16a34a',
@@ -518,7 +521,7 @@ export default function EmployeeDetailPageContent({
 
   return (
     <div className={DETAIL_ROOT}>
-      <div className="erp-pro-card erp-profile-identity">
+      <div className="erp-pro-card erp-profile-identity erp-employee-detail-hero">
         <div className="erp-employee-toolbar">
           <Button
             type="text"
@@ -1018,7 +1021,10 @@ export default function EmployeeDetailPageContent({
               </div>
 
               {employment && !user.excludedFromHrProcesses ? (
-                <DetailSection title={t('users.employment.historyTitle')}>
+                <DetailSection
+                  title={t('users.employment.historyTitle')}
+                  bodyClassName="erp-employee-section-body--flush"
+                >
                   <EmploymentHistorySection userId={user.id} employment={employment} />
                 </DetailSection>
               ) : null}

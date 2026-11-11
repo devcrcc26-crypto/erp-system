@@ -336,3 +336,50 @@
     padding: 12px 14px 14px;
   }
 }
+
+/* ── Tables inside tabs: always span their card ──────────────────────────
+ * Several tab tables use antd <Table> directly with scroll.x set to a number
+ * (560 / 900) or 'max-content'. antd then sizes the <table> to that width, so
+ * on a wide card it stops short of the right edge. min-width: 100% keeps it at
+ * least as wide as its card; wider tables still scroll sideways.
+ * Applies to Employee detail and My Profile (they share these tabs).
+ */
+.erp-profile-page .erp-employee-tab-panel .ant-table-wrapper,
+.erp-profile-page .erp-employee-tab-panel .ant-table-wrapper .ant-table,
+.erp-profile-page .erp-employee-tab-panel .ant-table-wrapper .ant-table-container {
+  width: 100%;
+}
+
+.erp-profile-page .erp-employee-tab-panel .ant-table-content > table,
+.erp-profile-page .erp-employee-tab-panel .ant-table-header > table,
+.erp-profile-page .erp-employee-tab-panel .ant-table-body > table {
+  min-width: 100% !important;
+}
+
+/* Payslips sit straight in the tab: frame them like the other tab cards. */
+.erp-profile-page .erp-employee-tab-panel > .erp-payslips-v2 > .ant-table-wrapper {
+  overflow: hidden;
+  border: 1px solid var(--color-card-border, var(--pv2-divider));
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+/* Employment history: two flush tables, the second under a sub-header strip. */
+.erp-profile-page .erp-employment-history {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-profile-page .erp-employment-history-block {
+  border-top: 1px solid var(--pv2-divider);
+}
+
+.erp-profile-page .erp-employment-history-subtitle {
+  margin: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--pv2-divider);
+  background: var(--erp-n-25);
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 650;
+}

@@ -5,7 +5,11 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { EmploymentState, InactivePeriod } from '@/lib/api/employment';
 import { useInactivePeriods } from '@/lib/query/employment';
 
-/** Employment periods (hire → leaving) and inactive periods, newest first. */
+/**
+ * Employment periods (hire → leaving) and inactive periods, newest first.
+ * Rendered in a flush section body: both tables run edge to edge, the
+ * inactive table under its own sub-header strip.
+ */
 export default function EmploymentHistorySection({
   userId,
   employment,
@@ -20,7 +24,7 @@ export default function EmploymentHistorySection({
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-employment-history">
       <Table
         size="small"
         rowKey="id"
@@ -59,8 +63,8 @@ export default function EmploymentHistorySection({
           },
         ]}
       />
-      <div>
-        <h4 className="m-0 mb-2 text-[13px] font-semibold text-slate-700">
+      <div className="erp-employment-history-block">
+        <h4 className="erp-employment-history-subtitle">
           {t('users.employment.inactiveHistory')}
         </h4>
         <Table<InactivePeriod>

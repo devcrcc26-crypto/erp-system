@@ -180,3 +180,268 @@
     padding: 8px 12px 8px 8px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Brand layer (Nov 2026) - same language as dashboard, Approvals, Request
+ * detail and the Employees list. HR employee detail only: My Profile shares
+ * profile-v2.css but not .erp-employee-detail-v2, so it is unchanged.
+ * - Identity card -> brand banner: glass toolbar, white Edit, photo ring,
+ *   white name, glass badges, glass fact tiles.
+ * - Tabs card: accent outline + login-card bar, pill tabs (selected = tint).
+ * - Sections: accent outline, tinted header, dark-green titles.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-employee-detail-v2 {
+  --edv2-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --edv2-panel-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+/* ── Banner ── */
+
+.erp-profile-page.erp-employee-detail-v2 > .erp-pro-card.erp-employee-detail-hero {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -6%;
+  z-index: -1;
+  width: 28rem;
+  height: 28rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-employee-toolbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+}
+
+/* Toolbar + photo buttons: glass. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  box-shadow: none;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-employee-toolbar-back.ant-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  backdrop-filter: none;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-employee-toolbar-back.ant-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Edit: solid white, accent text. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn-primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn-primary:not(:disabled):hover {
+  border-color: #ffffff !important;
+  background: var(--color-primary-soft, #e1f5ee) !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Photo: white ring + lift. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero .ant-avatar {
+  border: 3px solid #ffffff;
+  box-shadow: 0 10px 24px rgba(10, 36, 32, 0.28);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-employee-hero-name {
+  color: #ffffff;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-users-name-alt {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero .erp-users-email {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero .erp-users-cell-sub {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+/* Badges: glass ID chip + role; status / employment tags stay opaque pills. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero .erp-users-id-chip {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero .erp-users-role-tag {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-hero-badges .ant-tag,
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-users-status {
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.2);
+}
+
+/* Separation notice: light card floating on the banner. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .ant-alert {
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.2);
+}
+
+/* Fact tiles: glass. */
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-meta .erp-users-stat {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(8px);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-meta .erp-users-stat-label {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-meta .erp-employee-meta-value {
+  color: #ffffff;
+}
+
+.erp-employee-detail-v2 .erp-employee-detail-hero .erp-profile-meta-empty {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── Tabs card ── */
+
+.erp-profile-page.erp-employee-detail-v2 > .erp-pro-card.erp-profile-workspace {
+  position: relative;
+  border: 1px solid var(--edv2-border);
+  box-shadow: var(--edv2-panel-shadow);
+}
+
+.erp-employee-detail-v2 .erp-profile-workspace::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+/* Tab strip: tinted, pill tabs. */
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tabbar {
+  gap: 4px;
+  padding: 14px 16px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tabbar button {
+  border-radius: 999px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tabbar button:hover {
+  background: var(--erp-n-50);
+  color: var(--erp-n-900);
+}
+
+.erp-profile-page.erp-employee-detail-v2.erp-employee-detail-page .erp-employee-tabbar button[aria-selected='true'] {
+  background: rgba(var(--erp-accent-rgb), 0.12);
+  color: var(--erp-accent-hover);
+  font-weight: 650;
+}
+
+/* Pills replace the underline indicator. */
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tabbar button[aria-selected='true']::after {
+  display: none;
+}
+
+/* ── Sections inside tabs ── */
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-section {
+  border: 1px solid var(--edv2-border);
+  box-shadow: none;
+}
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-section-header {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.05) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-section-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-weight: 650;
+}
+
+/* Nested cards (leave, overtime, payslips …): same outline. */
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tab-panel .erp-pro-card {
+  border-color: var(--edv2-border);
+}
+
+.erp-profile-page.erp-employee-detail-v2 .erp-employee-tab-panel .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-profile-page.erp-employee-detail-v2 .erp-employee-tabbar button {
+    transition: none;
+  }
+}
