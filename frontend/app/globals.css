@@ -588,9 +588,13 @@ main::-webkit-scrollbar,
   min-width: 100%;
 }
 
-/* Ant Design measure row (scroll.x) - keep collapsed when thead padding overrides apply */
+/* Ant Design measure row (scroll.x) - keep collapsed when cell padding overrides apply.
+ * antd 6 renders it at the top of tbody: an un-collapsed row shows as a blank
+ * band between the header and the first row. */
 .erp-data-table .ant-table-thead > tr.ant-table-measure-row,
-.erp-pro-table .ant-table-thead > tr.ant-table-measure-row {
+.erp-pro-table .ant-table-thead > tr.ant-table-measure-row,
+.erp-data-table .ant-table-tbody > tr.ant-table-measure-row,
+.erp-pro-table .ant-table-tbody > tr.ant-table-measure-row {
   height: 0 !important;
   line-height: 0 !important;
 }
@@ -598,7 +602,9 @@ main::-webkit-scrollbar,
 .erp-data-table .ant-table-thead > tr.ant-table-measure-row > th,
 .erp-data-table .ant-table-thead > tr.ant-table-measure-row > td,
 .erp-pro-table .ant-table-thead > tr.ant-table-measure-row > th,
-.erp-pro-table .ant-table-thead > tr.ant-table-measure-row > td {
+.erp-pro-table .ant-table-thead > tr.ant-table-measure-row > td,
+.erp-data-table .ant-table-tbody > tr.ant-table-measure-row > td,
+.erp-pro-table .ant-table-tbody > tr.ant-table-measure-row > td {
   padding: 0 !important;
   height: 0 !important;
   min-height: 0 !important;
@@ -1522,8 +1528,8 @@ main::-webkit-scrollbar,
   display: none !important;
 }
 
-.erp-data-table .ant-table-tbody > tr > td,
-.erp-pro-table .ant-table-tbody > tr > td {
+.erp-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
+.erp-pro-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   padding: 12px 16px !important;
   height: auto;
   min-height: 52px;
@@ -1934,7 +1940,7 @@ main::-webkit-scrollbar,
   border-bottom: 1px solid var(--erp-n-200) !important;
 }
 
-.erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr > td {
+.erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   border-bottom: 1px solid var(--erp-n-100) !important;
   padding-top: 15px !important;
   padding-bottom: 15px !important;
@@ -3392,7 +3398,7 @@ main::-webkit-scrollbar,
   }
 
   .erp-users-page .erp-users-table .ant-table-thead > tr > th,
-  .erp-users-page .erp-users-table .ant-table-tbody > tr > td {
+  .erp-users-page .erp-users-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
@@ -3814,7 +3820,7 @@ main::-webkit-scrollbar,
   display: none !important;
 }
 
-.erp-data-table .ant-table-tbody > tr > td {
+.erp-data-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   padding: 0 16px !important;
   height: 40px;
   font-size: calc(13px * var(--erp-font-scale));
@@ -3841,7 +3847,7 @@ main::-webkit-scrollbar,
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
-.erp-data-table.erp-pro-table .ant-table-tbody > tr > td {
+.erp-data-table.erp-pro-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   padding: 14px 16px !important;
   height: auto;
   min-height: 48px;
@@ -4608,8 +4614,8 @@ main::-webkit-scrollbar,
     padding: 10px 12px !important;
   }
 
-  .erp-pro-table .ant-table-tbody > tr > td,
-  .erp-data-table.erp-pro-table .ant-table-tbody > tr > td {
+  .erp-pro-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
+  .erp-data-table.erp-pro-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
     padding: 10px 12px !important;
   }
 

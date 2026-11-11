@@ -4,33 +4,7 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Button, Input } from 'antd';
-import type { LucideIcon } from 'lucide-react';
-import {
-  BadgeCheck,
-  BriefcaseBusiness,
-  CalendarDays,
-  Car,
-  ChevronRight,
-  CircleDollarSign,
-  Clock3,
-  FileText,
-  Fuel,
-  History,
-  Home,
-  Laptop,
-  MapPin,
-  Package,
-  PackageMinus,
-  PackageOpen,
-  Plane,
-  Receipt,
-  Search,
-  ShoppingCart,
-  Stamp,
-  Timer,
-  Wallet,
-  Wrench,
-} from 'lucide-react';
+import { ChevronRight, History, Search } from 'lucide-react';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalCategorySummary } from '@/lib/api/approvals.types';
@@ -40,95 +14,13 @@ import {
   formatApprovalCategoryDescription,
   formatApprovalCategoryName,
 } from '@/lib/utils/approval-category-display';
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  LEAVE_REQUEST: CalendarDays,
-  SITE_ASSIGNMENT: MapPin,
-  WORK_FROM_HOME: Home,
-  OVERTIME_APPLICATION: Timer,
-  FIELD_MOVEMENT_LOG: Clock3,
-  FLIGHT_APPLICATION: Plane,
-  BUSINESS_TRIP: BriefcaseBusiness,
-  EXPENSE_CLAIM: Receipt,
-  PER_DIEM: Wallet,
-  PER_DIEM_SETTLEMENT: CircleDollarSign,
-  PURCHASE_REQUEST: ShoppingCart,
-  MATERIAL_REQUISITION: Package,
-  ASSET_REQUEST: Laptop,
-  CONSUMABLES_REQUISITION: PackageOpen,
-  EXIT_PERMIT: PackageMinus,
-  VEHICLE_APPLICATION: Car,
-  VEHICLE_REFUELING: Fuel,
-  INSPECTION_REPAIR: Wrench,
-  OFFICIAL_SEAL_USAGE: Stamp,
-  PROJECT_SEAL_USAGE: BadgeCheck,
-};
-
-interface RequestGroup {
-  key: string;
-  codes: string[];
-  accent: string;
-  tint: string;
-}
-
-/** Display order and colour of each card group. Unlisted codes fall into "other". */
-const REQUEST_GROUPS: RequestGroup[] = [
-  {
-    key: 'time',
-    codes: [
-      'LEAVE_REQUEST',
-      'SITE_ASSIGNMENT',
-      'WORK_FROM_HOME',
-      'OVERTIME_APPLICATION',
-      'FIELD_MOVEMENT_LOG',
-    ],
-    accent: tokens.colorBlue400,
-    tint: tokens.colorBlue50,
-  },
-  {
-    key: 'travel',
-    codes: ['FLIGHT_APPLICATION', 'BUSINESS_TRIP'],
-    accent: tokens.colorCyan400,
-    tint: tokens.colorCyan50,
-  },
-  {
-    key: 'expenses',
-    codes: ['EXPENSE_CLAIM', 'PER_DIEM', 'PER_DIEM_SETTLEMENT'],
-    accent: tokens.colorGreen600,
-    tint: tokens.colorGreen50,
-  },
-  {
-    key: 'materials',
-    codes: [
-      'PURCHASE_REQUEST',
-      'MATERIAL_REQUISITION',
-      'ASSET_REQUEST',
-      'CONSUMABLES_REQUISITION',
-      'EXIT_PERMIT',
-    ],
-    accent: tokens.colorAmber400,
-    tint: tokens.colorAmber50,
-  },
-  {
-    key: 'vehicles',
-    codes: ['VEHICLE_APPLICATION', 'VEHICLE_REFUELING', 'INSPECTION_REPAIR'],
-    accent: tokens.colorCoral400,
-    tint: tokens.colorCoral50,
-  },
-  {
-    key: 'seals',
-    codes: ['OFFICIAL_SEAL_USAGE', 'PROJECT_SEAL_USAGE'],
-    accent: tokens.colorTeal600,
-    tint: tokens.colorTeal50,
-  },
-];
-
-const OTHER_GROUP: RequestGroup = {
-  key: 'other',
-  codes: [],
-  accent: tokens.colorGray600,
-  tint: tokens.colorGray50,
-};
+import {
+  OTHER_GROUP,
+  REQUEST_GROUPS,
+  CategoryIcon,
+  requestGroupFor,
+  type RequestGroup,
+} from './request-category-visuals';
 
 interface PickerCard {
   category: ApprovalCategorySummary;
@@ -140,10 +32,6 @@ const RECENT_LIMIT = 4;
 // Enough of my latest requests to usually find RECENT_LIMIT distinct types.
 const RECENT_LOOKBACK = 20;
 
-function groupFor(code: string): RequestGroup {
-  return REQUEST_GROUPS.find((g) => g.codes.includes(code)) ?? OTHER_GROUP;
-}
-
 function RequestCard({
   card,
   group,
@@ -153,7 +41,6 @@ function RequestCard({
   group: RequestGroup;
   onSelect: (category: ApprovalCategorySummary) => void;
 }): React.ReactNode {
-  const Icon = CATEGORY_ICONS[card.category.code] ?? FileText;
   return (
     <li>
       <button
@@ -168,7 +55,7 @@ function RequestCard({
         }
       >
         <span aria-hidden className="erp-request-card-icon">
-          <Icon size={20} strokeWidth={1.75} />
+          <CategoryIcon code={card.category.code} size={20} strokeWidth={1.75} />
         </span>
         <span className="erp-request-card-body">
           <span
@@ -258,7 +145,7 @@ export default function NewRequestCategoryPicker({
       if (needle && !haystack.includes(needle)) {
         continue;
       }
-      const group = groupFor(card.category.code);
+      const group = requestGroupFor(card.category.code);
       const cards = buckets.get(group) ?? [];
       cards.push(card);
       buckets.set(group, cards);
@@ -386,7 +273,7 @@ export default function NewRequestCategoryPicker({
               <RequestCard
                 key={card.category.id}
                 card={card}
-                group={groupFor(card.category.code)}
+                group={requestGroupFor(card.category.code)}
                 onSelect={onSelect}
               />
             ))}

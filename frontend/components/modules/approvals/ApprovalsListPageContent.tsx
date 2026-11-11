@@ -3,7 +3,7 @@ import { accent } from '@/lib/theme/accent';
 
 import './approvals-v2.css';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   Button,
   DatePicker,
@@ -73,12 +73,44 @@ import {
 import type { DraftModule } from '@/lib/api/drafts.types';
 import { useMyDrafts } from '@/lib/query/drafts';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+import { avatarTint, userInitials } from '@/lib/utils/avatar-tint';
 import { DraftsPanel } from './DraftsPanel';
+import { CategoryIcon, requestGroupFor } from './request-category-visuals';
 
 type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL' | 'MY_DRAFTS';
 
 type ApprovalInbox = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
+
+type ListTier = NonNullable<ApprovalRequestListItem['tiers']>[number];
+
+/** Tier decisions that count as a completed step. */
+const DONE_DECISIONS: ReadonlySet<ListTier['decision']> = new Set([
+  'APPROVED',
+  'CONDITIONALLY_APPROVED',
+  'SKIPPED',
+]);
+
+/** Progress-dot state for one approval step in the table. */
+function tierDotState(tier: ListTier, currentTier: number): string {
+  if (DONE_DECISIONS.has(tier.decision)) {
+    return 'done';
+  }
+  if (tier.decision === 'REJECTED') {
+    return 'rejected';
+  }
+  if (tier.decision === 'RETURNED') {
+    return 'returned';
+  }
+  return tier.tierOrder === currentTier ? 'current' : 'pending';
+}
+
+/** Banner title: the inbox tab currently shown. */
+const INBOX_TITLE_KEY: Record<InboxTab, string> = {
+  MY_REQUESTS: 'pages.approvals.tabs.myRequests',
+  PENDING_MY_ACTION: 'pages.approvals.tabs.pendingMyAction',
+  ALL: 'pages.approvals.tabs.allRequests',
+  MY_DRAFTS: 'pages.approvals.tabs.myDrafts',
+};
 
 function toApprovalInbox(tab: InboxTab): ApprovalInbox {
   if (tab === 'MY_DRAFTS') {
@@ -87,7 +119,11 @@ function toApprovalInbox(tab: InboxTab): ApprovalInbox {
   return tab;
 }
 
-const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2 ${LIST_PAGE_V2}`;
+// No LIST_PAGE_V2 here: approvals-v2.css carries the full list look (brand
+// banner, KPI tiles, table card) and LIST_PAGE_V2's !important utilities would
+// override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2';
 
 const NEW_PATH = '/approvals/new';
 const LIST_PATH = '/approvals';
@@ -323,38 +359,68 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         dataIndex: 'title',
         key: 'title',
         ellipsis: true,
-        render: (value: string, row: ApprovalRequestListItem) => (
-          <div className="min-w-0">
-            <p className="erp-users-cell-strong m-0 truncate">{value}</p>
-            {row.lateSubmission?.isLate ? (
-              <p className="erp-users-cell-sub m-0 mt-0.5 truncate text-[#BA7517]">
-                {t('pages.approvals.lateSubmissionBadge', {
-                  month: row.lateSubmission.monthLabel,
-                })}
-              </p>
-            ) : null}
-            {isNarrow ? (
-              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
-                {row.requestNumber}
-              </p>
-            ) : null}
-          </div>
-        ),
+        render: (value: string, row: ApprovalRequestListItem) => {
+          const code = row.category?.code ?? row.categoryCode ?? '';
+          const group = requestGroupFor(code);
+          return (
+            <div className="erp-ap-title-cell">
+              <span
+                aria-hidden
+                className="erp-ap-type-icon"
+                style={
+                  {
+                    '--req-accent': group.accent,
+                    '--req-tint': group.tint,
+                  } as CSSProperties
+                }
+              >
+                <CategoryIcon code={code} size={16} strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0">
+                <p className="erp-ap-title-text m-0 truncate">{value}</p>
+                {row.lateSubmission?.isLate ? (
+                  <p className="erp-ap-late m-0 mt-1">
+                    {t('pages.approvals.lateSubmissionBadge', {
+                      month: row.lateSubmission.monthLabel,
+                    })}
+                  </p>
+                ) : null}
+                {isNarrow ? (
+                  <p className="erp-users-cell-sub erp-ap-number-inline m-0 mt-0.5 truncate">
+                    {row.requestNumber}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          );
+        },
       },
       {
         title: t('pages.approvals.table.category'),
         key: 'category',
         width: 180,
         responsive: ['md'],
-        render: (_: unknown, row: ApprovalRequestListItem) => (
-          <span className="erp-users-cell-sub">
-            {formatApprovalCategoryName(
-              row.category?.code ?? row.categoryCode,
-              t,
-              row.category?.name,
-            ) || '-'}
-          </span>
-        ),
+        render: (_: unknown, row: ApprovalRequestListItem) => {
+          const code = row.category?.code ?? row.categoryCode ?? '';
+          const name = formatApprovalCategoryName(code, t, row.category?.name);
+          if (!name) {
+            return <span className="erp-users-cell-sub">-</span>;
+          }
+          return (
+            <span
+              className="erp-ap-category-pill"
+              style={
+                {
+                  '--req-accent': requestGroupFor(code).accent,
+                } as CSSProperties
+              }
+              title={name}
+            >
+              <span aria-hidden className="erp-ap-category-dot" />
+              <span className="truncate">{name}</span>
+            </span>
+          );
+        },
       },
       {
         title: t('pages.approvals.table.submittedBy'),
@@ -363,14 +429,28 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_: unknown, row: ApprovalRequestListItem) => {
           const submittedFor = formatSubmittedFor(row, t);
+          const tint = avatarTint(row.requester?.id ?? row.requestedBy ?? '');
+          const initials = userInitials(
+            row.requester?.firstName,
+            row.requester?.lastName,
+          );
           return (
-            <div className="min-w-0">
-              <span className="erp-users-cell-strong">
-                {formatApprovalUserName(row.requester)}
+            <div className="erp-ap-person">
+              <span
+                aria-hidden
+                className="erp-ap-avatar"
+                style={{ background: tint.bg, color: tint.fg }}
+              >
+                {initials || '?'}
               </span>
-              {submittedFor ? (
-                <p className="erp-users-cell-sub m-0">{submittedFor}</p>
-              ) : null}
+              <div className="min-w-0">
+                <p className="erp-ap-person-name m-0 truncate">
+                  {formatApprovalUserName(row.requester)}
+                </p>
+                {submittedFor ? (
+                  <p className="erp-users-cell-sub m-0 truncate">{submittedFor}</p>
+                ) : null}
+              </div>
             </div>
           );
         },
@@ -381,7 +461,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         width: 120,
         responsive: ['lg'],
         render: (_: unknown, row: ApprovalRequestListItem) => (
-          <span className="erp-users-cell-sub">
+          <span className="erp-ap-date">
             {formatProjectDate(row.submittedAt ?? row.createdAt ?? null)}
           </span>
         ),
@@ -431,13 +511,40 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             .reverse()
             .map((tier) => formatApprovedOnBehalf(tier, t))
             .find(Boolean);
+          const steps = [...(row.tiers ?? [])].sort(
+            (a, b) => a.tierOrder - b.tierOrder,
+          );
+          const doneCount = steps.filter((tier) =>
+            DONE_DECISIONS.has(tier.decision),
+          ).length;
           return (
-            <div className="min-w-0">
+            <div className="erp-ap-step min-w-0">
               {current?.label ? (
-                <span className="erp-users-role-tag">{current.label}</span>
+                <span className="erp-users-role-tag erp-ap-step-label">
+                  {current.label}
+                </span>
               ) : (
                 <span className="erp-users-cell-sub">-</span>
               )}
+              {steps.length > 1 ? (
+                <span
+                  className="erp-ap-step-progress"
+                  title={`${doneCount}/${steps.length}`}
+                >
+                  <span aria-hidden className="erp-ap-step-dots">
+                    {steps.map((tier) => (
+                      <span
+                        key={tier.id}
+                        className="erp-ap-step-dot"
+                        data-state={tierDotState(tier, row.currentTier)}
+                      />
+                    ))}
+                  </span>
+                  <span className="erp-ap-step-count">
+                    {doneCount}/{steps.length}
+                  </span>
+                </span>
+              ) : null}
               {onBehalf ? (
                 <p className="erp-users-cell-sub m-0">{onBehalf}</p>
               ) : null}
@@ -463,6 +570,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           return (
             <Button
               size="small"
+              className="erp-ap-edit-btn"
               icon={<EditOutlined />}
               aria-label={t('pages.approvals.edit.buttonAria', {
                 number: row.requestNumber,
@@ -506,7 +614,26 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-pro-card">
+      <section
+        className="erp-approvals-hero"
+        aria-labelledby="erp-approvals-hero-title"
+      >
+        <div className="erp-approvals-hero-top">
+          <div className="erp-approvals-hero-heading min-w-0">
+            <h2 id="erp-approvals-hero-title" className="erp-approvals-hero-title">
+              {t(INBOX_TITLE_KEY[inbox])}
+            </h2>
+            <p className="erp-approvals-hero-subtitle">{pageDescription}</p>
+          </div>
+          <Button
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => router.push(NEW_PATH)}
+            className="erp-approvals-hero-cta"
+          >
+            {t('pages.approvals.newRequest')}
+          </Button>
+        </div>
         <div className="erp-approvals-tabbar" role="tablist">
           <button
             type="button"
@@ -564,7 +691,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             <span>{t('pages.approvals.tabs.myDrafts')}</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {isDraftsInbox ? (
         <>
@@ -627,15 +754,21 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-approvals-table-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">
-              {t('pages.approvals.listTitle')}
-            </h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-ap-card-icon">
+              <AuditOutlined />
             </span>
+            {/* Page and inbox names are in the shell header and the banner;
+                the card states what the table holds. */}
+            <h3 className="erp-pro-card-toolbar-title" aria-live="polite">
+              {meta.total === 1
+                ? t('pages.approvals.requestCountOne')
+                : t('pages.approvals.requestCount', {
+                    count: meta.total.toLocaleString(),
+                  })}
+            </h3>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -647,14 +780,6 @@ export default function ApprovalsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(NEW_PATH)}
-              aria-label={t('pages.approvals.newRequest')}
-            >
-              {isNarrow ? undefined : t('pages.approvals.newRequest')}
-            </Button>
           </div>
         </div>
 
