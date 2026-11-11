@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './attendance-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -151,7 +152,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2">
         <div className="erp-att-loading">
           <Spin />
         </div>
@@ -184,7 +185,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -198,41 +199,21 @@ export default function AttendanceListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <AttendanceStatBar
-        records={allRows}
-        totalEmployees={allRows.length}
-        loading={listQuery.isFetching && !listQuery.data}
-      />
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 flex-wrap items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {filtered.length.toLocaleString()}
-            </span>
-            {canViewHr && approval ? (
-              <Tag
-                className="erp-att-status-tag"
-                color={STATUS_COLORS[approval.status]}
-                icon={
-                  approval.status === 'APPROVED' ? <LockOutlined /> : undefined
-                }
-              >
-                {t(`pages.hr.attendance.review.status.${approval.status}`)}
-              </Tag>
-            ) : null}
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-attendance-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-attendance-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {t('pages.hr.listHeroTitle', {
+              title: pageTitle,
+              count: filtered.length.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
             {canViewHr ? (
               <HrListActions
                 compact={isCompact}
@@ -269,6 +250,45 @@ export default function AttendanceListPageContent(): React.ReactNode {
                 }}
               />
             ) : null}
+          </div>
+        </div>
+        <AttendanceStatBar
+          className="erp-employees-hero-stats"
+          records={allRows}
+          totalEmployees={allRows.length}
+          loading={listQuery.isFetching && !listQuery.data}
+        />
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 flex-wrap items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <CalendarOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            {canViewHr && approval ? (
+              <Tag
+                className="erp-att-status-tag"
+                color={STATUS_COLORS[approval.status]}
+                icon={
+                  approval.status === 'APPROVED' ? <LockOutlined /> : undefined
+                }
+              >
+                {t(`pages.hr.attendance.review.status.${approval.status}`)}
+              </Tag>
+            ) : null}
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

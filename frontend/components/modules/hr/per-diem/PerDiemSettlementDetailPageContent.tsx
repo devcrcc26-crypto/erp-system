@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import '@/components/modules/profile/profile-v2.css';
 import '@/components/modules/users/employee-detail-v2.css';
 
@@ -36,7 +37,10 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 /**
  * Per diem settlement detail - same sheet layout as the create form, plus approval and cash returned.
  */
@@ -120,7 +124,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -130,7 +134,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isError || !settlement) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -150,8 +154,8 @@ export default function PerDiemSettlementDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card erp-profile-identity">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-employee-toolbar">
           <Button
             type="text"
@@ -218,7 +222,7 @@ export default function PerDiemSettlementDetailPageContent({
         </div>
       </div>
 
-      <div className="erp-pro-card mt-3 overflow-hidden">
+      <div className="erp-pro-card erp-brand-detail-body">
         <div className="erp-employee-section">
           <div className="erp-employee-section-header">
             <h3 className="erp-employee-section-title m-0">

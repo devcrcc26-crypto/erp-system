@@ -1,4 +1,6 @@
 'use client';
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
@@ -53,7 +55,6 @@ import { buildCompanyAssetExportSheets } from '@/lib/utils/company-asset-export'
 import { companyAssetImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
@@ -334,7 +335,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-company-asset-page ${LIST_PAGE_V2}`}>
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-company-asset-page">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -343,7 +344,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-company-asset-page ${LIST_PAGE_V2}`}>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-company-asset-page">
       {importOpen ? (
         <ImportModal
           schema={companyAssetImportSchema}
@@ -366,59 +367,15 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <CompanyAssetStat
-          label={t('pages.hr.companyAsset.stats.total')}
-          value={statusCounts.all}
-          accent="teal"
-          icon={<ToolOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        <CompanyAssetStat
-          label={t('pages.hr.companyAsset.stats.available')}
-          value={statusCounts.available}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'AVAILABLE'}
-          onClick={() => handleStatusMode('AVAILABLE')}
-        />
-        <CompanyAssetStat
-          label={t('pages.hr.companyAsset.stats.inUse')}
-          value={statusCounts.inUse}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'IN_USE'}
-          onClick={() => handleStatusMode('IN_USE')}
-        />
-        <CompanyAssetStat
-          label={t('pages.hr.companyAsset.stats.repairing')}
-          value={statusCounts.repairing}
-          accent="red"
-          icon={<WarningOutlined />}
-          active={statusMode === 'REPAIRING'}
-          onClick={() => handleStatusMode('REPAIRING')}
-        />
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-list-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-list-hero-title" className="erp-employees-hero-title">
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -436,6 +393,65 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
                 onClick: () => router.push('/hr/company-asset/new'),
               }}
             />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <CompanyAssetStat
+            label={t('pages.hr.companyAsset.stats.total')}
+            value={statusCounts.all}
+            accent="teal"
+            icon={<ToolOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => handleStatusMode('all')}
+          />
+          <CompanyAssetStat
+            label={t('pages.hr.companyAsset.stats.available')}
+            value={statusCounts.available}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'AVAILABLE'}
+            onClick={() => handleStatusMode('AVAILABLE')}
+          />
+          <CompanyAssetStat
+            label={t('pages.hr.companyAsset.stats.inUse')}
+            value={statusCounts.inUse}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'IN_USE'}
+            onClick={() => handleStatusMode('IN_USE')}
+          />
+          <CompanyAssetStat
+            label={t('pages.hr.companyAsset.stats.repairing')}
+            value={statusCounts.repairing}
+            accent="red"
+            icon={<WarningOutlined />}
+            active={statusMode === 'REPAIRING'}
+            onClick={() => handleStatusMode('REPAIRING')}
+          />
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <ToolOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

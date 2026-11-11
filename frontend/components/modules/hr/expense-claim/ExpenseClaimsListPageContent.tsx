@@ -72,7 +72,11 @@ import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildExpenseClaimExportSheets } from '@/lib/utils/expense-claim-export';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// Same list look as Employees (employees-v2.css: brand banner, list card).
+// No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-expense-claims-page';
+
 function isEditableClaimStatus(status: ExpenseClaimListItem['status']): boolean {
   return status === 'DRAFT' || status === 'RETURNED';
 }
@@ -416,7 +420,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -425,7 +429,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-expense-claims-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
       <ConfirmDialog
         open={Boolean(deletingClaim)}
         title={t('hr.empty.deleteExpenseClaimTitle')}
@@ -463,7 +467,58 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-expense-claims-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-expense-claims-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {statusCounts.all === 1
+              ? t('pages.hr.expenseClaim.claimCountOne')
+              : t('pages.hr.expenseClaim.claimCount', {
+                  count: statusCounts.all.toLocaleString(),
+                })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export-claims',
+                  label: t('pages.hr.expenseClaim.exportClaims'),
+                  filePrefix: 'expense-claims',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildExpenseClaimExportSheets(filtered),
+                },
+                {
+                  key: 'export-items',
+                  label: t('pages.hr.expenseClaim.exportItems'),
+                  filePrefix: 'expense-claims-with-items',
+                  disabled: filtered.length === 0,
+                  buildSheets: async () =>
+                    buildExpenseClaimExportSheets(
+                      filtered,
+                      await fetchExpenseClaimDetails(
+                        filtered.map((row) => row.id),
+                      ),
+                    ),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                {
+                  label: t('hr.buttons.newExpenseClaim'),
+                  onClick: () => router.push('/approvals/new/expense-claim'),
+                }
+              }
+            />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <ExpenseClaimStat
           label={t('pages.hr.expenseClaim.stats.total')}
           value={statusCounts.all}
@@ -504,15 +559,16 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
         />
-      </div>
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <DollarOutlined />
             </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -524,38 +580,6 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export-claims',
-                  label: t('pages.hr.expenseClaim.exportClaims'),
-                  filePrefix: 'expense-claims',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildExpenseClaimExportSheets(filtered),
-                },
-                {
-                  key: 'export-items',
-                  label: t('pages.hr.expenseClaim.exportItems'),
-                  filePrefix: 'expense-claims-with-items',
-                  disabled: filtered.length === 0,
-                  buildSheets: async () =>
-                    buildExpenseClaimExportSheets(
-                      filtered,
-                      await fetchExpenseClaimDetails(
-                        filtered.map((row) => row.id),
-                      ),
-                    ),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={
-                {
-                  label: t('hr.buttons.newExpenseClaim'),
-                  onClick: () => router.push('/approvals/new/expense-claim'),
-                }
-              }
-            />
           </div>
         </div>
 

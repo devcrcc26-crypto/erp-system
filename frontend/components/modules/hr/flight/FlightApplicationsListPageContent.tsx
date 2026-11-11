@@ -75,7 +75,11 @@ import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildFlightApplicationExportSheets } from '@/lib/utils/flight-export';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// Same list look as Employees (employees-v2.css: brand banner, list card).
+// No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-flight-applications-page';
+
 type ListTab = 'ALL' | 'NEEDS_TICKET';
 
 const PENDING_STATUSES = statusesForFlightMode('pending');
@@ -411,7 +415,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-flight-applications-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -419,7 +423,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-flight-applications-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -429,7 +433,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   return (
     <div
-      className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-flight-applications-page${canViewHr ? ' erp-flight-applications-page--hr' : ''} ${LIST_PAGE_V2}`}
+      className={`${PAGE_ROOT}${canViewHr ? ' erp-flight-applications-page--hr' : ''}`}
     >
       {importOpen ? (
         <HrImportModal
@@ -457,7 +461,56 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-flight-applications-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-flight-applications-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export-applications',
+                  label: t('pages.hr.flight.exportApplications'),
+                  filePrefix: 'flight-applications',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildFlightApplicationExportSheets(filtered),
+                },
+                {
+                  key: 'export-passengers',
+                  label: t('pages.hr.flight.exportPassengers'),
+                  filePrefix: 'flight-applications-with-passengers',
+                  disabled: filtered.length === 0,
+                  buildSheets: async () =>
+                    buildFlightApplicationExportSheets(
+                      filtered,
+                      await fetchFlightApplicationDetails(
+                        filtered.map((row) => row.id),
+                      ),
+                    ),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                canCreate
+                  ? {
+                      label: t('hr.buttons.newFlightApplication'),
+                      onClick: () => router.push('/approvals/new/flight-application'),
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <FlightStat
           label={t('pages.hr.flight.stats.total')}
           value={statusCounts.all}
@@ -500,12 +553,15 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             onClick={handleNeedsTicketTab}
           />
         ) : null}
-      </div>
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Plane size={18} strokeWidth={2} />
+            </span>
             <span className="erp-users-count-pill">
               {meta.total.toLocaleString()}
             </span>
@@ -520,40 +576,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export-applications',
-                  label: t('pages.hr.flight.exportApplications'),
-                  filePrefix: 'flight-applications',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildFlightApplicationExportSheets(filtered),
-                },
-                {
-                  key: 'export-passengers',
-                  label: t('pages.hr.flight.exportPassengers'),
-                  filePrefix: 'flight-applications-with-passengers',
-                  disabled: filtered.length === 0,
-                  buildSheets: async () =>
-                    buildFlightApplicationExportSheets(
-                      filtered,
-                      await fetchFlightApplicationDetails(
-                        filtered.map((row) => row.id),
-                      ),
-                    ),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={
-                canCreate
-                  ? {
-                      label: t('hr.buttons.newFlightApplication'),
-                      onClick: () => router.push('/approvals/new/flight-application'),
-                    }
-                  : undefined
-              }
-            />
           </div>
         </div>
 

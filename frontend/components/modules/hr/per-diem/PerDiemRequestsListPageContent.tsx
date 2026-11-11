@@ -67,7 +67,11 @@ import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildPerDiemRequestExportSheets } from '@/lib/utils/per-diem-export';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// Same list look as Employees (employees-v2.css: brand banner, list card).
+// No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page';
+
 const PENDING_STATUSES = statusesForPerDiemMode('pending');
 const APPROVED_STATUSES = statusesForPerDiemMode('approved');
 const REJECTED_STATUSES = statusesForPerDiemMode('rejected');
@@ -402,7 +406,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listTab === 'settlements') {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         {listTabs}
         <PerDiemSettlementsList />
       </div>
@@ -411,7 +415,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         {listTabs}
         <div className="erp-pro-card flex justify-center p-12">
           <Spin />
@@ -421,7 +425,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-per-diem-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
       {listTabs}
       {importOpen ? (
         <HrImportModal
@@ -449,7 +453,38 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-per-diem-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-per-diem-hero-title" className="erp-employees-hero-title">
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  label: undefined,
+                  filePrefix: 'per-diem-requests',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildPerDiemRequestExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                {
+                  label: t('hr.buttons.newPerDiem'),
+                  onClick: () => router.push('/approvals/new/per-diem'),
+                }
+              }
+            />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <PerDiemStat
           label={t('pages.hr.perDiem.stats.total')}
           value={statusCounts.all}
@@ -492,12 +527,15 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
         />
-      </div>
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Wallet size={18} strokeWidth={2} />
+            </span>
             <span className="erp-users-count-pill">
               {meta.total.toLocaleString()}
             </span>
@@ -512,25 +550,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export',
-                  label: undefined,
-                  filePrefix: 'per-diem-requests',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildPerDiemRequestExportSheets(filtered),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={
-                {
-                  label: t('hr.buttons.newPerDiem'),
-                  onClick: () => router.push('/approvals/new/per-diem'),
-                }
-              }
-            />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -43,7 +44,10 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-inspection-repair-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 type HrWorkflowStatus = Extract<
   InspectionRepairStatus,
   'IN_REPAIR' | 'REPAIRED' | 'REJECTED'
@@ -194,7 +198,7 @@ export default function InspectionRepairDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -204,7 +208,7 @@ export default function InspectionRepairDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -256,8 +260,8 @@ export default function InspectionRepairDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-inspection-repair-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -346,51 +350,51 @@ export default function InspectionRepairDetailPageContent({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.form.inspectionType')}
-            </p>
-            <p className="erp-employee-meta-value truncate">
-              {t(`hr.inspectionType.${request.inspectionType}`)}
-            </p>
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('hr.form.inspectionType')}
+              </p>
+              <p className="erp-employee-meta-value truncate">
+                {t(`hr.inspectionType.${request.inspectionType}`)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.form.urgency')}</p>
-            <p className="erp-employee-meta-value">
-              {t(`hr.urgency.${request.urgency}`)}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.form.urgency')}</p>
+              <p className="erp-employee-meta-value">
+                {t(`hr.urgency.${request.urgency}`)}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.form.location')}</p>
-            <p className="erp-employee-meta-value truncate">
-              {request.location}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.form.location')}</p>
+              <p className="erp-employee-meta-value truncate">
+                {request.location}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.labels.completedAt')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {request.completedAt
-                ? formatProjectDate(request.completedAt)
-                : '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('hr.labels.completedAt')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {request.completedAt
+                  ? formatProjectDate(request.completedAt)
+                  : '-'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
+        <div className="erp-pro-card erp-brand-detail-body min-w-0">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
             <DetailSection title={t('hr.section.requestDetails')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

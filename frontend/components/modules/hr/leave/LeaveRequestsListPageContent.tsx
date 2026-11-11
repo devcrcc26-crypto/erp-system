@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './leave-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -447,7 +448,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -498,7 +499,41 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-leave-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-leave-hero-title" className="erp-employees-hero-title">
+            {t('pages.hr.listHeroTitle', {
+              title: pageTitle,
+              count: meta.total.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  filePrefix: 'leave-requests',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildLeaveRequestExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                canCreate
+                  ? {
+                      label: t('hr.buttons.newLeaveRequest'),
+                      onClick: () => router.push('/approvals/new/leave-request'),
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('pages.hr.leave.stats.total')}
           value={statusCounts.all}
@@ -541,15 +576,16 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <CalendarOutlined />
             </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -561,26 +597,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export',
-                  filePrefix: 'leave-requests',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildLeaveRequestExportSheets(filtered),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={
-                canCreate
-                  ? {
-                      label: t('hr.buttons.newLeaveRequest'),
-                      onClick: () => router.push('/approvals/new/leave-request'),
-                    }
-                  : undefined
-              }
-            />
           </div>
         </div>
 
@@ -703,7 +719,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
         <div className="erp-pro-card">
           <div className="erp-profile-tabbar erp-employee-tabbar" role="tablist">
             <button
@@ -739,7 +755,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
+    <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
       {requestsPanel}
     </div>
   );

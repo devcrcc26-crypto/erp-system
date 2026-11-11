@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import '@/components/modules/profile/profile-v2.css';
 import '@/components/modules/users/employee-detail-v2.css';
 
@@ -24,7 +25,10 @@ import {
   PER_DIEM_DESTINATION_CATEGORIES,
 } from '@/lib/constants/per-diem-destination-categories';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 /**
  * Employee per diem rates detail - Users / employee profile chrome.
  */
@@ -46,7 +50,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (!canManagePerDiemRates) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -54,7 +58,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isLoading || rateQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -64,7 +68,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -91,8 +95,8 @@ export default function EmployeePerDiemRatesDetailPageContent({
   const employeeName = formatUserName(employee);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card erp-profile-identity">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-employee-toolbar">
           <Button
             type="text"
@@ -207,7 +211,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
         </div>
       </div>
 
-      <div className="erp-pro-card min-w-0 overflow-hidden">
+      <div className="erp-pro-card erp-brand-detail-body min-w-0">
         <div className="erp-employee-tab-panel erp-contract-detail-body">
           <EmployeePerDiemRatesSection
             employeeId={employeeId}

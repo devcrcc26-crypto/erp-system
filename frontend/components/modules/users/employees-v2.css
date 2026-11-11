@@ -543,6 +543,13 @@
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+/* Four or more tiles share one row on desktop instead of wrapping 3 + n. */
+@media (min-width: 901px) {
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat-bar:has(> .erp-users-stat:nth-child(4)) {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
 .erp-employees-v2 .erp-employees-hero .erp-users-stat {
   padding: 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -674,6 +681,64 @@
 .erp-employees-v2 .erp-employees-list-card .ant-pagination .ant-pagination-item-active a {
   color: var(--erp-accent-hover);
   font-weight: 600;
+}
+
+/* Clickable filter tiles on the brand banner (any module). */
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat {
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--active,
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--active:hover {
+  border-color: #ffffff;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.24);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-contract-stat--active .erp-users-stat-label {
+  color: var(--erp-n-600);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-contract-stat--active .erp-users-stat-value {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
+/* Read-only tiles (no filter action) stay glass and non-interactive. */
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--static {
+  cursor: default;
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--static:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.09);
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat {
+    transition: none;
+  }
+
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:hover {
+    transform: none;
+  }
 }
 
 @media (max-width: 900px) {

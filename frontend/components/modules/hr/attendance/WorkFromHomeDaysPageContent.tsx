@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './work-from-home-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -502,7 +503,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
 
   if (!canView) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-wfh-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -510,7 +511,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-wfh-v2">
         <div className="erp-wfh-loading">
           <Spin />
         </div>
@@ -521,7 +522,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const monthName = t(`hr.months.${month}`);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-wfh-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-wfh-v2">
       <ConfirmDialog
         open={Boolean(deleteId)}
         title={t('pages.hr.workFromHome.deleteTitle')}
@@ -792,7 +793,31 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-wfh-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-wfh-hero-title" className="erp-employees-hero-title">
+            {t('pages.hr.listHeroTitle', {
+              title: t('pages.hr.workFromHome.title'),
+              count: filtered.length.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            {canAssign ? (
+              <HrListActions
+                compact={isCompact}
+                primary={{
+                  label: t('common.add'),
+                  icon: <PlusOutlined />,
+                  onClick: openCreate,
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('pages.hr.workFromHome.stats.total')}
           value={scopeCounts.all}
@@ -829,17 +854,18 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
           active={scopeMode === 'EMPLOYEES'}
           onClick={() => setScopeMode('EMPLOYEES')}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <HomeOutlined />
+            </span>
             <h3 className="erp-pro-card-toolbar-title">
               {t('pages.hr.workFromHome.title')}
             </h3>
-            <span className="erp-users-count-pill">
-              {filtered.length.toLocaleString()}
-            </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -851,16 +877,6 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {canAssign ? (
-              <HrListActions
-                compact={isCompact}
-                primary={{
-                  label: t('common.add'),
-                  icon: <PlusOutlined />,
-                  onClick: openCreate,
-                }}
-              />
-            ) : null}
           </div>
         </div>
 

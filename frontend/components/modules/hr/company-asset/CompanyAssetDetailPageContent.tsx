@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -62,7 +63,9 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
 
 function displayEmployeeName(
   user?: {
@@ -387,7 +390,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -397,7 +400,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isError || !asset) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -461,8 +464,8 @@ export default function CompanyAssetDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -564,42 +567,42 @@ export default function CompanyAssetDetailPageContent({
             </p>
           </div>
         </div>
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.assetLabels.type')}</p>
+              <p className="erp-employee-meta-value truncate">{asset.type}</p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.assetLabels.year')}</p>
+              <p className="erp-employee-meta-value">{asset.year}</p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.assetLabels.color')}</p>
+              <p className="erp-employee-meta-value truncate">{asset.color}</p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {t('hr.assetLabels.assignedTo')}
+              </p>
+              <p className="erp-employee-meta-value truncate">
+                {activeAssignment
+                  ? displayEmployeeName(activeAssignment.employee)
+                  : '-'}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.assetLabels.type')}</p>
-            <p className="erp-employee-meta-value truncate">{asset.type}</p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.assetLabels.year')}</p>
-            <p className="erp-employee-meta-value">{asset.year}</p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.assetLabels.color')}</p>
-            <p className="erp-employee-meta-value truncate">{asset.color}</p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.assetLabels.assignedTo')}
-            </p>
-            <p className="erp-employee-meta-value truncate">
-              {activeAssignment
-                ? displayEmployeeName(activeAssignment.employee)
-                : '-'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-pro-card min-w-0 overflow-hidden">
+      <div className="erp-pro-card erp-brand-detail-body min-w-0">
         <div className="erp-employee-tab-panel erp-contract-detail-body">
           <DetailSection
             title={t('hr.assetSection.currentAssignment')}

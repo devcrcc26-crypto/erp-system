@@ -2,13 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, InputNumber, Select, Skeleton, Spin } from 'antd';
-import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import {
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import '@/components/modules/users/employees-v2.css';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -48,7 +45,10 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No LIST_PAGE_V2: employees-v2.css carries the brand look and the
+// utilities' !important rules would override it.
+const HISTORY_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 flex flex-col';
 const HISTORY_PAGE_SIZE = 15;
 const LOW_BALANCE_THRESHOLD = 5;
 
@@ -439,7 +439,7 @@ export default function LeaveHistoryPageContent({
 
   if (!allowed) {
     return (
-      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
+      <div className={HISTORY_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -452,7 +452,7 @@ export default function LeaveHistoryPageContent({
     canViewHr
   ) {
     return (
-      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
+      <div className={HISTORY_ROOT}>
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -462,53 +462,71 @@ export default function LeaveHistoryPageContent({
   const sick = displayBalances.find((b) => b.leaveType === 'SICK')?.balance;
 
   return (
-    <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} />}
-            onClick={handleBack}
-            className="!mb-2 !px-0"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('hr.buttons.back')}
-          </Button>
+    <div className={HISTORY_ROOT}>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-leave-history-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <div className="min-w-0">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={handleBack}
+              className="!mb-2 !px-2"
+            >
+              {t('hr.buttons.back')}
+            </Button>
+            <h2
+              id="erp-leave-history-hero-title"
+              className="erp-employees-hero-title break-words"
+            >
+              {displayName}
+            </h2>
+            <p className="m-0 mt-1 text-[13px] text-white/80">
+              {t('hr.leave.historyTitle')}
+            </p>
+          </div>
         </div>
-      </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          {[
+            { label: t('hr.table.year'), value: String(year) },
+            {
+              label: t('hr.leaveType.ANNUAL'),
+              value:
+                annual != null
+                  ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
+                  : '-',
+            },
+            {
+              label: t('hr.leaveType.SICK'),
+              value:
+                sick != null
+                  ? `${sick.remaining} / ${sick.entitled + sick.broughtForward}`
+                  : '-',
+            },
+          ].map((item) => (
+            <div key={item.label} className="erp-users-stat">
+              <div className="min-w-0 text-left">
+                <p className="erp-users-stat-label">{item.label}</p>
+                <p className="erp-users-stat-value">{item.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      <SummaryStrip
-        items={[
-          {
-            label: t('hr.table.employee'),
-            value: displayName,
-          },
-          {
-            label: t('hr.table.year'),
-            value: String(year),
-          },
-          {
-            label: t('hr.leaveType.ANNUAL'),
-            value:
-              annual != null
-                ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
-                : '-',
-          },
-          {
-            label: t('hr.leaveType.SICK'),
-            value:
-              sick != null
-                ? `${sick.remaining} / ${sick.entitled + sick.broughtForward}`
-                : '-',
-          },
-        ]}
-      />
-
-      <SectionCard
-        title={t('hr.section.leaveBalance')}
-        bodyClassName="p-4"
-        action={
-          <div className="flex items-center gap-2">
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Wallet size={18} />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('hr.section.leaveBalance')}
+            </h3>
+          </div>
+          <div className="erp-users-toolbar-actions flex items-center gap-2">
             <span
               className="text-xs"
               style={{ color: tokens.colorTextSecondary }}
@@ -528,36 +546,44 @@ export default function LeaveHistoryPageContent({
               style={{ width: 96 }}
             />
           </div>
-        }
-      >
-        {balancesError ? (
-          <Alert
-            type="error"
-            showIcon
-            title={errorMessage(balancesError)}
-          />
-        ) : balancesLoading ? (
-          <div className="flex justify-center py-8">
-            <Spin />
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
-            {displayBalances.map(({ leaveType, balance }) => (
-              <BalanceTile
-                key={leaveType}
-                label={formatLeaveType(leaveType, t)}
-                balance={balance}
-              />
-            ))}
-          </div>
-        )}
-      </SectionCard>
+        </div>
+        <div className="p-4">
+          {balancesError ? (
+            <Alert
+              type="error"
+              showIcon
+              title={errorMessage(balancesError)}
+            />
+          ) : balancesLoading ? (
+            <div className="flex justify-center py-8">
+              <Spin />
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {displayBalances.map(({ leaveType, balance }) => (
+                <BalanceTile
+                  key={leaveType}
+                  label={formatLeaveType(leaveType, t)}
+                  balance={balance}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-      <SectionCard title={t('hr.leave.historyTitle')} bodyClassName="p-0">
-        <div
-          className="erp-filter-bar border-b px-3 py-3 sm:px-4"
-          style={{ borderColor: tokens.colorBorder }}
-        >
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <CalendarDays size={18} />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('hr.leave.historyTitle')}
+            </h3>
+          </div>
+        </div>
+        <div className="erp-users-filter-bar">
           <Select
             allowClear
             placeholder={t('hr.placeholder.leaveType')}
@@ -591,37 +617,40 @@ export default function LeaveHistoryPageContent({
             />
           </div>
         ) : (
-          <DataTable<LeaveRequestListItem>
-            rowKey="id"
-            size="small"
-            loading={historyQuery.isLoading}
-            columns={columns}
-            dataSource={historyRows}
-            onRow={(record) => ({
-              onClick: () =>
-                router.push(
-                  leaveRequestDetailHref(record.id, detailReturnTo),
+          <div className="erp-pro-table-card-body">
+            <DataTable<LeaveRequestListItem>
+              rowKey="id"
+              className="erp-pro-table erp-users-table"
+              size="small"
+              loading={historyQuery.isLoading}
+              columns={columns}
+              dataSource={historyRows}
+              onRow={(record) => ({
+                onClick: () =>
+                  router.push(
+                    leaveRequestDetailHref(record.id, detailReturnTo),
+                  ),
+                style: { cursor: 'pointer' },
+              })}
+              pagination={{
+                current: historyMeta.page,
+                pageSize: historyMeta.limit,
+                total: historyMeta.total,
+                showSizeChanger: false,
+                onChange: (page) => setHistoryPage(page),
+              }}
+              locale={{
+                emptyText: (
+                  <TableEmptyState
+                    icon={<CalendarDays />}
+                    title={t('hr.leave.noHistory')}
+                  />
                 ),
-              style: { cursor: 'pointer' },
-            })}
-            pagination={{
-              current: historyMeta.page,
-              pageSize: historyMeta.limit,
-              total: historyMeta.total,
-              showSizeChanger: false,
-              onChange: (page) => setHistoryPage(page),
-            }}
-            locale={{
-              emptyText: (
-                <TableEmptyState
-                  icon={<CalendarDays />}
-                  title={t('hr.leave.noHistory')}
-                />
-              ),
-            }}
-          />
+              }}
+            />
+          </div>
         )}
-      </SectionCard>
+      </div>
     </div>
   );
 }

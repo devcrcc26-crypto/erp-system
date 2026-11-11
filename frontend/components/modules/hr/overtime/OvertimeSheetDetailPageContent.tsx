@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import './overtime-entries-v2.css';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -83,7 +85,10 @@ import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-exc
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { resolveOvertimeDetailBackHref } from '@/lib/utils/hr-self-service-nav';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 function DetailSection({
   title,
   children,
@@ -612,7 +617,7 @@ export default function OvertimeSheetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -622,7 +627,7 @@ export default function OvertimeSheetDetailPageContent({
 
   if (detailQuery.isError || !sheet) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -648,7 +653,7 @@ export default function OvertimeSheetDetailPageContent({
     !isOnBehalfFiler
   ) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -663,8 +668,8 @@ export default function OvertimeSheetDetailPageContent({
   );
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button

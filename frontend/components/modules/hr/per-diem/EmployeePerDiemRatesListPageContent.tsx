@@ -55,7 +55,11 @@ import {
 } from '@/lib/utils/employee-per-diem-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// Same list look as Employees (employees-v2.css: brand banner, list card).
+// No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page';
+
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
@@ -358,7 +362,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (!canManagePerDiemRates) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -366,7 +370,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -375,7 +379,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
       {importOpen ? (
         <ImportModal
           schema={employeePerDiemRateImportSchema}
@@ -398,7 +402,40 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-employee-per-diem-rates-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-employee-per-diem-rates-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'rates',
+                  label: t('hr.exportImport.employeePerDiemRates.export'),
+                  filePrefix: 'employee-per-diem-rates',
+                  disabled: filtered.length === 0,
+                  buildSheets: () =>
+                    buildEmployeePerDiemRateExportSheets(filtered),
+                },
+              ]}
+              onImport={canManagePerDiemRates ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('pages.hr.employeePerDiemRates.addRates'),
+                onClick: () => router.push('/hr/employee-per-diem-rates/new'),
+              }}
+            />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <RateStat
           label={t('pages.hr.employeePerDiemRates.stats.total')}
           value={stats.total}
@@ -429,12 +466,15 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
           accent="teal"
           icon={<BankOutlined />}
         />
-      </div>
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <TeamOutlined />
+            </span>
             <span className="erp-users-count-pill">
               {meta.total.toLocaleString()}
             </span>
@@ -449,24 +489,6 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'rates',
-                  label: t('hr.exportImport.employeePerDiemRates.export'),
-                  filePrefix: 'employee-per-diem-rates',
-                  disabled: filtered.length === 0,
-                  buildSheets: () =>
-                    buildEmployeePerDiemRateExportSheets(filtered),
-                },
-              ]}
-              onImport={canManagePerDiemRates ? () => setImportOpen(true) : undefined}
-              primary={{
-                label: t('pages.hr.employeePerDiemRates.addRates'),
-                onClick: () => router.push('/hr/employee-per-diem-rates/new'),
-              }}
-            />
           </div>
         </div>
 

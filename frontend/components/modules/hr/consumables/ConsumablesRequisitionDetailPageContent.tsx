@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -67,7 +68,10 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-consumables-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
 function DetailSection({
   title,
   children,
@@ -348,7 +352,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -358,7 +362,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   if (detailQuery.isError || !requisition) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -410,8 +414,8 @@ export default function ConsumablesRequisitionDetailPageContent({
         : 400;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-consumables-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -506,47 +510,47 @@ export default function ConsumablesRequisitionDetailPageContent({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.items')}</p>
-            <p className="erp-employee-meta-value">
-              {requisition.items.length}
-            </p>
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.table.items')}</p>
+              <p className="erp-employee-meta-value">
+                {requisition.items.length}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.requiredBy')}</p>
-            <p className="erp-employee-meta-value">
-              {requisition.requiredByDate
-                ? formatProjectDate(requisition.requiredByDate)
-                : '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.table.requiredBy')}</p>
+              <p className="erp-employee-meta-value">
+                {requisition.requiredByDate
+                  ? formatProjectDate(requisition.requiredByDate)
+                  : '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.department')}</p>
-            <p className="erp-employee-meta-value truncate">
-              {requisition.department ?? '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.table.department')}</p>
+              <p className="erp-employee-meta-value truncate">
+                {requisition.department ?? '-'}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {requisition.submittedAt
-                ? t('hr.table.submittedDate')
-                : t('hr.table.createdDate')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(
-                requisition.submittedAt ?? requisition.createdAt,
-              )}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">
+                {requisition.submittedAt
+                  ? t('hr.table.submittedDate')
+                  : t('hr.table.createdDate')}
+              </p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(
+                  requisition.submittedAt ?? requisition.createdAt,
+                )}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -572,7 +576,7 @@ export default function ConsumablesRequisitionDetailPageContent({
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
+        <div className="erp-pro-card erp-brand-detail-body min-w-0">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
             <DetailSection title={t('hr.section.requestDetails')}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

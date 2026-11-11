@@ -604,6 +604,7 @@
       "comingSoonDescription": "{{module}} 将在后续版本中提供。",
       "accessDenied": "您无权访问人力资源模块。",
       "teamListDescription": "您本人的申请以及向您汇报的员工的申请。",
+      "listHeroTitle": "{{title}}（{{count}}）",
       "myTeam": {
         "title": "我的团队",
         "description": "直接或间接向您汇报的所有员工。",

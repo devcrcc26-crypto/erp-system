@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import '@/components/modules/profile/profile-v2.css';
 import '@/components/modules/users/employee-detail-v2.css';
 import '@/components/modules/hr/overtime/overtime-entries-v2.css';
@@ -78,7 +79,10 @@ import { exportExpenseClaimDetailItemsExcel } from '@/lib/utils/expense-claim-ex
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 function DetailSection({
   title,
   children,
@@ -526,7 +530,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -536,7 +540,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isError || !claim) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -561,7 +565,7 @@ export default function ExpenseClaimDetailPageContent({
     claim.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -603,8 +607,8 @@ export default function ExpenseClaimDetailPageContent({
         : 420;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card erp-profile-identity">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-employee-toolbar">
           <Button
             type="text"

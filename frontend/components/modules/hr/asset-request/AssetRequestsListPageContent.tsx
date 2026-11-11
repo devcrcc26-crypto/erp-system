@@ -1,4 +1,6 @@
 'use client';
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useState } from 'react';
@@ -35,7 +37,6 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
@@ -215,45 +216,60 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
     : null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page ${LIST_PAGE_V2}`}>
-      <div className="erp-users-stat-bar">
-        <AssetRequestStat
-          label="All Requests"
-          value={meta?.total ?? total}
-          accent="blue"
-          icon={<InboxOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => { setStatusMode('all'); resetPage(); }}
-        />
-        <AssetRequestStat
-          label="Pending"
-          value={pendingCount}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'pending'}
-          onClick={() => { setStatusMode('pending'); resetPage(); }}
-        />
-        <AssetRequestStat
-          label="Approved"
-          value={approvedCount}
-          accent="teal"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'approved'}
-          onClick={() => { setStatusMode('approved'); resetPage(); }}
-        />
-        <AssetRequestStat
-          label="Rejected"
-          value={rejectedCount}
-          accent="red"
-          icon={<CloseCircleOutlined />}
-          active={statusMode === 'rejected'}
-          onClick={() => { setStatusMode('rejected'); resetPage(); }}
-        />
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-asset-requests-page">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-asset-requests-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-asset-requests-hero-title" className="erp-employees-hero-title">
+            Asset Requests
+          </h2>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <AssetRequestStat
+            label="All Requests"
+            value={meta?.total ?? total}
+            accent="blue"
+            icon={<InboxOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => { setStatusMode('all'); resetPage(); }}
+          />
+          <AssetRequestStat
+            label="Pending"
+            value={pendingCount}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'pending'}
+            onClick={() => { setStatusMode('pending'); resetPage(); }}
+          />
+          <AssetRequestStat
+            label="Approved"
+            value={approvedCount}
+            accent="teal"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'approved'}
+            onClick={() => { setStatusMode('approved'); resetPage(); }}
+          />
+          <AssetRequestStat
+            label="Rejected"
+            value={rejectedCount}
+            accent="red"
+            icon={<CloseCircleOutlined />}
+            active={statusMode === 'rejected'}
+            onClick={() => { setStatusMode('rejected'); resetPage(); }}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
-        <div className="erp-users-toolbar">
-          <span className="erp-pro-card-toolbar-title">Asset Requests</span>
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <FormOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">Asset Requests</h3>
+          </div>
           <Button
             icon={<ReloadOutlined spin={isFetching} />}
             onClick={() => refetch()}

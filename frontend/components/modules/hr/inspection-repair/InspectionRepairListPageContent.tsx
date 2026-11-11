@@ -1,4 +1,6 @@
 'use client';
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
@@ -50,7 +52,6 @@ import { buildInspectionRepairExportSheets } from '@/lib/utils/inspection-repair
 import { inspectionRepairImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForInspectionRepairMode('pending');
 const ACTIVE_STATUSES = statusesForInspectionRepairMode('active');
 const DONE_STATUSES = statusesForInspectionRepairMode('done');
@@ -299,7 +300,7 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-inspection-repair-page ${LIST_PAGE_V2}`}>
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-inspection-repair-page">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -308,7 +309,7 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-inspection-repair-page ${LIST_PAGE_V2}`}>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-inspection-repair-page">
       {importOpen ? (
         <ImportModal
           schema={inspectionRepairImportSchema}
@@ -331,59 +332,15 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <InspectionRepairStat
-          label={t('pages.hr.inspectionRepair.stats.total')}
-          value={statusCounts.all}
-          accent="teal"
-          icon={<ToolOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        <InspectionRepairStat
-          label={t('pages.hr.inspectionRepair.stats.pending')}
-          value={statusCounts.pending}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'pending'}
-          onClick={() => handleStatusMode('pending')}
-        />
-        <InspectionRepairStat
-          label={t('pages.hr.inspectionRepair.stats.active')}
-          value={statusCounts.active}
-          accent="blue"
-          icon={<ToolOutlined />}
-          active={statusMode === 'active'}
-          onClick={() => handleStatusMode('active')}
-        />
-        <InspectionRepairStat
-          label={t('pages.hr.inspectionRepair.stats.done')}
-          value={statusCounts.done}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'done'}
-          onClick={() => handleStatusMode('done')}
-        />
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-list-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-list-hero-title" className="erp-employees-hero-title">
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -401,6 +358,65 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
                 onClick: () => router.push('/approvals/new/inspection-repair'),
               }}
             />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <InspectionRepairStat
+            label={t('pages.hr.inspectionRepair.stats.total')}
+            value={statusCounts.all}
+            accent="teal"
+            icon={<ToolOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => handleStatusMode('all')}
+          />
+          <InspectionRepairStat
+            label={t('pages.hr.inspectionRepair.stats.pending')}
+            value={statusCounts.pending}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'pending'}
+            onClick={() => handleStatusMode('pending')}
+          />
+          <InspectionRepairStat
+            label={t('pages.hr.inspectionRepair.stats.active')}
+            value={statusCounts.active}
+            accent="blue"
+            icon={<ToolOutlined />}
+            active={statusMode === 'active'}
+            onClick={() => handleStatusMode('active')}
+          />
+          <InspectionRepairStat
+            label={t('pages.hr.inspectionRepair.stats.done')}
+            value={statusCounts.done}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'done'}
+            onClick={() => handleStatusMode('done')}
+          />
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <ToolOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

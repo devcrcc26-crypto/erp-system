@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './site-assignments-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -255,7 +256,7 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-site-assignments-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-site-assignments-v2">
         <div className="erp-sa-loading">
           <Spin />
         </div>
@@ -264,7 +265,7 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-site-assignments-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-site-assignments-v2">
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -277,7 +278,29 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-sa-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-sa-hero-title" className="erp-employees-hero-title">
+            {t('pages.hr.listHeroTitle', {
+              title: t('pages.hr.siteAssignments.title'),
+              count: (meta?.total ?? filteredRows.length).toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              primary={{
+                label: t('pages.hr.siteAssignments.newRequest'),
+                icon: <PlusOutlined />,
+                onClick: () => router.push('/approvals/new/site-assignment'),
+              }}
+            />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('pages.hr.siteAssignments.stats.total')}
           value={statusCounts.all}
@@ -310,17 +333,18 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
           active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <EnvironmentOutlined />
+            </span>
             <h3 className="erp-pro-card-toolbar-title">
               {t('pages.hr.siteAssignments.title')}
             </h3>
-            <span className="erp-users-count-pill">
-              {(meta?.total ?? filteredRows.length).toLocaleString()}
-            </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -332,14 +356,6 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              primary={{
-                label: t('pages.hr.siteAssignments.newRequest'),
-                icon: <PlusOutlined />,
-                onClick: () => router.push('/approvals/new/site-assignment'),
-              }}
-            />
           </div>
         </div>
 

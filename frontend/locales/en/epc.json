@@ -604,6 +604,7 @@
       "comingSoonDescription": "{{module}} will be available in a future update.",
       "accessDenied": "You do not have access to Human Resources.",
       "teamListDescription": "Your own requests and those of the people who report to you.",
+      "listHeroTitle": "{{title}} ({{count}})",
       "myTeam": {
         "title": "My Team",
         "description": "Everyone who reports to you, directly or through someone else.",

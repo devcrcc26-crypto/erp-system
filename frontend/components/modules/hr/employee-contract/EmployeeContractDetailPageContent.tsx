@@ -1,5 +1,9 @@
 'use client';
 
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
+import './contracts-v2.css';
+
 import { useState } from 'react';
 import {
   Alert,
@@ -43,7 +47,11 @@ import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look (brand banner,
+// sections) and DETAIL_PAGE_V2's !important utilities would override it.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page erp-brand-detail-v2 erp-hr-travel-v2 erp-contracts-v2';
+
 interface TerminateFormValues {
   terminatedAt?: dayjs.Dayjs;
   terminationReason: string;
@@ -175,7 +183,7 @@ export default function EmployeeContractDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -185,7 +193,7 @@ export default function EmployeeContractDetailPageContent({
 
   if (detailQuery.isError || !contract) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -215,8 +223,8 @@ export default function EmployeeContractDetailPageContent({
     contract.taxApplicable != null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -312,46 +320,46 @@ export default function EmployeeContractDetailPageContent({
             </p>
           </div>
         </div>
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.contractType')}</p>
+              <p className="erp-employee-meta-value">
+                {formatEmployeeContractType(contract.contractType, t)}
+              </p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.signedAt')}</p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(contract.signedAt)}
+              </p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
+              <p className="erp-employee-meta-value">
+                {formatProjectDate(contract.startDate)}
+              </p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
+              <p className="erp-employee-meta-value">
+                {contract.endDate
+                  ? formatProjectDate(contract.endDate)
+                  : t('hr.labels.openEnded')}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.contractType')}</p>
-            <p className="erp-employee-meta-value">
-              {formatEmployeeContractType(contract.contractType, t)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.signedAt')}</p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(contract.signedAt)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(contract.startDate)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
-            <p className="erp-employee-meta-value">
-              {contract.endDate
-                ? formatProjectDate(contract.endDate)
-                : t('hr.labels.openEnded')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-brand-detail-body">
         <div className="erp-employee-tab-panel erp-contract-detail-body">
           <DetailSection title={t('hr.section.contractDetails')}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

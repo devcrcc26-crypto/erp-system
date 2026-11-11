@@ -1,6 +1,7 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';
 import '@/components/modules/profile/profile-v2.css';
 import '@/components/modules/users/employee-detail-v2.css';
 
@@ -60,7 +61,10 @@ import { exportFlightApplicationPassengersExcel } from '@/lib/utils/flight-expor
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+
 function DetailSection({
   title,
   children,
@@ -197,7 +201,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -207,7 +211,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isError || !application) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <Alert
           type="error"
           showIcon
@@ -230,7 +234,7 @@ export default function FlightApplicationDetailPageContent({
   const tripTypeLabel = formatTripType(application.tripType, t);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={DETAIL_ROOT}>
       {importOpen ? (
         <HrImportModal
           entity="flightPassengers"
@@ -247,7 +251,7 @@ export default function FlightApplicationDetailPageContent({
         />
       ) : null}
 
-      <div className="erp-pro-card erp-profile-identity">
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-employee-toolbar">
           <Button
             type="text"
@@ -330,7 +334,7 @@ export default function FlightApplicationDetailPageContent({
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
+        <div className="erp-pro-card erp-brand-detail-body min-w-0">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
             <DetailSection title={t('hr.travel.requirements')}>
               <div className="flex flex-col gap-4">

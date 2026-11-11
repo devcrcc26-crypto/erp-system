@@ -25,6 +25,8 @@ export interface AttendanceStatBarProps {
   records: AttendanceRecord[];
   totalEmployees?: number;
   loading: boolean;
+  /** Extra classes for the bar (e.g. `erp-employees-hero-stats` on the brand banner). */
+  className?: string;
 }
 
 function AttendanceStat({
@@ -74,8 +76,10 @@ export default function AttendanceStatBar({
   records,
   totalEmployees,
   loading,
+  className = '',
 }: AttendanceStatBarProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const barClassName = `erp-users-stat-bar ${className}`.trim();
 
   const stats = useMemo(() => {
     const totalPresent = records.reduce(
@@ -100,7 +104,7 @@ export default function AttendanceStatBar({
 
   if (loading) {
     return (
-      <div className="erp-users-stat-bar">
+      <div className={barClassName}>
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="erp-users-stat">
             <Skeleton.Avatar active size={40} shape="square" />
@@ -119,7 +123,7 @@ export default function AttendanceStatBar({
   }
 
   return (
-    <div className="erp-users-stat-bar">
+    <div className={barClassName}>
       <AttendanceStat
         label={t('pages.hr.attendance.stats.employees')}
         value={stats.employees.toLocaleString()}

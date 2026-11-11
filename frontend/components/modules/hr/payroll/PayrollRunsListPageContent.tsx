@@ -1,6 +1,7 @@
 'use client';
 import { accent } from '@/lib/theme/accent';
 
+import '@/components/modules/users/employees-v2.css';
 import './payroll-v2.css';
 import { useMemo, useState } from 'react';
 import {
@@ -393,7 +394,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -401,7 +402,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -410,7 +411,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
+    <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
       <Modal
         title={t('hr.payroll.create.title')}
         open={createOpen}
@@ -470,7 +471,47 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-payroll-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-payroll-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {t('pages.hr.listHeroTitle', {
+              title: t('hr.payroll.list.title'),
+              count: meta.total.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            {canAccess ? (
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setSettingsOpen(true)}
+                data-shot="payroll-company-settings"
+              >
+                {isNarrow
+                  ? t('hr.payroll.companySettings.openButtonShort')
+                  : t('hr.payroll.companySettings.openButton')}
+              </Button>
+            ) : null}
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreateOpen(true)}
+                data-shot="payroll-new-run"
+              >
+                {isNarrow
+                  ? t('hr.payroll.list.newRunShort')
+                  : t('hr.payroll.list.newRun')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <PayrollStat
           label={t('hr.payroll.list.statTotalRuns')}
           value={statusCounts.all}
@@ -503,25 +544,26 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
           active={filterMode === 'flagged'}
           onClick={() => handleFilterMode('flagged')}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card overflow-hidden">
+      <div className="erp-pro-card erp-employees-list-card overflow-hidden">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 flex-col gap-0.5">
-            <div className="flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <DollarOutlined />
+            </span>
+            <div className="flex min-w-0 flex-col gap-0.5">
               <h3 className="erp-pro-card-toolbar-title m-0">
                 {t('hr.payroll.list.title')}
               </h3>
-              <span className="erp-users-count-pill">
-                {meta.total.toLocaleString()}
-              </span>
+              <p className="erp-users-cell-sub m-0 hidden sm:block">
+                {t('hr.payroll.list.summaryLine', {
+                  current: summary.currentStatus,
+                  lastPaid: summary.lastPaidNet,
+                })}
+              </p>
             </div>
-            <p className="erp-users-cell-sub m-0 hidden sm:block">
-              {t('hr.payroll.list.summaryLine', {
-                current: summary.currentStatus,
-                lastPaid: summary.lastPaidNet,
-              })}
-            </p>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -533,29 +575,6 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {canAccess ? (
-              <Button
-                icon={<SettingOutlined />}
-                onClick={() => setSettingsOpen(true)}
-                data-shot="payroll-company-settings"
-              >
-                {isNarrow
-                  ? t('hr.payroll.companySettings.openButtonShort')
-                  : t('hr.payroll.companySettings.openButton')}
-              </Button>
-            ) : null}
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setCreateOpen(true)}
-                data-shot="payroll-new-run"
-              >
-                {isNarrow
-                  ? t('hr.payroll.list.newRunShort')
-                  : t('hr.payroll.list.newRun')}
-              </Button>
-            ) : null}
           </div>
         </div>
 

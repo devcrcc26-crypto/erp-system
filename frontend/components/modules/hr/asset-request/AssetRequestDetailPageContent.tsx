@@ -1,5 +1,7 @@
 'use client';
-import { accent } from '@/lib/theme/accent';
+
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/ui/brand-detail-v2.css';import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import { Button, Dropdown, Grid, Skeleton } from 'antd';
@@ -31,7 +33,10 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
 
 function DetailSection({
   title,
@@ -129,7 +134,7 @@ export default function AssetRequestDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -139,7 +144,7 @@ export default function AssetRequestDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(detailQuery.error, 'Asset request not found', t)}
@@ -177,19 +182,21 @@ export default function AssetRequestDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={DETAIL_ROOT}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         {/* Toolbar */}
-        <div className="erp-employee-toolbar flex items-center justify-between gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
-            onClick={() => router.push('/hr/asset-requests')}
-          >
-            <ArrowLeft size={15} />
-            Asset Requests
-          </button>
-          <div className="flex items-center gap-2">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/asset-requests')}
+              aria-label="Asset Requests"
+            >
+              {isNarrow ? undefined : 'Asset Requests'}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             {canSubmit ? (
               <Button type="primary" onClick={() => setConfirmSubmit(true)}>
                 Submit for Approval
@@ -229,7 +236,7 @@ export default function AssetRequestDetailPageContent({
         </div>
 
         {/* Meta strip */}
-        <div className="erp-employee-meta-bar grid grid-cols-2 gap-px border-t border-slate-150 sm:grid-cols-4">
+        <div className="erp-users-stat-bar erp-employee-meta-bar">
           {[
             {
               label: 'Employee',
@@ -248,15 +255,19 @@ export default function AssetRequestDetailPageContent({
               value: formatProjectDate(request.createdAt),
             },
           ].map(({ label, value }) => (
-            <div key={label} className="erp-users-stat px-5 py-4">
-              <p className="erp-users-stat-label">{label}</p>
-              <p className="erp-employee-meta-value">{value}</p>
+            <div key={label} className="erp-users-stat">
+              <div className="min-w-0">
+                <p className="erp-users-stat-label">{label}</p>
+                <p className="erp-employee-meta-value">{value}</p>
+              </div>
             </div>
           ))}
         </div>
+      </div>
 
+      <div className="erp-pro-card erp-brand-detail-body">
         {/* Body sections */}
-        <div className="flex flex-col gap-0 divide-y divide-slate-150">
+        <div className="erp-employee-tab-panel">
           <DetailSection title="Request Details">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FieldRow label="Asset Category" value={request.assetCategory} />

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './leave-policy-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -264,7 +265,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-employees-v2 erp-leave-policy-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -272,7 +273,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-employees-v2 erp-leave-policy-v2">
         <div className="erp-leave-policy-loading">
           <Spin />
         </div>
@@ -281,7 +282,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
+    <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-employees-v2 erp-leave-policy-v2">
       {importOpen ? (
         <ImportModal
           schema={leavePolicyImportSchema}
@@ -315,7 +316,40 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         onCancel={() => setDeleteId(null)}
       />
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-leave-policy-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-leave-policy-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {t('pages.hr.listHeroTitle', {
+              title: t('hr.leavePolicy.listTitle'),
+              count: statusCounts.all.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  filePrefix: 'leave-policies',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildLeavePolicyExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.leavePolicy.new'),
+                onClick: () => router.push(NEW_PATH),
+              }}
+            />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('hr.leavePolicy.stats.total')}
           value={statusCounts.all}
@@ -348,17 +382,18 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
           active={statusMode === 'progressive'}
           onClick={() => handleStatusMode('progressive')}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <FileTextOutlined />
+            </span>
             <h3 className="erp-pro-card-toolbar-title">
               {t('hr.leavePolicy.listTitle')}
             </h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -370,22 +405,6 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export',
-                  filePrefix: 'leave-policies',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildLeavePolicyExportSheets(filtered),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={{
-                label: t('hr.leavePolicy.new'),
-                onClick: () => router.push(NEW_PATH),
-              }}
-            />
           </div>
         </div>
 

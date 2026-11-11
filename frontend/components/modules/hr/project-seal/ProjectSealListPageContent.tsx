@@ -1,4 +1,6 @@
 'use client';
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
@@ -57,7 +59,6 @@ import { buildSealExportSheets } from '@/lib/utils/seal-export';
 import { projectSealImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/project-seal';
 const NEW_PATH = '/approvals/new/project-seal';
 
@@ -307,7 +308,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-project-seal-page ${LIST_PAGE_V2}`}>
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-project-seal-page">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -316,7 +317,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-project-seal-page ${LIST_PAGE_V2}`}>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-project-seal-page">
       {importOpen ? (
         <ImportModal
           schema={projectSealImportSchema}
@@ -339,69 +340,15 @@ export default function ProjectSealListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <ProjectSealStat
-          label={t('pages.hr.projectSeal.stats.total')}
-          value={statusCounts.all}
-          accent="teal"
-          icon={<InboxOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        {!canViewHr ? (
-          <ProjectSealStat
-            label={t('pages.hr.projectSeal.stats.draft')}
-            value={statusCounts.draft}
-            accent="blue"
-            icon={<FormOutlined />}
-            active={statusMode === 'draft'}
-            onClick={() => handleStatusMode('draft')}
-          />
-        ) : null}
-        <ProjectSealStat
-          label={t('pages.hr.projectSeal.stats.pending')}
-          value={statusCounts.pending}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'pending'}
-          onClick={() => handleStatusMode('pending')}
-        />
-        <ProjectSealStat
-          label={t('pages.hr.projectSeal.stats.approved')}
-          value={statusCounts.approved}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'approved'}
-          onClick={() => handleStatusMode('approved')}
-        />
-        <ProjectSealStat
-          label={t('pages.hr.projectSeal.stats.rejected')}
-          value={statusCounts.rejected}
-          accent="red"
-          icon={<CloseCircleOutlined />}
-          active={statusMode === 'rejected'}
-          onClick={() => handleStatusMode('rejected')}
-        />
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-list-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-list-hero-title" className="erp-employees-hero-title">
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -419,6 +366,75 @@ export default function ProjectSealListPageContent(): React.ReactNode {
                 onClick: () => router.push(NEW_PATH),
               }}
             />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <ProjectSealStat
+            label={t('pages.hr.projectSeal.stats.total')}
+            value={statusCounts.all}
+            accent="teal"
+            icon={<InboxOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => handleStatusMode('all')}
+          />
+          {!canViewHr ? (
+            <ProjectSealStat
+              label={t('pages.hr.projectSeal.stats.draft')}
+              value={statusCounts.draft}
+              accent="blue"
+              icon={<FormOutlined />}
+              active={statusMode === 'draft'}
+              onClick={() => handleStatusMode('draft')}
+            />
+          ) : null}
+          <ProjectSealStat
+            label={t('pages.hr.projectSeal.stats.pending')}
+            value={statusCounts.pending}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'pending'}
+            onClick={() => handleStatusMode('pending')}
+          />
+          <ProjectSealStat
+            label={t('pages.hr.projectSeal.stats.approved')}
+            value={statusCounts.approved}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'approved'}
+            onClick={() => handleStatusMode('approved')}
+          />
+          <ProjectSealStat
+            label={t('pages.hr.projectSeal.stats.rejected')}
+            value={statusCounts.rejected}
+            accent="red"
+            icon={<CloseCircleOutlined />}
+            active={statusMode === 'rejected'}
+            onClick={() => handleStatusMode('rejected')}
+          />
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <InboxOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

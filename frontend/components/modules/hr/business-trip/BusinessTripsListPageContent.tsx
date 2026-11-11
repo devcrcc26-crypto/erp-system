@@ -75,7 +75,11 @@ import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildBusinessTripExportSheets } from '@/lib/utils/business-trip-export';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// Same list look as Employees (employees-v2.css: brand banner, list card).
+// No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page';
+
 type ListTab = 'ALL' | 'NEEDS_TICKET';
 
 const PENDING_STATUSES = statusesForBusinessTripMode('pending');
@@ -389,7 +393,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -397,7 +401,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -407,7 +411,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   return (
     <div
-      className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page${canViewHr ? ' erp-business-trips-page--hr' : ''} ${LIST_PAGE_V2}`}
+      className={`${PAGE_ROOT}${canViewHr ? ' erp-business-trips-page--hr' : ''}`}
     >
       {importOpen ? (
         <HrImportModal
@@ -435,7 +439,56 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-business-trips-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-business-trips-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {pageTitle}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export-trips',
+                  label: t('pages.hr.businessTrip.exportTrips'),
+                  filePrefix: 'business-trips',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildBusinessTripExportSheets(filtered),
+                },
+                {
+                  key: 'export-passengers',
+                  label: t('pages.hr.businessTrip.exportPassengers'),
+                  filePrefix: 'business-trips-with-passengers',
+                  disabled: filtered.length === 0,
+                  buildSheets: async () =>
+                    buildBusinessTripExportSheets(
+                      filtered,
+                      await fetchBusinessTripDetails(
+                        filtered.map((row) => row.id),
+                      ),
+                    ),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                canCreate
+                  ? {
+                      label: t('hr.buttons.newBusinessTrip'),
+                      onClick: () => router.push('/approvals/new/business-trip'),
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <BusinessTripStat
           label={t('pages.hr.businessTrip.stats.total')}
           value={statusCounts.all}
@@ -478,12 +531,15 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             onClick={handleNeedsTicketTab}
           />
         ) : null}
-      </div>
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Globe size={18} strokeWidth={2} />
+            </span>
             <span className="erp-users-count-pill">
               {meta.total.toLocaleString()}
             </span>
@@ -498,40 +554,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <HrListActions
-              compact={isCompact}
-              exports={[
-                {
-                  key: 'export-trips',
-                  label: t('pages.hr.businessTrip.exportTrips'),
-                  filePrefix: 'business-trips',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildBusinessTripExportSheets(filtered),
-                },
-                {
-                  key: 'export-passengers',
-                  label: t('pages.hr.businessTrip.exportPassengers'),
-                  filePrefix: 'business-trips-with-passengers',
-                  disabled: filtered.length === 0,
-                  buildSheets: async () =>
-                    buildBusinessTripExportSheets(
-                      filtered,
-                      await fetchBusinessTripDetails(
-                        filtered.map((row) => row.id),
-                      ),
-                    ),
-                },
-              ]}
-              onImport={canViewHr ? () => setImportOpen(true) : undefined}
-              primary={
-                canCreate
-                  ? {
-                      label: t('hr.buttons.newBusinessTrip'),
-                      onClick: () => router.push('/approvals/new/business-trip'),
-                    }
-                  : undefined
-              }
-            />
           </div>
         </div>
 

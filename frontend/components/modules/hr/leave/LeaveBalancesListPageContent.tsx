@@ -17,6 +17,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
   UserOutlined,
+  WalletOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -258,7 +259,35 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-leave-balances-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2
+            id="erp-leave-balances-hero-title"
+            className="erp-employees-hero-title"
+          >
+            {t('pages.hr.listHeroTitle', {
+              title: t('hr.tabs.leaveBalances'),
+              count: meta.total.toLocaleString(),
+            })}
+          </h2>
+          <div className="erp-employees-hero-actions">
+            <ExportExcelButton
+              compact={isCompact}
+              actions={[
+                {
+                  key: 'balances',
+                  filePrefix: 'leave-balances',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildLeaveBalanceExportSheets(filtered),
+                },
+              ]}
+            />
+          </div>
+        </div>
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('pages.hr.leave.balanceStats.employees')}
           value={meta.total}
@@ -283,17 +312,18 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
           accent="slate"
           icon={<ClockCircleOutlined />}
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <WalletOutlined />
+            </span>
             <h3 className="erp-pro-card-toolbar-title">
               {t('hr.tabs.leaveBalances')}
             </h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -305,17 +335,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isCompact}
-              actions={[
-                {
-                  key: 'balances',
-                  filePrefix: 'leave-balances',
-                  disabled: filtered.length === 0,
-                  buildSheets: () => buildLeaveBalanceExportSheets(filtered),
-                },
-              ]}
-            />
           </div>
         </div>
 
