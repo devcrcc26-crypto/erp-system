@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Spin } from 'antd';
@@ -64,7 +65,7 @@ interface EmployeeLeaveProfileSectionProps {
 }
 
 const BALANCE_ACCENT: Record<string, string> = {
-  ANNUAL: '#1d9e75',
+  ANNUAL: accent.primary,
   MATERNITY: '#be185d',
   SICK: '#2563eb',
 };

@@ -3,7 +3,7 @@
  * white floating tiles, 16px radius, soft shadow. Scoped under
  * `.erp-leave-v2` on LeaveRequestsListPageContent root.
  *
- * Contrast on white: muted #4B5563 7.6:1; primary-strong #0F6E56 on the
+ * Contrast on white: muted #4B5563 7.6:1; primary-strong var(--erp-accent-hover) on the
  * 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
  */
 .erp-leave-v2 {
@@ -16,9 +16,9 @@
   --lv2-body: #1f2937;
   --lv2-divider: #eef1f4;
   --lv2-subtle: #f7f8fa;
-  --lv2-tint: rgba(29, 158, 117, 0.1);
-  --lv2-primary: #1d9e75;
-  --lv2-primary-strong: #0f6e56;
+  --lv2-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --lv2-primary: var(--erp-accent);
+  --lv2-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }

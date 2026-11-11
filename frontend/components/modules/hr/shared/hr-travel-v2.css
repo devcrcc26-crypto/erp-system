@@ -18,9 +18,9 @@
   --htv2-body: #1f2937;
   --htv2-divider: #eef1f4;
   --htv2-subtle: #f7f8fa;
-  --htv2-tint: rgba(29, 158, 117, 0.1);
-  --htv2-primary: #1d9e75;
-  --htv2-primary-strong: #0f6e56;
+  --htv2-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --htv2-primary: var(--erp-accent);
+  --htv2-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
   min-width: 0;
@@ -523,13 +523,13 @@
 }
 
 .erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary {
-  background: #1d9e75;
-  border-color: #1d9e75;
+  background: var(--erp-accent);
+  border-color: var(--erp-accent);
 }
 
 .erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary:hover {
-  background: #0f6e56 !important;
-  border-color: #0f6e56 !important;
+  background: var(--erp-accent-hover) !important;
+  border-color: var(--erp-accent-hover) !important;
 }
 
 /* Portaled mark-paid / cash / confirm modals */
@@ -539,8 +539,8 @@
   --htv2-muted: #4b5563;
   --htv2-strong: #0f172a;
   --htv2-body: #1f2937;
-  --htv2-primary: #1d9e75;
-  --htv2-primary-strong: #0f6e56;
+  --htv2-primary: var(--erp-accent);
+  --htv2-primary-strong: var(--erp-accent-hover);
 }
 
 .erp-hr-travel-modal .ant-modal-content,

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import './evaluation-v2.css';
 
@@ -303,7 +304,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
         <div className="erp-evaluation-progress">
           <Progress
             percent={Math.round((completed / total) * 100)}
-            strokeColor="#1D9E75"
+            strokeColor={accent.primary}
             railColor="#E8EBEF"
             format={(p) => `${p}% complete`}
           />

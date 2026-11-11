@@ -7,6 +7,7 @@ import type { Locale } from 'antd/es/locale';
 import enUS from 'antd/locale/en_US';
 import zhCN from 'antd/locale/zh_CN';
 import FontScaleSync from '@/components/providers/FontScaleSync';
+import ThemeAccentSync from '@/components/providers/ThemeAccentSync';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { buildAntdTheme } from '@/lib/theme/antd-theme';
 import {
@@ -68,6 +69,7 @@ export default function AntDesignProvider({
     <AntdRegistry>
       <ConfigProvider theme={theme} locale={antdLocale}>
         <FontScaleSync />
+        <ThemeAccentSync />
         <App className="flex h-full min-h-0 flex-1 flex-col">{children}</App>
       </ConfigProvider>
     </AntdRegistry>

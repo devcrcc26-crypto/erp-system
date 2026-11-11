@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -8,7 +9,7 @@ import { UserOutlined } from '@ant-design/icons';
  * easier to scan. Each text colour is ≥ 4.5:1 on its tint.
  */
 const AVATAR_TINTS: ReadonlyArray<{ bg: string; fg: string }> = [
-  { bg: '#E1F5EE', fg: '#0F6E56' },
+  { bg: accent.light, fg: accent.hover },
   { bg: '#E6F1FB', fg: '#1A4A7A' },
   { bg: '#FAEEDA', fg: '#7A4D0F' },
   { bg: '#FAECE7', fg: '#9A3B1C' },

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { Spin } from 'antd';
 import {
@@ -45,7 +46,7 @@ function ProjectStatusDonut({
   stats: PortfolioDashboardStats;
 }): React.ReactNode {
   const data = [
-    { name: 'In Progress', value: statusCount(stats.projectsByStatus, 'IN_PROGRESS'), fill: '#1D9E75' },
+    { name: 'In Progress', value: statusCount(stats.projectsByStatus, 'IN_PROGRESS'), fill: accent.primary },
     { name: 'Completed', value: statusCount(stats.projectsByStatus, 'COMPLETED'), fill: '#639922' },
     { name: 'Not Started', value: statusCount(stats.projectsByStatus, 'NOT_STARTED'), fill: '#D3D1C7' },
     { name: 'On Hold', value: statusCount(stats.projectsByStatus, 'ON_HOLD'), fill: '#BA7517' },

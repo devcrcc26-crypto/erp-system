@@ -162,7 +162,7 @@ export function TravelRouteHero({
             <Plane
               size={18}
               strokeWidth={2}
-              className="shrink-0 rotate-45 text-[#1d9e75]"
+              className="shrink-0 rotate-45 text-[color:var(--erp-accent)]"
               aria-hidden
             />
             <span>{placeName(destination)}</span>

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
@@ -56,7 +57,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   blue: { bg: '#E6F1FB', fg: '#185FA5' },

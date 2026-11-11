@@ -7,6 +7,7 @@ import { useForgotPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import AuthCenteredShell from '@/components/auth/AuthCenteredShell';
+import { accent } from '@/lib/theme/accent';
 
 const AUTH_INPUT_CLASS =
   'w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
@@ -91,7 +92,7 @@ function ForgotPasswordForm(): React.ReactNode {
           type="submit"
           disabled={forgotPassword.isPending}
           className="w-full rounded-none px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-          style={{ backgroundColor: '#1D9E75' }}
+          style={{ backgroundColor: accent.primary }}
         >
           {forgotPassword.isPending ? 'Sending…' : 'Send reset link'}
         </button>
@@ -102,7 +103,7 @@ function ForgotPasswordForm(): React.ReactNode {
       </p>
 
       <p className="mt-4 text-center text-sm text-slate-500">
-        <Link href="/login" className="font-medium text-[#1D9E75] hover:underline">
+        <Link href="/login" className="font-medium text-[color:var(--erp-accent)] hover:underline">
           Back to sign in
         </Link>
       </p>

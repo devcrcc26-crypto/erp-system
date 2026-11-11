@@ -12,9 +12,9 @@
   --att-body: #1f2937;
   --att-divider: #eef1f4;
   --att-subtle: #f7f8fa;
-  --att-tint: rgba(29, 158, 117, 0.1);
-  --att-primary: #1d9e75;
-  --att-primary-strong: #0f6e56;
+  --att-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --att-primary: var(--erp-accent);
+  --att-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }
@@ -417,7 +417,7 @@
 .erp-att-import-v2
   .erp-att-import-dropzone.ant-upload-wrapper
   .ant-upload-drag:hover {
-  border-color: #1d9e75 !important;
+  border-color: var(--erp-accent) !important;
   background: #f0faf6 !important;
 }
 

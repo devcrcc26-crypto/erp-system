@@ -1,12 +1,12 @@
 /*
  * Dashboard v2 — floating-tile language shared with leave / site-assignment.
- * Every rule is scoped under `.erp-dashboard-v2`. Accent: primary #1D9E75;
- * text on 10% tint uses #0F6E56 (5.3:1). Muted #4B5563 is 7.6:1 on white.
+ * Every rule is scoped under `.erp-dashboard-v2`. Accent: primary var(--erp-accent);
+ * text on 10% tint uses var(--erp-accent-hover) (5.3:1). Muted #4B5563 is 7.6:1 on white.
  */
 .erp-dashboard-v2 {
-  --dv2-primary: #1d9e75;
-  --dv2-primary-strong: #0f6e56;
-  --dv2-primary-tint: rgba(29, 158, 117, 0.1);
+  --dv2-primary: var(--erp-accent);
+  --dv2-primary-strong: var(--erp-accent-hover);
+  --dv2-primary-tint: rgba(var(--erp-accent-rgb),  0.1);
   --dv2-surface: #ffffff;
   --dv2-subtle: #f7f8fa;
   --dv2-text: #1f2937;
@@ -116,11 +116,11 @@
 }
 
 .erp-dashboard-v2 .dv2-action:hover {
-  border-color: rgba(29, 158, 117, 0.45);
+  border-color: rgba(var(--erp-accent-rgb),  0.45);
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(29, 158, 117, 0.12);
+  box-shadow: 0 4px 10px rgba(var(--erp-accent-rgb),  0.12);
 }
 
 .erp-dashboard-v2 .dv2-action:active {
@@ -196,10 +196,10 @@
 
 .erp-dashboard-v2 .dv2-tab--active,
 .erp-dashboard-v2 .dv2-tab--active:hover {
-  border-color: rgba(29, 158, 117, 0.25);
+  border-color: rgba(var(--erp-accent-rgb),  0.25);
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
-  box-shadow: 0 1px 2px rgba(29, 158, 117, 0.08);
+  box-shadow: 0 1px 2px rgba(var(--erp-accent-rgb),  0.08);
 }
 
 .erp-dashboard-v2 .dv2-tab--active .dv2-tab-icon {
@@ -375,7 +375,7 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 .erp-dashboard-v2 a.dv2-kpi:hover {
-  border-color: rgba(29, 158, 117, 0.35);
+  border-color: rgba(var(--erp-accent-rgb),  0.35);
   background: #fbfefd;
   transform: translateY(-1px);
   box-shadow:
@@ -834,7 +834,7 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 .erp-dashboard-v2 .dv2-button:hover {
-  background: rgba(29, 158, 117, 0.16);
+  background: rgba(var(--erp-accent-rgb),  0.16);
 }
 
 .erp-dashboard-v2 .dv2-empty {

@@ -88,7 +88,7 @@ function HoursPreviewChip({
     <div
       className={`min-w-0 rounded-lg border px-3 py-2.5 ${
         emphasize
-          ? 'border-[#1D9E75]/30] bg-[#E1F5EE]'
+          ? 'border-[var(--erp-accent)]/30] bg-[var(--erp-accent-light)]'
           : 'border-[#e8ebef] bg-[#fafbfc]'
       }`}
     >
@@ -97,7 +97,7 @@ function HoursPreviewChip({
       </p>
       <p
         className={`m-0 mt-0.5 text-[15px] font-semibold tabular-nums leading-tight ${
-          emphasize ? 'text-[#0F6E56]' : 'text-[var(--color-text-primary)]'
+          emphasize ? 'text-[color:var(--erp-accent-hover)]' : 'text-[var(--color-text-primary)]'
         }`}
       >
         {value}

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo } from 'react';
 import { Alert, Spin } from 'antd';
@@ -27,7 +28,7 @@ const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 type DayStatus = 'working' | 'half' | 'off';
 
 const STATUS_DOT: Record<DayStatus, string> = {
-  working: '#1d9e75',
+  working: accent.primary,
   half: '#ba7517',
   off: '#94a3b8',
 };

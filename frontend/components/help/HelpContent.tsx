@@ -76,7 +76,7 @@ export default function HelpContent({
           <div className="flex items-start gap-4">
             {iconKey ? (
               <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E1F5EE] text-[22px] text-[#0F6E56]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--erp-accent-light)] text-[22px] text-[color:var(--erp-accent-hover)]"
                 aria-hidden
               >
                 {getNavIcon(iconKey)}
@@ -137,7 +137,7 @@ export default function HelpContent({
           className="erp-employee-section scroll-mt-4"
         >
           <div className="erp-employee-section-header !justify-start gap-2.5">
-            <span className="h-4 w-1 shrink-0 rounded-full bg-[#1D9E75]" aria-hidden />
+            <span className="h-4 w-1 shrink-0 rounded-full bg-[var(--erp-accent)]" aria-hidden />
             <h2
               id={`${section.heading.id}-title`}
               className="m-0 text-[15px] font-semibold leading-6 text-[rgba(0,0,0,0.88)]"
@@ -475,8 +475,8 @@ function parseTable(lines: string[]): Block | null {
 
 const TONE_STYLES: Record<Tone, { box: string; icon: string; Icon: LucideIcon }> = {
   success: {
-    box: 'border-[#1D9E75] bg-[#F1FAF6]',
-    icon: 'text-[#0F6E56]',
+    box: 'border-[var(--erp-accent)] bg-[#F1FAF6]',
+    icon: 'text-[color:var(--erp-accent-hover)]',
     Icon: CheckCircle2,
   },
   info: {
@@ -516,7 +516,7 @@ function SectionIndex({
           <li key={section.id}>
             <a
               href={`#${section.id}`}
-              className="inline-flex rounded-full border border-[#E8EBEF] bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[#1D9E75] hover:!text-[#0F6E56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D9E75]"
+              className="inline-flex rounded-full border border-[#E8EBEF] bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[var(--erp-accent)] hover:!text-[color:var(--erp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--erp-accent)]"
             >
               {plainText(section.text)}
             </a>
@@ -541,7 +541,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
           id={block.id}
           className="mb-3 mt-2 flex scroll-mt-4 items-center gap-2.5 text-[17px] font-semibold leading-7 text-[rgba(0,0,0,0.88)]"
         >
-          <span className="h-4 w-1 shrink-0 rounded-full bg-[#1D9E75]" aria-hidden />
+          <span className="h-4 w-1 shrink-0 rounded-full bg-[var(--erp-accent)]" aria-hidden />
           <span>{inline(block.text)}</span>
         </h2>
       );
@@ -585,7 +585,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
           {block.items.map((item, index) => (
             <li key={index} className="flex gap-3">
               <span
-                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E1F5EE] text-[12px] font-semibold text-[#0F6E56]"
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--erp-accent-light)] text-[12px] font-semibold text-[color:var(--erp-accent-hover)]"
                 aria-hidden
               >
                 {index + 1}
@@ -716,7 +716,7 @@ function inline(text: string): ReactNode {
         <a
           key={key}
           href={match[3]}
-          className="font-medium !text-[#0F6E56] underline-offset-2 hover:underline"
+          className="font-medium !text-[color:var(--erp-accent-hover)] underline-offset-2 hover:underline"
         >
           {match[2]}
         </a>,

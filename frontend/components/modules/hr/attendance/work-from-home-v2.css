@@ -12,9 +12,9 @@
   --wfh-body: #1f2937;
   --wfh-divider: #eef1f4;
   --wfh-subtle: #f7f8fa;
-  --wfh-tint: rgba(29, 158, 117, 0.1);
-  --wfh-primary: #1d9e75;
-  --wfh-primary-strong: #0f6e56;
+  --wfh-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --wfh-primary: var(--erp-accent);
+  --wfh-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }

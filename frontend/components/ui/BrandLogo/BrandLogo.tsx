@@ -1,39 +1,32 @@
 'use client';
 
+import Image from 'next/image';
+
+const LOGO_SRC = '/crcc-logo.jpg';
+
 /**
- * CRCC text brand mark — used on shell nav and related chrome.
- * Logo image removed; brand is text-only.
+ * CRCC brand mark — globe + wordmark for shell nav and auth chrome.
  */
 export default function BrandLogo({
   size = 32,
   className,
-  onDark = false,
+  priority = false,
 }: {
   size?: number;
   className?: string;
   priority?: boolean;
+  /** Kept for callers; logo artwork includes its own colours. */
   onDark?: boolean;
 }): React.ReactNode {
-  const fontSize = Math.max(12, Math.round(size * 0.45));
-
   return (
-    <span
-      className={[
-        'inline-flex shrink-0 items-center justify-center font-semibold tracking-wide',
-        onDark ? 'text-white' : 'text-[var(--sb-text,#1B2B4B)]',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{
-        height: size,
-        minWidth: size,
-        fontSize,
-        lineHeight: 1,
-      }}
-      aria-hidden={false}
-    >
-      CRCC
-    </span>
+    <Image
+      src={LOGO_SRC}
+      alt="CRCC"
+      width={size}
+      height={size}
+      priority={priority}
+      className={['shrink-0 object-contain', className].filter(Boolean).join(' ')}
+      style={{ width: size, height: size }}
+    />
   );
 }

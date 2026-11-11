@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -33,7 +34,7 @@ export const CHART_TOOLTIP_CURSOR = { fill: 'rgba(0,0,0,0.04)' };
 type StatColor = 'teal' | 'red' | 'amber' | 'blue' | 'green' | 'default';
 
 const STAT_ACCENT: Record<StatColor, { bg: string; fg: string }> = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   blue: { bg: '#E6F1FB', fg: '#185FA5' },
@@ -125,7 +126,7 @@ export function ChartCard({
           {icon ? (
             <span
               className="erp-users-stat-chip"
-              style={{ background: '#E1F5EE', color: '#1D9E75' }}
+              style={{ background: accent.light, color: accent.primary }}
             >
               {icon}
             </span>
@@ -163,7 +164,7 @@ export function SectionCard({
         {action ? (
           <Link
             href={action.href}
-            className="text-xs font-medium text-[#1D9E75] no-underline hover:text-[#0F6E56]"
+            className="text-xs font-medium text-[color:var(--erp-accent)] no-underline hover:text-[color:var(--erp-accent-hover)]"
           >
             {action.label} →
           </Link>

@@ -156,7 +156,7 @@ export default function PersonalDashboard({
           action={
             <Link
               href="/hr/leave-requests"
-              className="text-xs font-medium text-[#1D9E75] no-underline hover:text-[#0F6E56]"
+              className="text-xs font-medium text-[color:var(--erp-accent)] no-underline hover:text-[color:var(--erp-accent-hover)]"
             >
               {t(`${HR}.viewAll`)}
             </Link>
@@ -201,7 +201,7 @@ export default function PersonalDashboard({
           action={
             <Link
               href="/profile"
-              className="text-xs font-medium text-[#1D9E75] no-underline hover:text-[#0F6E56]"
+              className="text-xs font-medium text-[color:var(--erp-accent)] no-underline hover:text-[color:var(--erp-accent-hover)]"
             >
               {t(`${HR}.viewAll`)}
             </Link>
@@ -239,7 +239,7 @@ export default function PersonalDashboard({
                         {formatProjectDate(holiday.date)}
                       </p>
                     </div>
-                    <span className="flex-shrink-0 text-xs font-medium text-[#1D9E75]">
+                    <span className="flex-shrink-0 text-xs font-medium text-[color:var(--erp-accent)]">
                       {daysLabel}
                     </span>
                   </div>

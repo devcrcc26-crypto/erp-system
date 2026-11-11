@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Spin } from 'antd';
@@ -444,7 +445,7 @@ export default function EmployeeOvertimeProfileSection({
             <HoursTile
               label={t('hr.overtimeCategory.regular')}
               value={formatOvertimeHours(yearTotals.regular)}
-              accent="#1d9e75"
+              accent={accent.primary}
             />
             <HoursTile
               label={t('hr.overtimeCategory.night')}
@@ -464,7 +465,7 @@ export default function EmployeeOvertimeProfileSection({
             <HoursTile
               label={t('hr.overtimeCategory.total')}
               value={formatOvertimeHours(yearTotals.total)}
-              accent="#0f6e56"
+              accent={accent.hover}
               meta={t('hr.overtime.sheetsInYear', {
                 count: yearTotals.sheets,
               })}

@@ -4,7 +4,7 @@
  * and soft approval-chain tier cards. Scoped under `.erp-approvals-v2`.
  *
  * Contrast on white: muted #4B5563 7.6:1; strong #0F172A; primary-strong
- * #0F6E56 on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
+ * var(--erp-accent-hover) on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
  */
 
 .erp-approvals-v2 {
@@ -17,9 +17,9 @@
   --ap2-body: #1f2937;
   --ap2-divider: #eef1f4;
   --ap2-subtle: #f7f8fa;
-  --ap2-tint: rgba(29, 158, 117, 0.1);
-  --ap2-primary: #1d9e75;
-  --ap2-primary-strong: #0f6e56;
+  --ap2-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --ap2-primary: var(--erp-accent);
+  --ap2-primary-strong: var(--erp-accent-hover);
   --ap2-amber-bg: #fffaeb;
   --ap2-amber: #b54708;
   --ap2-orange: #f47b20;
@@ -373,7 +373,7 @@
 }
 
 .erp-approval-tier-card[data-state='approved'] .erp-approval-tier-index {
-  color: #1d9e75;
+  color: var(--erp-accent);
 }
 
 .erp-approval-tier-card[data-state='rejected'] .erp-approval-tier-index {
@@ -616,15 +616,15 @@
 }
 
 .erp-resubmit-submit.ant-btn-primary {
-  background: #1d9e75;
-  border-color: #1d9e75;
+  background: var(--erp-accent);
+  border-color: var(--erp-accent);
   height: 38px;
   padding-inline: 18px;
 }
 
 .erp-resubmit-submit.ant-btn-primary:hover {
-  background: #0f6e56 !important;
-  border-color: #0f6e56 !important;
+  background: var(--erp-accent-hover) !important;
+  border-color: var(--erp-accent-hover) !important;
 }
 
 .erp-resubmit-history {
@@ -704,8 +704,8 @@
   --ap2-body: #1f2937;
   --ap2-divider: #eef1f4;
   --ap2-subtle: #f7f8fa;
-  --ap2-primary: #1d9e75;
-  --ap2-primary-strong: #0f6e56;
+  --ap2-primary: var(--erp-accent);
+  --ap2-primary-strong: var(--erp-accent-hover);
 }
 
 .erp-approval-modal.erp-confirm-dialog .ant-modal-content,

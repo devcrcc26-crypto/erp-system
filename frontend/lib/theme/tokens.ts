@@ -1,17 +1,19 @@
 // UI polish pass - styles only, no logic changes
 
+import { accent } from './accent';
+
 /**
- * Design tokens - teal-forward construction ERP palette.
- * Used by Ant Design ConfigProvider and shared UI components.
+ * Design tokens — construction ERP palette.
+ * Primary / sidebar accent follow {@link ACCENT_MODE} in `./accent`.
  */
 export const tokens = {
-  colorPrimary: '#1D9E75',
-  colorPrimaryHover: '#0F6E56',
-  colorPrimaryLight: '#E1F5EE',
+  colorPrimary: accent.primary,
+  colorPrimaryHover: accent.hover,
+  colorPrimaryLight: accent.light,
 
-  colorTeal400: '#1D9E75',
-  colorTeal50: '#E1F5EE',
-  colorTeal600: '#0F6E56',
+  colorTeal400: accent.primary,
+  colorTeal50: accent.light,
+  colorTeal600: accent.hover,
 
   colorAmber400: '#BA7517',
   colorAmber50: '#FAEEDA',
@@ -40,16 +42,16 @@ export const tokens = {
   colorGray600: '#5F5E5A',
 
   colorNavy: '#1B2B4B',
-  /** Light sider - high-contrast labels, teal active states */
+  /** Light sider - high-contrast labels, accent active states */
   colorSidebarBg: '#FFFFFF',
   colorSidebarRailBg: '#F5F7F9',
-  colorSidebarActive: '#E1F5EE',
+  colorSidebarActive: accent.light,
   colorSidebarHover: 'rgba(15, 23, 42, 0.04)',
   colorSidebarBorder: '#E8EBEF',
   colorSidebarText: '#1A1A1A',
   colorSidebarTextMuted: '#6B7280',
-  colorSidebarTextActive: '#0F6E56',
-  colorSidebarAccent: '#1D9E75',
+  colorSidebarTextActive: accent.hover,
+  colorSidebarAccent: accent.primary,
   colorSidebarGroupLabel: '#6B7280',
   colorSidebarIcon: '#64748B',
 

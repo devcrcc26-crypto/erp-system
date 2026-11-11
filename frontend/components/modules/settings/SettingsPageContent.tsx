@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Checkbox, Grid, Spin } from 'antd';
@@ -54,7 +55,7 @@ const ACTION_TITLE_KEYS: Record<PermissionAction, string> = {
 };
 
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   blue: { bg: '#E6F1FB', fg: '#378ADD' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
 } as const;

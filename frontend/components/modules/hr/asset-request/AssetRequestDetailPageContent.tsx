@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import { Button, Dropdown, Grid, Skeleton } from 'antd';
@@ -207,7 +208,7 @@ export default function AssetRequestDetailPageContent({
           <div className="flex items-start gap-4">
             <div
               className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl"
-              style={{ background: '#E1F5EE', color: '#1D9E75' }}
+              style={{ background: accent.light, color: accent.primary }}
             >
               <Package size={22} />
             </div>

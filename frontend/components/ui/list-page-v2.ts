@@ -33,7 +33,7 @@ export const LIST_PAGE_V2 = [
   '[&_.erp-pro-card]:!shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
   '[&_.erp-users-toolbar]:!border-b-0 [&_.erp-users-toolbar]:!px-5 [&_.erp-users-toolbar]:!pt-[18px] [&_.erp-users-toolbar]:!pb-3.5',
   '[&_.erp-pro-card-toolbar-title]:!text-base [&_.erp-pro-card-toolbar-title]:!font-semibold [&_.erp-pro-card-toolbar-title]:!text-slate-900',
-  '[&_.erp-users-count-pill]:!bg-emerald-600/10 [&_.erp-users-count-pill]:!px-2.5 [&_.erp-users-count-pill]:!text-[#0f6e56]',
+  '[&_.erp-users-count-pill]:!bg-emerald-600/10 [&_.erp-users-count-pill]:!px-2.5 [&_.erp-users-count-pill]:!text-[color:var(--erp-accent-hover)]',
 
   // Filters: one quiet row on white, wrapping instead of squeezing.
   '[&_.erp-users-filter-bar]:!flex-wrap [&_.erp-users-filter-bar]:!gap-x-3 [&_.erp-users-filter-bar]:!gap-y-2.5 [&_.erp-users-filter-bar]:!overflow-visible',
@@ -95,5 +95,5 @@ export const DETAIL_PAGE_V2 = [
 
   // Chips and tags: soft fills instead of outlines.
   '[&_.erp-users-id-chip]:!rounded-lg [&_.erp-users-id-chip]:!border-0 [&_.erp-users-id-chip]:!bg-[#f2f4f7] [&_.erp-users-id-chip]:!text-[#344054]',
-  '[&_.erp-users-role-tag]:!border-0 [&_.erp-users-role-tag]:!bg-emerald-600/10 [&_.erp-users-role-tag]:!font-semibold [&_.erp-users-role-tag]:!text-[#0f6e56]',
+  '[&_.erp-users-role-tag]:!border-0 [&_.erp-users-role-tag]:!bg-emerald-600/10 [&_.erp-users-role-tag]:!font-semibold [&_.erp-users-role-tag]:!text-[color:var(--erp-accent-hover)]',
 ].join(' ');

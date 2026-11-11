@@ -3,7 +3,7 @@
  * dashboard and employee detail. Scoped under `.erp-employees-v2`
  * (UsersPageContent root only).
  *
- * Contrast on white: muted text #4B5563 7.6:1; primary-strong #0F6E56
+ * Contrast on white: muted text #4B5563 7.6:1; primary-strong var(--erp-accent-hover)
  * on the 10% primary tint 5.3:1.
  */
 .erp-employees-v2 {
@@ -15,9 +15,9 @@
   --ev2-strong: #0f172a;
   --ev2-divider: #eef1f4;
   --ev2-subtle: #f7f8fa;
-  --ev2-tint: rgba(29, 158, 117, 0.1);
-  --ev2-primary: #1d9e75;
-  --ev2-primary-strong: #0f6e56;
+  --ev2-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --ev2-primary: var(--erp-accent);
+  --ev2-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }
@@ -150,7 +150,7 @@
 .erp-employees-v2 .erp-users-search-input.ant-input-affix-wrapper-focused,
 .erp-employees-v2 .erp-users-search-input.ant-input-affix-wrapper:focus-within {
   border-color: var(--ev2-primary) !important;
-  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.14) !important;
+  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb),  0.14) !important;
 }
 
 .erp-employees-v2 .erp-users-search-icon {

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import './attendance-v2.css';
 
@@ -677,8 +678,8 @@ export default function AttendanceReviewPageContent({
       hint: t('pages.hr.attendance.review.stats.resolvedHint'),
       value: String(summary.totalResolved),
       suffix: `/ ${summary.totalFlagged}`,
-      chipBg: '#E1F5EE',
-      chipFg: '#1D9E75',
+      chipBg: accent.light,
+      chipFg: accent.primary,
       icon: <CheckCircleOutlined />,
     },
     {

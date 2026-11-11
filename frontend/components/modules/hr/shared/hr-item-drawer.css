@@ -121,13 +121,13 @@
 }
 
 .erp-hr-item-drawer .erp-hr-item-drawer-footer .ant-btn-primary {
-  background: #1d9e75;
-  border-color: #1d9e75;
+  background: var(--erp-accent);
+  border-color: var(--erp-accent);
 }
 
 .erp-hr-item-drawer .erp-hr-item-drawer-footer .ant-btn-primary:hover {
-  background: #0f6e56 !important;
-  border-color: #0f6e56 !important;
+  background: var(--erp-accent-hover) !important;
+  border-color: var(--erp-accent-hover) !important;
 }
 
 .erp-hr-item-drawer-hint-card {

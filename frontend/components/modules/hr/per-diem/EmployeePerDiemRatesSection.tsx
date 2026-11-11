@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect } from 'react';
 import { Alert, Button, Form, InputNumber, Space, Spin, Switch } from 'antd';
@@ -30,7 +31,7 @@ type FormValues = Partial<
 >;
 
 const CATEGORY_ACCENT: Record<PerDiemDestinationCategory, string> = {
-  Domestic: '#1d9e75',
+  Domestic: accent.primary,
   Regional: '#0d9488',
   International: '#0369a1',
 };

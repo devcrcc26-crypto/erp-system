@@ -12,9 +12,9 @@
   --lpv2-body: #1f2937;
   --lpv2-divider: #eef1f4;
   --lpv2-subtle: #f7f8fa;
-  --lpv2-tint: rgba(29, 158, 117, 0.1);
-  --lpv2-primary: #1d9e75;
-  --lpv2-primary-strong: #0f6e56;
+  --lpv2-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --lpv2-primary: var(--erp-accent);
+  --lpv2-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }

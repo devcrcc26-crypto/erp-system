@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import { Button, Checkbox, Input, Modal, Progress, Space, Steps, Tag, Typography } from 'antd';
@@ -527,7 +528,7 @@ export default function FieldMovementForm({
                     className={`mt-1 text-xs ${
                       day.submittedLog.status === 'DRAFT'
                         ? 'text-[#b45309]'
-                        : 'text-[#1d9e75]'
+                        : 'text-[color:var(--erp-accent)]'
                     }`}
                   >
                     {day.submittedLog.status === 'DRAFT'
@@ -566,7 +567,7 @@ export default function FieldMovementForm({
                     ? Math.round((filledCount / selectedDays.length) * 100)
                     : 0
                 }
-                strokeColor="#1d9e75"
+                strokeColor={accent.primary}
                 size="small"
                 showInfo={false}
                 className="!mb-3"
@@ -698,7 +699,7 @@ export default function FieldMovementForm({
 
       {step === 3 ? (
         <div className="flex flex-col items-start gap-2 py-2">
-          <Typography.Title level={4} className="!mb-1 !text-[#1d9e75]">
+          <Typography.Title level={4} className="!mb-1 !text-[color:var(--erp-accent)]">
             ✓ Field Movement Log {submittedNumber} submitted
           </Typography.Title>
           <Typography.Paragraph className="!mb-0 text-[#6B7280]">

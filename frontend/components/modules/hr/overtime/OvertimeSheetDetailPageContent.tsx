@@ -790,7 +790,7 @@ export default function OvertimeSheetDetailPageContent({
             {
               label: t('hr.overtimeCategory.total'),
               value: sheet.totalHours,
-              color: 'text-[#0f6e56]',
+              color: 'text-[color:var(--erp-accent-hover)]',
               total: true,
             },
           ] as const

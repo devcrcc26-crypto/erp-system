@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { Skeleton } from 'antd';
+import { accent } from '@/lib/theme/accent';
 
 /** Charts need the DOM / canvas, so they are never server-rendered. */
 const ChartSkeleton = (): React.ReactNode => (
@@ -24,7 +25,7 @@ export const DASHBOARD_CHART_COLORS = {
   urgentDark: '#7a1a12',
   warn: '#d9730d',
   caution: '#eab308',
-  primary: '#1d9e75',
+  primary: accent.primary,
   blue: '#2563eb',
   purple: '#7c3aed',
   orange: '#ea580c',

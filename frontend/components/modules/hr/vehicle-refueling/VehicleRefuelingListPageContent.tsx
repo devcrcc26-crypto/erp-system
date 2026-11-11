@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import {
@@ -60,7 +61,7 @@ const APPROVED_STATUSES = statusesForVehicleRefuelingMode('approved');
 const REJECTED_STATUSES = statusesForVehicleRefuelingMode('rejected');
 
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },

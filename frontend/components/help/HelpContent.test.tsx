@@ -83,7 +83,7 @@ describe('HelpContent', () => {
     expect(steps?.children).toHaveLength(3);
     expect(within(steps as HTMLElement).getByText('Amount')).toBeTruthy();
 
-    expect(screen.getByText('What happens next:').closest('div.border-l-4')?.className).toContain('border-[#1D9E75]');
+    expect(screen.getByText('What happens next:').closest('div.border-l-4')?.className).toContain('border-[var(--erp-accent)]');
     expect(screen.getByText('Note:').closest('div.border-l-4')?.className).toContain('border-[#378ADD]');
     expect(screen.getByText('Only drafts can be edited.').closest('div.border-l-4')).toBeTruthy();
   });

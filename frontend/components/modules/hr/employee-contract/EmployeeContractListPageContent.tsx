@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import {
@@ -69,7 +70,7 @@ import { buildEmployeeContractExportSheets } from '@/lib/utils/employee-contract
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   slate: { bg: '#EEF1F4', fg: '#64748B' },

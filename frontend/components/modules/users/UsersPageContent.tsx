@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import './employees-v2.css';
@@ -172,7 +173,7 @@ const USER_STAT_ACCENT: Record<
   'teal' | 'green' | 'amber' | 'slate',
   { bg: string; fg: string }
 > = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   slate: { bg: '#EEF1F4', fg: '#64748B' },

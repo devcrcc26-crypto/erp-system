@@ -99,7 +99,7 @@ export default function HorizontalScrollHint({
   }
 
   const buttonClass =
-    'absolute top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.15)] transition hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D9E75]';
+    'absolute top-1/2 z-[3] flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.15)] transition hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--erp-accent)]';
 
   return (
     <div ref={rootRef} className="relative min-w-0">

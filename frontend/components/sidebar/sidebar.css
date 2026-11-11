@@ -16,10 +16,10 @@
   --sb-text-muted: #4b5563;
   --sb-icon: #64748b;
   --sb-hover: rgba(15, 23, 42, 0.05);
-  --sb-active-bg: #e1f5ee;
-  --sb-active-text: #0f6e56;
-  --sb-accent: #0f6e56;
-  --sb-focus: #1d9e75;
+  --sb-active-bg: var(--erp-accent-light);
+  --sb-active-text: var(--erp-accent-hover);
+  --sb-accent: var(--erp-accent-hover);
+  --sb-focus: var(--erp-accent);
   --sb-badge-bg: #c43d3c;
   --sb-field-bg: #f6f8fa;
   --sb-field-border: #d0d7de;
@@ -27,7 +27,7 @@
   --sb-scrollbar: rgba(15, 23, 42, 0.18);
   --sb-shadow: 4px 0 16px rgba(15, 23, 42, 0.06);
   --sb-tile-bg: #f1f4f7;
-  --sb-tile-hover: #d9f0e7;
+  --sb-tile-hover: var(--erp-accent-soft);
   --sb-tile-active-text: #ffffff;
   --sb-panel-bg: #f6f8fa;
 }
@@ -941,8 +941,8 @@
 .erp-sidebar-v2 {
   --sb-border: #eef1f4;
   --sb-hover: rgba(16, 24, 40, 0.04);
-  --sb-active-bg: rgba(29, 158, 117, 0.1);
-  --sb-active-text: #0f6e56;
+  --sb-active-bg: rgba(var(--erp-accent-rgb), 0.1);
+  --sb-active-text: var(--erp-accent-hover);
   --sb-field-bg: #f2f4f7;
   --sb-field-border: transparent;
   --sb-panel-bg: #f7f8fa;
@@ -953,7 +953,7 @@
   /* Icon chips: a soft square behind every destination icon. */
   --sb-chip-bg: #f2f4f7;
   --sb-chip-hover: #e6eaef;
-  --sb-chip-active: rgba(29, 158, 117, 0.16);
+  --sb-chip-active: rgba(var(--erp-accent-rgb), 0.16);
   --sb-rail-bg: #fbfcfd;
 }
 
@@ -1274,7 +1274,7 @@
 .erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-tile[data-active='true'] .sb-icon-tile {
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
-  box-shadow: inset 0 0 0 1px rgba(29, 158, 117, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
 }
 
 /* Compact rail: a short rule under the search/favorites tools. */
@@ -1313,7 +1313,7 @@
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page'] .sb-icon {
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
-  box-shadow: inset 0 0 0 1px rgba(29, 158, 117, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
 }
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page']::before {
@@ -1322,7 +1322,7 @@
 
 /* Avatar: soft gradient instead of a flat fill. */
 .erp-sidebar-v2 .sb-avatar {
-  background: linear-gradient(135deg, #1d9e75 0%, #0f6e56 100%);
+  background: linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent-hover) 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 

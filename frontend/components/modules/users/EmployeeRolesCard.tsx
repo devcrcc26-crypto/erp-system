@@ -245,7 +245,7 @@ export default function EmployeeRolesCard({
                   data-primary={isPrimary ? 'true' : undefined}
                   className={`erp-employee-role-dot inline-block h-2 w-2 shrink-0 rounded-full ${
                     isPrimary
-                      ? 'bg-[#1d9e75]'
+                      ? 'bg-[var(--erp-accent)]'
                       : 'border-2 border-slate-400 bg-transparent'
                   }`}
                   aria-hidden

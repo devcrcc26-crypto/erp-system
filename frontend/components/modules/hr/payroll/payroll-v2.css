@@ -7,7 +7,7 @@
  * `.erp-payroll-settings-drawer` (company settings, portaled).
  *
  * Contrast on white: muted #4B5563 7.6:1; strong #0F172A; primary-strong
- * #0F6E56 on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
+ * var(--erp-accent-hover) on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
  */
 .erp-payroll-v2,
 .erp-payslips-v2,
@@ -24,9 +24,9 @@
   --pr-divider: #eef1f4;
   --pr-subtle: #f7f8fa;
   --pr-tile: #f7f8fa;
-  --pr-tint: rgba(29, 158, 117, 0.1);
-  --pr-primary: #1d9e75;
-  --pr-primary-strong: #0f6e56;
+  --pr-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --pr-primary: var(--erp-accent);
+  --pr-primary-strong: var(--erp-accent-hover);
   --pr-amber-bg: #fffaeb;
   --pr-amber: #b54708;
 }
@@ -865,7 +865,7 @@
 }
 
 .erp-payroll-entry-link:hover {
-  background: rgba(29, 158, 117, 0.16);
+  background: rgba(var(--erp-accent-rgb),  0.16);
 }
 
 .erp-payroll-entry-link:focus-visible {
@@ -959,9 +959,9 @@
   --pr-body: #1f2937;
   --pr-divider: #eef1f4;
   --pr-subtle: #f7f8fa;
-  --pr-tint: rgba(29, 158, 117, 0.1);
-  --pr-primary: #1d9e75;
-  --pr-primary-strong: #0f6e56;
+  --pr-tint: rgba(var(--erp-accent-rgb),  0.1);
+  --pr-primary: var(--erp-accent);
+  --pr-primary-strong: var(--erp-accent-hover);
   --pr-amber-bg: #fffaeb;
   --pr-amber: #b54708;
 }
@@ -1156,7 +1156,7 @@
 .erp-payroll-settings-section-body .ant-input-focused,
 .erp-payroll-settings-section-body .ant-input-affix-wrapper-focused {
   border-color: var(--pr-primary);
-  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb),  0.15);
 }
 
 .erp-payroll-settings-section-body .ant-input-disabled,

@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Select, Skeleton, Table, Tag } from 'antd';
@@ -564,12 +565,12 @@ export default function EmployeeAttendanceProfileSection({
             <StatTile
               label={t('pages.hr.attendance.stats.totalPayableHours')}
               value={formatNumber(totalPayableHours)}
-              accent="#0F6E56"
+              accent={accent.hover}
             />
             <StatTile
               label={t('pages.hr.attendance.profilePresentDays')}
               value={`${formatNumber(summary.totalPresentDays)}`}
-              accent="#1d9e75"
+              accent={accent.primary}
               meta={t('pages.hr.attendance.profileDaysUnit')}
             />
             <StatTile

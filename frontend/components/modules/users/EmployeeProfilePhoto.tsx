@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useRef, useState } from 'react';
 import { Avatar, Button, Space, Spin, Tooltip, Upload } from 'antd';
@@ -174,7 +175,7 @@ export default function EmployeeProfilePhoto({
           icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
           style={{
             backgroundColor: imageSrc ? undefined : '#e8f7f2',
-            color: imageSrc ? undefined : '#0f6e56',
+            color: imageSrc ? undefined : accent.hover,
             fontWeight: 600,
             flexShrink: 0,
             border: '1px solid rgba(29, 158, 117, 0.18)',

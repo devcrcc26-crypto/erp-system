@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -43,7 +44,7 @@ import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   blue: { bg: '#E6F1FB', fg: '#378ADD' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   green: { bg: '#EAF3DE', fg: '#639922' },

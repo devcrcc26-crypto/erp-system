@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import Link from 'next/link';
 import { Spin } from 'antd';
@@ -44,7 +45,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 
 const LEAVE_TYPE_COLORS: Record<string, string> = {
-  ANNUAL: '#1D9E75',
+  ANNUAL: accent.primary,
   SICK: '#E24B4A',
   UNPAID: '#9CA3AF',
   MATERNITY: '#7C3AED',
@@ -54,7 +55,7 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
 };
 
 const MODULE_COLORS: Record<string, string> = {
-  'Leave Request': '#1D9E75',
+  'Leave Request': accent.primary,
   Overtime: '#378ADD',
   'Expense Claim': '#BA7517',
   'Purchase Request': '#7C3AED',
@@ -71,7 +72,7 @@ const MODULE_COLORS: Record<string, string> = {
 };
 
 const MODULE_COLOR_FALLBACK = [
-  '#1D9E75',
+  accent.primary,
   '#378ADD',
   '#7C3AED',
   '#BA7517',
@@ -98,7 +99,7 @@ function colorForModule(module: string, index: number): string {
 }
 
 const HEADCOUNT_PALETTE = [
-  '#1D9E75',
+  accent.primary,
   '#378ADD',
   '#7C3AED',
   '#BA7517',
@@ -129,7 +130,7 @@ const ViewAllLink = ({
 }): React.ReactNode => (
   <Link
     href={href}
-    className="text-xs font-medium text-[#1D9E75] no-underline hover:text-[#0F6E56]"
+    className="text-xs font-medium text-[color:var(--erp-accent)] no-underline hover:text-[color:var(--erp-accent-hover)]"
   >
     {label}
   </Link>
@@ -340,8 +341,8 @@ export default function HrDashboard({
                         <stop offset="100%" stopColor="#E24B4A" stopOpacity={0.55} />
                       </linearGradient>
                       <linearGradient id="hrTotalArea" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1D9E75" stopOpacity={0.22} />
-                        <stop offset="100%" stopColor="#1D9E75" stopOpacity={0} />
+                        <stop offset="0%" stopColor={accent.primary} stopOpacity={0.22} />
+                        <stop offset="100%" stopColor={accent.primary} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -380,10 +381,10 @@ export default function HrDashboard({
                       type="monotone"
                       dataKey="total"
                       name={t(`${HR}.chart.legend.total`)}
-                      stroke="#1D9E75"
+                      stroke={accent.primary}
                       strokeWidth={2.5}
                       fill="url(#hrTotalArea)"
-                      dot={{ r: 3, fill: '#1D9E75', strokeWidth: 0 }}
+                      dot={{ r: 3, fill: accent.primary, strokeWidth: 0 }}
                       activeDot={{ r: 5, strokeWidth: 0 }}
                     />
                     <Bar
@@ -685,8 +686,8 @@ export default function HrDashboard({
             >
               <defs>
                 <linearGradient id="otBarGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#1D9E75" stopOpacity={0.7} />
-                  <stop offset="100%" stopColor="#1D9E75" stopOpacity={1} />
+                  <stop offset="0%" stopColor={accent.primary} stopOpacity={0.7} />
+                  <stop offset="100%" stopColor={accent.primary} stopOpacity={1} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -744,8 +745,8 @@ export default function HrDashboard({
                   className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E1F5EE]">
-                      <span className="text-xs font-semibold text-[#1D9E75]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--erp-accent-light)]">
+                      <span className="text-xs font-semibold text-[color:var(--erp-accent)]">
                         {employeeInitials(req.employeeName)}
                       </span>
                     </div>
@@ -791,7 +792,7 @@ export default function HrDashboard({
                       className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{
                         backgroundColor:
-                          trip.type === 'FLIGHT' ? '#378ADD' : '#1D9E75',
+                          trip.type === 'FLIGHT' ? '#378ADD' : accent.primary,
                       }}
                     />
                     <div className="min-w-0">

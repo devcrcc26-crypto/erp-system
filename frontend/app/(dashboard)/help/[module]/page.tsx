@@ -48,7 +48,7 @@ export default function HelpModulePage(): ReactNode {
         <p className="mb-0 mt-4">
           <Link
             href="/help/getting-started"
-            className="font-medium text-[#0F6E56] underline-offset-2 hover:underline"
+            className="font-medium text-[color:var(--erp-accent-hover)] underline-offset-2 hover:underline"
           >
             {locale === 'zh' ? '返回快速开始' : 'Back to Getting started'}
           </Link>

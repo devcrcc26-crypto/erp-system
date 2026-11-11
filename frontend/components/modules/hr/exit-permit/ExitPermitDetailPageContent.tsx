@@ -391,7 +391,7 @@ export default function ExitPermitDetailPageContent({
       key: 'items',
       label: t('hr.table.items'),
       value: permit.items.length > 0 ? permit.items.length.toLocaleString() : '-',
-      color: permit.items.length > 0 ? 'text-[#0f6e56]' : 'text-gray-400',
+      color: permit.items.length > 0 ? 'text-[color:var(--erp-accent-hover)]' : 'text-gray-400',
       total: true,
     },
   ];

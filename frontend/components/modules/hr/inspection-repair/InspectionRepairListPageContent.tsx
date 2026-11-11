@@ -1,4 +1,5 @@
 'use client';
+import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
 import {
@@ -55,7 +56,7 @@ const ACTIVE_STATUSES = statusesForInspectionRepairMode('active');
 const DONE_STATUSES = statusesForInspectionRepairMode('done');
 
 const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   blue: { bg: '#E6F1FB', fg: '#185FA5' },
