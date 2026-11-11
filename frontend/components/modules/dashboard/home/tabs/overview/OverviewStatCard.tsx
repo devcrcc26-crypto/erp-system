@@ -71,7 +71,7 @@ export default function OverviewStatCard({
   );
 
   const surface =
-    'group flex h-full min-w-0 flex-col justify-between gap-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-200 hover:border-slate-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600';
+    'group relative flex h-full min-w-0 flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-[color:var(--color-card-border)] bg-[image:var(--gradient-surface)] p-5 shadow-[var(--shadow-panel)] transition-all duration-200 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-[image:var(--gradient-primary)] before:opacity-80 group-hover:before:opacity-100 hover:-translate-y-0.5 hover:border-[rgba(var(--erp-accent-rgb),0.32)] hover:bg-white hover:shadow-[0_2px_6px_rgba(20,29,25,0.05),0_12px_28px_rgba(var(--erp-accent-hover-rgb),0.11)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--erp-accent)]';
 
   return (
     <motion.li
@@ -99,7 +99,7 @@ export default function OverviewStatCard({
 export function OverviewStatSkeleton(): React.ReactNode {
   return (
     <li className="min-w-0 list-none">
-      <div className="flex h-full flex-col justify-between gap-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="flex h-full flex-col justify-between gap-5 rounded-2xl border border-[color:var(--color-card-border)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <div className="flex items-start justify-between gap-3">
           <div className="h-3 w-24 animate-pulse rounded bg-slate-100" />
           <div className="h-10 w-10 animate-pulse rounded-xl bg-slate-100" />

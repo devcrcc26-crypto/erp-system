@@ -81,9 +81,9 @@ export default function OverviewCard({
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex h-full min-w-0 flex-col rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:border-slate-200 hover:shadow-md ${className}`.trim()}
+      className={`flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--color-card-border)] bg-white shadow-[var(--shadow-panel)] transition-all duration-200 hover:border-[rgba(var(--erp-accent-rgb),0.32)] hover:shadow-[0_2px_6px_rgba(20,29,25,0.05),0_12px_28px_rgba(var(--erp-accent-hover-rgb),0.11)] ${className}`.trim()}
     >
-      <header className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+      <header className="flex items-start gap-3 border-b border-slate-150 bg-[linear-gradient(180deg,#ffffff_0%,#fafdfc_100%)] px-5 py-4">
         <span
           aria-hidden
           className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${TONE[tone].badge}`}
@@ -93,7 +93,7 @@ export default function OverviewCard({
         <div className="min-w-0 flex-1">
           <h2
             id={headingId}
-            className="m-0 truncate text-[15px] font-semibold leading-6 text-slate-900"
+            className="m-0 truncate text-[15px] font-semibold leading-6 tracking-[-0.01em] text-[color:var(--color-text-heading)]"
           >
             {title}
           </h2>
@@ -105,7 +105,7 @@ export default function OverviewCard({
         {viewAllHref ? (
           <Link
             href={viewAllHref}
-            className="inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[rgba(var(--erp-accent-rgb),0.08)] px-2.5 py-1 text-xs font-semibold text-[color:var(--erp-accent-hover)] transition-colors hover:bg-[rgba(var(--erp-accent-rgb),0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--erp-accent)]"
           >
             {t(`${HOME}.viewAll`)}
             <span className="sr-only">{`: ${title}`}</span>

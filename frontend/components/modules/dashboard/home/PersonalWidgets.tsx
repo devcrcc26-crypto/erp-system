@@ -322,7 +322,7 @@ export function OvertimeWidget({ enabled }: { enabled: boolean }): React.ReactNo
           </div>
           <Link
             href={overtimeSheetDetailHref(sheet.id, '/profile?tab=overtime')}
-            className="mt-auto inline-flex w-fit items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            className="dv2-button"
           >
             {t(`${HOME}.overtime.openSheet`)}
           </Link>
@@ -399,7 +399,7 @@ export function MyEvaluationWidget({ enabled }: { enabled: boolean }): React.Rea
           </p>
           <Link
             href={`/hr/evaluations/${evaluation.id}`}
-            className="mt-auto inline-flex w-fit items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            className="dv2-button"
           >
             {t(`${HOME}.evaluation.open`)}
           </Link>

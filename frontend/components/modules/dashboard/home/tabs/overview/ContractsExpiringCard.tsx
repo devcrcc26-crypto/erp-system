@@ -179,7 +179,7 @@ export default function ContractsExpiringCard({
                   formatter={(value: unknown) =>
                     typeof value === 'number' ? formatCount(value, locale) : ''
                   }
-                  style={{ fill: '#0f172a', fontSize: 12, fontWeight: 600 }}
+                  style={{ fill: '#141d19', fontSize: 12, fontWeight: 600 }}
                 />
               </Bar>
             </BarChart>

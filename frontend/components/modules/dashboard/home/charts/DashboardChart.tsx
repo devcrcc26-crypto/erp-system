@@ -30,9 +30,9 @@ export const DASHBOARD_CHART_COLORS = {
   purple: '#7c3aed',
   orange: '#ea580c',
   red: '#dc2626',
-  text: '#1f2937',
-  muted: '#4b5563',
-  grid: '#eef1f4',
+  text: '#26302c',
+  muted: '#4a5651',
+  grid: '#eaf0ed',
 } as const;
 
 const DONUT_PALETTE: readonly string[] = [

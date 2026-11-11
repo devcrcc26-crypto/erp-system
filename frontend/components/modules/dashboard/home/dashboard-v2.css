@@ -1,26 +1,33 @@
 /*
- * Dashboard v2 — floating-tile language shared with leave / site-assignment.
+ * Dashboard v2 — brand-layer language shared with login / leave / site-assignment.
  * Every rule is scoped under `.erp-dashboard-v2`. Accent: primary var(--erp-accent);
- * text on 10% tint uses var(--erp-accent-hover) (5.3:1). Muted #4B5563 is 7.6:1 on white.
+ * text on 10% tint uses var(--erp-accent-hover) (6.2:1 on white).
  */
 .erp-dashboard-v2 {
   --dv2-primary: var(--erp-accent);
   --dv2-primary-strong: var(--erp-accent-hover);
-  --dv2-primary-tint: rgba(var(--erp-accent-rgb),  0.1);
-  --dv2-surface: #ffffff;
+  --dv2-primary-tint: rgba(var(--erp-accent-rgb), 0.1);
+  --dv2-surface: var(--color-surface, #ffffff);
   --dv2-subtle: var(--erp-n-50);
   --dv2-text: var(--erp-n-800);
   --dv2-text-strong: var(--erp-n-900);
   --dv2-muted: var(--erp-n-600);
   --dv2-divider: var(--erp-n-150);
+  --dv2-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --dv2-border-hover: rgba(var(--erp-accent-rgb), 0.32);
   --dv2-urgent: #b42318;
   --dv2-warn: #b54708;
   --dv2-warn-tint: #fffaeb;
   --dv2-urgent-tint: #fef3f2;
   --dv2-radius: 16px;
-  --dv2-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 16px rgba(16, 24, 40, 0.06);
+  --dv2-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+  --dv2-shadow-hover:
+    0 2px 6px rgba(20, 29, 25, 0.05),
+    0 12px 28px rgba(var(--erp-accent-hover-rgb), 0.11);
 
   display: flex;
   flex-direction: column;
@@ -33,53 +40,104 @@
   outline-offset: 2px;
 }
 
-/* ── Page header: greeting + quick actions (toolbar card, like list pages) ── */
+/* ── Page header: dark brand hero banner (echoing login brand panel) ── */
 
 .erp-dashboard-v2 .dv2-header.erp-pro-card {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px 24px;
-  padding: 22px 24px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  gap: 18px 24px;
+  padding: 24px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--dv2-radius);
-  background: linear-gradient(135deg, #ffffff 0%, #fafdfc 65%, #f2fbf8 100%);
-  box-shadow: var(--dv2-shadow);
-  overflow: visible;
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+  overflow: hidden;
+}
+
+/* Architectural drawing-sheet grid + soft radial glow from login brand panel */
+.erp-dashboard-v2 .dv2-header.erp-pro-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-dashboard-v2 .dv2-header.erp-pro-card::after {
+  content: '';
+  position: absolute;
+  top: -65%;
+  right: -8%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 .erp-dashboard-v2 .dv2-greeting {
+  position: relative;
   min-width: 0;
 }
 
 .erp-dashboard-v2 .dv2-greeting-eyebrow {
-  margin: 0 0 4px;
-  color: var(--dv2-primary-strong);
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+.erp-dashboard-v2 .dv2-greeting-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary-soft, #e1f5ee);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
+}
+
 .erp-dashboard-v2 .dv2-greeting-title {
   margin: 0;
-  color: var(--dv2-text-strong);
-  font-size: 22px;
+  color: #ffffff;
+  font-size: clamp(20px, 2vw, 24px);
   font-weight: 650;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
   overflow-wrap: anywhere;
 }
 
 .erp-dashboard-v2 .dv2-greeting-date {
-  margin: 4px 0 0;
-  color: var(--dv2-muted);
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
+  font-weight: 450;
 }
 
 .erp-dashboard-v2 .dv2-actions {
+  position: relative;
   min-width: 0;
 }
 
@@ -97,30 +155,36 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 14px 0 11px;
-  border: 1px solid var(--erp-n-200);
-  border-radius: 11px;
-  background: var(--dv2-surface);
-  color: var(--dv2-text-strong);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-control, 10px);
+  background: rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 550;
   text-decoration: none;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.16);
   transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    transform 140ms ease,
-    box-shadow 140ms ease;
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .erp-dashboard-v2 .dv2-action:hover {
-  border-color: rgba(var(--erp-accent-rgb),  0.45);
-  background: var(--dv2-primary-tint);
+  border-color: #ffffff;
+  background: #ffffff;
   color: var(--dv2-primary-strong);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(var(--erp-accent-rgb),  0.12);
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.24);
+}
+
+.erp-dashboard-v2 .dv2-action:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .erp-dashboard-v2 .dv2-action:active {
@@ -131,6 +195,11 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
+  color: var(--color-primary-soft, #e1f5ee);
+  transition: color 150ms ease;
+}
+
+.erp-dashboard-v2 .dv2-action:hover .dv2-action-icon {
   color: var(--dv2-primary-strong);
 }
 
@@ -149,7 +218,7 @@
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
   padding: 6px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--dv2-border);
   border-radius: 14px;
   background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
@@ -166,10 +235,10 @@
   gap: 8px;
   flex: 0 0 auto;
   scroll-snap-align: start;
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   background: transparent;
   color: var(--dv2-muted);
   font-size: 13px;
@@ -191,15 +260,15 @@
 
 .erp-dashboard-v2 .dv2-tab:hover {
   background: var(--dv2-subtle);
-  color: var(--dv2-text-strong);
+  color: var(--dv2-primary-strong);
 }
 
 .erp-dashboard-v2 .dv2-tab--active,
 .erp-dashboard-v2 .dv2-tab--active:hover {
-  border-color: rgba(var(--erp-accent-rgb),  0.25);
-  background: var(--dv2-primary-tint);
-  color: var(--dv2-primary-strong);
-  box-shadow: 0 1px 2px rgba(var(--erp-accent-rgb),  0.08);
+  border-color: transparent;
+  background: var(--gradient-primary) border-box;
+  color: #ffffff;
+  box-shadow: var(--shadow-button-sm);
 }
 
 .erp-dashboard-v2 .dv2-tab--active .dv2-tab-icon {
@@ -357,9 +426,9 @@
   justify-content: space-between;
   gap: 10px;
   padding: 18px 20px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--dv2-border);
   border-radius: var(--dv2-radius);
-  background: var(--dv2-surface);
+  background: var(--gradient-surface, var(--dv2-surface));
   box-shadow: var(--dv2-shadow);
   transition:
     background-color 140ms ease,
@@ -375,12 +444,10 @@ a.erp-dashboard-v2 .dv2-kpi,
 }
 
 .erp-dashboard-v2 a.dv2-kpi:hover {
-  border-color: rgba(var(--erp-accent-rgb),  0.35);
-  background: #fbfefd;
-  transform: translateY(-1px);
-  box-shadow:
-    0 2px 4px rgba(16, 24, 40, 0.05),
-    0 8px 20px rgba(16, 24, 40, 0.08);
+  border-color: var(--dv2-border-hover);
+  background: var(--dv2-surface);
+  transform: translateY(-2px);
+  box-shadow: var(--dv2-shadow-hover);
 }
 
 .erp-dashboard-v2 .dv2-kpi-head {
@@ -500,20 +567,20 @@ a.erp-dashboard-v2 .dv2-kpi,
   display: flex;
   min-width: 0;
   flex-direction: column;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--dv2-border);
   border-radius: var(--dv2-radius);
   background: var(--dv2-surface);
   box-shadow: var(--dv2-shadow);
+  overflow: hidden;
   transition:
-    box-shadow 150ms ease,
-    border-color 150ms ease;
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .erp-dashboard-v2 .dv2-card:hover {
-  border-color: rgba(15, 23, 42, 0.1);
-  box-shadow:
-    0 2px 4px rgba(16, 24, 40, 0.05),
-    0 10px 26px rgba(16, 24, 40, 0.08);
+  border-color: var(--dv2-border-hover);
+  box-shadow: var(--dv2-shadow-hover);
 }
 
 .erp-dashboard-v2 .dv2-card-header {
@@ -522,27 +589,30 @@ a.erp-dashboard-v2 .dv2-kpi,
   gap: 12px;
   padding: 16px 20px 14px;
   border-bottom: 1px solid var(--dv2-divider);
+  background: linear-gradient(180deg, #ffffff 0%, #fafdfc 100%);
 }
 
 .erp-dashboard-v2 .dv2-card-icon {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--dv2-primary-tint);
   color: var(--dv2-primary-strong);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.16);
 }
 
 .erp-dashboard-v2 .dv2-card-title {
   min-width: 0;
   flex: 1 1 auto;
   margin: 0;
-  color: var(--dv2-text-strong);
+  color: var(--color-text-heading, var(--dv2-primary-strong));
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   line-height: 1.35;
 }
 
@@ -551,20 +621,24 @@ a.erp-dashboard-v2 .dv2-kpi,
   flex-shrink: 0;
   align-items: center;
   gap: 3px;
-  min-height: 32px;
-  padding: 0 8px;
-  margin-right: -6px;
-  border-radius: 8px;
+  min-height: 30px;
+  padding: 0 10px;
+  margin-right: -4px;
+  border-radius: 999px;
+  background: rgba(var(--erp-accent-rgb), 0.08);
   color: var(--dv2-primary-strong);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 120ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
 }
 
 .erp-dashboard-v2 .dv2-view-all:hover {
-  background: var(--dv2-primary-tint);
+  background: rgba(var(--erp-accent-rgb), 0.16);
   text-decoration: none;
 }
 
@@ -797,7 +871,7 @@ a.erp-dashboard-v2 .dv2-kpi,
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--dv2-primary);
+  background: var(--gradient-primary);
 }
 
 .erp-dashboard-v2 .dv2-progress > span.dv2-progress-fill--strong {
@@ -824,17 +898,25 @@ a.erp-dashboard-v2 .dv2-kpi,
   align-items: center;
   min-height: 36px;
   margin-top: auto;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: var(--dv2-primary-tint);
-  color: var(--dv2-primary-strong);
+  padding: 0 16px;
+  border-radius: var(--radius-control, 10px);
+  background: var(--gradient-primary) border-box;
+  color: #ffffff;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
+  box-shadow: var(--shadow-button-sm);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease;
 }
 
 .erp-dashboard-v2 .dv2-button:hover {
-  background: rgba(var(--erp-accent-rgb),  0.16);
+  background: var(--gradient-primary-hover) border-box;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-button-sm-hover);
 }
 
 .erp-dashboard-v2 .dv2-empty {

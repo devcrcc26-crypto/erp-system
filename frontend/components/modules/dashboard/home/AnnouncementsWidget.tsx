@@ -53,7 +53,7 @@ export default function AnnouncementsWidget({ enabled }: { enabled: boolean }): 
                   {!item.readAt ? (
                     <span
                       aria-hidden
-                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle"
+                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--erp-accent)] align-middle"
                     />
                   ) : null}
                   {localized(locale, item.title, item.titleZh)}

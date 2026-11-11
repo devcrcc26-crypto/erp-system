@@ -24,10 +24,12 @@ export const TONE: Record<OverviewTone, ToneClasses> = {
     fill: 'bg-slate-400',
   },
   ok: {
-    badge: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/15',
-    value: 'text-emerald-700',
-    pill: 'bg-emerald-50 text-emerald-700 ring-emerald-200/70',
-    fill: 'bg-emerald-500',
+    badge:
+      'bg-[color:var(--erp-accent-light)] text-[color:var(--erp-accent-hover)] ring-[rgba(var(--erp-accent-rgb),0.22)]',
+    value: 'text-[color:var(--erp-accent-hover)]',
+    pill:
+      'bg-[color:var(--erp-accent-light)] text-[color:var(--erp-accent-hover)] ring-[rgba(var(--erp-accent-rgb),0.22)]',
+    fill: 'bg-[image:var(--gradient-primary)]',
   },
   info: {
     badge: 'bg-sky-500/10 text-sky-700 ring-sky-500/15',
@@ -59,24 +61,24 @@ export const CONTRACT_LEVEL_COLORS = {
 
 /** Donut palette for leave types (ordered by prominence). */
 export const LEAVE_PALETTE: readonly string[] = [
-  '#10b981', // emerald-500
+  '#1d9e75', // brand teal
   '#0ea5e9', // sky-500
   '#8b5cf6', // violet-500
   '#f59e0b', // amber-500
   '#f43f5e', // rose-500
-  '#14b8a6', // teal-500
-  '#64748b', // slate-500
+  '#0f6e56', // brand teal dark
+  '#5f6b66', // --erp-n-500
 ];
 
-export const CHART_TEXT = '#475569'; // slate-600
-export const CHART_GRID = '#f1f5f9'; // slate-100
+export const CHART_TEXT = '#4a5651'; // --erp-n-600
+export const CHART_GRID = '#eff4f1'; // --erp-n-100
 
 /** Stacked overtime series (normal / evening / sunday / holiday). */
 export const OT_SERIES_COLORS = {
-  normal: '#10b981', // emerald-500
+  normal: '#1d9e75', // brand teal
   evening: '#0ea5e9', // sky-500
   sunday: '#8b5cf6', // violet-500
   holiday: '#f59e0b', // amber-500
 } as const;
 
-export const BAR_FILL = '#0ea5e9'; // sky-500 — default single-series bar
+export const BAR_FILL = '#1d9e75'; // brand teal — default single-series bar

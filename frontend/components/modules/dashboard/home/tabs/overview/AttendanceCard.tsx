@@ -105,7 +105,7 @@ export default function AttendanceCard({
             canImport ? (
               <Link
                 href="/hr/attendance"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                className="dv2-button gap-1.5"
               >
                 <Upload size={14} aria-hidden />
                 {t(`${STATS}.attendance.importAction`)}
@@ -144,13 +144,13 @@ export default function AttendanceCard({
           </div>
 
           {canImport && attendance.importStatus === 'not_imported' ? (
-            <div className="mt-auto flex items-center justify-between gap-3 rounded-xl bg-emerald-50/70 px-4 py-3 ring-1 ring-inset ring-emerald-100">
-              <p className="m-0 text-xs text-emerald-800">
+            <div className="mt-auto flex items-center justify-between gap-3 rounded-xl bg-[color:var(--erp-accent-light)] px-4 py-3 ring-1 ring-inset ring-[rgba(var(--erp-accent-rgb),0.22)]">
+              <p className="m-0 text-xs text-[color:var(--erp-accent-hover)]">
                 {t(`${HOME}.overview.attendanceImportHint`)}
               </p>
               <Link
                 href="/hr/attendance"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200 transition-colors hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--erp-accent-hover)] ring-1 ring-inset ring-[rgba(var(--erp-accent-rgb),0.28)] transition-colors hover:bg-[color:var(--erp-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--erp-accent)]"
               >
                 <Upload size={14} aria-hidden />
                 {t(`${STATS}.attendance.importAction`)}
