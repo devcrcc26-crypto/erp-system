@@ -198,7 +198,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
         <Skeleton active paragraph={{ rows: 2 }} />
       ) : null}
 
-      <div className="erp-pro-card overflow-hidden">
+      <div className="erp-pro-card erp-request-form-card overflow-hidden">
         <div className="erp-employee-section">
           <div className="erp-employee-section-header">
             <h3 className="erp-employee-section-title m-0">

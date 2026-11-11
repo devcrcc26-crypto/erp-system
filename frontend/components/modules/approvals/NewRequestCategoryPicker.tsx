@@ -296,17 +296,12 @@ export default function NewRequestCategoryPicker({
   return (
     <div className="erp-pro-list-page erp-users-page erp-approvals-new-page erp-request-picker erp-hr-travel-v2">
       <div className="erp-request-picker-hero">
-        <div className="min-w-0">
-          <h2
-            className="erp-request-picker-title"
-            style={{ color: tokens.colorTextPrimary }}
-          >
+        <div className="erp-request-picker-heading min-w-0">
+          <p className="erp-request-picker-eyebrow">{t('nav.groups.newRequest')}</p>
+          <h2 className="erp-request-picker-title">
             {t('pages.approvals.picker.title')}
           </h2>
-          <p
-            className="erp-request-picker-subtitle"
-            style={{ color: tokens.colorTextSecondary }}
-          >
+          <p className="erp-request-picker-subtitle">
             {t('pages.approvals.newDescription')}
           </p>
         </div>
@@ -322,12 +317,16 @@ export default function NewRequestCategoryPicker({
               <Search
                 aria-hidden
                 size={16}
-                style={{ color: tokens.colorTextTertiary }}
+                className="erp-request-picker-search-icon"
               />
             }
             className="erp-request-picker-search"
           />
-          <Button size="large" onClick={onCancel}>
+          <Button
+            size="large"
+            onClick={onCancel}
+            className="erp-request-picker-cancel"
+          >
             {t('common.cancel')}
           </Button>
         </div>

@@ -660,40 +660,7 @@
   border-color: transparent !important;
 }
 
-/* New Request picker: inherit travel tokens, give tiles a quiet hover lift. */
-.erp-hr-travel-v2.erp-request-picker {
-  gap: 20px;
-}
-
-.erp-hr-travel-v2 .erp-request-picker-hero,
-.erp-hr-travel-v2 .erp-request-picker-group {
-  border-radius: var(--htv2-radius);
-  box-shadow: var(--htv2-shadow);
-}
-
-.erp-hr-travel-v2 .erp-request-card {
-  border: 1px solid transparent;
-  border-radius: 14px;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.erp-hr-travel-v2 .erp-request-card:hover {
-  border-color: var(--htv2-divider);
-  box-shadow: var(--htv2-shadow);
-}
-
-.erp-hr-travel-v2 .erp-request-card-icon {
-  border-radius: 12px;
-}
-
-.erp-hr-travel-v2 .erp-request-picker-search.ant-input-affix-wrapper,
-.erp-hr-travel-v2 .erp-request-picker-actions .ant-btn,
-.erp-hr-travel-v2 .erp-request-picker-chip {
-  border-radius: 999px;
-}
+/* New Request picker styles live in app/globals.css (.erp-request-picker). */
 
 @media (max-width: 900px) {
   .erp-hr-travel-v2 .erp-users-stat-bar {

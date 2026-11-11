@@ -7306,19 +7306,34 @@ main::-webkit-scrollbar,
 /* ── New Request catalogue (/approvals/new) - v2 floating panels ── */
 
 /*
- * Same panel language as the dashboard, header and sidebar: white, 16px
- * radius, soft shadow, no borders. Each group is one panel; request types are
- * borderless tiles inside it that tint with their group colour on hover.
- * Text: name #0F172A, description/muted #4B5563 (7.6:1 on white).
+ * New Request picker - brand-layer language shared with login, dashboard,
+ * header and sidebar:
+ * - Hero: dark brand-gradient banner (login brand panel / dashboard header),
+ *   drawing-sheet grid + radial glow, white type, glass controls.
+ * - Groups: white panels, 16px radius, faint accent border, surface gradient,
+ *   panel shadow (dashboard cards).
+ * - Tiles: bordered cards that lift on hover (dashboard KPI cards); group
+ *   colour kept on the icon for wayfinding.
+ * Contrast: white type on the gradient is >= 4.5:1 at its lightest stop;
+ * tile name n-900 / description n-600 on white (8.3:1).
  */
 .erp-request-picker {
   --rp-radius: 16px;
-  --rp-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 16px rgba(16, 24, 40, 0.06);
+  --rp-tile-radius: 14px;
+  --rp-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --rp-border-hover: rgba(var(--erp-accent-rgb), 0.32);
+  --rp-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+  --rp-shadow-hover:
+    0 2px 6px rgba(20, 29, 25, 0.05),
+    0 12px 28px rgba(var(--erp-accent-hover-rgb), 0.11);
   --rp-muted: var(--erp-n-600);
   --rp-strong: var(--erp-n-900);
-  --rp-subtle: var(--erp-n-100);
+  --rp-subtle: var(--erp-n-50);
+  --rp-divider: var(--erp-n-150);
 
   gap: 20px;
 }
@@ -7328,35 +7343,104 @@ main::-webkit-scrollbar,
   outline-offset: 2px;
 }
 
-/* ── Hero: title, search, cancel, group chips ── */
+/* ── Hero: brand banner with title, search, cancel, group chips ── */
 
 .erp-request-picker-hero {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px 24px;
-  padding: 24px;
+  gap: 18px 24px;
+  padding: 24px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--rp-radius);
-  background: #ffffff;
-  box-shadow: var(--rp-shadow);
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+  overflow: hidden;
+}
+
+/* Drawing-sheet grid, fading in towards the right (dashboard header). */
+.erp-request-picker-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+/* Soft accent glow, top right. */
+.erp-request-picker-hero::after {
+  content: '';
+  position: absolute;
+  top: -70%;
+  right: -6%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+.erp-request-picker-heading {
+  position: relative;
+}
+
+.erp-request-picker-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.erp-request-picker-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary-soft, #e1f5ee);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
 }
 
 .erp-request-picker-title {
   margin: 0;
-  color: var(--rp-strong) !important;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.3;
+  color: #ffffff !important;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
 }
 
 .erp-request-picker-subtitle {
-  margin: 4px 0 0;
-  color: var(--rp-muted) !important;
-  font-size: 14px;
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 13px;
+  font-weight: 450;
 }
 
 .erp-request-picker-actions {
+  position: relative;
   display: flex;
   flex: 1 1 320px;
   justify-content: flex-end;
@@ -7369,36 +7453,88 @@ main::-webkit-scrollbar,
   min-width: 0;
 }
 
+/* Glass field on the banner; turns into a white login-style field on focus. */
 .erp-request-picker-search.ant-input-affix-wrapper {
-  border-color: transparent;
-  border-radius: 999px;
-  background: var(--erp-n-100);
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: var(--radius-control, 10px);
+  background: rgba(255, 255, 255, 0.11) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.16);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.erp-request-picker-search.ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  color: #ffffff;
+}
+
+.erp-request-picker-search.ant-input-affix-wrapper .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.erp-request-picker-search-icon,
+.erp-request-picker-search.ant-input-affix-wrapper .ant-input-clear-icon {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .erp-request-picker-search.ant-input-affix-wrapper:hover {
-  border-color: transparent;
-  background: #eceff3;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
 }
 
 .erp-request-picker-search.ant-input-affix-wrapper-focused,
 .erp-request-picker-search.ant-input-affix-wrapper:focus-within {
-  border-color: var(--erp-accent);
-  background: #ffffff;
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.24);
 }
 
-.erp-request-picker-search .ant-input {
-  background: transparent;
+.erp-request-picker-search.ant-input-affix-wrapper:focus-within .ant-input {
+  color: var(--rp-strong);
 }
 
-.erp-request-picker-actions .ant-btn {
-  border-radius: 999px;
+.erp-request-picker-search.ant-input-affix-wrapper:focus-within .ant-input::placeholder {
+  color: var(--erp-n-500);
+}
+
+.erp-request-picker-search.ant-input-affix-wrapper:focus-within .erp-request-picker-search-icon,
+.erp-request-picker-search.ant-input-affix-wrapper:focus-within .ant-input-clear-icon {
+  color: var(--erp-n-500);
+}
+
+/* Cancel: glass action button (dashboard quick actions). */
+.erp-request-picker-cancel.ant-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: var(--radius-control, 10px);
+  background: rgba(255, 255, 255, 0.11) !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.16);
+}
+
+.erp-request-picker-cancel.ant-btn:hover {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+.erp-request-picker-cancel.ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .erp-request-picker-chips {
+  position: relative;
   display: flex;
   flex: 1 1 100%;
   flex-wrap: wrap;
   gap: 8px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .erp-request-picker-chip {
@@ -7407,39 +7543,51 @@ main::-webkit-scrollbar,
   gap: 8px;
   min-height: 34px;
   padding: 4px 6px 4px 14px;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
-  background: var(--rp-subtle);
-  color: var(--erp-n-800);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.94);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 550;
   white-space: nowrap;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .erp-request-picker-chip:hover {
-  background: var(--erp-n-200);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .erp-request-picker-chip[aria-pressed='true'] {
-  background: rgba(var(--erp-accent-rgb),  0.1);
+  border-color: #ffffff;
+  background: #ffffff;
   color: var(--erp-accent-hover);
+  box-shadow: 0 4px 12px rgba(10, 36, 32, 0.2);
 }
 
+.erp-request-picker .erp-request-picker-chip:focus-visible {
+  outline-color: #ffffff;
+}
+
+/* Group colour dot, ringed so it reads on the dark banner. */
 .erp-request-picker-chip-dot {
   width: 8px;
   height: 8px;
   margin-left: -4px;
   border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
 .erp-request-picker-chip-count {
   min-width: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #ffffff;
-  color: var(--rp-muted);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -7448,6 +7596,7 @@ main::-webkit-scrollbar,
 }
 
 .erp-request-picker-chip[aria-pressed='true'] .erp-request-picker-chip-count {
+  background: rgba(var(--erp-accent-rgb), 0.1);
   color: var(--erp-accent-hover);
 }
 
@@ -7456,10 +7605,11 @@ main::-webkit-scrollbar,
 .erp-request-picker-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 16px 16px;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--rp-border);
   border-radius: var(--rp-radius);
-  background: #ffffff;
+  background: var(--gradient-surface, #ffffff);
   box-shadow: var(--rp-shadow);
 }
 
@@ -7468,7 +7618,8 @@ main::-webkit-scrollbar,
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid var(--rp-divider);
   color: var(--rp-muted) !important;
   font-size: 12px;
   font-weight: 600;
@@ -7476,27 +7627,36 @@ main::-webkit-scrollbar,
   text-transform: uppercase;
 }
 
+.erp-request-picker-group-title svg {
+  color: var(--erp-accent-hover);
+}
+
 .erp-request-picker-group-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.08);
 }
 
 .erp-request-picker-group-count {
+  margin-left: auto;
+  min-width: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--rp-subtle);
-  color: var(--rp-muted);
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
   font-size: 12px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-  line-height: 20px;
+  line-height: 22px;
+  text-align: center;
 }
 
 .erp-request-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 4px 8px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -7504,9 +7664,10 @@ main::-webkit-scrollbar,
 
 .erp-request-picker-grid > li {
   display: flex;
+  min-width: 0;
 }
 
-/* ── Request tiles ── */
+/* ── Request tiles: bordered cards that lift on hover ── */
 
 .erp-request-card {
   position: relative;
@@ -7515,17 +7676,27 @@ main::-webkit-scrollbar,
   align-items: flex-start;
   gap: 14px;
   width: 100%;
-  padding: 12px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--rp-divider);
+  border-radius: var(--rp-tile-radius);
+  background: #ffffff;
   cursor: pointer;
   text-align: left;
-  transition: background-color 120ms ease;
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .erp-request-card:hover {
-  background: var(--req-tint);
+  border-color: var(--rp-border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--rp-shadow-hover);
+}
+
+.erp-request-card:active {
+  transform: translateY(0);
 }
 
 .erp-request-card-icon {
@@ -7538,11 +7709,14 @@ main::-webkit-scrollbar,
   border-radius: 12px;
   background: var(--req-tint);
   color: var(--req-accent);
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .erp-request-card:hover .erp-request-card-icon {
-  background: #ffffff;
+  background: var(--req-accent);
+  color: #ffffff;
 }
 
 .erp-request-card-body {
@@ -7560,6 +7734,10 @@ main::-webkit-scrollbar,
   line-height: 1.4;
 }
 
+.erp-request-card:hover .erp-request-card-name {
+  color: var(--color-text-heading, var(--erp-accent-hover)) !important;
+}
+
 .erp-request-card-description {
   display: -webkit-box;
   overflow: hidden;
@@ -7568,6 +7746,7 @@ main::-webkit-scrollbar,
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .erp-request-card-arrow {
@@ -7577,13 +7756,14 @@ main::-webkit-scrollbar,
   opacity: 0;
   transform: translateX(-4px);
   transition:
-    opacity 120ms ease,
-    transform 120ms ease;
+    opacity 140ms ease,
+    transform 140ms ease,
+    color 140ms ease;
 }
 
 .erp-request-card:hover .erp-request-card-arrow,
 .erp-request-card:focus-visible .erp-request-card-arrow {
-  color: var(--req-accent);
+  color: var(--erp-accent-hover);
   opacity: 1;
   transform: translateX(0);
 }
@@ -7596,13 +7776,33 @@ main::-webkit-scrollbar,
   }
 }
 
+/* ── Step 2: dynamic form card (login card accent bar) ── */
+
+.erp-request-form-card.erp-pro-card {
+  position: relative;
+  border: 1px solid var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  border-radius: 16px;
+  background: var(--gradient-surface, #ffffff);
+  box-shadow: var(--shadow-panel);
+}
+
+.erp-request-form-card.erp-pro-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-request-form-card .erp-employee-section-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
 @media (max-width: 640px) {
   .erp-request-picker-hero {
-    padding: 18px;
-  }
-
-  .erp-request-picker-title {
-    font-size: 19px;
+    padding: 18px 16px;
   }
 
   .erp-request-picker-actions {
@@ -7611,18 +7811,14 @@ main::-webkit-scrollbar,
 
   .erp-request-picker-chips {
     flex-wrap: nowrap;
-    margin: 0 -18px;
-    padding: 0 18px 2px;
+    margin: 0 -16px;
+    padding: 14px 16px 2px;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
   .erp-request-picker-group {
-    padding: 14px 8px 8px;
-  }
-
-  .erp-request-picker-grid {
-    grid-template-columns: 1fr;
+    padding: 14px 12px 12px;
   }
 }
 
@@ -7630,10 +7826,12 @@ main::-webkit-scrollbar,
   .erp-request-card,
   .erp-request-card-icon,
   .erp-request-card-arrow,
-  .erp-request-picker-chip {
+  .erp-request-picker-chip,
+  .erp-request-picker-search.ant-input-affix-wrapper {
     transition: none;
   }
 
+  .erp-request-card:hover,
   .erp-request-card-arrow {
     transform: none;
   }
