@@ -168,7 +168,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
             employeeId,
             {
                 resolvedTiers: {
-                    ruleName: 'Project Seal HR → GM chain',
+                    ruleName: 'Project Seal → Managing Director',
                     tiers: resolvedTiers,
                 },
                 createdByUserId: userId,

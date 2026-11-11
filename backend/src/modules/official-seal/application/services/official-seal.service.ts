@@ -160,7 +160,7 @@ export class OfficialSealService
         await this.attachSubmissionFiles(id, companyId, userId, files);
       }
       this.logger.log(
-        `Official seal ${requestNumber} auto-approved (GM+ submitter)`,
+        `Official seal ${requestNumber} auto-approved (Managing Director / System Administrator submitter)`,
       );
       await this.onBehalfService.recordOnBehalfCreate({
         moduleCode: 'OFFICIAL_SEAL_USAGE',
@@ -191,7 +191,7 @@ export class OfficialSealService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: "Official Seal HR → GM chain",
+          ruleName: "Official Seal → Managing Director",
           tiers: resolvedTiers,
         },
         createdByUserId: userId,

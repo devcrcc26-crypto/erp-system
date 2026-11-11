@@ -35,6 +35,7 @@ const ROLE_ALIASES: Record<string, string> = {
   FINANCE: 'Finance Manager',
   FINANCE_MANAGER: 'Finance Manager',
   DIRECTOR: 'Managing Director',
+  MANAGING_DIRECTOR: 'Managing Director',
   GENERAL_MANAGER: 'General Manager',
   PROCUREMENT: 'Procurement Officer',
   LEGAL: 'Document Controller',

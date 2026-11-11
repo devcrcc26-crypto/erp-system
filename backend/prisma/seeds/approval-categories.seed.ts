@@ -529,10 +529,8 @@ const CATEGORIES: CategorySeedDef[] = [
     approvalRules: [
       {
         name: 'Default',
-        tiers: [
-          tier('Department Head', 'DEPARTMENT_HEAD', 1),
-          tier('General Manager', 'GENERAL_MANAGER', 2),
-        ],
+        // Single step for any submitter; see buildSealManagingDirectorChain.
+        tiers: [tier('Managing Director', 'MANAGING_DIRECTOR', 1)],
       },
     ],
   },
@@ -570,10 +568,8 @@ const CATEGORIES: CategorySeedDef[] = [
     approvalRules: [
       {
         name: 'Default',
-        tiers: [
-          tier('Project Manager', 'PROJECT_MANAGER', 1),
-          tier('General Manager', 'GENERAL_MANAGER', 2),
-        ],
+        // Single step for any submitter; see buildSealManagingDirectorChain.
+        tiers: [tier('Managing Director', 'MANAGING_DIRECTOR', 1)],
       },
     ],
   },

@@ -73,6 +73,15 @@ export const AUTO_APPROVE_ROLES: readonly string[] = [
   'System Administrator',
 ];
 
+/** Seal submitters whose own requests are approved directly (no tier). */
+export const SEAL_AUTO_APPROVE_ROLES: readonly string[] = [
+  'Managing Director',
+  'System Administrator',
+];
+
+export const SEAL_NO_MANAGING_DIRECTOR_MESSAGE =
+  'No Managing Director found. Please assign the Managing Director role before submitting a seal request.';
+
 /** HR staff roles - their org requests go directly to HR Manager. */
 export const HR_STAFF_ROLES: readonly string[] = [
   'HR Assistant',
@@ -1063,129 +1072,70 @@ export class HrApprovalChainService {
   }
 
   /**
- * Approval chain for official seal requests.
- * Empty array = General Manager / above - direct APPROVED (no approval request).
- * if HR Officer / above, a single HR Officer tier. Then a General Manager tier.
- * Otherwise a single HR Officer and General Manager tier.
- */
-
+   * Official seal requests: a single Managing Director tier, for any submitter.
+   * See {@link buildSealManagingDirectorChain}.
+   */
   async buildOfficialSealApprovalChain(
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     // AUTO_APPROVE_WRAP:buildOfficialSealApprovalChain
-    return this.withAutoApproveFallback(async () => {
-
-    const submitterRole =
-      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
-
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(submitterRole);
-
-    if (isGmOrAbove) {
-      return [];
-    }
-
-    const isHrOrAbove = [
-      'HR Officer',
-      'HR Manager'
-    ].includes(submitterRole);
-
-    const tiers: ChainTierDraft[] = [];
-    const hr = await this.getHROfficer(companyId);
-    const gm = await this.getGeneralManager(companyId);
-    if (!isHrOrAbove) {
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'HR Officer',
-        approverId: hr.id,
-        resolver: 'ROLE:HR Officer',
-      });
-    }
-    tiers.push({
-      order: tiers.length + 1,
-      label: 'General Manager',
-      approverId: gm.id,
-      resolver: 'ROLE:General Manager',
-    });
-
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
+    return this.withAutoApproveFallback(() =>
+      this.buildSealManagingDirectorChain(submitterId, companyId),
     );
-
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
-
-  
-    });
   }
 
+  /**
+   * Project seal requests: a single Managing Director tier, for any submitter.
+   * See {@link buildSealManagingDirectorChain}.
+   */
   async buildProjectSealApprovalChain(
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     // AUTO_APPROVE_WRAP:buildProjectSealApprovalChain
-    return this.withAutoApproveFallback(async () => {
+    return this.withAutoApproveFallback(() =>
+      this.buildSealManagingDirectorChain(submitterId, companyId),
+    );
+  }
 
+  /**
+   * Seal requests go straight to the Managing Director - no Reports to, HR or
+   * General Manager tier. HR Manager reads every seal record through the
+   * `official-seal` / `project-seal` manage permission; it is not an approver.
+   *
+   * Empty array (direct APPROVED) only when the submitter is the Managing
+   * Director or a System Administrator. With several active Managing
+   * Directors, the earliest-created one is the approver.
+   */
+  private async buildSealManagingDirectorChain(
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
-
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(submitterRole);
-    
-    if (isGmOrAbove) {
+    if (SEAL_AUTO_APPROVE_ROLES.includes(submitterRole)) {
       return [];
     }
 
-    const isHrOrAbove = [
-      'HR Officer',
-      'HR Manager'
-    ].includes(submitterRole);
-
-    const tiers: ChainTierDraft[] = [];
-    const hr = await this.getHROfficer(companyId);
-    const gm = await this.getGeneralManager(companyId);
-    if (!isHrOrAbove) {
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'HR Officer',
-        approverId: hr.id,
-        resolver: 'ROLE:HR Officer',
-      });
-    }
-    tiers.push({
-      order: tiers.length + 1,
-      label: 'General Manager',
-      approverId: gm.id,
-      resolver: 'ROLE:General Manager',
-    });
-
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
+    const managingDirector = await this.findActiveUserByPrimaryRoleName(
+      companyId,
+      'Managing Director',
     );
+    if (!managingDirector) {
+      throw new BadRequestException(SEAL_NO_MANAGING_DIRECTOR_MESSAGE);
+    }
 
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
-
-  
-    });
+    return [
+      {
+        tierOrder: 1,
+        label: 'Managing Director',
+        approverId: managingDirector.id,
+        resolver: 'ROLE:Managing Director',
+      },
+    ];
   }
+
   /**
    * Field movement / early departure: same chain as leave (Reports to → HR).
    */
