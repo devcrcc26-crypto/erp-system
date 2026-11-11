@@ -1,0 +1,219 @@
+/*
+ * Exit Permit add / edit form - brand-layer language shared with login,
+ * dashboard and Approvals (banner comes from HrFormPageShell tone="brand").
+ * - Step bar: accent-bordered panel; step badges keep antd's own colours.
+ * - Section cards: faint accent outline + login-card gradient bar, tinted
+ *   header, dark-green titles.
+ * - Items: same card, clean table, green row hover.
+ * - Footer: frosted bar with an accent hairline.
+ * Scoped to .erp-exit-permit-form-page (+ the item drawer by class).
+ *
+ * FormLayout pro cards set border/shadow with !important Tailwind utilities,
+ * which page CSS cannot override; the outline and bar are drawn on ::after /
+ * ::before instead, which those utilities do not touch.
+ */
+
+.erp-exit-permit-form-page {
+  --ep-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --ep-divider: var(--erp-n-150);
+  --ep-muted: var(--erp-n-600);
+  --ep-strong: var(--erp-n-900);
+  --ep-heading: var(--color-text-heading, var(--erp-accent-hover));
+  --ep-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+/* ── Step bar ── */
+
+.erp-exit-permit-form-page.erp-hr-travel-v2 .erp-stepper-form__steps-shell {
+  border: 1px solid var(--ep-border) !important;
+  border-radius: 16px !important;
+  background: #ffffff;
+  box-shadow: var(--ep-shadow) !important;
+}
+
+.erp-exit-permit-form-page .erp-stepper-form__steps-shell .ant-steps-item-title {
+  font-weight: 550;
+}
+
+.erp-exit-permit-form-page .erp-stepper-form__steps-shell .ant-steps-item-process .ant-steps-item-title {
+  color: var(--ep-heading) !important;
+  font-weight: 650;
+}
+
+/* Mobile progress bar: brand gradient fill. */
+.erp-exit-permit-form-page .erp-stepper-form__mobile-progress .bg-emerald-600 {
+  background: var(--gradient-primary);
+}
+
+/* ── Section cards (FormLayout pro, incl. on-behalf) ── */
+
+.erp-exit-permit-form-page .erp-form-layout-pro {
+  position: relative;
+}
+
+/* Accent outline (see file note). */
+.erp-exit-permit-form-page .erp-form-layout-pro::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid var(--ep-border);
+  border-radius: inherit;
+}
+
+/* Login-card gradient bar along the top. */
+.erp-exit-permit-form-page .erp-form-layout-pro::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-exit-permit-form-page .erp-form-layout-pro-header {
+  padding-top: 20px;
+  border-bottom-color: var(--ep-divider);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+/* Header title (first line of the header copy). */
+.erp-exit-permit-form-page .erp-form-layout-pro-header > div:first-child > div:first-child {
+  color: var(--ep-heading);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+/* Header description. */
+.erp-exit-permit-form-page .erp-form-layout-pro-header > div:first-child > div + div {
+  color: var(--ep-muted);
+}
+
+.erp-exit-permit-form-page .erp-form-layout-pro .ant-form-item-label > label {
+  color: var(--color-text-body, var(--erp-n-800));
+  font-weight: 550;
+}
+
+/* ── Items step ── */
+
+.erp-exit-permit-form-page .erp-pro-card.erp-ot-entries {
+  position: relative;
+  border: 1px solid var(--ep-border);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: var(--ep-shadow);
+  overflow: hidden;
+}
+
+.erp-exit-permit-form-page .erp-pro-card.erp-ot-entries::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-exit-permit-form-page .erp-ot-entries-header {
+  padding-top: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-exit-permit-form-page .erp-ot-entries-title {
+  color: var(--ep-heading);
+  font-weight: 650;
+}
+
+.erp-exit-permit-form-page .erp-ot-entries-count {
+  border-radius: 999px;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
+  font-weight: 650;
+}
+
+.erp-exit-permit-form-page .erp-ot-entries .ant-table-thead > tr > th {
+  background: var(--erp-n-50) !important;
+  color: var(--ep-muted) !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ep-divider) !important;
+}
+
+.erp-exit-permit-form-page .erp-ot-entries .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-exit-permit-form-page .erp-ot-entries .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+.erp-exit-permit-form-page .erp-ot-entries .ant-table-footer {
+  border-top: 1px solid var(--ep-divider);
+  background: var(--erp-n-25);
+}
+
+/* ── Footer: frosted bar with accent hairline ── */
+
+.erp-exit-permit-form-page.erp-hr-travel-v2 .erp-stepper-form__footer {
+  border-top: 1px solid var(--ep-border) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -10px 28px -14px rgba(var(--erp-accent-hover-rgb), 0.22) !important;
+}
+
+.erp-exit-permit-form-page .erp-stepper-form__footer .ant-btn {
+  border-radius: var(--radius-control, 10px) !important;
+}
+
+/* ── Item drawer (portaled; matched by its drawer class) ── */
+
+.erp-exit-permit-item-drawer .ant-drawer-header {
+  position: relative;
+  border-bottom: 1px solid var(--erp-n-150);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-exit-permit-item-drawer .ant-drawer-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-exit-permit-item-drawer .ant-drawer-title > div > div {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-weight: 650;
+}
+
+.erp-exit-permit-item-drawer .erp-hr-item-drawer-hint-card {
+  border: 1px solid rgba(var(--erp-accent-rgb), 0.2);
+  border-radius: 12px;
+  background: rgba(var(--erp-accent-rgb), 0.06);
+  color: var(--erp-n-800);
+}

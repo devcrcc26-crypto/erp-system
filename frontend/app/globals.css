@@ -7842,3 +7842,161 @@ main::-webkit-scrollbar,
     transform: none;
   }
 }
+
+/*
+ * Form banner, brand tone (HrFormPageShell tone="brand"): the dark
+ * brand-gradient banner shared with the dashboard, New Request and Approvals -
+ * drawing-sheet grid, accent glow, white type, glass back link and buttons.
+ * Opt-in per page; the default white banner is unchanged.
+ */
+.erp-form-banner--brand {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 24px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+  overflow: hidden;
+}
+
+.erp-form-banner--brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-form-banner--brand::after {
+  content: '';
+  position: absolute;
+  top: -80%;
+  right: -6%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+.erp-form-banner--brand .erp-form-banner-back {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 550;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.erp-form-banner--brand .erp-form-banner-back:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.erp-form-banner--brand .erp-form-banner-back:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.erp-form-banner--brand .erp-form-banner-main {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.erp-form-banner--brand .erp-form-banner-icon {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--erp-accent-hover);
+  box-shadow: 0 10px 24px rgba(10, 36, 32, 0.24);
+}
+
+.erp-form-banner--brand .erp-form-banner-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(19px, 2vw, 23px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.erp-form-banner--brand .erp-form-banner-subtitle {
+  max-width: 48rem;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-form-banner--brand .erp-form-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-form-banner--brand .erp-form-banner-actions .ant-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+.erp-form-banner--brand .erp-form-banner-actions .ant-btn:hover {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+@media (max-width: 640px) {
+  .erp-form-banner--brand {
+    padding: 14px 16px 18px;
+  }
+
+  .erp-form-banner--brand .erp-form-banner-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .erp-form-banner--brand .erp-form-banner-actions,
+  .erp-form-banner--brand .erp-form-banner-actions .ant-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-form-banner--brand .erp-form-banner-back {
+    transition: none;
+  }
+}

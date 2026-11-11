@@ -1,9 +1,11 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
+import './exit-permit-form-v2.css';
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 import ExitPermitForm from '@/components/modules/hr/exit-permit/ExitPermitForm';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { ExitPermitDetail } from '@/lib/api/exit-permit.types';
@@ -37,6 +39,8 @@ export default function ExitPermitFormContent(): React.ReactNode {
         cancelHref="/approvals/new"
         backLabel={t('hr.buttons.backToList')}
         showCancelButton={false}
+        tone="brand"
+        icon={<CategoryIcon code="EXIT_PERMIT" size={24} strokeWidth={1.75} />}
       >
         <ExitPermitForm
           onSuccess={(created) => void handleSuccess(created)}

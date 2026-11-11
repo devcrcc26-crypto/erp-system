@@ -1,7 +1,9 @@
 'use client';
 
 import ReturnedRequestCallout from '@/components/modules/approvals/ReturnedRequestCallout';
-import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import HrFormPageShell, {
+  type HrFormPageShellProps,
+} from '@/components/modules/hr/shared/HrFormPageShell';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
@@ -14,6 +16,8 @@ export default function RequestEditPageShell({
   approvalRequestId,
   backHref,
   className = '',
+  tone,
+  icon,
   children,
 }: {
   status: string;
@@ -21,6 +25,9 @@ export default function RequestEditPageShell({
   backHref: string;
   /** Module page classes (same as its create page) for consistent styling. */
   className?: string;
+  /** Banner tone + icon, same as the module's create page (see HrFormPageShell). */
+  tone?: HrFormPageShellProps['tone'];
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -34,6 +41,8 @@ export default function RequestEditPageShell({
         cancelHref={backHref}
         backLabel={t('hr.buttons.back')}
         showCancelButton={false}
+        tone={tone}
+        icon={icon}
       >
         {status === 'RETURNED' ? (
           <ReturnedRequestCallout approvalRequestId={approvalRequestId} />

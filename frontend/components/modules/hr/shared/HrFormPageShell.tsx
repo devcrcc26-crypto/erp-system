@@ -24,6 +24,13 @@ export interface HrFormPageShellProps {
   showCancelButton?: boolean;
   /** Extra controls next to Cancel in the banner. */
   headerExtra?: React.ReactNode;
+  /**
+   * 'brand': dark brand-gradient banner (dashboard / approvals look), styled by
+   * .erp-form-banner--brand in globals.css. 'default' keeps the white banner.
+   */
+  tone?: 'default' | 'brand';
+  /** Optional request-type icon shown in a tile beside the title (brand tone). */
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -40,6 +47,8 @@ export default function HrFormPageShell({
   onCancel,
   showCancelButton = true,
   headerExtra,
+  tone = 'default',
+  icon,
   children,
 }: HrFormPageShellProps): React.ReactNode {
   const router = useRouter();
@@ -59,6 +68,43 @@ export default function HrFormPageShell({
   const showCancel =
     showCancelButton && Boolean(onCancel || cancelHref);
   const backHref = cancelHref;
+
+  if (tone === 'brand') {
+    return (
+      <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
+        <section className="erp-form-banner erp-form-banner--brand">
+          {backHref ? (
+            <Link href={backHref} className="erp-form-banner-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              {backLabel ?? cancelLabel}
+            </Link>
+          ) : null}
+          <div className="erp-form-banner-main">
+            {icon ? (
+              <span aria-hidden className="erp-form-banner-icon">
+                {icon}
+              </span>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <h1 className="erp-form-banner-title">{title}</h1>
+              {description ? (
+                <p className="erp-form-banner-subtitle">{description}</p>
+              ) : null}
+            </div>
+            {headerExtra || showCancel ? (
+              <div className="erp-form-banner-actions">
+                {headerExtra}
+                {showCancel ? (
+                  <Button onClick={handleCancel}>{cancelLabel}</Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </section>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
