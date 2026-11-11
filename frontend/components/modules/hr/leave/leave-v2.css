@@ -1,0 +1,1010 @@
+/*
+ * Leave requests + balances (v2) - same panel language as Employees:
+ * white floating tiles, 16px radius, soft shadow. Scoped under
+ * `.erp-leave-v2` on LeaveRequestsListPageContent root.
+ *
+ * Contrast on white: muted #4B5563 7.6:1; primary-strong #0F6E56 on the
+ * 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
+ */
+.erp-leave-v2 {
+  --lv2-radius: 16px;
+  --lv2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --lv2-muted: #4b5563;
+  --lv2-strong: #0f172a;
+  --lv2-body: #1f2937;
+  --lv2-divider: #eef1f4;
+  --lv2-subtle: #f7f8fa;
+  --lv2-tint: rgba(29, 158, 117, 0.1);
+  --lv2-primary: #1d9e75;
+  --lv2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-leave-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+/* ── Tab bar ── */
+
+.erp-leave-v2 .erp-profile-tabbar,
+.erp-leave-v2 .erp-employee-tabbar {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: none;
+  gap: 4px;
+}
+
+.erp-leave-v2 .erp-employee-tabbar button[role='tab'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--lv2-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.erp-leave-v2 .erp-employee-tabbar button[role='tab']:hover {
+  background: var(--lv2-subtle);
+  color: var(--lv2-body);
+}
+
+.erp-leave-v2 .erp-employee-tabbar button[role='tab'][aria-selected='true'] {
+  background: var(--lv2-tint);
+  color: var(--lv2-primary-strong);
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-employee-tabbar button[role='tab']:focus-visible {
+  outline: 2px solid var(--lv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-leave-v2 .erp-leave-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Stat tiles ── */
+
+.erp-leave-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-leave-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-leave-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--lv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-leave-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--lv2-primary),
+    var(--lv2-shadow);
+}
+
+.erp-leave-v2 .erp-users-stat.erp-contract-stat--static {
+  cursor: default;
+}
+
+.erp-leave-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-leave-v2 .erp-users-stat-label {
+  color: var(--lv2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-leave-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-stat-sub {
+  margin: 2px 0 0;
+  color: var(--lv2-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* ── Toolbar + filters ── */
+
+.erp-leave-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-leave-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lv2-strong);
+}
+
+.erp-leave-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--lv2-tint);
+  color: var(--lv2-primary-strong);
+}
+
+.erp-leave-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--lv2-divider);
+  background: transparent;
+}
+
+.erp-leave-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-leave-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-leave-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 160px;
+  flex: 0 1 200px;
+}
+
+.erp-leave-v2 .erp-users-filter-daterange {
+  min-width: 240px;
+}
+
+.erp-leave-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-leave-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-leave-v2 .erp-users-filter-bar .ant-picker,
+.erp-leave-v2 .erp-users-filter-bar .ant-input-number,
+.erp-leave-v2 .erp-users-filter-bar .ant-btn {
+  border-radius: 10px !important;
+}
+
+/* ── Table chrome ── */
+
+.erp-leave-v2 .erp-pro-table-card-body {
+  padding: 0 0 8px;
+}
+
+.erp-leave-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row,
+.erp-leave-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row > td {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.erp-leave-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-thead > tr > th {
+  background: transparent;
+  color: var(--lv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-leave-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr > td {
+  border-color: var(--lv2-divider);
+}
+
+.erp-leave-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr:hover > td {
+  background: #fbfcfd;
+}
+
+.erp-leave-v2 .erp-users-avatar {
+  flex: none;
+  border-radius: 10px !important;
+}
+
+.erp-leave-v2 .erp-leave-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-leave-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lv2-strong);
+}
+
+.erp-leave-v2 .erp-users-email,
+.erp-leave-v2 .erp-users-cell-sub {
+  color: var(--lv2-muted);
+}
+
+.erp-leave-v2 .erp-users-cell-strong {
+  color: var(--lv2-body);
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-users-id-chip {
+  background: var(--lv2-subtle);
+  color: var(--lv2-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-date {
+  color: var(--lv2-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-leave-v2 .erp-leave-date--strong {
+  color: var(--lv2-body);
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-days {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--lv2-strong);
+}
+
+/* Balance remaining / entitled cell */
+.erp-leave-v2 .erp-leave-balance-cell {
+  line-height: 1.35;
+}
+
+.erp-leave-v2 .erp-leave-balance-remaining {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lv2-strong);
+}
+
+.erp-leave-v2 .erp-leave-balance-remaining--low {
+  color: #b54708;
+}
+
+.erp-leave-v2 .erp-leave-balance-entitled {
+  margin-left: 4px;
+  color: var(--lv2-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-balance-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--lv2-muted);
+  font-size: 12px;
+}
+
+.erp-leave-v2 .erp-leave-balance-low-pill {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fffaeb;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.erp-leave-v2 .erp-leave-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+/* ── Detail hero ── */
+
+.erp-leave-v2.erp-leave-detail-page {
+  gap: 20px;
+}
+
+.erp-leave-v2 .erp-leave-detail-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 0;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2 .erp-leave-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-leave-v2 .erp-leave-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  color: var(--lv2-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.erp-leave-v2 .erp-leave-back:hover {
+  color: var(--lv2-primary-strong) !important;
+}
+
+.erp-leave-v2 .erp-leave-back:focus-visible {
+  outline: 2px solid var(--lv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-leave-v2 .erp-leave-hero-identity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.erp-leave-v2 .erp-leave-hero-identity .erp-users-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  line-height: 48px !important;
+  font-size: 16px !important;
+}
+
+.erp-leave-v2 .erp-leave-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-hero-title {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-leave-v2 .erp-leave-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-leave-v2 .erp-leave-hero-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-leave-v2 .erp-leave-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  color: var(--lv2-muted);
+  font-size: 13px;
+}
+
+.erp-leave-v2 .erp-leave-detail-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-leave-v2 .erp-leave-detail-meta strong {
+  color: var(--lv2-body);
+}
+
+.erp-leave-v2 .erp-leave-fact-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.erp-leave-v2 .erp-leave-fact {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-fact-label {
+  margin: 0;
+  color: var(--lv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-leave-v2 .erp-leave-fact-value {
+  margin: 4px 0 0;
+  color: var(--lv2-strong);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-fact-value--sm {
+  font-size: 15px;
+}
+
+.erp-leave-v2 .erp-leave-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 16px;
+}
+
+.erp-leave-v2 .erp-leave-detail-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-leave-v2 .erp-leave-detail-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-leave-v2 .erp-leave-section-card .erp-employee-section-header {
+  padding: 16px 20px 0;
+  border-bottom: 0;
+}
+
+.erp-leave-v2 .erp-leave-section-card .erp-employee-section-title {
+  color: var(--lv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-section-card .erp-employee-section-body {
+  padding: 14px 20px 20px;
+}
+
+/* Request details card */
+
+.erp-leave-v2 .erp-leave-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-leave-v2 .erp-leave-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-field {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 14px 14px 12px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-leave-v2 .erp-leave-field-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--lv2-primary-strong);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.erp-leave-v2 .erp-leave-field-label {
+  margin: 0 0 4px;
+  color: var(--lv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-leave-v2 .erp-leave-field-value {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.erp-leave-v2 .erp-leave-field-value--num {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-field-unit {
+  margin-left: 6px;
+  color: var(--lv2-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-leave-v2 .erp-leave-field-hint {
+  margin: 2px 0 0;
+  color: var(--lv2-muted);
+  font-size: 12px;
+}
+
+.erp-leave-v2 .erp-leave-field-value-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.erp-leave-v2 .erp-leave-field-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-field-person .erp-users-avatar {
+  flex: none;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  line-height: 36px !important;
+  font-size: 13px !important;
+}
+
+.erp-leave-v2 .erp-leave-details-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-details-block-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-leave-v2 .erp-leave-period-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-leave-v2 .erp-leave-period-card {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-period-index {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--lv2-tint);
+  color: var(--lv2-primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.erp-leave-v2 .erp-leave-period-range {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-period-days {
+  margin: 2px 0 0;
+  color: var(--lv2-muted);
+  font-size: 12px;
+}
+
+.erp-leave-v2 .erp-leave-breakdown-wrap {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+  padding: 4px 8px 8px;
+}
+
+.erp-leave-v2 .erp-leave-reason-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f0faf6;
+  border: 1px solid #d8f3e7;
+}
+
+.erp-leave-v2 .erp-leave-reason {
+  margin: 0;
+  color: var(--lv2-body);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.erp-leave-v2 .erp-leave-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.erp-leave-v2 .erp-leave-balance-tile {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-balance-tile--highlight {
+  grid-column: 1 / -1;
+  background: var(--lv2-tint);
+}
+
+.erp-leave-v2 .erp-leave-balance-tile .erp-leave-fact-value {
+  font-size: 20px;
+}
+
+@media (max-width: 1024px) {
+  .erp-leave-v2 .erp-leave-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-leave-v2 .erp-leave-detail-aside {
+    position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-leave-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-leave-v2 .erp-leave-fact-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-leave-v2 .erp-leave-period-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-leave-v2 .erp-users-stat-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-leave-v2 .erp-leave-fact-row,
+  .erp-leave-v2 .erp-leave-details-grid,
+  .erp-leave-v2 .erp-leave-balance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Add / edit form ── */
+
+.erp-leave-v2.erp-leave-form-page {
+  gap: 16px;
+}
+
+.erp-leave-v2.erp-leave-form-page .erp-form-layout-pro {
+  border: 0 !important;
+  border-radius: var(--lv2-radius) !important;
+  box-shadow: var(--lv2-shadow) !important;
+  overflow: hidden;
+}
+
+.erp-leave-v2.erp-leave-form-page .erp-stepper-form__steps-shell {
+  border: 0;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2.erp-leave-form-page .erp-stepper-form__footer {
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2.erp-leave-form-page .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-leave-v2 .erp-leave-form-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 18px 20px;
+  border-radius: var(--lv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lv2-shadow);
+}
+
+.erp-leave-v2 .erp-leave-form-hero-title {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-leave-v2 .erp-leave-form-hero-desc {
+  margin: 4px 0 0;
+  color: var(--lv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 48rem;
+}
+
+.erp-leave-v2 .erp-leave-form-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-leave-v2 .erp-leave-period-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-period-editor-label {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-period-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-period-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-period-editor-row .ant-picker,
+.erp-leave-v2 .erp-leave-period-editor-row .ant-select-selector {
+  border-radius: 10px !important;
+}
+
+.erp-leave-v2 .erp-leave-period-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.erp-leave-v2 .erp-leave-preview-panel {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-preview-title {
+  margin: 0 0 6px;
+  color: var(--lv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-preview-hint {
+  margin: 0 0 12px;
+  color: var(--lv2-muted);
+  font-size: 13px;
+}
+
+.erp-leave-v2 .erp-leave-form-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f0faf6;
+  border: 1px solid #d8f3e7;
+}
+
+.erp-leave-v2 .erp-leave-form-balance-title {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-leave-v2 .erp-leave-form-balance-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-form-balance-tile {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.erp-leave-v2 .erp-leave-form-balance-tile--primary {
+  background: var(--lv2-tint);
+  box-shadow: none;
+}
+
+.erp-leave-v2 .erp-leave-form-balance-tile .erp-leave-fact-label {
+  margin-bottom: 2px;
+}
+
+.erp-leave-v2 .erp-leave-form-balance-tile .erp-leave-fact-value {
+  font-size: 18px;
+}
+
+.erp-leave-v2 .erp-leave-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-leave-v2 .erp-leave-review-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-review-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-leave-v2 .erp-leave-review-label {
+  margin: 0;
+  color: var(--lv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-leave-v2 .erp-leave-review-value {
+  margin: 0;
+  color: var(--lv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.erp-leave-v2 .erp-leave-review-files {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-leave-v2 .erp-leave-review-file {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--lv2-subtle);
+}
+
+.erp-leave-v2 .erp-leave-review-file span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--lv2-body);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .erp-leave-v2 .erp-leave-period-editor-row {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-leave-v2 .erp-leave-form-balance-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-leave-v2 .erp-leave-form-balance-tiles,
+  .erp-leave-v2 .erp-leave-review-grid,
+  .erp-leave-v2 .erp-leave-review-files {
+    grid-template-columns: 1fr;
+  }
+}

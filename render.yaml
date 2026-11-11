@@ -1,0 +1,111 @@
+# Render Blueprint - Construction ERP backend API
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Stack: Render (this service) + Supabase/Neon (Postgres) + Vercel (frontend) + Resend (email)
+#
+# Render dashboard (if not using Blueprint):
+#   Root Directory     - backend
+#   Build Command      - npm ci --include=dev && npm run build
+#   Pre-Deploy Command - leave EMPTY if migrations already applied (run locally or via CI)
+#   Start Command      - npm run start:prod
+#   Health Check Path  - /api/health
+#
+# Supabase DATABASE_URL: use session pooler on port 5432 (not transaction pooler :6543).
+#   postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
+#
+# Setup:
+#   1. Connect this repo in Render → New → Blueprint → use this file
+#   2. Set secret env vars in the Render dashboard (sync: false keys below)
+#   3. Deploy Vercel frontend separately (see frontend/vercel.json)
+#   4. Set CORS_ORIGIN + FRONTEND_URL to your Vercel production URL
+#   5. Set NEXT_PUBLIC_API_URL on Vercel to https://<this-service>.onrender.com/api
+#
+# First deploy only (Render Shell, after migrations succeed):
+#   npm run prisma:seed
+#   # Or baseline-only: SEED_PM_DEMO=false npm run prisma:seed
+
+services:
+  - type: web
+    name: construction-erp-api
+    runtime: node
+    region: oregon
+    plan: starter
+    branch: main
+    rootDir: backend
+
+    # NODE_ENV=production omits devDependencies; --include=dev is required for nest build + prisma.
+    buildCommand: npm ci --include=dev && npm run build
+    # Apply pending Prisma migrations before traffic (requires DATABASE_URL on session pooler :5432).
+    preDeployCommand: npx prisma migrate deploy
+    startCommand: npm run start:prod
+
+    healthCheckPath: /api/health
+
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: API_PREFIX
+        value: api
+
+      # Set to your Vercel production URL (no trailing slash)
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+      - key: THROTTLE_LIMIT
+        value: "300"
+
+      # Postgres connection string (?sslmode=require recommended).
+      # Supabase: session pooler port 5432 - NOT transaction pooler :6543 (migrations hang).
+      - key: DATABASE_URL
+        sync: false
+
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # Enable when Render Redis / Upstash is configured
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+
+      # Object storage - point Minio client at S3-compatible host in production
+      - key: STORAGE_PROVIDER
+        value: minio
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_PORT
+        value: "443"
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_USE_SSL
+        value: "true"
+
+      # Resend SMTP: smtp.resend.com:587 (configure auth in mail module if needed)
+      - key: MAIL_HOST
+        value: smtp.resend.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_FROM
+        sync: false
+
+      - key: NOTIFICATION_RETENTION_DAYS
+        value: "90"

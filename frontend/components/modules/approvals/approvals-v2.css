@@ -1,0 +1,783 @@
+/*
+ * Approvals inbox + detail (v2) - same panel language as Leave / Employees:
+ * soft pill tabs, floating stats, borderless 16px cards, quiet table header,
+ * and soft approval-chain tier cards. Scoped under `.erp-approvals-v2`.
+ *
+ * Contrast on white: muted #4B5563 7.6:1; strong #0F172A; primary-strong
+ * #0F6E56 on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
+ */
+
+.erp-approvals-v2 {
+  --ap2-radius: 16px;
+  --ap2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --ap2-muted: #4b5563;
+  --ap2-strong: #0f172a;
+  --ap2-body: #1f2937;
+  --ap2-divider: #eef1f4;
+  --ap2-subtle: #f7f8fa;
+  --ap2-tint: rgba(29, 158, 117, 0.1);
+  --ap2-primary: #1d9e75;
+  --ap2-primary-strong: #0f6e56;
+  --ap2-amber-bg: #fffaeb;
+  --ap2-amber: #b54708;
+  --ap2-orange: #f47b20;
+
+  gap: 20px;
+}
+
+.erp-approvals-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--ap2-radius);
+  background: #ffffff;
+  box-shadow: var(--ap2-shadow);
+}
+
+.erp-approvals-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+/* ── Soft pill tabs (inbox switcher) ── */
+
+.erp-approvals-v2 .erp-approvals-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+.erp-approvals-v2 .erp-approvals-tabbar button[role='tab'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ap2-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.erp-approvals-v2 .erp-approvals-tabbar button[role='tab']:hover {
+  background: var(--ap2-subtle);
+  color: var(--ap2-body);
+}
+
+.erp-approvals-v2 .erp-approvals-tabbar button[role='tab'][aria-selected='true'] {
+  background: var(--ap2-tint);
+  color: var(--ap2-primary-strong);
+  font-weight: 600;
+}
+
+.erp-approvals-v2 .erp-approvals-tabbar button[role='tab']:focus-visible {
+  outline: 2px solid var(--ap2-primary);
+  outline-offset: 2px;
+}
+
+.erp-approvals-v2 .erp-approvals-tab-badge {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #d32f2f;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Stat tiles ── */
+
+.erp-approvals-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-approvals-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--ap2-radius);
+  background: #ffffff;
+  box-shadow: var(--ap2-shadow);
+}
+
+.erp-approvals-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-approvals-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--ap2-primary);
+  outline-offset: 2px;
+}
+
+.erp-approvals-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--ap2-primary),
+    var(--ap2-shadow);
+}
+
+.erp-approvals-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-approvals-v2 .erp-users-stat-label {
+  color: var(--ap2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-approvals-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  color: var(--ap2-strong);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* ── Toolbar + filters + table ── */
+
+.erp-approvals-v2 .erp-users-toolbar {
+  border-bottom: none;
+  padding: 18px 20px 14px;
+}
+
+.erp-approvals-v2 .erp-pro-card-toolbar-title {
+  color: var(--ap2-strong);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.erp-approvals-v2 .erp-users-count-pill {
+  background: var(--ap2-tint);
+  color: var(--ap2-primary-strong);
+  padding: 2px 10px;
+}
+
+.erp-approvals-v2 .erp-users-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--ap2-divider);
+  background: transparent;
+  padding: 0 20px 16px;
+}
+
+.erp-approvals-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-approvals-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-approvals-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-approvals-v2 .erp-users-filter-bar .ant-picker,
+.erp-approvals-v2 .erp-users-filter-bar .ant-input-affix-wrapper {
+  border-radius: 10px !important;
+}
+
+.erp-approvals-v2 .erp-pro-table-card-body {
+  padding: 0;
+}
+
+.erp-approvals-v2 .ant-table-thead > tr > th {
+  background: #f7f8fa !important;
+  color: var(--ap2-muted) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--ap2-divider) !important;
+}
+
+.erp-approvals-v2 .ant-table-tbody > tr.ant-table-measure-row,
+.erp-approvals-v2 .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-approvals-v2 .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: #f7f8fa !important;
+}
+
+.erp-approvals-v2 .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 14px 20px !important;
+}
+
+.erp-approvals-v2 .erp-users-cell-sub {
+  color: var(--ap2-muted);
+}
+
+.erp-approvals-v2 .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.erp-approvals-v2 .erp-users-role-tag {
+  border: 0;
+  background: var(--ap2-tint);
+  color: var(--ap2-primary-strong);
+  font-weight: 600;
+}
+
+/* ── Detail layout ── */
+
+.erp-approvals-v2.erp-approvals-detail-page {
+  gap: 20px;
+}
+
+.erp-approvals-v2 .erp-employee-toolbar {
+  border-bottom: 1px solid var(--ap2-divider);
+  padding: 12px 20px;
+}
+
+.erp-approvals-v2 .erp-employee-hero {
+  padding: 20px 24px 24px;
+}
+
+.erp-approvals-v2 .erp-employee-hero-name {
+  color: var(--ap2-strong);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.erp-approvals-v2 .erp-employee-meta-bar {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.erp-approvals-v2 .erp-employee-meta-value {
+  color: var(--ap2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-approvals-v2 .erp-approvals-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+  gap: 20px;
+}
+
+@media (max-width: 1100px) {
+  .erp-approvals-v2 .erp-approvals-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Approval chain: soft tier cards ── */
+
+.erp-approval-chain {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ap2-radius, 16px);
+  background: #ffffff;
+  box-shadow: var(
+    --ap2-shadow,
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06)
+  );
+}
+
+.erp-approval-chain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-approval-chain-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.erp-approval-chain-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.erp-approval-tier-card {
+  display: flex;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.erp-approval-tier-card[data-state='current'] {
+  background: #fff7ed;
+  box-shadow: inset 0 0 0 1.5px rgba(244, 123, 32, 0.35);
+}
+
+.erp-approval-tier-card[data-state='approved'] {
+  background: #f0faf6;
+}
+
+.erp-approval-tier-card[data-state='rejected'] {
+  background: #fef2f2;
+}
+
+.erp-approval-tier-card[data-state='returned'] {
+  background: #fffaeb;
+}
+
+.erp-approval-tier-index {
+  display: inline-flex;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4b5563;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.erp-approval-tier-card[data-state='current'] .erp-approval-tier-index {
+  color: #f47b20;
+}
+
+.erp-approval-tier-card[data-state='approved'] .erp-approval-tier-index {
+  color: #1d9e75;
+}
+
+.erp-approval-tier-card[data-state='rejected'] .erp-approval-tier-index {
+  color: #d32f2f;
+}
+
+.erp-approval-tier-card[data-state='returned'] .erp-approval-tier-index {
+  color: #b54708;
+}
+
+.erp-approval-tier-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.erp-approval-tier-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.erp-approval-tier-label {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-approval-tier-meta {
+  margin: 4px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-approval-tier-comment {
+  margin: 8px 0 0;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-approval-condition {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fffaeb;
+}
+
+.erp-approval-condition[data-resolved='true'] {
+  background: #eaf3de;
+}
+
+.erp-approval-condition-text {
+  margin: 0;
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-approval-chain-footer {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #eef1f4;
+}
+
+/* ── Overtime entries on approvals detail ── */
+
+.erp-approvals-v2 .erp-ot-summary-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .erp-approvals-v2 .erp-ot-summary-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .erp-approvals-v2 .erp-ot-summary-tiles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.erp-approvals-v2 .erp-ot-summary-tile {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--ap2-shadow);
+}
+
+.erp-approvals-v2 .erp-ot-summary-tile[data-total='true'] {
+  background: #f0faf6;
+}
+
+.erp-approvals-v2 .erp-ot-summary-label {
+  margin: 0;
+  color: var(--ap2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-approvals-v2 .erp-ot-summary-value {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive stats ── */
+
+@media (max-width: 900px) {
+  .erp-approvals-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-approvals-v2 .erp-users-stat-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Resubmit card + response history ── */
+
+.erp-resubmit-card {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ap2-radius, 16px);
+  background: #ffffff;
+  box-shadow: var(
+    --ap2-shadow,
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06)
+  );
+}
+
+.erp-resubmit-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef1f4;
+  background: #fffaeb;
+}
+
+.erp-resubmit-card-icon {
+  display: inline-flex;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #b54708;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.erp-resubmit-card-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-resubmit-card-subtitle {
+  margin: 4px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.erp-resubmit-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 18px;
+}
+
+.erp-resubmit-return-note {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fffaeb;
+}
+
+.erp-resubmit-return-note-label {
+  margin: 0;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-resubmit-return-note-text {
+  margin: 6px 0 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.erp-resubmit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erp-resubmit-field-label {
+  margin: 0;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-resubmit-textarea.ant-input,
+.erp-resubmit-textarea textarea.ant-input,
+.erp-resubmit-card .ant-input,
+.erp-resubmit-card textarea.ant-input {
+  border-radius: 10px !important;
+}
+
+.erp-resubmit-upload-btn.ant-btn,
+.erp-resubmit-submit.ant-btn {
+  border-radius: 10px !important;
+  font-weight: 600;
+}
+
+.erp-resubmit-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.erp-resubmit-submit.ant-btn-primary {
+  background: #1d9e75;
+  border-color: #1d9e75;
+  height: 38px;
+  padding-inline: 18px;
+}
+
+.erp-resubmit-submit.ant-btn-primary:hover {
+  background: #0f6e56 !important;
+  border-color: #0f6e56 !important;
+}
+
+.erp-resubmit-history {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ap2-radius, 16px);
+  background: #ffffff;
+  box-shadow: var(
+    --ap2-shadow,
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06)
+  );
+}
+
+.erp-resubmit-history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-resubmit-history-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-resubmit-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px 16px;
+  list-style: none;
+}
+
+.erp-resubmit-history-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+}
+
+.erp-resubmit-history-item-label {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-resubmit-history-item-meta {
+  margin: 4px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-resubmit-history-item-note {
+  margin: 8px 0 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.erp-resubmit-history-item-docs {
+  margin-top: 10px;
+}
+
+/* ── Portaled approval modals (ConfirmDialog + reassign) ── */
+
+.erp-approval-modal {
+  --ap2-radius: 16px;
+  --ap2-muted: #4b5563;
+  --ap2-strong: #0f172a;
+  --ap2-body: #1f2937;
+  --ap2-divider: #eef1f4;
+  --ap2-subtle: #f7f8fa;
+  --ap2-primary: #1d9e75;
+  --ap2-primary-strong: #0f6e56;
+}
+
+.erp-approval-modal.erp-confirm-dialog .ant-modal-content,
+.erp-approval-modal.erp-confirm-dialog .ant-modal-container,
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-content {
+  border-radius: var(--ap2-radius) !important;
+}
+
+.erp-approval-modal .ant-modal-content,
+.erp-approval-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--ap2-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-approval-modal.erp-confirm-dialog .ant-modal-content,
+.erp-approval-modal.erp-confirm-dialog .ant-modal-container {
+  padding: 0 !important;
+}
+
+.erp-approval-modal .ant-modal-header {
+  margin-bottom: 8px;
+}
+
+.erp-approval-modal .ant-modal-title {
+  color: var(--ap2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-approval-modal .erp-approval-modal-hint {
+  margin: 0 0 16px;
+  color: var(--ap2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-approval-modal .ant-form-item-label > label {
+  color: var(--ap2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-approval-modal .ant-select-selector,
+.erp-approval-modal .ant-input,
+.erp-approval-modal textarea.ant-input,
+.erp-approval-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-approval-modal .ant-modal-footer {
+  margin-top: 8px;
+}
+
+.erp-approval-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--ap2-primary);
+  border-color: var(--ap2-primary);
+}
+
+.erp-approval-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: var(--ap2-primary-strong) !important;
+  border-color: var(--ap2-primary-strong) !important;
+}
+
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
+  background: var(--ap2-primary);
+  border-color: var(--ap2-primary);
+}
+
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous):hover {
+  background: var(--ap2-primary-strong) !important;
+  border-color: var(--ap2-primary-strong) !important;
+}

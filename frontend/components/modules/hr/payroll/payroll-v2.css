@@ -1,0 +1,1741 @@
+/*
+ * Payroll (v2) - same panel language as the dashboard, Employees list and
+ * profile: white panels, 16px radius, soft shadow, no hard borders, soft
+ * tiles for facts. Scoped under `.erp-payroll-v2` (payroll list + run detail
+ * roots), `.erp-payroll-modal` (payroll modals, portaled), `.erp-payslips-v2`
+ * (payslips section on profile / employee detail), `.erp-payslip-drawer` and
+ * `.erp-payroll-settings-drawer` (company settings, portaled).
+ *
+ * Contrast on white: muted #4B5563 7.6:1; strong #0F172A; primary-strong
+ * #0F6E56 on the 10% primary tint 5.3:1; amber #B54708 on #FFFAEB 5.0:1.
+ */
+.erp-payroll-v2,
+.erp-payslips-v2,
+.erp-payslip-drawer,
+.erp-payroll-modal,
+.erp-payroll-settings-drawer {
+  --pr-radius: 16px;
+  --pr-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --pr-muted: #4b5563;
+  --pr-strong: #0f172a;
+  --pr-body: #1f2937;
+  --pr-divider: #eef1f4;
+  --pr-subtle: #f7f8fa;
+  --pr-tile: #f7f8fa;
+  --pr-tint: rgba(29, 158, 117, 0.1);
+  --pr-primary: #1d9e75;
+  --pr-primary-strong: #0f6e56;
+  --pr-amber-bg: #fffaeb;
+  --pr-amber: #b54708;
+}
+
+.erp-payroll-v2 {
+  gap: 20px;
+}
+
+.erp-payroll-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--pr-radius);
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payroll-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+/* ── Stat tiles (list): four separate floating cards ── */
+
+.erp-payroll-v2 .erp-users-stat-bar {
+  gap: 16px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.erp-payroll-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--pr-radius);
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payroll-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-payroll-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
+}
+
+.erp-payroll-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--pr-primary),
+    var(--pr-shadow);
+}
+
+.erp-payroll-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-payroll-v2 .erp-users-stat-label {
+  color: var(--pr-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-payroll-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* ── Card toolbar + filters (list and entries) ── */
+
+.erp-payroll-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-payroll-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+}
+
+.erp-payroll-v2 .erp-users-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--pr-divider);
+  background: transparent;
+}
+
+.erp-payroll-v2 .erp-users-search-input {
+  flex: 1 1 260px;
+  max-width: 380px;
+}
+
+.erp-payroll-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-payroll-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 170px;
+  flex: 0 1 200px;
+}
+
+.erp-payroll-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-payroll-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-payroll-v2 .erp-users-filter-bar .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-payroll-v2 .erp-payroll-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pr-body);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.erp-payroll-v2 .erp-users-cell-sub {
+  color: var(--pr-muted);
+}
+
+.erp-payroll-v2 .erp-users-cell-strong {
+  color: var(--pr-body);
+}
+
+/* ── Tables (list + entries) ── */
+
+/* Ant Design's measure row lives in <tbody>; keep it collapsed. */
+.erp-payroll-v2 .ant-table-tbody > tr.ant-table-measure-row,
+.erp-payroll-v2 .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-payroll-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+.erp-payroll-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > td {
+  background: var(--pr-subtle) !important;
+  color: var(--pr-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--pr-divider) !important;
+  white-space: nowrap;
+}
+
+.erp-payroll-v2 .ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-payroll-v2 .ant-table-wrapper .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  border-bottom-color: var(--pr-divider) !important;
+}
+
+.erp-payroll-v2 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--pr-subtle) !important;
+}
+
+.erp-payroll-v2 .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 14px 20px;
+}
+
+.erp-payroll-v2 .erp-payroll-status.ant-tag {
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.erp-payroll-v2 .erp-payroll-flag-count {
+  display: inline-flex;
+  min-width: 28px;
+  justify-content: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Run detail: hero ── */
+
+.erp-payroll-hero {
+  padding: 20px 24px;
+}
+
+.erp-payroll-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-payroll-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  color: var(--pr-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-payroll-back:hover {
+  color: var(--pr-primary-strong) !important;
+}
+
+.erp-payroll-back:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
+}
+
+.erp-payroll-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-payroll-hero-title {
+  margin: 0;
+  color: var(--pr-strong);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-payroll-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  color: var(--pr-muted);
+  font-size: 13px;
+}
+
+.erp-payroll-hero-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-payroll-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-payroll-hero-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-payroll-steps {
+  margin-top: 20px;
+  padding: 16px 16px 12px;
+  border-radius: 12px;
+  background: var(--pr-tile);
+}
+
+.erp-payroll-steps .ant-steps-item-title {
+  color: var(--pr-body) !important;
+  font-size: 13px !important;
+  font-weight: 500;
+}
+
+.erp-payroll-steps .ant-steps-item-wait .ant-steps-item-title {
+  color: var(--pr-muted) !important;
+}
+
+.erp-payroll-steps .ant-steps-item-description {
+  color: var(--pr-muted) !important;
+  font-size: 12px !important;
+}
+
+.erp-payroll-steps .ant-steps-item-wait .ant-steps-item-icon {
+  background: #ffffff !important;
+}
+
+.erp-payroll-steps .ant-steps-item {
+  min-width: 0;
+}
+
+.erp-payroll-steps .ant-steps-item-title {
+  white-space: nowrap;
+}
+
+.erp-payroll-step-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.erp-payroll-step-who {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--pr-body);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-payroll-step-when {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Run detail: summary tiles ── */
+
+.erp-payroll-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.erp-payroll-summary-tile--net {
+  grid-column: span 2;
+}
+
+.erp-payroll-summary-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: var(--pr-radius);
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payroll-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payroll-summary-chip {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--pr-tile);
+  color: var(--pr-muted);
+}
+
+.erp-payroll-summary-value {
+  overflow: hidden;
+  margin: 0;
+  color: var(--pr-strong);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-payroll-summary-unit {
+  margin-left: 4px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-payroll-summary-tile--net {
+  background: var(--pr-primary-strong);
+}
+
+.erp-payroll-summary-tile--net .erp-payroll-summary-label,
+.erp-payroll-summary-tile--net .erp-payroll-summary-unit {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.erp-payroll-summary-tile--net .erp-payroll-summary-value {
+  color: #ffffff;
+}
+
+.erp-payroll-summary-tile--net .erp-payroll-summary-chip {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* ── Run detail: payslips panel ── */
+
+.erp-payroll-payslips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.erp-payroll-payslips-title {
+  margin: 0;
+  color: var(--pr-strong);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.erp-payroll-payslips-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.erp-payroll-count-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pr-tile);
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payroll-count-chip strong {
+  color: var(--pr-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-payslips-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-payroll-payslips-actions .ant-btn {
+  border-radius: 10px;
+}
+
+/* ── Run detail: entries table ── */
+
+/* `clip`, not `hidden`: hidden makes a scroll container and traps the sticky header. */
+.erp-payroll-entries {
+  overflow: clip;
+}
+
+.erp-payroll-entries-table {
+  --pr-net-bg: #f0faf6;
+  --pr-group-line: #e4e7ec;
+}
+
+/* Header: grouped two-row header, opaque so rows don't show through when stuck. */
+.erp-payroll-entries-table .ant-table-thead > tr > th.ant-table-cell {
+  padding: 10px 12px !important;
+  line-height: 18px;
+}
+
+.erp-payroll-entries-table .ant-table-thead > tr:first-child > th.ant-table-cell[colspan] {
+  padding-top: 8px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 2px solid var(--pr-tint) !important;
+  color: var(--pr-primary-strong) !important;
+  text-align: center;
+}
+
+.erp-payroll-entries-table .ant-table-thead > tr:first-child > th.ant-table-cell[colspan],
+.erp-payroll-entries-table .erp-payroll-col-group-start {
+  border-left: 1px solid var(--pr-group-line) !important;
+}
+
+/* Header and totals stay inside the card; only the rows scroll between them. */
+.erp-payroll-entries-table .ant-table-header {
+  position: relative;
+  z-index: 3;
+  box-shadow:
+    0 1px 0 var(--pr-divider),
+    0 6px 10px -8px rgba(16, 24, 40, 0.18);
+}
+
+.erp-payroll-entries-table .ant-table-container {
+  border-radius: 0 0 var(--pr-radius) var(--pr-radius);
+}
+
+/* Body */
+.erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row > td.ant-table-cell {
+  padding: 12px !important;
+  color: var(--pr-body);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.erp-payroll-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-thead > tr > th.erp-payroll-col-net,
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row > td.erp-payroll-col-net,
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-summary td.erp-payroll-col-net {
+  background: var(--pr-net-bg) !important;
+  color: var(--pr-primary-strong) !important;
+}
+
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row:hover > td.erp-payroll-col-net {
+  background: #e3f5ee !important;
+}
+
+.erp-payroll-entries-table td.erp-payroll-col-gross {
+  color: var(--pr-strong) !important;
+}
+
+/* Multi-contract rows: one line per contract, then a total line. Line heights are
+   fixed so every stacked column lines up; other cells sit on the total line. */
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.ant-table-cell {
+  vertical-align: bottom;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.erp-payroll-col-employee,
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.ant-table-row-expand-icon-cell {
+  vertical-align: top;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td:first-child {
+  box-shadow: inset 3px 0 0 var(--pr-primary);
+}
+
+.erp-pr-split {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-pr-split-line {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.erp-pr-split-total {
+  height: 27px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #d0d5dd;
+  color: var(--pr-strong);
+  font-size: 13px;
+}
+
+.erp-pr-split-tag {
+  margin-right: auto;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--pr-tile);
+  color: var(--pr-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.erp-payroll-split-pill {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.erp-payroll-split-pill + .erp-payroll-split-pill {
+  margin-left: 6px;
+}
+
+.erp-payroll-freelancer-pill {
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+}
+
+.erp-payroll-entries .erp-users-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.erp-payroll-entries .erp-users-toolbar .ant-btn {
+  border-radius: 10px;
+}
+
+/* Totals (sticky at the bottom) */
+.erp-payroll-entries .ant-table-summary > tr > td,
+.erp-payroll-entries .ant-table-summary .ant-table-cell {
+  padding: 12px !important;
+  border-top: 2px solid var(--pr-group-line, #e4e7ec);
+  background: var(--pr-subtle) !important;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-entries-table .ant-table-summary {
+  box-shadow: 0 -6px 10px -8px rgba(16, 24, 40, 0.18);
+}
+
+.erp-payroll-entries .ant-table-row-expand-icon {
+  border-radius: 6px;
+}
+
+.erp-payroll-entries .ant-table-row-expand-icon:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
+}
+
+.erp-payroll-entries .ant-table-tbody > tr.ant-table-expanded-row > td {
+  padding: 0 !important;
+  background: var(--pr-subtle) !important;
+}
+
+.erp-payroll-employee-name {
+  margin: 0;
+  color: var(--pr-strong);
+  font-weight: 600;
+}
+
+.erp-payroll-employee-id {
+  margin: 2px 0 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payroll-flag.ant-tag {
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.erp-payroll-topup-mark {
+  margin-left: 4px;
+  color: var(--pr-primary-strong);
+  font-weight: 700;
+}
+
+.erp-payroll-entry-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 20px 18px 40px;
+}
+
+.erp-payroll-entry-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.erp-payroll-fact {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.erp-payroll-fact--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-payroll-fact--warning {
+  background: var(--pr-amber-bg);
+}
+
+.erp-payroll-fact-label {
+  margin: 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payroll-fact--warning .erp-payroll-fact-label,
+.erp-payroll-fact--warning .erp-payroll-fact-value {
+  color: var(--pr-amber);
+}
+
+.erp-payroll-fact-value {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--pr-body);
+  font-size: 13px;
+}
+
+.erp-payroll-entry-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.erp-payroll-entry-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-entry-periods li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--pr-body);
+  font-size: 13px;
+}
+
+.erp-payroll-entry-periods li span:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.erp-payroll-ot-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.erp-payroll-ot-period {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.erp-payroll-ot-period-label {
+  margin: 0;
+  color: var(--pr-muted, #6b7280);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-payroll-ot-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-ot-lines li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--pr-body);
+  font-size: 13px;
+}
+
+.erp-payroll-ot-lines li span:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.erp-payroll-ot-lines li.erp-payroll-ot-total {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--pr-border, #e5e7eb);
+  font-weight: 600;
+}
+
+.erp-payroll-entry-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-payroll-entry-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong) !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-payroll-entry-link:hover {
+  background: rgba(29, 158, 117, 0.16);
+}
+
+.erp-payroll-entry-link:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
+}
+
+.erp-payroll-entry-side .ant-btn {
+  align-self: flex-start;
+  border-radius: 10px;
+}
+
+/* ── Modals (portaled) ── */
+
+/* antd 6 renders .ant-modal-container; a global rule squares modal corners. */
+.erp-payroll-modal .ant-modal-content,
+.erp-payroll-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--pr-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-payroll-modal .ant-modal-header {
+  margin-bottom: 16px;
+}
+
+.erp-payroll-modal .ant-modal-title {
+  color: var(--pr-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-payroll-modal .ant-form-item-label > label {
+  color: var(--pr-body);
+  font-weight: 500;
+}
+
+.erp-payroll-modal .ant-picker,
+.erp-payroll-modal .ant-input,
+.erp-payroll-modal .ant-input-number,
+.erp-payroll-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-payroll-modal .ant-input-number,
+.erp-payroll-modal .ant-input-number-affix-wrapper {
+  width: 100%;
+}
+
+.erp-payroll-modal .erp-payroll-modal-hint {
+  margin: -4px 0 16px;
+  color: var(--pr-muted);
+  font-size: 13px;
+}
+
+.erp-payroll-modal .erp-payroll-flag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--pr-amber-bg);
+  list-style: none;
+}
+
+.erp-payroll-modal .erp-payroll-flag-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--pr-amber);
+  font-size: 13px;
+}
+
+.erp-payroll-modal .erp-payroll-flag-list li strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Company settings drawer (portaled) ── */
+
+.erp-payroll-settings-drawer,
+.erp-payroll-settings-drawer .ant-drawer-content {
+  --pr-radius: 16px;
+  --pr-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --pr-muted: #4b5563;
+  --pr-strong: #0f172a;
+  --pr-body: #1f2937;
+  --pr-divider: #eef1f4;
+  --pr-subtle: #f7f8fa;
+  --pr-tint: rgba(29, 158, 117, 0.1);
+  --pr-primary: #1d9e75;
+  --pr-primary-strong: #0f6e56;
+  --pr-amber-bg: #fffaeb;
+  --pr-amber: #b54708;
+}
+
+.erp-payroll-settings-drawer .ant-drawer-header {
+  align-items: flex-start;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--pr-divider);
+}
+
+.erp-payroll-settings-drawer .ant-drawer-header .ant-drawer-close {
+  margin-top: 6px;
+}
+
+.erp-payroll-settings-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.erp-payroll-settings-head-icon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+  font-size: 18px;
+}
+
+.erp-payroll-settings-head-title {
+  margin: 0;
+  color: var(--pr-strong);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.erp-payroll-settings-head-desc {
+  margin: 4px 0 0;
+  color: var(--pr-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.erp-payroll-settings-drawer .ant-drawer-body {
+  background: var(--pr-subtle);
+}
+
+.erp-payroll-settings-drawer .ant-drawer-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--pr-divider);
+  background: #ffffff;
+}
+
+.erp-payroll-settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-payroll-settings-footer .ant-btn {
+  min-width: 96px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+/* Gutter lives on this wrapper: a global rule zeroes padding on .ant-form. */
+.erp-payroll-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.erp-payroll-settings-readonly.ant-alert {
+  border-radius: 12px;
+}
+
+.erp-payroll-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-payroll-settings-section {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--pr-radius);
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payroll-settings-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 14px;
+}
+
+.erp-payroll-settings-section-icon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+  font-size: 16px;
+}
+
+.erp-payroll-settings-section-title {
+  margin: 0;
+  color: var(--pr-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.erp-payroll-settings-section-desc {
+  margin: 3px 0 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-payroll-settings-progress {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.erp-payroll-settings-progress--complete {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.erp-payroll-settings-section-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+  margin: 0 18px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--pr-divider);
+}
+
+.erp-payroll-settings-section-body .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.erp-payroll-settings-section-body .ant-form-item-label {
+  padding-bottom: 6px;
+}
+
+.erp-payroll-settings-section-body .ant-form-item-label > label {
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.erp-payroll-settings-section-body .ant-input,
+.erp-payroll-settings-section-body .ant-input-affix-wrapper {
+  min-height: 38px;
+  border-color: #e4e7ec;
+  border-radius: 10px;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-settings-section-body .ant-input:hover,
+.erp-payroll-settings-section-body .ant-input-affix-wrapper:hover {
+  border-color: #b5c0cc;
+}
+
+.erp-payroll-settings-section-body .ant-input:focus,
+.erp-payroll-settings-section-body .ant-input-focused,
+.erp-payroll-settings-section-body .ant-input-affix-wrapper-focused {
+  border-color: var(--pr-primary);
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.15);
+}
+
+.erp-payroll-settings-section-body .ant-input-disabled,
+.erp-payroll-settings-section-body .ant-input[disabled] {
+  background: var(--pr-subtle);
+  color: var(--pr-body);
+}
+
+.erp-payroll-settings-section-body .ant-form-item-extra {
+  margin-top: 6px;
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payroll-settings-mono.ant-input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.erp-payroll-settings-span-2 {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 575px) {
+  .erp-payroll-settings-content {
+    padding: 16px;
+  }
+
+  .erp-payroll-settings-section-header {
+    flex-wrap: wrap;
+  }
+
+  .erp-payroll-settings-progress {
+    margin-left: 48px;
+  }
+
+  .erp-payroll-settings-section-body {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-payroll-settings-span-2 {
+    grid-column: auto;
+  }
+}
+
+/* ── Payslips section (profile / employee detail) ── */
+
+.erp-payslips-v2 .ant-table-wrapper .ant-table {
+  background: transparent;
+}
+
+.erp-payslips-v2 .ant-table-wrapper .ant-table-thead > tr > th {
+  background: var(--pr-subtle) !important;
+  color: var(--pr-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--pr-divider) !important;
+}
+
+.erp-payslips-v2 .ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-payslips-v2 .ant-table-wrapper .ant-table-tbody > tr > td {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  border-bottom-color: var(--pr-divider) !important;
+}
+
+.erp-payslips-v2 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--pr-subtle) !important;
+}
+
+.erp-payslips-v2 .erp-payslip-period {
+  color: var(--pr-strong);
+  font-weight: 600;
+}
+
+.erp-payslips-v2 .erp-payslip-net {
+  color: var(--pr-strong);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.erp-payslips-v2 .erp-payslip-net span {
+  margin-left: 4px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-payslip-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.erp-payslip-state--pending {
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.erp-payslips-v2 .erp-payslip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.erp-payslips-v2 .erp-payslip-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-payslips-v2 .erp-payslips-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  color: var(--pr-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.erp-payslips-v2 .erp-payslips-empty-icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+}
+
+/* ── Payslip breakdown drawer (portaled) ── */
+
+.erp-payslip-drawer .ant-drawer-header {
+  border-bottom: 1px solid var(--pr-divider);
+}
+
+.erp-payslip-drawer .ant-drawer-title {
+  color: var(--pr-strong);
+  font-weight: 600;
+}
+
+.erp-payslip-drawer .ant-drawer-body {
+  background: var(--pr-subtle);
+}
+
+.erp-payslip-hero {
+  padding: 18px;
+  border-radius: var(--pr-radius);
+  background: var(--pr-primary-strong);
+  color: #ffffff;
+}
+
+.erp-payslip-hero-label {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payslip-hero-amount {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-payslip-hero-amount span {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.erp-payslip-hero-who {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+}
+
+.erp-payslip-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-payslip-fact {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.erp-payslip-fact--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-payslip-fact p {
+  margin: 0;
+}
+
+.erp-payslip-fact p:first-child {
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payslip-fact p:last-child {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  color: var(--pr-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-payslip-section {
+  padding: 14px 16px;
+  border-radius: var(--pr-radius);
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payslip-section-title {
+  margin: 0 0 6px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payslip-subtitle {
+  margin: 8px 0 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payslip-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  color: var(--pr-body);
+  font-size: 13px;
+}
+
+.erp-payslip-row > span:last-child {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.erp-payslip-row--total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pr-divider);
+  color: var(--pr-strong);
+  font-weight: 600;
+}
+
+.erp-payslip-note {
+  margin: 0;
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+
+/* ── Run detail: phone entry cards (table is too wide below 768px) ── */
+
+.erp-payroll-entry-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.erp-payroll-mobile-totals {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--pr-subtle);
+}
+
+.erp-payroll-mobile-totals-title {
+  margin: 0 0 8px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payroll-mobile-totals dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.erp-payroll-mobile-totals dt,
+.erp-payroll-entry-card-grid dt {
+  color: var(--pr-muted);
+  font-size: 12px;
+}
+
+.erp-payroll-mobile-totals dd,
+.erp-payroll-entry-card-grid dd {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--pr-strong);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-payroll-mobile-totals-net dd {
+  color: var(--pr-primary-strong);
+}
+
+.erp-payroll-entry-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-entry-card {
+  padding: 14px;
+  border: 1px solid var(--pr-divider);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.erp-payroll-entry-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.erp-payroll-entry-card-head .erp-payroll-flag.ant-tag {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-payroll-entry-card-net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+}
+
+.erp-payroll-entry-card-net > span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-payroll-entry-card-net strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.erp-payroll-entry-card-net small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-payroll-entry-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin: 12px 0 0;
+}
+
+.erp-payroll-entry-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.erp-payroll-entry-card-actions .ant-btn {
+  border-radius: 8px;
+}
+
+.erp-payroll-entry-card-actions .ant-btn-text {
+  color: var(--pr-primary-strong);
+  font-weight: 600;
+}
+
+.erp-payroll-entry-card-details {
+  margin: 12px -14px -14px;
+  border-top: 1px solid var(--pr-divider);
+  border-radius: 0 0 14px 14px;
+  background: var(--pr-subtle);
+}
+
+.erp-payroll-entry-card-details .erp-payroll-entry-detail {
+  padding: 12px;
+}
+
+.erp-payroll-entry-cards-more.ant-btn {
+  height: 40px;
+  border-radius: 10px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 1279px) {
+  .erp-payroll-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Seven tiles on three columns: Total net takes its own full row. */
+  .erp-payroll-summary-tile--net {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-payroll-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .erp-payroll-entry-detail {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .erp-payroll-hero-actions {
+    width: 100%;
+  }
+
+  .erp-payroll-hero-actions .ant-btn {
+    flex: 1 1 auto;
+  }
+
+  /* Vertical stepper on phones: tighter rows, approver back on. */
+  .erp-payroll-steps {
+    padding: 12px 14px 4px;
+  }
+
+  .erp-payroll-steps .ant-steps-item-title {
+    white-space: normal;
+  }
+
+  .erp-payroll-step-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+
+  .erp-payroll-payslips {
+    padding: 16px;
+  }
+
+  .erp-payroll-payslips-actions {
+    width: 100%;
+  }
+
+  .erp-payroll-payslips-actions .ant-btn {
+    flex: 1 1 auto;
+  }
+
+  .erp-payroll-entries .erp-users-toolbar {
+    padding: 16px 16px 12px;
+  }
+
+  .erp-payroll-entries .erp-users-filter-bar {
+    padding: 0 16px 14px;
+  }
+
+  .erp-payroll-entries .erp-users-search-input {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .erp-payroll-entries .erp-users-filter-select {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-payroll-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  /* Total net first on phones: it is the number people come for. */
+  .erp-payroll-summary-tile--net {
+    order: -1;
+  }
+
+  .erp-payroll-summary-tile {
+    padding: 14px;
+  }
+
+  .erp-payroll-hero {
+    padding: 18px 16px;
+  }
+
+  .erp-payroll-hero-actions {
+    justify-content: flex-start;
+  }
+
+}
+
+@media (max-width: 480px) {
+  .erp-payroll-v2 .erp-users-stat {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .erp-payroll-v2 .erp-users-stat-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .erp-payroll-v2 .erp-users-stat-label {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  .erp-payroll-v2 .erp-users-stat-value {
+    font-size: 22px;
+  }
+
+  .erp-payroll-v2 .erp-users-filter-select {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .erp-payroll-summary-value {
+    font-size: 17px;
+  }
+
+  .erp-payroll-entry-facts,
+  .erp-payslip-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

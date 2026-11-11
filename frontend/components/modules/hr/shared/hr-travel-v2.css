@@ -1,0 +1,708 @@
+/*
+ * Shared v2 chrome for Expense Claims, Flight Applications, Business Trips,
+ * Per Diem (requests / settlements), Employee Per Diem Rates, Operations
+ * request/register details & forms (purchase, material, consumables, fleet,
+ * seals, exit permit, company assets/vehicles), New Request picker, and
+ * Employees (list / detail / add / edit).
+ * Scoped under `.erp-hr-travel-v2`. Portaled modals and drawers use
+ * `.erp-hr-travel-modal`.
+ */
+
+.erp-hr-travel-v2 {
+  --htv2-radius: 16px;
+  --htv2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --htv2-muted: #4b5563;
+  --htv2-strong: #0f172a;
+  --htv2-body: #1f2937;
+  --htv2-divider: #eef1f4;
+  --htv2-subtle: #f7f8fa;
+  --htv2-tint: rgba(29, 158, 117, 0.1);
+  --htv2-primary: #1d9e75;
+  --htv2-primary-strong: #0f6e56;
+
+  gap: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.erp-hr-travel-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+.erp-hr-travel-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--htv2-radius);
+  background: #ffffff;
+  box-shadow: var(--htv2-shadow);
+}
+
+/* Soft pill tabs (per-diem advances / settlements) */
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar-card {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--htv2-radius);
+  background: #ffffff;
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar button[role='tab'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--htv2-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar button[role='tab']:hover {
+  background: var(--htv2-subtle);
+  color: var(--htv2-body);
+}
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar button[role='tab'][aria-selected='true'] {
+  background: var(--htv2-tint);
+  color: var(--htv2-primary-strong);
+  font-weight: 600;
+}
+
+.erp-hr-travel-v2 .erp-hr-travel-tabbar button[role='tab']:focus-visible {
+  outline: 2px solid var(--htv2-primary);
+  outline-offset: 2px;
+}
+
+/* Stat tiles */
+
+.erp-hr-travel-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.erp-hr-travel-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--htv2-radius);
+  background: #ffffff;
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-hr-travel-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--htv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-hr-travel-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--htv2-primary),
+    var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-hr-travel-v2 .erp-users-stat-label {
+  color: var(--htv2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-hr-travel-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* Toolbar + filters */
+
+.erp-hr-travel-v2 .erp-users-toolbar,
+.erp-hr-travel-v2 .erp-employee-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-hr-travel-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--htv2-strong);
+}
+
+.erp-hr-travel-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--htv2-tint);
+  color: var(--htv2-primary-strong);
+}
+
+.erp-hr-travel-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--htv2-divider);
+  background: transparent;
+}
+
+.erp-hr-travel-v2 .erp-users-search-input {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+
+.erp-hr-travel-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-hr-travel-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-hr-travel-v2 .erp-users-filter-bar .ant-picker,
+.erp-hr-travel-v2 .erp-users-search-input.ant-input-affix-wrapper {
+  border-radius: 10px !important;
+}
+
+.erp-hr-travel-v2 .erp-pro-table-card-body {
+  padding: 0 0 8px;
+}
+
+.erp-hr-travel-v2 .ant-table-thead > tr > th {
+  background: #f7f8fa !important;
+  color: var(--htv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--htv2-divider) !important;
+}
+
+.erp-hr-travel-v2 .ant-table-tbody > tr:hover > td {
+  background: #f7f8fa !important;
+}
+
+.erp-hr-travel-v2 .erp-users-cell-sub {
+  color: var(--htv2-muted);
+}
+
+.erp-hr-travel-v2 .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.erp-hr-travel-v2 .erp-users-role-tag {
+  border: 0;
+  background: var(--htv2-tint);
+  color: var(--htv2-primary-strong);
+  font-weight: 600;
+}
+
+/* Detail */
+
+.erp-hr-travel-v2 .erp-employee-hero {
+  padding: 20px 24px 24px;
+}
+
+.erp-hr-travel-v2 .erp-employee-hero-name {
+  color: var(--htv2-strong);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-hr-travel-v2 .erp-employee-section {
+  border: 0;
+  border-radius: var(--htv2-radius);
+  background: #ffffff;
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-pro-card .erp-employee-section {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.erp-hr-travel-v2 .erp-employee-section-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--htv2-divider);
+  background: #ffffff;
+}
+
+.erp-hr-travel-v2 .erp-employee-section-title {
+  color: var(--htv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.erp-hr-travel-v2 .erp-employee-section-body {
+  padding: 16px 20px 20px;
+}
+
+/* Standalone toolbar buttons only — leave Space.Compact (Export/Import/Add) joined. */
+.erp-hr-travel-v2 .erp-employee-toolbar-actions > .ant-btn,
+.erp-hr-travel-v2 .erp-users-toolbar-actions > .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-hr-travel-v2 .ant-space-compact > .ant-btn:first-child,
+.erp-hr-travel-v2 .ant-space-compact > *:first-child .ant-btn {
+  border-start-start-radius: 10px;
+  border-end-start-radius: 10px;
+}
+
+.erp-hr-travel-v2 .ant-space-compact > .ant-btn:last-child,
+.erp-hr-travel-v2 .ant-space-compact > *:last-child .ant-btn {
+  border-start-end-radius: 10px;
+  border-end-end-radius: 10px;
+}
+
+/* Form shell (HrFormPageShell + stepper / form layout) */
+
+.erp-hr-travel-v2.erp-employee-form-page,
+.erp-hr-travel-v2.erp-expense-claim-form-page,
+.erp-hr-travel-v2.erp-employee-per-diem-form-page {
+  gap: 16px;
+}
+
+.erp-hr-travel-v2 .erp-form-layout-pro,
+.erp-hr-travel-v2 .erp-stepper-form__steps-shell {
+  border: 0 !important;
+  border-radius: var(--htv2-radius) !important;
+  box-shadow: var(--htv2-shadow) !important;
+}
+
+.erp-hr-travel-v2 .erp-stepper-form__footer {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: var(--htv2-shadow) !important;
+}
+
+/* Section stepper: shadow only on step cards + step bar/footer — not the full scroll column */
+.erp-hr-travel-v2.erp-flight-form-page .erp-stepper-form,
+.erp-hr-travel-v2.erp-business-trip-form-page .erp-stepper-form {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.erp-hr-travel-v2.erp-flight-form-page .erp-stepper-form > .min-h-0,
+.erp-hr-travel-v2.erp-business-trip-form-page .erp-stepper-form > .min-h-0 {
+  background: transparent !important;
+}
+
+.erp-hr-travel-v2 .ant-input,
+.erp-hr-travel-v2 textarea.ant-input,
+.erp-hr-travel-v2 .ant-select-selector,
+.erp-hr-travel-v2 .ant-picker,
+.erp-hr-travel-v2 .ant-input-number {
+  border-radius: 10px !important;
+}
+
+.erp-hr-travel-v2 .erp-form-layout-pro .ant-btn:not(.ant-space-compact .ant-btn),
+.erp-hr-travel-v2 .erp-stepper-form .ant-btn:not(.ant-space-compact .ant-btn) {
+  border-radius: 10px !important;
+}
+
+/* ── Contain fields on add + detail (no horizontal overflow) ── */
+
+.erp-hr-travel-v2.erp-employee-form-page,
+.erp-hr-travel-v2.erp-employee-detail-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .erp-stepper-form,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro,
+.erp-hr-travel-v2.erp-employee-form-page .erp-pro-card,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-pro-card,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section,
+.erp-hr-travel-v2 .erp-form-grid-2,
+.erp-hr-travel-v2 .erp-form-grid-3,
+.erp-hr-travel-v2 .erp-per-diem-rate-grid,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-table-wrapper,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item-control,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item-control-input,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item-control-input-content,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-form-item,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-form-item-control,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-form-item-control-input,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-form-item-control-input-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * Even field columns that fill the section.
+ * Rulebook §3.1: 2 cols from md; 3 cols only from xl.
+ */
+@media (min-width: 768px) {
+  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-2,
+  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .erp-hr-travel-v2.erp-employee-form-page .erp-form-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-select,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-input-number,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-picker,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-input-affix-wrapper,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-input-number-affix-wrapper,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro input.ant-input,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro textarea.ant-input,
+.erp-hr-travel-v2.erp-employee-form-page .erp-form-layout-pro .ant-cascader-picker,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section .ant-select,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section .ant-input-number,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section .ant-picker,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section .ant-input-affix-wrapper,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section input.ant-input,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-section textarea.ant-input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-form-item .ant-space-compact {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact > .ant-select,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact > .ant-input-number,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact > .ant-picker,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact > .ant-input,
+.erp-hr-travel-v2.erp-employee-form-page .ant-form-item .ant-space-compact > .ant-input-affix-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.erp-hr-travel-v2 .erp-per-diem-rate-input .ant-input-number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-meta-bar,
+.erp-hr-travel-v2.erp-employee-detail-page .erp-users-stat-bar.erp-employee-meta-bar {
+  min-width: 0;
+  overflow: hidden;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.625rem), 1fr));
+}
+
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-meta-bar .erp-users-stat {
+  min-width: 0;
+}
+
+.erp-hr-travel-v2.erp-employee-detail-page .erp-employee-meta-value {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-hr-travel-v2 .erp-users-cell-sub,
+.erp-hr-travel-v2 .erp-users-email,
+.erp-hr-travel-v2 .erp-employee-hero-name,
+.erp-hr-travel-v2 .erp-users-name {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.erp-hr-travel-v2 .erp-employee-section-header,
+.erp-hr-travel-v2 .erp-ot-entries-header {
+  flex-wrap: wrap;
+}
+
+.erp-hr-travel-v2 .erp-employee-section-title,
+.erp-hr-travel-v2 .erp-ot-entries-title {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.erp-hr-travel-v2 .erp-per-diem-rate-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .ant-radio-group,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.erp-hr-travel-v2.erp-employee-form-page .ant-radio-button-wrapper,
+.erp-hr-travel-v2.erp-employee-detail-page .ant-radio-button-wrapper {
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  line-height: 1.35;
+}
+
+/* Expense item drawer */
+
+.erp-expense-item-drawer .ant-drawer-content {
+  border-radius: 16px 0 0 16px;
+}
+
+.erp-expense-item-drawer .erp-expense-item-section {
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+}
+
+.erp-expense-item-drawer .erp-expense-item-section-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef1f4;
+  background: #ffffff;
+}
+
+.erp-expense-item-drawer .erp-expense-item-section-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.erp-expense-item-drawer .erp-expense-item-section-body {
+  padding: 16px;
+}
+
+.erp-expense-item-drawer .ant-btn,
+.erp-expense-item-drawer .ant-input,
+.erp-expense-item-drawer .ant-select-selector,
+.erp-expense-item-drawer .ant-input-number,
+.erp-expense-item-drawer .ant-picker {
+  border-radius: 10px !important;
+}
+
+.erp-expense-item-drawer .erp-expense-item-drawer-footer {
+  padding-top: 4px;
+}
+
+.erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary {
+  background: #1d9e75;
+  border-color: #1d9e75;
+}
+
+.erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary:hover {
+  background: #0f6e56 !important;
+  border-color: #0f6e56 !important;
+}
+
+/* Portaled mark-paid / cash / confirm modals */
+
+.erp-hr-travel-modal {
+  --htv2-radius: 16px;
+  --htv2-muted: #4b5563;
+  --htv2-strong: #0f172a;
+  --htv2-body: #1f2937;
+  --htv2-primary: #1d9e75;
+  --htv2-primary-strong: #0f6e56;
+}
+
+.erp-hr-travel-modal .ant-modal-content,
+.erp-hr-travel-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--htv2-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-hr-travel-modal .ant-modal-header {
+  margin-bottom: 4px;
+}
+
+.erp-hr-travel-modal .ant-modal-title {
+  color: var(--htv2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-hr-travel-modal .erp-hr-travel-modal-hint {
+  margin: 0 0 18px;
+  color: var(--htv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-hr-travel-modal .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.erp-hr-travel-modal .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.erp-hr-travel-modal .ant-form-item-label {
+  padding-bottom: 4px !important;
+}
+
+.erp-hr-travel-modal .ant-form-item-label > label {
+  color: var(--htv2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-hr-travel-modal .ant-input,
+.erp-hr-travel-modal textarea.ant-input,
+.erp-hr-travel-modal .ant-input-number,
+.erp-hr-travel-modal .ant-picker,
+.erp-hr-travel-modal .ant-select-selector,
+.erp-hr-travel-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-hr-travel-modal .ant-input-number,
+.erp-hr-travel-modal .ant-picker {
+  width: 100%;
+}
+
+.erp-hr-travel-modal .ant-modal-footer {
+  margin-top: 20px;
+}
+
+.erp-hr-travel-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--htv2-primary);
+  border-color: var(--htv2-primary);
+}
+
+.erp-hr-travel-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: var(--htv2-primary-strong) !important;
+  border-color: var(--htv2-primary-strong) !important;
+}
+
+.erp-hr-travel-modal.erp-confirm-dialog .ant-modal-content,
+.erp-hr-travel-modal.erp-confirm-dialog .ant-modal-container {
+  padding: 0 !important;
+}
+
+.erp-hr-travel-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
+  background: var(--htv2-primary);
+  border-color: var(--htv2-primary);
+}
+
+/* Portaled drawers (employee import) share the same header/footer chrome. */
+.erp-hr-travel-modal.ant-drawer .ant-drawer-header,
+.erp-hr-travel-modal .ant-drawer-header {
+  border-bottom-color: var(--htv2-divider);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-drawer-title,
+.erp-hr-travel-modal .ant-drawer-title {
+  color: var(--htv2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-drawer-footer,
+.erp-hr-travel-modal .ant-drawer-footer {
+  border-top-color: var(--htv2-divider);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn-primary,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary {
+  background: var(--htv2-primary);
+  border-color: var(--htv2-primary);
+}
+
+.erp-hr-travel-modal.ant-drawer .ant-btn-primary:hover,
+.erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary:hover {
+  background: var(--htv2-primary-strong) !important;
+  border-color: var(--htv2-primary-strong) !important;
+}
+
+/* New Request picker: inherit travel tokens, give tiles a quiet hover lift. */
+.erp-hr-travel-v2.erp-request-picker {
+  gap: 20px;
+}
+
+.erp-hr-travel-v2 .erp-request-picker-hero,
+.erp-hr-travel-v2 .erp-request-picker-group {
+  border-radius: var(--htv2-radius);
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-request-card {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.erp-hr-travel-v2 .erp-request-card:hover {
+  border-color: var(--htv2-divider);
+  box-shadow: var(--htv2-shadow);
+}
+
+.erp-hr-travel-v2 .erp-request-card-icon {
+  border-radius: 12px;
+}
+
+.erp-hr-travel-v2 .erp-request-picker-search.ant-input-affix-wrapper,
+.erp-hr-travel-v2 .erp-request-picker-actions .ant-btn,
+.erp-hr-travel-v2 .erp-request-picker-chip {
+  border-radius: 999px;
+}
+
+@media (max-width: 900px) {
+  .erp-hr-travel-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-hr-travel-v2 .erp-users-stat-bar {
+    grid-template-columns: 1fr;
+  }
+}

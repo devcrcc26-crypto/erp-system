@@ -1,0 +1,86 @@
+{
+  "count": 20,
+  "files": {
+    "components/modules/approvals/detail/VehicleRefuelingDetail.tsx": {
+      "count": 1,
+      "errors": [
+        "TS2304: Cannot find name 'formatVehicleRefuelingEmployeeName'."
+      ]
+    },
+    "components/modules/hr/HrImportModal.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepClassNameType<{ root?: string | undefined; header?: string | undefined; body?: string | undefined; footer?: string | undefined; container?: string | undefined; title?: string | undefined; wrapper?: string | undefined; mask?: string | undefined; close?: string | undefined; } | u...'.",
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepStylesType<{ root?: CSSProperties | undefined; header?: CSSProperties | undefined; body?: CSSProperties | undefined; ... 5 more ...; close?: CSSProperties | undefined; } | undefined>) | DeepStylesType<...>'."
+      ]
+    },
+    "components/modules/hr/inspection-repair/InspectionRepairFormContent.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2551: Property 'approvalRequestId' does not exist on type 'InspectionRepairDetail'. Did you mean 'approvalRequest'?",
+        "TS2551: Property 'approvalRequestId' does not exist on type 'InspectionRepairDetail'. Did you mean 'approvalRequest'?"
+      ]
+    },
+    "components/modules/hr/work-schedule/AssignWorkScheduleModal.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepClassNameType<{ root?: string | undefined; header?: string | undefined; body?: string | undefined; footer?: string | undefined; container?: string | undefined; title?: string | undefined; wrapper?: string | undefined; mask?: string | undefined; close?: string | undefined; } | u...'.",
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepStylesType<{ root?: CSSProperties | undefined; header?: CSSProperties | undefined; body?: CSSProperties | undefined; ... 5 more ...; close?: CSSProperties | undefined; } | undefined>) | DeepStylesType<...>'."
+      ]
+    },
+    "components/modules/projects/engineering/VersionHistoryTimeline.test.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2739: Type '{ engineeringDocumentVersionId: string; revisionLabel: string; status: string; createdAt: string; loop: \"EXTERNAL\"; events: { action: string; phase: \"INTENT\"; createdAt: string; }[]; }' is missing the following properties from type 'VersionHistoryEntry': documentVersionId, fileVersionNumber, fileName",
+        "TS2739: Type '{ engineeringDocumentVersionId: string; revisionLabel: string; status: string; createdAt: string; loop: \"INTERNAL\"; events: { action: string; phase: \"COMMITTED\"; createdAt: string; }[]; }' is missing the following properties from type 'VersionHistoryEntry': documentVersionId, fileVersionNumber, fileName"
+      ]
+    },
+    "components/modules/settings/SettingsDisciplinesPanel.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2339: Property 'taskDisciplines' does not exist on type '{ users: number; }'.",
+        "TS2339: Property 'taskDisciplines' does not exist on type '{ users: number; }'."
+      ]
+    },
+    "components/providers/AntDesignProvider.tsx": {
+      "count": 1,
+      "errors": [
+        "TS2322: Type '{ lang: { fieldDateFormat: string; fieldDateTimeFormat: string; dateFormat: string; dateTimeFormat: string; locale: string; fieldTimeFormat?: string; fieldMonthFormat?: string; fieldYearFormat?: string; ... 43 more ...; rangePlaceholder?: [string, string]; }; ... 4 more ...; monthFormat?: string; }' is not assignable to type 'PickerLocale'."
+      ]
+    },
+    "components/ui/ConfirmDialog/ConfirmDialog.tsx": {
+      "count": 2,
+      "errors": [
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepClassNameType<{ root?: string | undefined; header?: string | undefined; body?: string | undefined; footer?: string | undefined; container?: string | undefined; title?: string | undefined; wrapper?: string | undefined; mask?: string | undefined; close?: string | undefined; } | u...'.",
+        "TS2353: Object literal may only specify known properties, and 'content' does not exist in type '((info: { props: ModalProps; }) => DeepStylesType<{ root?: CSSProperties | undefined; header?: CSSProperties | undefined; body?: CSSProperties | undefined; ... 5 more ...; close?: CSSProperties | undefined; } | undefined>) | DeepStylesType<...>'."
+      ]
+    },
+    "components/ui/FormPageFooter/FormPageFooter.tsx": {
+      "count": 1,
+      "errors": [
+        "TS18047: 'main' is possibly 'null'."
+      ]
+    },
+    "components/ui/StepperForm/StepperForm.tsx": {
+      "count": 1,
+      "errors": [
+        "TS18047: 'main' is possibly 'null'."
+      ]
+    },
+    "lib/field-movement/field-movement-field-rules.test.ts": {
+      "count": 2,
+      "errors": [
+        "TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<FieldMovementFieldKey, FieldPresence>'.",
+        "TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<FieldMovementFieldKey, FieldPresence>'."
+      ]
+    },
+    "lib/utils/users-export-excel.test.ts": {
+      "count": 2,
+      "errors": [
+        "TS2741: Property 'reportsToUserId' is missing in type '{ id: string; companyId: string; branchId: null; departmentId: null; positionId: null; discipline: null; engineeringDisciplineId: null; firstName: string; lastName: string; chineseName: null; email: string; ... 9 more ...; updatedAt: string; }' but required in type 'User'.",
+        "TS2741: Property 'reportsToUserId' is missing in type '{ id: string; companyId: string; branchId: null; departmentId: string; department: { id: string; name: string; }; positionId: string; position: { id: string; title: string; }; discipline: null; engineeringDisciplineId: string; ... 34 more ...; userRoles: { ...; }[]; }' but required in type 'User'."
+      ]
+    }
+  },
+  "updatedAt": "2026-10-15T12:37:47.011Z"
+}

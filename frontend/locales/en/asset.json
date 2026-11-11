@@ -1,0 +1,84 @@
+{
+  "nav": {
+    "hr": {
+      "companyAssets": "Company Assets"
+    }
+  },
+  "pages": {
+    "hr": {
+      "companyAsset": {
+        "title": "Company Assets",
+        "new": "New Company Asset",
+        "edit": "Edit Company Asset",
+        "detail": "Asset Detail",
+        "formDescription": "Add or update a company asset record."
+      }
+    }
+  },
+  "hr": {
+    "assetStatus": {
+      "AVAILABLE": "Available",
+      "IN_USE": "In Use",
+      "REPAIRING": "Repairing",
+      "DISPOSED": "Disposed"
+    },
+    "assetLabels": {
+      "serialNumber": "Serial Number",
+      "brand": "Brand",
+      "model": "Model",
+      "year": "Year",
+      "color": "Color",
+      "type": "Type",
+      "status": "Status",
+      "description": "Description",
+      "photo": "Photo",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "assetPlaceholder": {
+      "search": "Search by serial number, brand or model…",
+      "serialNumber": "e.g. SN-001234",
+      "brand": "e.g. Dell",
+      "model": "e.g. Latitude 5540",
+      "year": "e.g. 2024",
+      "color": "e.g. Black",
+      "type": "e.g. Laptop",
+      "description": "Optional description…",
+      "filterStatus": "Filter by status",
+      "filterType": "Filter by type"
+    },
+    "assetButtons": {
+      "newAsset": "New Asset",
+      "editAsset": "Edit Asset",
+      "deleteAsset": "Delete Asset",
+      "changeStatus": "Change Status",
+      "save": "Save",
+      "create": "Create Asset",
+      "cancel": "Cancel",
+      "back": "Back",
+      "backToList": "Back to Assets"
+    },
+    "assetMessages": {
+      "created": "Asset created successfully",
+      "updated": "Asset updated successfully",
+      "deleted": "Asset deleted successfully",
+      "statusUpdated": "Asset status updated",
+      "notFound": "Asset not found",
+      "failedToCreate": "Failed to create asset",
+      "failedToUpdate": "Failed to update asset",
+      "failedToDelete": "Failed to delete asset",
+      "failedToUpdateStatus": "Failed to update asset status"
+    },
+    "assetDialog": {
+      "deleteTitle": "Delete asset?",
+      "deleteDesc": "This will permanently delete this asset record. This action cannot be undone.",
+      "statusTitle": "Change asset status"
+    },
+    "assetEmpty": {
+      "noAssets": "No assets found"
+    },
+    "assetSection": {
+      "assetDetails": "Asset Details"
+    }
+  }
+}

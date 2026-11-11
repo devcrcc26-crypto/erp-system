@@ -1,0 +1,279 @@
+﻿announcements.md|## 如何阅读公告
+announcements.md|## 如何确认已阅读公告
+announcements.md|## 如何撰写草稿
+announcements.md|## 如何发布公告
+announcements.md|## 如何查看阅读情况
+announcements.md|## 如何编辑已发布的公告
+announcements.md|## 如何发布系统更新
+approvals.md|## 如何发起新申请
+approvals.md|## 如何跟踪您的申请
+approvals.md|## 如何继续编辑草稿
+approvals.md|## 申请被退回时怎么办
+approvals.md|## 如何回复条件
+approvals.md|## 如何查找等待您处理的申请
+approvals.md|## 决定前如何核对申请
+approvals.md|## 如何批准申请
+approvals.md|## 如何退回申请
+approvals.md|## 如何拒绝申请
+approvals.md|## 如何有条件批准
+approvals.md|## 如何转派等待中的环节
+approvals.md|## 如何代其他审批人批准或退回
+approvals.md|## 如何查看所有申请和公司报表
+attendance.md|## 如何导入一个月的考勤
+attendance.md|## 第 1 步 — 上传文件
+attendance.md|## 第 2 步 — 核对并确认
+attendance.md|## 第 3 步 — 完成
+attendance.md|## 如何审核一个月的考勤
+attendance.md|## 如何更正某天的打卡时间
+attendance.md|## 如何处理晚于最晚打卡时间的打卡
+attendance.md|## 如何批准一个月的考勤
+attendance.md|## 如何解锁已批准的月份
+attendance.md|## 如何将考勤机记录关联到员工
+attendance.md|## 如何处理待录入考勤机的员工
+business-trips.md|## 如何申请出差
+business-trips.md|## 第 1 步 — 出行详情
+business-trips.md|## 第 2 步 — 目的与预算
+business-trips.md|## 第 3 步 — 乘客
+business-trips.md|## 第 4 步 — 确认并提交
+business-trips.md|## 如何确认收到机票
+business-trips.md|## 申请被退回时怎么办
+business-trips.md|## 如何审批出差申请
+business-trips.md|## 如何查看所有出差
+business-trips.md|## 如何上传机票
+business-trips.md|## 人事须知
+company-assets.md|## 如何查看发放给您的资产
+company-assets.md|## 如何报告资产问题
+company-assets.md|## 如何添加公司资产
+company-assets.md|## 第 1 步 — 资产详情
+company-assets.md|## 第 2 步 — 固定资产台账
+company-assets.md|## 第 3 步 — 照片
+company-assets.md|## 第 4 步 — 确认并提交
+company-assets.md|## 如何向员工发放资产
+company-assets.md|## 如何收回资产
+company-assets.md|## 如何修改状态、编辑或删除资产
+company-assets.md|## 如何查找、导出或导入资产
+dashboard.md|## 如何从仪表板发起申请
+dashboard.md|## 个人摘要（假期、加班、申请）
+dashboard.md|## 我的团队显示什么
+dashboard.md|## 公司视图显示什么
+employee-management.md|## 如何添加员工
+employee-management.md|## 第 1 步 — 账户与权限
+employee-management.md|## 第 2 步 — 个人信息
+employee-management.md|## 第 3 步 — 雇佣信息
+employee-management.md|## 第 4 步 — 教育与经验
+employee-management.md|## 第 5 步 — 假期政策与文件
+employee-management.md|## 第 6 步 — 审核并提交
+employee-management.md|## 如何查找和更新员工
+employee-management.md|## 如何登记劳动合同
+employee-management.md|## 如何将员工暂时设为非活动
+employee-management.md|## 如何办理离职
+employee-management.md|## 如何重新雇用
+employee-management.md|## 人事须知
+evaluations.md|## 如何自评
+evaluations.md|## 如何查看结果
+evaluations.md|## 不同意结果时怎么办
+evaluations.md|## 如何评估团队成员
+evaluations.md|## 如何评估并分享结果
+evaluations.md|## 如何回复异议
+evaluations.md|## 如何设置考核模板
+evaluations.md|## 如何运行考核周期
+evaluations.md|## 如何跟踪所有考核
+evaluations.md|## 如何处理升级的异议
+evaluations.md|## 如何归档已完成的考核
+exit-permit.md|## 如何申请出入证
+exit-permit.md|## 第 1 步 — 申请详情
+exit-permit.md|## 第 2 步 — 物品清单
+exit-permit.md|## 第 3 步 — 确认并提交
+exit-permit.md|## 如何跟踪您的出入证
+exit-permit.md|## 出入证被退回时怎么办
+exit-permit.md|## 如何审批出入证
+exit-permit.md|## 如何查看所有出入证
+exit-permit.md|## 如何打印出入门证或门岗登记
+exit-permit.md|## 人事须知
+expense-claims.md|## 如何提交费用报销
+expense-claims.md|## 第 1 步 — 申请详情
+expense-claims.md|## 第 2 步 — 物品清单
+expense-claims.md|## 第 3 步 — 确认并提交
+expense-claims.md|## 如何跟踪您的费用报销
+expense-claims.md|## 如何完成草稿报销
+expense-claims.md|## 如何取消费用报销
+expense-claims.md|## 报销被退回时怎么办
+expense-claims.md|## 如何审批费用报销
+expense-claims.md|## 如何查看所有费用报销
+expense-claims.md|## 如何将报销标记为已支付
+expense-claims.md|## 如何删除费用报销
+expense-claims.md|## 如何导入或导出费用报销
+field-movement.md|## 如何说明异常考勤
+field-movement.md|## 第 1 步 — 选择月份
+field-movement.md|## 第 2 步 — 说明日期
+field-movement.md|## 第 3 步 — 确认并提交
+field-movement.md|## 说明被退回时怎么办
+field-movement.md|## 如何审批说明
+field-movement.md|## 如何查看所有说明
+field-movement.md|## 如何代他人录入纸质表格
+field-movement.md|## 人事须知
+flight.md|## 如何申请机票
+flight.md|## 第 1 步 — 出行详情
+flight.md|## 第 2 步 — 乘客
+flight.md|## 第 3 步 — 确认并提交
+flight.md|## 如何确认收到机票
+flight.md|## 申请被退回时怎么办
+flight.md|## 如何审批机票申请
+flight.md|## 如何查看所有机票申请
+flight.md|## 如何上传机票
+flight.md|## 人事须知
+getting-started.md|## 如何登录
+getting-started.md|## 如何熟悉界面
+getting-started.md|## 如何提交申请
+getting-started.md|## 如何跟踪申请
+getting-started.md|## 申请被退回时怎么办
+getting-started.md|## 需要帮助？
+leave.md|## 如何申请休假
+leave.md|## 第 1 步 — 请假详情
+leave.md|## 第 2 步 — 附件材料
+leave.md|## 第 3 步 — 确认并提交
+leave.md|## 如何查看假期余额
+leave.md|## 如何跟踪您的请假申请
+leave.md|## 如何修改请假申请
+leave.md|## 如何取消请假申请
+leave.md|## 申请被退回时怎么办
+leave.md|## 如何批准、退回或拒绝请假申请
+leave.md|## 如何为团队成员申请休假
+leave.md|## 如何查看所有请假申请
+leave.md|## 如何编辑或删除请假申请
+leave.md|## 如何查看和调整假期余额
+leave.md|## 如何从 Excel 导入请假申请
+leave.md|## 人事须知
+materials.md|## 如何提交采购申请
+materials.md|## 第 1 步 — 申请详情（采购）
+materials.md|## 第 2 步 — 物品清单（采购）
+materials.md|## 第 3 步 — 确认并提交（采购）
+materials.md|## 如何提交领料申请
+materials.md|## 第 1 步 — 申请详情（领料）
+materials.md|## 第 2 步 — 物品清单（领料）
+materials.md|## 第 3 步 — 确认并提交（领料）
+materials.md|## 如何提交低值易耗品申请
+materials.md|## 第 1 步 — 申请详情（低值易耗品）
+materials.md|## 第 2 步 — 物品清单（低值易耗品）
+materials.md|## 第 3 步 — 确认并提交（低值易耗品）
+materials.md|## 如何跟踪您的申请
+materials.md|## 申请被退回时怎么办
+materials.md|## 如何审批物料或采购申请
+materials.md|## 如何查看所有申请
+materials.md|## 如何更正草稿或已退回申请的明细
+materials.md|## 人事须知
+overtime.md|## 先了解这些规则
+overtime.md|## 如何打开加班表
+overtime.md|## 如何添加加班记录
+overtime.md|## 如何为加班表添加附件
+overtime.md|## 如何提交加班表
+overtime.md|## 如何修改加班表
+overtime.md|## 如何取消加班表
+overtime.md|## 如何跟踪您的加班表
+overtime.md|## 加班表被退回时怎么办
+overtime.md|## 如何批准、退回或拒绝加班表
+overtime.md|## 如何为团队成员填报加班
+overtime.md|## 如何查看所有加班表
+overtime.md|## 如何修改或删除加班
+overtime.md|## 如何从 Excel 导入加班
+overtime.md|## 人事须知
+payroll.md|## 薪资运行的步骤
+payroll.md|## 如何创建薪资运行
+payroll.md|## 如何核对薪资运行
+payroll.md|## 如何添加奖金或税后补发
+payroll.md|## 如何添加或移除自由职业者
+payroll.md|## 如何重新计算薪资运行
+payroll.md|## 如何标记已复核并提交
+payroll.md|## 如何以人事身份批准薪资运行
+payroll.md|## 如何以总经理身份批准薪资运行
+payroll.md|## 总经理要求修改时怎么办
+payroll.md|## 如何标记已发放
+payroll.md|## 如何生成并发布工资单
+payroll.md|## 如何导出薪资
+payroll.md|## 如何取消薪资运行
+payroll.md|## 如何设置公司薪资信息
+payroll.md|## 人事须知
+per-diem.md|## 开始之前
+per-diem.md|## 如何申请差旅补贴预支
+per-diem.md|## 第 1 步 — 目的地类别
+per-diem.md|## 第 2 步 — 申请详情
+per-diem.md|## 第 3 步 — 确认并提交
+per-diem.md|## 行程结束后如何结算预支
+per-diem.md|## 第 1 步 — 行程
+per-diem.md|## 第 2 步 — 车辆
+per-diem.md|## 第 3 步 — 已领预支
+per-diem.md|## 确认并提交
+per-diem.md|## 如何跟踪您的差旅补贴申请
+per-diem.md|## 如何取消差旅补贴申请
+per-diem.md|## 申请被退回时怎么办
+per-diem.md|## 如何审批差旅补贴申请
+per-diem.md|## 如何设置员工的差旅补贴标准
+per-diem.md|## 如何查看所有差旅补贴申请
+per-diem.md|## 如何记录拨款
+per-diem.md|## 如何结算申请并登记差额
+profile.md|## 如何打开个人资料
+profile.md|## 如何修改语言、时区或日期格式
+profile.md|## 如何更改邮箱地址
+profile.md|## 如何更改密码
+profile.md|## 如何使用通知
+seals.md|## 如何申请用章
+seals.md|## 第 1 步 — 申请详情
+seals.md|## 第 2 步 — 待用印文件
+seals.md|## 第 3 步 — 确认并提交
+seals.md|## 如何跟踪您的用章申请
+seals.md|## 申请被退回时怎么办
+seals.md|## 如何审批用章申请
+seals.md|## 如何查看所有用章申请
+seals.md|## 如何用印
+seals.md|## 如何导出或导入用章申请
+seals.md|## 人事须知
+site-assignments.md|## 如何查看您的现场派驻
+site-assignments.md|## 如何为团队成员创建现场派驻
+site-assignments.md|## 第 1 步 — 详情
+site-assignments.md|## 第 2 步 — 确认
+site-assignments.md|## 如何为主管的团队创建现场派驻
+site-assignments.md|## 如何查看所有现场派驻
+site-assignments.md|## 如何缩短现场派驻
+site-assignments.md|## 如何取消现场派驻
+site-assignments.md|## 人事须知
+tips.md|## 从哪里发起申请？
+tips.md|## 为什么新建申请里没有某个类型？
+tips.md|## 为什么我的左侧菜单比同事的短？
+tips.md|## 在哪里查看我的假期余额、加班或工资单？
+tips.md|## 为什么我午餐时段的加班时间被扣掉了？
+tips.md|## 我的申请一直没有进展，怎么办？
+tips.md|## 审批人退回了我的申请，接下来怎么做？
+tips.md|## 如何切换手册语言？
+tips.md|## 需要帮助时联系谁？
+vehicles.md|## 如何预约公司车辆
+vehicles.md|## 第 1 步 — 行程时间
+vehicles.md|## 第 2 步 — 选择车辆
+vehicles.md|## 第 3 步 — 出行详情
+vehicles.md|## 第 4 步 — 确认并提交
+vehicles.md|## 如何申请办公车辆加油
+vehicles.md|## 第 1 步 — 选择车辆
+vehicles.md|## 第 2 步 — 申请详情
+vehicles.md|## 第 3 步 — 确认并提交
+vehicles.md|## 如何报告检查、保养或维修
+vehicles.md|## 第 1 步 — 资产
+vehicles.md|## 第 2 步 — 申请详情
+vehicles.md|## 第 3 步 — 确认并提交
+vehicles.md|## 如何跟踪用车或加油申请
+vehicles.md|## 申请被退回时怎么办
+vehicles.md|## 如何审批用车或加油申请
+vehicles.md|## 如何查看所有车辆申请
+vehicles.md|## 如何在行程结束后释放车辆
+vehicles.md|## 如何上传油费收据
+vehicles.md|## 如何更新检修状态
+vehicles.md|## 如何添加公司车辆
+vehicles.md|## 如何修改、更改状态或删除公司车辆
+vehicles.md|## 人事须知
+work-from-home.md|## 如何申请居家办公
+work-from-home.md|## 第 1 步 — 详情
+work-from-home.md|## 第 2 步 — 确认
+work-from-home.md|## 如何跟踪或取消申请
+work-from-home.md|## 申请被退回时怎么办
+work-from-home.md|## 如何审批居家办公申请
+work-from-home.md|## 如何直接分配居家办公日
+work-from-home.md|## 如何修改或删除已分配的日期
+work-from-home.md|## 如何取消已批准的申请

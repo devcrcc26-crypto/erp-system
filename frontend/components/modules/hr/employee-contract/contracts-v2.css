@@ -1,0 +1,95 @@
+/*
+ * Employee Contracts list (v2). The page root also carries `.erp-employees-v2`,
+ * so stat tiles, toolbar, filters and table chrome match the Employees list;
+ * this file only adds what is specific to contracts. Scoped under
+ * `.erp-contracts-v2` (EmployeeContractListPageContent root only).
+ *
+ * Contrast on their backgrounds: muted #4B5563 7.6:1; amber #B54708 on
+ * #FFFAEB 5.0:1; red #B42318 on #FEF3F2 5.6:1.
+ */
+.erp-contracts-v2 .erp-contracts-toolbar-sub {
+  margin: 2px 0 0;
+  color: var(--ev2-muted);
+  font-size: 13px;
+}
+
+.erp-contracts-v2 .erp-contracts-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-contracts-v2 .erp-contracts-person .erp-users-avatar {
+  flex: none;
+  font-size: 13px;
+}
+
+.erp-contracts-v2 .erp-contracts-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.erp-contracts-v2 .erp-contracts-date {
+  color: var(--ev2-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-contracts-v2 .erp-contracts-date--strong {
+  color: #1f2937;
+}
+
+.erp-contracts-v2 .erp-contracts-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.erp-contracts-v2 .erp-contracts-end-hint {
+  display: inline-flex;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fffaeb;
+  color: #b54708;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.erp-contracts-v2 .erp-contracts-end-hint--overdue {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.erp-contracts-v2 .erp-contracts-open {
+  color: var(--ev2-muted);
+  font-style: italic;
+}
+
+/* Stat tiles are buttons here: hover, focus and an outlined active state. */
+.erp-contracts-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-contracts-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: 2px;
+}
+
+.erp-contracts-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px #1d9e75,
+    var(--ev2-shadow);
+}

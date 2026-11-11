@@ -1,0 +1,55 @@
+{
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(psql postgresql://postgres.sqirbwhvtuvtngzpjlfg:5S%2A%2BF%23fY%40T%2BA4Jc@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require -c ' *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(xargs grep -l \"UNIQUE INDEX\")",
+      "Bash(npx prisma *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('pg'\\)\\)\")",
+      "Bash(powershell -NoProfile -Command \"Test-NetConnection -ComputerName aws-0-eu-west-1.pooler.supabase.com -Port 5432 | Select-Object ComputerName,RemotePort,TcpTestSucceeded\")",
+      "Bash(npx ts-node *)",
+      "Bash(rm -f \"c:\\\\Users\\\\PAVILION\\\\Documents\\\\ERP System\\\\backend\\\\scratch-query-folder.ts\" \"/tmp/query_folder.ts\" 2>&1)",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_tables.js\")",
+      "Bash(cp '/c/Users/PAVILION/Documents/ERP System/backend/prisma/schema.prisma' /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/schema_after.prisma)",
+      "Read(//c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/**)",
+      "Bash(node /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/make_before.js)",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/find_stuck_sessions.js\")",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_edvs.js\")",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/reopen_stuck_session.js\")",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_dl_sessions.js\")",
+      "Bash(git stash *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -i \"^ts-node$\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).scripts\\)\")",
+      "Read(./docs-capture/**)",
+      "Edit(./docs-capture/**)",
+      "Write(./docs-capture/**)",
+      "Bash(*docs-capture*)",
+      "Bash(npm --prefix docs-capture *)",
+      "Bash(npx playwright *)"
+    ],
+    "additionalDirectories": [
+      "\\tmp",
+      "docs-capture"
+    ],
+    "deny": [
+      "Read(./backend/data/private/**)",
+      "Read(./backend/.env)",
+      "Read(./backend/.env.local)",
+      "Read(./backend/.env.*.local)",
+      "Read(./frontend/.env)",
+      "Read(./frontend/.env.local)",
+      "Read(./frontend/.env.*.local)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./**/.next/**)",
+      "Read(./**/node_modules/**)",
+      "Read(./**/dist/**)",
+      "Read(./docs-capture/node_modules/**)",
+      "Read(./docs-capture/out/**)",
+      "Read(./docs-capture/.auth/**)"
+    ]
+  }
+}

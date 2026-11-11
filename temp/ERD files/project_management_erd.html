@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Management ERD</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f7;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 16px; font-weight: 600; }
+    #erd {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+    }
+    #erd svg {
+      display: block;
+      width: 100%;
+      min-width: 1400px;
+      height: auto;
+    }
+    #loading { color: #6b7280; padding: 24px; text-align: center; }
+    #error {
+      display: none;
+      margin-top: 16px;
+      padding: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      color: #b91c1c;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Project Management ERD</h1>
+  <div id="loading">Rendering diagram…</div>
+  <div id="erd"></div>
+  <pre id="error"></pre>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    (async function () {
+      const loadingEl = document.getElementById('loading');
+      const errorEl = document.getElementById('error');
+      const erdEl = document.getElementById('erd');
+      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: dark ? 'dark' : 'default',
+          securityLevel: 'loose',
+          er: { useMaxWidth: false },
+        });
+
+        const diagram = `erDiagram
+
+  PROJECT {
+    uuid id PK
+    uuid company_id FK
+    uuid client_company_id FK
+    uuid branch_id FK
+    string project_code
+    string name
+    string location
+    string project_type
+    string contract_type
+    string status
+    date start_date
+    date planned_finish_date
+    date actual_finish_date
+    decimal budget
+    string currency
+    uuid project_manager_id FK
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  PROJECT_TEAM {
+    uuid id PK
+    uuid project_id FK
+    uuid user_id FK
+    string role_on_project
+    date assigned_from
+    date assigned_to
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  MILESTONE {
+    uuid id PK
+    uuid project_id FK
+    string name
+    date planned_date
+    date actual_date
+    string status
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  TASK {
+    uuid id PK
+    uuid project_id FK
+    uuid milestone_id FK
+    uuid parent_task_id FK
+    uuid assigned_to FK
+    string task_id_code
+    string name
+    string description
+    date start_date
+    date finish_date
+    int duration_days
+    int progress_pct
+    string status
+    boolean is_critical
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  TASK_DEPENDENCY {
+    uuid id PK
+    uuid predecessor_task_id FK
+    uuid successor_task_id FK
+    string dependency_type
+    int lag_days
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  RFI {
+    uuid id PK
+    uuid project_id FK
+    uuid raised_by FK
+    uuid assigned_to FK
+    string rfi_number
+    string title
+    string description
+    string discipline
+    string priority
+    string status
+    date date_raised
+    date due_date
+    date date_answered
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  RFI_RESPONSE {
+    uuid id PK
+    uuid rfi_id FK
+    uuid responded_by FK
+    string response_text
+    timestamp responded_at
+    timestamp created_at
+  }
+
+  SUBMITTAL {
+    uuid id PK
+    uuid project_id FK
+    uuid submitted_by FK
+    uuid reviewed_by FK
+    string submittal_number
+    string category
+    string title
+    string contractor
+    string supplier
+    string spec_reference
+    int revision_number
+    string status
+    date submission_date
+    date due_date
+    date review_date
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  SUBMITTAL_REVIEW {
+    uuid id PK
+    uuid submittal_id FK
+    uuid reviewed_by FK
+    int revision_number
+    string status
+    string comments
+    timestamp reviewed_at
+    timestamp created_at
+  }
+
+  DRAWING {
+    uuid id PK
+    uuid project_id FK
+    uuid folder_id FK
+    string drawing_number
+    string title
+    string discipline
+    string revision
+    string status
+    boolean is_latest
+    date date_issued
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  DRAWING_VERSION {
+    uuid id PK
+    uuid drawing_id FK
+    uuid uploaded_by FK
+    string revision
+    string file_key
+    string status
+    string change_note
+    timestamp created_at
+  }
+
+  DRAWING_LINK {
+    uuid id PK
+    uuid drawing_id FK
+    string linked_entity_type
+    uuid linked_entity_id
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  DAILY_LOG {
+    uuid id PK
+    uuid project_id FK
+    uuid site_engineer_id FK
+    date log_date
+    string shift
+    string weather_condition
+    decimal temperature_c
+    decimal rainfall_mm
+    string work_summary
+    string status
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  DAILY_LOG_WORKFORCE {
+    uuid id PK
+    uuid daily_log_id FK
+    string trade
+    string contractor
+    int worker_count
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  DAILY_LOG_EQUIPMENT {
+    uuid id PK
+    uuid daily_log_id FK
+    string equipment_type
+    int quantity
+    decimal hours_used
+    decimal hours_downtime
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  DAILY_LOG_VISITOR {
+    uuid id PK
+    uuid daily_log_id FK
+    string visitor_name
+    string company
+    string purpose
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  DAILY_LOG_INCIDENT {
+    uuid id PK
+    uuid daily_log_id FK
+    string incident_type
+    string description
+    string severity
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  MEETING {
+    uuid id PK
+    uuid project_id FK
+    uuid organizer_id FK
+    string meeting_number
+    string meeting_type
+    string title
+    timestamp meeting_date
+    string location
+    string status
+    timestamp minutes_issued_at
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  MEETING_AGENDA_ITEM {
+    uuid id PK
+    uuid meeting_id FK
+    uuid presenter_id FK
+    int item_order
+    string topic
+    string discussion_notes
+    string decisions_made
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+  }
+
+  MEETING_ATTENDEE {
+    uuid id PK
+    uuid meeting_id FK
+    uuid user_id FK
+    string external_name
+    string organization
+    string role_at_meeting
+    boolean attended
+    timestamp created_at
+    uuid created_by FK
+  }
+
+  ACTION_ITEM {
+    uuid id PK
+    uuid meeting_id FK
+    uuid owner_id FK
+    string description
+    date due_date
+    string status
+    timestamp closed_at
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  CORRESPONDENCE {
+    uuid id PK
+    uuid project_id FK
+    uuid sender_user_id FK
+    string reference_number
+    string correspondence_type
+    string subject
+    string sender_name
+    string recipient_name
+    date correspondence_date
+    string status
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  RISK {
+    uuid id PK
+    uuid project_id FK
+    uuid owner_id FK
+    string risk_id_code
+    string title
+    string description
+    string category
+    int probability
+    int impact
+    int risk_score
+    string mitigation_plan
+    string contingency_plan
+    date review_date
+    string status
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  ISSUE {
+    uuid id PK
+    uuid project_id FK
+    uuid raised_by FK
+    uuid assigned_to FK
+    string issue_number
+    string issue_type
+    string description
+    string location
+    string severity
+    string status
+    date due_date
+    timestamp resolved_at
+    timestamp verified_at
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  PUNCH_ITEM {
+    uuid id PK
+    uuid project_id FK
+    uuid raised_by FK
+    uuid assigned_to FK
+    string punch_number
+    string description
+    string room_or_area
+    string trade_responsible
+    string severity
+    string status
+    date due_date
+    timestamp corrected_at
+    timestamp verified_at
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  CLOSEOUT {
+    uuid id PK
+    uuid project_id FK
+    date practical_completion_date
+    date defects_liability_end_date
+    date final_completion_date
+    string status
+    decimal contract_value
+    decimal variations_total
+    decimal claims_total
+    decimal final_settlement
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+  }
+
+  CLOSEOUT_CHECKLIST_ITEM {
+    uuid id PK
+    uuid closeout_id FK
+    uuid verified_by FK
+    string category
+    string description
+    boolean is_complete
+    timestamp completed_at
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+  }
+
+  WARRANTY {
+    uuid id PK
+    uuid closeout_id FK
+    string item_description
+    string supplier
+    date start_date
+    date expiry_date
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  PROJECT ||--o{ PROJECT_TEAM : "has members"
+  PROJECT ||--o{ MILESTONE : "has milestones"
+  PROJECT ||--o{ TASK : "has tasks"
+  PROJECT ||--o{ RFI : "has RFIs"
+  PROJECT ||--o{ SUBMITTAL : "has submittals"
+  PROJECT ||--o{ DRAWING : "has drawings"
+  PROJECT ||--o{ DAILY_LOG : "has daily logs"
+  PROJECT ||--o{ MEETING : "has meetings"
+  PROJECT ||--o{ CORRESPONDENCE : "has correspondence"
+  PROJECT ||--o{ RISK : "has risks"
+  PROJECT ||--o{ ISSUE : "has issues"
+  PROJECT ||--o{ PUNCH_ITEM : "has punch items"
+  PROJECT ||--|| CLOSEOUT : "closed by"
+
+  MILESTONE ||--o{ TASK : "groups"
+  TASK ||--o{ TASK : "has subtasks"
+  TASK ||--o{ TASK_DEPENDENCY : "is predecessor"
+  TASK ||--o{ TASK_DEPENDENCY : "is successor"
+
+  RFI ||--o{ RFI_RESPONSE : "answered by"
+
+  SUBMITTAL ||--o{ SUBMITTAL_REVIEW : "reviewed in"
+
+  DRAWING ||--o{ DRAWING_VERSION : "versioned by"
+  DRAWING ||--o{ DRAWING_LINK : "linked to"
+
+  DAILY_LOG ||--o{ DAILY_LOG_WORKFORCE : "records crew"
+  DAILY_LOG ||--o{ DAILY_LOG_EQUIPMENT : "records equipment"
+  DAILY_LOG ||--o{ DAILY_LOG_VISITOR : "records visitors"
+  DAILY_LOG ||--o{ DAILY_LOG_INCIDENT : "records incidents"
+
+  MEETING ||--o{ MEETING_AGENDA_ITEM : "has agenda"
+  MEETING ||--o{ MEETING_ATTENDEE : "has attendees"
+  MEETING ||--o{ ACTION_ITEM : "generates actions"
+
+  CLOSEOUT ||--o{ CLOSEOUT_CHECKLIST_ITEM : "has checklist"
+  CLOSEOUT ||--o{ WARRANTY : "has warranties"
+`;
+
+        const { svg } = await mermaid.render('project-management-erd-' + Date.now(), diagram);
+        erdEl.innerHTML = svg;
+        loadingEl.style.display = 'none';
+
+        const svgRoot = erdEl.querySelector('svg');
+        if (svgRoot) {
+          const entityFill = dark ? '#334155' : '#e0f2fe';
+          const rowFill = dark ? '#1e293b' : '#ffffff';
+          const textFill = dark ? '#f1f5f9' : '#1e293b';
+          const stroke = dark ? '#94a3b8' : '#0284c7';
+
+          svgRoot.querySelectorAll('rect').forEach((rect) => {
+            const fill = rect.getAttribute('fill');
+            if (!fill || fill === 'none' || fill === 'transparent') {
+              rect.setAttribute('fill', rowFill);
+            }
+            if (!rect.getAttribute('stroke')) {
+              rect.setAttribute('stroke', stroke);
+            }
+          });
+
+          svgRoot.querySelectorAll('.entityBox rect, .entityBox').forEach((el) => {
+            if (el.tagName === 'rect') {
+              el.setAttribute('fill', entityFill);
+              el.setAttribute('stroke', stroke);
+            }
+          });
+
+          svgRoot.querySelectorAll('text').forEach((text) => {
+            const fill = text.getAttribute('fill');
+            if (!fill || fill === 'none' || fill === 'transparent') {
+              text.setAttribute('fill', textFill);
+            }
+          });
+
+          svgRoot.querySelectorAll('path').forEach((path) => {
+            const strokeColor = path.getAttribute('stroke');
+            if (strokeColor && (strokeColor === 'none' || strokeColor === 'transparent')) {
+              path.setAttribute('stroke', stroke);
+            }
+          });
+        }
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = err instanceof Error ? (err.stack || err.message) : String(err);
+      }
+    })();
+  </script>
+</body>
+</html>

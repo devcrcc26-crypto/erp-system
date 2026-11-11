@@ -1,0 +1,371 @@
+/*
+ * Org structure (v2) - Departments, Positions, Disciplines catalog.
+ * Same panel language as Employees: floating tiles, 16px radius, soft
+ * shadow. Scoped under `.erp-org-v2` (list roots) and `.erp-org-drawer`
+ * (add/edit drawers, portaled).
+ */
+.erp-org-v2 {
+  --ov2-radius: 16px;
+  --ov2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --ov2-muted: #4b5563;
+  --ov2-strong: #0f172a;
+  --ov2-body: #1f2937;
+  --ov2-divider: #eef1f4;
+  --ov2-subtle: #f7f8fa;
+  --ov2-tint: rgba(29, 158, 117, 0.1);
+  --ov2-primary: #1d9e75;
+  --ov2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-org-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--ov2-radius);
+  background: #ffffff;
+  box-shadow: var(--ov2-shadow);
+}
+
+.erp-org-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+/* ── Stat tiles ── */
+
+.erp-org-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.erp-org-v2 .erp-org-portfolio-stats {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.erp-org-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--ov2-radius);
+  background: #ffffff;
+  box-shadow: var(--ov2-shadow);
+}
+
+.erp-org-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-org-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--ov2-primary);
+  outline-offset: 2px;
+}
+
+.erp-org-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--ov2-primary),
+    var(--ov2-shadow);
+}
+
+.erp-org-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-org-v2 .erp-users-stat-label {
+  color: var(--ov2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-org-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.erp-org-v2 .erp-position-stat-hint {
+  margin: 2px 0 0;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* ── Toolbar + filters ── */
+
+.erp-org-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-org-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ov2-strong);
+}
+
+.erp-org-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--ov2-tint);
+  color: var(--ov2-primary-strong);
+}
+
+.erp-org-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--ov2-divider);
+  background: transparent;
+}
+
+.erp-org-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-org-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-org-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-org-v2 .erp-users-filter-bar .ant-btn,
+.erp-org-v2 .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary):not(.ant-btn-text) {
+  border-radius: 10px !important;
+}
+
+.erp-org-v2 .erp-users-toolbar-actions .ant-btn-primary {
+  border-radius: 10px;
+}
+
+.erp-org-v2 .erp-users-email,
+.erp-org-v2 .erp-users-cell-sub {
+  color: var(--ov2-muted);
+}
+
+.erp-org-v2 .erp-users-cell-strong {
+  color: var(--ov2-body);
+}
+
+.erp-org-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ov2-strong);
+}
+
+.erp-org-v2 .erp-position-title-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #e6f1fb;
+  color: #1a4a7a;
+  box-shadow: none;
+}
+
+.erp-org-v2 .erp-position-filter-chip {
+  background: var(--ov2-tint);
+  color: var(--ov2-primary-strong);
+}
+
+/* ── Tables ── */
+
+.erp-org-v2 .ant-table-tbody > tr.ant-table-measure-row,
+.erp-org-v2 .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-org-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+.erp-org-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > td {
+  background: var(--ov2-subtle) !important;
+  color: var(--ov2-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid var(--ov2-divider) !important;
+}
+
+.erp-org-v2 .ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-org-v2 .ant-table-wrapper .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  border-bottom-color: var(--ov2-divider) !important;
+}
+
+.erp-org-v2 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--ov2-subtle) !important;
+}
+
+.erp-org-v2 .erp-table-row-actions .ant-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.erp-org-v2 .ant-table-tbody > tr:hover .erp-table-row-actions .ant-btn,
+.erp-org-v2 .ant-table-tbody > tr:focus-within .erp-table-row-actions .ant-btn,
+.erp-org-v2 .erp-table-row-actions .ant-btn:focus-visible,
+.erp-org-v2 .erp-table-row-actions .ant-btn.ant-dropdown-open {
+  opacity: 1;
+}
+
+.erp-org-v2 .erp-table-row-actions .ant-btn:hover {
+  background: #e9edf1 !important;
+}
+
+@media (hover: none) {
+  .erp-org-v2 .erp-table-row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+.erp-org-v2 .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 14px 20px;
+}
+
+.erp-org-v2 .erp-evaluation-loading,
+.erp-org-v2 .erp-org-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--ov2-radius);
+  background: #ffffff;
+  box-shadow: var(--ov2-shadow);
+}
+
+@media (max-width: 1100px) {
+  .erp-org-v2 .erp-org-portfolio-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-org-v2 .erp-users-stat-bar,
+  .erp-org-v2 .erp-org-portfolio-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-org-v2 .erp-users-stat {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .erp-org-v2 .erp-users-stat-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .erp-org-v2 .erp-users-stat-label {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  .erp-org-v2 .erp-users-stat-value {
+    font-size: 22px;
+  }
+}
+
+/* ── Add / edit drawers (portaled) ── */
+
+.erp-org-drawer {
+  --ov2-radius: 16px;
+  --ov2-muted: #4b5563;
+  --ov2-strong: #0f172a;
+  --ov2-body: #1f2937;
+  --ov2-divider: #eef1f4;
+  --ov2-subtle: #f7f8fa;
+  --ov2-primary: #1d9e75;
+  --ov2-primary-strong: #0f6e56;
+}
+
+.erp-org-drawer .ant-drawer-header {
+  align-items: flex-start;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--ov2-divider);
+}
+
+.erp-org-drawer .ant-drawer-title {
+  color: var(--ov2-strong);
+  width: 100%;
+}
+
+.erp-org-drawer .ant-drawer-body {
+  padding: 20px;
+  background: #ffffff;
+}
+
+.erp-org-drawer .ant-drawer-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--ov2-divider);
+  background: #ffffff;
+}
+
+.erp-org-drawer .erp-org-drawer-hint {
+  margin: 0.35rem 0 0;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.erp-org-drawer .erp-org-drawer-footer .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-org-drawer .erp-org-drawer-footer .ant-btn-primary {
+  background: var(--ov2-primary);
+  border-color: var(--ov2-primary);
+}
+
+.erp-org-drawer .erp-org-drawer-footer .ant-btn-primary:hover {
+  background: var(--ov2-primary-strong) !important;
+  border-color: var(--ov2-primary-strong) !important;
+}
+
+.erp-org-drawer .ant-form-item-label > label {
+  color: var(--ov2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-org-drawer .ant-input,
+.erp-org-drawer .ant-input-affix-wrapper,
+.erp-org-drawer .ant-select-selector,
+.erp-org-drawer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-org-drawer .erp-org-drawer-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--ov2-muted);
+  font-size: 12px;
+  font-weight: 500;
+}

@@ -1,0 +1,1489 @@
+/*
+ * Main sidebar theme - light surface with teal selection, matching the app
+ * tokens (lib/theme/tokens.ts). Every colour the sidebar uses is a variable
+ * here so the single selected state, focus ring and contrast ratios are
+ * defined once. The drawer shares the variables because it renders outside
+ * `.sb-theme`.
+ * Contrast on --sb-bg (#FFFFFF): text 14.7:1, muted 7.6:1, icon 4.8:1,
+ * focus ring 3.4:1. Active text on --sb-active-bg: 5.5:1; accent bar 5.5:1.
+ */
+.sb-theme,
+.sb-drawer {
+  --sb-bg: #ffffff;
+  --sb-border: #e8ebef;
+  --sb-text: #1f2937;
+  --sb-text-strong: #0f172a;
+  --sb-text-muted: #4b5563;
+  --sb-icon: #64748b;
+  --sb-hover: rgba(15, 23, 42, 0.05);
+  --sb-active-bg: #e1f5ee;
+  --sb-active-text: #0f6e56;
+  --sb-accent: #0f6e56;
+  --sb-focus: #1d9e75;
+  --sb-badge-bg: #c43d3c;
+  --sb-field-bg: #f6f8fa;
+  --sb-field-border: #d0d7de;
+  --sb-skeleton: rgba(15, 23, 42, 0.06);
+  --sb-scrollbar: rgba(15, 23, 42, 0.18);
+  --sb-shadow: 4px 0 16px rgba(15, 23, 42, 0.06);
+  --sb-tile-bg: #f1f4f7;
+  --sb-tile-hover: #d9f0e7;
+  --sb-tile-active-text: #ffffff;
+  --sb-panel-bg: #f6f8fa;
+}
+
+.sb-theme {
+  background: var(--sb-bg);
+  color: var(--sb-text);
+  font-family: var(--font-sans);
+}
+
+/* Separate the light rail and docked panel from the light page. */
+.sb-rail {
+  border-right: 1px solid var(--sb-border);
+}
+
+.sb-panel {
+  border-left: 1px solid var(--sb-border);
+  border-right: 1px solid var(--sb-border);
+  background: var(--sb-bg);
+  box-shadow: var(--sb-shadow);
+}
+
+.sb-brand-title {
+  color: var(--sb-text-strong);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Caption above the main list ("Menu"). Sentence case, never all-caps. */
+.sb-section-label {
+  margin: 4px 0 6px;
+  padding: 0 12px;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* One focus ring for every sidebar control (WCAG 2.4.7). */
+.sb-theme :is(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--sb-focus);
+  outline-offset: 2px;
+}
+
+.sb-theme a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sb-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-scrollbar) transparent;
+}
+
+.sb-divider {
+  border-top: 1px solid var(--sb-border);
+}
+
+.sb-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--sb-icon);
+}
+
+/* ── Selectable surfaces: rows (expanded) and tiles (compact) ── */
+
+.sb-selectable {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--sb-text);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sb-selectable:hover {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/* THE selected state - used by rail, panel and project items alike. */
+.sb-selectable[aria-current='page'],
+.sb-selectable[data-active='true'] {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  font-weight: 600;
+}
+
+.sb-selectable[aria-current='page']::before,
+.sb-selectable[data-active='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sb-accent);
+}
+
+.sb-selectable:hover .sb-icon {
+  color: var(--sb-text-strong);
+}
+
+.sb-selectable[aria-current='page'] .sb-icon,
+.sb-selectable[data-active='true'] .sb-icon {
+  color: var(--sb-active-text);
+}
+
+.sb-row {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+}
+
+/* Labels stay on one line; the ellipsis is only a fallback for unusually long names. */
+.sb-row-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-row-text,
+.sb-row-context {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-row-context {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sb-text-muted);
+}
+
+.sb-row--static {
+  cursor: default;
+  color: var(--sb-text-muted);
+}
+
+.sb-row--static:hover {
+  background: transparent;
+  color: var(--sb-text-muted);
+}
+
+/* Compact tiles: identical height, icon over a single-line caption. */
+.sb-tile {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.sb-tile[aria-current='page']::before,
+.sb-tile[data-active='true']::before {
+  top: 14px;
+  bottom: 14px;
+}
+
+.sb-theme[data-mode='compact'] .sb-list {
+  gap: 4px;
+}
+
+.sb-tile .sb-icon {
+  font-size: 19px;
+  width: 20px;
+  height: 20px;
+}
+
+.sb-tile-caption {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Folder affordance: chevron that turns when the folder is open. */
+.sb-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--sb-text-muted);
+  transition: transform 150ms ease;
+}
+
+[aria-expanded='true'] > .sb-chevron {
+  transform: rotate(90deg);
+}
+
+/* Folder mark sits level with the icon on every tile. */
+.sb-tile-folder-mark {
+  position: absolute;
+  top: 24px;
+  right: 6px;
+  display: inline-flex;
+  transform: translateY(-50%);
+  color: var(--sb-text-muted);
+}
+
+.sb-selectable[aria-expanded='true'] {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/*
+ * Top-level entries (rail rows and compact tiles) carry their icon in a
+ * rounded tile. The tile is part of THE selected state above: the current
+ * page's tile turns solid accent with a white icon (6.3:1).
+ */
+.sb-row.sb-rail-item {
+  min-height: 42px;
+  gap: 12px;
+  padding: 5px 10px 5px 8px;
+}
+
+.sb-icon-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--sb-tile-bg);
+  font-size: 16px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sb-tile .sb-icon-tile {
+  width: 36px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.sb-selectable:hover .sb-icon-tile,
+.sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: var(--sb-tile-hover);
+  color: var(--sb-active-text);
+}
+
+.sb-selectable[aria-current='page'] .sb-icon-tile,
+.sb-selectable[data-active='true'] .sb-icon-tile {
+  background: var(--sb-accent);
+  color: var(--sb-tile-active-text);
+}
+
+/* ── Groups inside a module panel ── */
+
+.sb-group + .sb-group {
+  margin-top: 6px;
+}
+
+.sb-group-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 4px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.sb-group-toggle:hover {
+  color: var(--sb-text-strong);
+}
+
+/*
+ * Panel typography - two text levels, hierarchy carried by weight, tracking
+ * and colour rather than a size drop:
+ *   group title  12px / 600 / 0.04em, muted   (People, Time & Leave, …)
+ *   module link  13px / 400, 500 when active   (Leave Requests, Overtime, …)
+ * Sentence/Title Case only - no all-caps below 13px. Colours come from the
+ * existing rules above; these classes set typography only. Declared after
+ * `.sb-row` and `.sb-selectable[aria-current]` so they win at equal specificity.
+ */
+.erp-sidebar-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.erp-sidebar-module-link {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.erp-sidebar-module-link[aria-current='page'] {
+  font-weight: 500;
+}
+
+.sb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Inline (expanded) panel: a soft card under its folder row. */
+.sb-inline-panel {
+  margin: 4px 0 8px;
+  padding: 6px;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-panel-bg);
+}
+
+.sb-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.sb-panel-title {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--sb-text-strong);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sb-project-card {
+  margin: 4px 4px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--sb-border);
+  border-radius: 8px;
+}
+
+.sb-project-eyebrow {
+  margin: 0;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sb-project-name {
+  margin: 2px 0 6px;
+  color: var(--sb-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sb-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  color: var(--sb-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sb-back-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Small controls ── */
+
+.sb-icon-button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sb-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sb-text);
+  cursor: pointer;
+}
+
+.sb-icon-button:hover {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/* The star overlays the row end instead of reserving width, so labels get the full row. */
+.sb-pin {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sb-item:hover .sb-pin,
+.sb-item:focus-within .sb-pin,
+.sb-pin[aria-pressed='true'] {
+  opacity: 1;
+}
+
+.sb-pin[aria-pressed='true'] {
+  color: var(--sb-accent);
+}
+
+.sb-pin[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.sb-pin:hover:not([aria-disabled='true']) {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+@media (hover: none) {
+  .sb-pin {
+    opacity: 1;
+  }
+}
+
+.sb-item {
+  position: relative;
+}
+
+/* Make room for the star only while it is visible. */
+.sb-item:hover > .sb-row,
+.sb-item:focus-within > .sb-row,
+.sb-item[data-pinned='true'] > .sb-row {
+  padding-right: 36px;
+}
+
+.sb-badge {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--sb-badge-bg);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Anchored to the icon's top-right corner, centred on the tile. */
+.sb-badge--floating {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 8px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-shadow: 0 0 0 2px var(--sb-bg);
+}
+
+.sb-soon {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 999px;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sb-search-field {
+  position: relative;
+  display: block;
+}
+
+.sb-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--sb-text-muted);
+  pointer-events: none;
+}
+
+.sb-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 52px 0 34px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 999px;
+  background: var(--sb-field-bg);
+  color: var(--sb-text-strong);
+  font-size: 14px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.sb-search-input:hover {
+  border-color: var(--sb-icon);
+}
+
+.sb-search-input:focus-visible {
+  border-color: var(--sb-focus);
+  background: var(--sb-bg);
+}
+
+.sb-search-input::placeholder {
+  color: var(--sb-text-muted);
+  opacity: 1;
+}
+
+.sb-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.sb-kbd {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 6px;
+  background: var(--sb-bg);
+  color: var(--sb-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.sb-empty {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--sb-text-muted);
+  font-size: 13px;
+}
+
+.sb-skeleton {
+  border-radius: 8px;
+  background: var(--sb-skeleton);
+  animation: sb-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sb-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.sb-rail,
+.sb-panel {
+  transition: width 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-rail,
+  .sb-panel,
+  .sb-chevron,
+  .sb-selectable,
+  .sb-icon-tile,
+  .sb-search-input,
+  .sb-pin,
+  .sb-skeleton {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── Mobile drawer: same theme, visible header and close control ── */
+
+.sb-drawer .ant-drawer-section,
+.sb-drawer .ant-drawer-content {
+  background: var(--sb-bg);
+}
+
+/* Never wider than the phone: always leave a strip of page to tap out. */
+.sb-drawer .ant-drawer-content-wrapper,
+.sb-drawer .ant-drawer-section {
+  max-width: calc(100vw - 40px);
+}
+
+.sb-drawer .ant-drawer-header {
+  background: var(--sb-bg);
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.sb-drawer .ant-drawer-title {
+  color: var(--sb-text-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sb-drawer .ant-drawer-close {
+  color: var(--sb-text);
+}
+
+.sb-drawer .ant-drawer-close:hover {
+  color: var(--sb-text-strong);
+  background: var(--sb-hover);
+}
+
+.sb-drawer .ant-drawer-close:focus-visible {
+  outline: 2px solid var(--sb-focus);
+  outline-offset: 2px;
+}
+
+.sb-drawer .ant-drawer-body {
+  padding: 0;
+}
+
+/* ── Expanded footer: utility icon bar + account card ── */
+
+.sb-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 8px;
+}
+
+.sb-utility-bar {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-utility-button {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.sb-utility-button .sb-icon {
+  width: 20px;
+  font-size: 18px;
+}
+
+/* Same selected treatment; the accent bar sits under an icon-only button. */
+.sb-utility-button[aria-current='page']::before {
+  top: auto;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  width: auto;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.sb-utility-button .sb-badge--floating {
+  top: 2px;
+  left: calc(50% + 4px);
+}
+
+.sb-account-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-panel-bg);
+  text-align: left;
+}
+
+.sb-avatar {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--sb-accent);
+  color: var(--sb-tile-active-text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sb-account-text {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.sb-account-name,
+.sb-account-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-account-name {
+  color: var(--sb-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sb-account-card[aria-current='page'] .sb-account-name {
+  color: var(--sb-active-text);
+}
+
+.sb-account-meta {
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.sb-account-chevron {
+  flex-shrink: 0;
+  color: var(--sb-text-muted);
+}
+
+/* Account card and the collapse control share one footer row. */
+.sb-account-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sb-account-row > .sb-account-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Collapse (expanded) / expand (compact) toggle: square, quieter than destinations. */
+.sb-mode-toggle {
+  display: inline-flex;
+  width: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-bg);
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.sb-mode-toggle:hover {
+  border-color: var(--sb-tile-hover);
+  background: var(--sb-tile-hover);
+  color: var(--sb-active-text);
+}
+
+.sb-mode-toggle .sb-icon {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-mode-toggle {
+    transition: none;
+  }
+}
+
+/* ── Compact rail ── */
+
+/*
+ * The compact rail sits on a light grey surface so docked panels (white)
+ * read as a separate layer. Icon tiles turn white to stay visible on it.
+ * Muted text on --sb-rail-bg: 7.1:1.
+ */
+.sb-theme {
+  --sb-rail-bg: #f5f7f9;
+}
+
+.sb-theme[data-mode='compact'] .sb-rail {
+  background: var(--sb-rail-bg);
+}
+
+.sb-theme[data-mode='compact'] .sb-icon-tile {
+  background: var(--sb-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--sb-border),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.sb-theme[data-mode='compact'] .sb-selectable:hover .sb-icon-tile,
+.sb-theme[data-mode='compact'] .sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: var(--sb-tile-hover);
+  box-shadow: none;
+}
+
+.sb-theme[data-mode='compact'] .sb-selectable[aria-current='page'] .sb-icon-tile,
+.sb-theme[data-mode='compact'] .sb-selectable[data-active='true'] .sb-icon-tile {
+  background: var(--sb-accent);
+  box-shadow: none;
+}
+
+/* Search / Favorites sit apart from the destinations. */
+.sb-compact-tools {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.sb-footer--compact {
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.sb-utility-stack {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-footer--compact .sb-utility-button {
+  height: 42px;
+}
+
+/* In the vertical stack the accent bar goes back to the left edge. */
+.sb-footer--compact .sb-utility-button[aria-current='page']::before {
+  top: 10px;
+  right: auto;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  height: auto;
+  border-radius: 0 3px 3px 0;
+}
+
+.sb-account-avatar-link {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  border-radius: 12px;
+}
+
+.sb-account-avatar-link .sb-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.sb-account-avatar-link[aria-current='page'] .sb-avatar {
+  box-shadow:
+    0 0 0 2px var(--sb-active-bg),
+    0 0 0 4px var(--sb-accent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Sidebar v2 - docked flush look. Everything below is scoped under
+ * `.erp-sidebar-v2` (desktop <nav>, drawer root and drawer <nav>), so the
+ * rules above remain the base and nothing leaks outside the sidebar.
+ *
+ * Contrast on white: text 14.7:1, muted 7.6:1, icon 4.8:1. Selected text and
+ * icon (#0F6E56, the app's primary-hover token) on the 10% primary tint:
+ * 5.3:1. Focus ring (#1D9E75) on white: 3.4:1.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-sidebar-v2 {
+  --sb-border: #eef1f4;
+  --sb-hover: rgba(16, 24, 40, 0.04);
+  --sb-active-bg: rgba(29, 158, 117, 0.1);
+  --sb-active-text: #0f6e56;
+  --sb-field-bg: #f2f4f7;
+  --sb-field-border: transparent;
+  --sb-panel-bg: #f7f8fa;
+  --sb-radius: 16px;
+  --sb-panel-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  /* Icon chips: a soft square behind every destination icon. */
+  --sb-chip-bg: #f2f4f7;
+  --sb-chip-hover: #e6eaef;
+  --sb-chip-active: rgba(29, 158, 117, 0.16);
+  --sb-rail-bg: #fbfcfd;
+}
+
+/* ── Docked panels (desktop only: the desktop <nav> carries data-mode) ── */
+
+.erp-sidebar-v2.sb-theme[data-mode] {
+  padding: 0;
+  background: var(--sb-bg);
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-rail {
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid var(--sb-border);
+  border-radius: 0;
+  background: var(--sb-bg);
+  box-shadow: none;
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-panel {
+  margin-left: 0;
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid var(--sb-border);
+  border-radius: 0;
+  background: var(--sb-bg);
+  box-shadow: none;
+}
+
+.erp-sidebar-v2 .sb-panel-header {
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 8px 0 14px;
+  border-bottom-color: var(--sb-border);
+}
+
+/* Folder icon beside the panel title, tinted like the selected state. */
+.erp-sidebar-v2 .sb-panel-icon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.erp-sidebar-v2 .sb-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* ── One selected state: soft tinted pill, primary text and icon ── */
+
+.erp-sidebar-v2 .sb-row,
+.erp-sidebar-v2 .sb-tile {
+  border-radius: 10px;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page'],
+.erp-sidebar-v2 .sb-selectable[data-active='true'] {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  font-weight: 500;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page']::before,
+.erp-sidebar-v2 .sb-selectable[data-active='true']::before {
+  display: none;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] {
+  background: var(--sb-hover);
+}
+
+/*
+ * Icon chips. Every destination icon - rail rows, compact tiles and panel
+ * items - sits in a soft rounded square. The chip is part of THE selected
+ * state: it deepens to the primary tint with a primary icon, so the current
+ * page is readable from the icon alone in the compact rail.
+ */
+.erp-sidebar-v2 .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-icon-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--sb-chip-bg);
+  color: var(--sb-icon);
+  font-size: 16px;
+  box-shadow: none;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.erp-sidebar-v2 .sb-selectable:hover .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable:hover .sb-icon-tile,
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: var(--sb-chip-hover);
+  color: var(--sb-text-strong);
+  box-shadow: none;
+}
+
+.erp-sidebar-v2 .sb-selectable:hover .sb-icon,
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon {
+  color: var(--sb-text-strong);
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page'] .sb-icon,
+.erp-sidebar-v2 .sb-selectable[data-active='true'] .sb-icon {
+  color: var(--sb-active-text);
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2 .sb-selectable[data-active='true'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[data-active='true'] .sb-icon-tile {
+  background: var(--sb-chip-active);
+  color: var(--sb-active-text);
+  box-shadow: none;
+}
+
+/* Rail rows (drawer / expanded tree): chip + 14px label. */
+.erp-sidebar-v2 .sb-row.sb-rail-item {
+  min-height: 42px;
+  gap: 10px;
+  padding: 5px 10px 5px 8px;
+  font-size: 14px;
+}
+
+/* Panel items: a smaller chip so the 13px link text leads. */
+.erp-sidebar-v2 .erp-sidebar-module-link {
+  min-height: 36px;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+.erp-sidebar-v2 .erp-sidebar-module-link > .sb-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--sb-chip-bg);
+  color: var(--sb-icon);
+  font-size: 15px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.erp-sidebar-v2 .erp-sidebar-module-link:hover > .sb-icon {
+  background: var(--sb-chip-hover);
+  color: var(--sb-text-strong);
+}
+
+.erp-sidebar-v2 .erp-sidebar-module-link[aria-current='page'] > .sb-icon {
+  background: var(--sb-chip-active);
+  color: var(--sb-active-text);
+}
+
+/* Coming-soon rows keep a quiet chip. */
+.erp-sidebar-v2 .sb-row--static > .sb-icon {
+  background: transparent;
+  color: var(--sb-text-muted);
+}
+
+/* Search results: the context line sits under the label beside the chip. */
+.erp-sidebar-v2 .sb-row-context {
+  margin-top: 1px;
+}
+
+/* ── Section headers: small uppercase muted (expanded) ── */
+
+.erp-sidebar-v2 .erp-sidebar-group-title,
+.erp-sidebar-v2 .sb-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-sidebar-v2 .sb-section-label {
+  margin: 8px 0 6px;
+}
+
+.erp-sidebar-v2 .sb-group + .sb-group {
+  margin-top: 12px;
+}
+
+/* Group header: label, hairline, chevron - reads as a section divider. */
+.erp-sidebar-v2 .sb-group-toggle {
+  gap: 10px;
+  padding: 4px 8px 6px;
+  border-radius: 8px;
+}
+
+.erp-sidebar-v2 .sb-group-toggle > span:first-child {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-sidebar-v2 .sb-group-toggle > span:first-child::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--sb-border);
+}
+
+.erp-sidebar-v2 .sb-group-toggle:hover {
+  background: var(--sb-hover);
+}
+
+.erp-sidebar-v2 .sb-group-toggle .sb-chevron {
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+/* Open folder: indented list, no card or guide line. */
+.erp-sidebar-v2 .sb-inline-panel {
+  margin: 2px 0 6px;
+  padding: 2px 0 4px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ── Fields and footer ── */
+
+.erp-sidebar-v2 .sb-search-input {
+  border-color: var(--sb-field-border);
+}
+
+.erp-sidebar-v2 .sb-search-input:hover {
+  border-color: transparent;
+  background: #eceff3;
+}
+
+.erp-sidebar-v2 .sb-search-input:focus-visible {
+  border-color: var(--sb-focus);
+  background: var(--sb-bg);
+}
+
+.erp-sidebar-v2 .sb-kbd {
+  border-color: #dfe3e8;
+}
+
+.erp-sidebar-v2 .sb-footer {
+  border-top-color: var(--sb-border);
+}
+
+.erp-sidebar-v2 .sb-account-card {
+  border: 0;
+  background: var(--sb-panel-bg);
+}
+
+.erp-sidebar-v2 .sb-mode-toggle {
+  border-color: transparent;
+  background: var(--sb-field-bg);
+}
+
+.erp-sidebar-v2 .sb-mode-toggle:hover {
+  border-color: transparent;
+  background: var(--sb-active-bg);
+}
+
+/* ── Compact: icon-only rail (~72px), labels in hover/focus tooltips ── */
+
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-rail {
+  background: var(--sb-rail-bg);
+}
+
+/* Compact tile = the chip itself, centred, with breathing room. */
+.erp-sidebar-v2 .sb-tile {
+  min-height: 48px;
+  gap: 0;
+  padding: 6px 0;
+  border-radius: 12px;
+}
+
+.erp-sidebar-v2 .sb-tile .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-tile .sb-icon-tile {
+  width: 38px;
+  height: 36px;
+  border-radius: 11px;
+  font-size: 18px;
+}
+
+/* The tile background stays quiet; the chip carries hover and selection. */
+.erp-sidebar-v2 .sb-tile:hover,
+.erp-sidebar-v2 .sb-tile[aria-expanded='true'] {
+  background: transparent;
+}
+
+.erp-sidebar-v2 .sb-tile[aria-current='page'],
+.erp-sidebar-v2 .sb-tile[data-active='true'] {
+  background: transparent;
+}
+
+.erp-sidebar-v2 .sb-tile:hover .sb-icon-tile,
+.erp-sidebar-v2 .sb-tile[aria-expanded='true'] .sb-icon-tile {
+  transform: translateY(-1px);
+}
+
+.erp-sidebar-v2 .sb-tile[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2 .sb-tile[data-active='true'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-tile[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-tile[data-active='true'] .sb-icon-tile {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(29, 158, 117, 0.28);
+}
+
+/* Compact rail: a short rule under the search/favorites tools. */
+.erp-sidebar-v2 .sb-compact-tools {
+  border-bottom-color: var(--sb-border);
+}
+
+/* Compact footer buttons take the same chip look. */
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button {
+  height: 44px;
+  border-radius: 12px;
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button .sb-icon {
+  width: 36px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--sb-chip-bg);
+  font-size: 17px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button:hover {
+  background: transparent;
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button:hover .sb-icon {
+  background: var(--sb-chip-hover);
+  color: var(--sb-text-strong);
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page'] {
+  background: transparent;
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page'] .sb-icon {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(29, 158, 117, 0.28);
+}
+
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page']::before {
+  display: none;
+}
+
+/* Avatar: soft gradient instead of a flat fill. */
+.erp-sidebar-v2 .sb-avatar {
+  background: linear-gradient(135deg, #1d9e75 0%, #0f6e56 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-sidebar-v2 .sb-tile:hover .sb-icon-tile,
+  .erp-sidebar-v2 .sb-tile[aria-expanded='true'] .sb-icon-tile {
+    transform: none;
+  }
+}
+
+/* Caption stays in the accessible name; the tooltip shows it visually. */
+.erp-sidebar-v2 .sb-tile-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/*
+ * Folder mark on compact tiles: a tiny disc tucked into the chip's
+ * bottom-right corner. It keeps folders visually distinct from links
+ * (the ARIA already says so) without competing with the icon.
+ */
+.erp-sidebar-v2 .sb-tile-folder-mark {
+  top: auto;
+  right: 6px;
+  bottom: 3px;
+  width: 13px;
+  height: 13px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--sb-bg);
+  color: var(--sb-text-muted);
+  box-shadow: 0 0 0 1.5px var(--sb-rail-bg);
+  opacity: 0.75;
+  transform: none;
+  transition: opacity 120ms ease, color 120ms ease, transform 150ms ease;
+}
+
+.erp-sidebar-v2 .sb-tile:hover .sb-tile-folder-mark,
+.erp-sidebar-v2 .sb-tile[aria-expanded='true'] .sb-tile-folder-mark {
+  opacity: 1;
+  color: var(--sb-text-strong);
+}
+
+.erp-sidebar-v2 .sb-tile[aria-current='page'] .sb-tile-folder-mark,
+.erp-sidebar-v2 .sb-tile[data-active='true'] .sb-tile-folder-mark {
+  color: var(--sb-active-text);
+  opacity: 1;
+}
+
+/* Follows the chip's hover lift so it stays glued to the corner. */
+.erp-sidebar-v2 .sb-tile:hover .sb-tile-folder-mark,
+.erp-sidebar-v2 .sb-tile[aria-expanded='true'] .sb-tile-folder-mark {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-sidebar-v2 .sb-tile-folder-mark,
+  .erp-sidebar-v2 .sb-tile:hover .sb-tile-folder-mark,
+  .erp-sidebar-v2 .sb-tile[aria-expanded='true'] .sb-tile-folder-mark {
+    transform: none;
+    transition: none;
+  }
+}
+
+.erp-sidebar-v2 .sb-tile .sb-badge--floating,
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button .sb-badge--floating {
+  top: 2px;
+  left: calc(50% + 4px);
+}
+
+/* Thin dividers between sections replace headers in compact mode. */
+.erp-sidebar-v2 .sb-compact-tools {
+  margin: 0 8px;
+  padding: 8px 0;
+}
+
+.erp-sidebar-v2 .sb-footer--compact {
+  padding: 8px 6px;
+}
+
+.erp-sidebar-v2 .sb-account-avatar-link .sb-avatar {
+  box-shadow: none;
+}
+
+.erp-sidebar-v2 .sb-account-avatar-link[aria-current='page'] .sb-avatar {
+  box-shadow:
+    0 0 0 2px var(--sb-bg),
+    0 0 0 4px var(--sb-active-text);
+}
+
+/* ── Mobile drawer: flush with the edge (no floating panel) ── */
+
+.erp-sidebar-v2.sb-drawer .ant-drawer-content-wrapper,
+.erp-sidebar-v2.sb-drawer .ant-drawer-section {
+  overflow: hidden;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.erp-sidebar-v2.sb-drawer .ant-drawer-header {
+  border-bottom-color: var(--sb-border);
+}
+
+/* ── Unpinned flyout: module panel as an overlay beside the rail ── */
+
+/*
+ * Absolutely positioned against the desktop <nav> (whose width is the rail
+ * only), so opening it never reflows the page. It stays mounted while
+ * closing: `inert` + visibility keep it out of the tab order and the
+ * accessibility tree, and the visibility delay lets the fade finish.
+ */
+.erp-sidebar-v2 {
+  --sb-flyout-shadow:
+    1px 0 0 rgba(16, 24, 40, 0.04),
+    8px 0 24px -6px rgba(16, 24, 40, 0.14);
+}
+
+.erp-sidebar-v2 .sb-flyout {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  z-index: 1;
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    visibility 0s linear 160ms;
+}
+
+.erp-sidebar-v2 .sb-flyout[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    visibility 0s;
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-flyout .sb-panel {
+  height: 100%;
+  margin-left: 0;
+  background: var(--sb-bg);
+  box-shadow: var(--sb-flyout-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-sidebar-v2 .sb-flyout,
+  .erp-sidebar-v2 .sb-flyout[data-open='true'] {
+    transform: none;
+    transition: none;
+  }
+}

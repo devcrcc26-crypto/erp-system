@@ -1,0 +1,874 @@
+/*
+ * Evaluation module (v2) - same panel language as the Employees list:
+ * white floating tiles, 16px radius, soft shadow, no hard borders.
+ * Scoped under `.erp-evaluation-v2` on every evaluation page root.
+ * Overrides `.erp-evaluation-page` square corners for this module.
+ *
+ * Contrast on white: muted #4B5563 7.6:1; primary-strong #0F6E56 on the
+ * 10% primary tint 5.3:1.
+ */
+.erp-evaluation-v2 {
+  --ev2-radius: 16px;
+  --ev2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --ev2-muted: #4b5563;
+  --ev2-strong: #0f172a;
+  --ev2-body: #1f2937;
+  --ev2-divider: #eef1f4;
+  --ev2-subtle: #f7f8fa;
+  --ev2-tile: #f7f8fa;
+  --ev2-tint: rgba(29, 158, 117, 0.1);
+  --ev2-primary: #1d9e75;
+  --ev2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+/* Beat `.erp-evaluation-page … { border-radius: 0 }`. */
+.erp-evaluation-v2.erp-evaluation-page .erp-pro-card,
+.erp-evaluation-v2.erp-evaluation-page .erp-evaluation-detail-hero,
+.erp-evaluation-v2.erp-evaluation-page .erp-users-stat-bar,
+.erp-evaluation-v2.erp-evaluation-page .erp-evaluation-section-card,
+.erp-evaluation-v2.erp-evaluation-page .erp-assessment-overall,
+.erp-evaluation-v2.erp-evaluation-page .erp-assessment-banner,
+.erp-evaluation-v2.erp-evaluation-page .erp-dispute-score-card,
+.erp-evaluation-v2.erp-evaluation-page .erp-dispute-action-card,
+.erp-evaluation-v2.erp-evaluation-page .erp-dispute-history,
+.erp-evaluation-v2.erp-evaluation-page .erp-evaluation-card {
+  border-radius: var(--ev2-radius);
+}
+
+.erp-evaluation-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+/* ── Stat tiles: separate floating cards ── */
+
+.erp-evaluation-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-evaluation-v2 .erp-evaluation-inbox-stats {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.erp-evaluation-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-evaluation-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--ev2-primary);
+  outline-offset: 2px;
+}
+
+.erp-evaluation-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--ev2-primary),
+    var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-evaluation-v2 .erp-users-stat-label {
+  color: var(--ev2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-evaluation-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* ── Card toolbar + filters ── */
+
+.erp-evaluation-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-evaluation-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ev2-strong);
+}
+
+.erp-evaluation-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--ev2-tint);
+  color: var(--ev2-primary-strong);
+}
+
+.erp-evaluation-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--ev2-divider);
+  background: transparent;
+}
+
+.erp-evaluation-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-evaluation-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-evaluation-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 160px;
+  flex: 0 1 200px;
+}
+
+.erp-evaluation-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-evaluation-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-evaluation-v2 .erp-users-filter-bar .ant-btn,
+.erp-evaluation-v2 .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary):not(.ant-btn-text) {
+  border-radius: 10px !important;
+}
+
+.erp-evaluation-v2 .erp-users-toolbar-actions .ant-btn-primary {
+  border-radius: 10px;
+}
+
+.erp-evaluation-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ev2-strong);
+}
+
+.erp-evaluation-v2 .erp-users-email,
+.erp-evaluation-v2 .erp-users-cell-sub {
+  color: var(--ev2-muted);
+}
+
+.erp-evaluation-v2 .erp-users-cell-strong {
+  color: var(--ev2-body);
+}
+
+.erp-evaluation-v2 .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+  padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-evaluation-v2 .erp-users-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+  box-shadow: none;
+  line-height: 36px !important;
+  font-weight: 600;
+}
+
+/* ── Tables ── */
+
+.erp-evaluation-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row,
+.erp-evaluation-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row > td,
+.erp-evaluation-v2 .ant-table-tbody > tr.ant-table-measure-row,
+.erp-evaluation-v2 .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-evaluation-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+.erp-evaluation-v2 .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > td,
+.erp-evaluation-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th,
+.erp-evaluation-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th.ant-table-cell {
+  background: var(--ev2-subtle) !important;
+  color: var(--ev2-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid var(--ev2-divider) !important;
+}
+
+.erp-evaluation-v2 .ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-evaluation-v2 .ant-table-wrapper .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
+.erp-evaluation-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:not(.ant-table-measure-row)
+  > td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  border-bottom-color: var(--ev2-divider) !important;
+}
+
+.erp-evaluation-v2 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td,
+.erp-evaluation-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td {
+  background: var(--ev2-subtle) !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-stage-seg--done {
+  background: var(--ev2-primary);
+}
+
+.erp-evaluation-v2 .erp-evaluation-stage-labels span {
+  color: var(--ev2-muted);
+}
+
+/* Row actions: shown on row hover or keyboard focus, always on touch. */
+.erp-evaluation-v2 .erp-table-row-actions .ant-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.erp-evaluation-v2 .ant-table-tbody > tr:hover .erp-table-row-actions .ant-btn,
+.erp-evaluation-v2 .ant-table-tbody > tr:focus-within .erp-table-row-actions .ant-btn,
+.erp-evaluation-v2 .erp-table-row-actions .ant-btn:focus-visible,
+.erp-evaluation-v2 .erp-table-row-actions .ant-btn.ant-dropdown-open {
+  opacity: 1;
+}
+
+.erp-evaluation-v2 .erp-table-row-actions .ant-btn:hover {
+  background: #e9edf1 !important;
+}
+
+@media (hover: none) {
+  .erp-evaluation-v2 .erp-table-row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-evaluation-v2 .erp-table-row-actions .ant-btn {
+    transition: none;
+  }
+}
+
+.erp-evaluation-v2 .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 14px 20px;
+}
+
+/* ── Progress strip on overview ── */
+
+.erp-evaluation-v2 .erp-evaluation-progress {
+  padding: 14px 18px;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+/* ── Trend card ── */
+
+.erp-evaluation-v2 .erp-evaluation-trend-card {
+  margin-bottom: 0;
+}
+
+.erp-evaluation-v2 .erp-evaluation-trend-card .erp-pro-card-body {
+  padding: 18px 20px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-trend-title {
+  margin: 0 0 12px;
+  color: var(--ev2-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Detail hero (payroll / employee detail language) ── */
+
+.erp-evaluation-v2 .erp-evaluation-detail-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-bottom: 0;
+  border: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  color: var(--ev2-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-evaluation-v2 .erp-evaluation-back:hover {
+  color: var(--ev2-primary-strong) !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-back:focus-visible {
+  outline: 2px solid var(--ev2-primary);
+  outline-offset: 2px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-identity .erp-users-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  line-height: 48px !important;
+  font-size: 16px !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-hero h2,
+.erp-evaluation-v2 .erp-evaluation-hero-title {
+  margin: 0;
+  color: var(--ev2-strong) !important;
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-score {
+  text-align: center;
+  min-width: 88px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ev2-tile);
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  color: var(--ev2-muted);
+  font-size: 13px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-meta strong {
+  color: var(--ev2-body);
+}
+
+.erp-evaluation-v2 .erp-evaluation-hero-stages {
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ev2-tile);
+}
+
+.erp-evaluation-v2 .erp-evaluation-fact-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.erp-evaluation-v2 .erp-evaluation-fact {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--ev2-tile);
+}
+
+.erp-evaluation-v2 .erp-evaluation-fact-label {
+  margin: 0;
+  color: var(--ev2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-evaluation-v2 .erp-evaluation-fact-value {
+  margin: 4px 0 0;
+  color: var(--ev2-strong);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-evaluation-v2.erp-evaluation-detail-page {
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .erp-evaluation-v2 .erp-evaluation-fact-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-tabs.ant-tabs > .ant-tabs-nav {
+  padding: 0 12px;
+  background: transparent;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-tabs.ant-tabs > .ant-tabs-nav::before {
+  border-bottom-color: var(--ev2-divider) !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--ev2-primary-strong) !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-tabs .ant-tabs-ink-bar {
+  background: var(--ev2-primary) !important;
+}
+
+.erp-evaluation-v2 .erp-evaluation-detail-tabs .ant-tabs-content-holder {
+  padding: 18px 20px 22px;
+}
+
+/* ── Section / assessment panels ── */
+
+.erp-evaluation-v2 .erp-evaluation-section-card {
+  border: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+  overflow: hidden;
+}
+
+.erp-evaluation-v2 .erp-evaluation-section-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ev2-divider);
+  background: var(--ev2-subtle);
+}
+
+.erp-evaluation-v2 .erp-assessment-banner {
+  border: 0;
+  border-radius: 12px;
+  background: var(--ev2-tile);
+}
+
+.erp-evaluation-v2 .erp-assessment-banner--action {
+  background: #e6f1fb;
+}
+
+.erp-evaluation-v2 .erp-assessment-overall {
+  border: 0;
+  border-radius: 12px;
+  background: var(--ev2-tile);
+  box-shadow: none;
+}
+
+.erp-evaluation-v2 .erp-assessment-section-avg {
+  color: var(--ev2-primary-strong);
+}
+
+.erp-evaluation-v2 .erp-assessment-criteria-item {
+  border-bottom-color: var(--ev2-divider);
+}
+
+.erp-evaluation-v2 .erp-assessment-criteria-name {
+  color: var(--ev2-strong);
+}
+
+.erp-evaluation-v2 .erp-assessment-criteria-desc {
+  color: var(--ev2-muted);
+}
+
+.erp-evaluation-v2 .erp-dispute-score-card,
+.erp-evaluation-v2 .erp-dispute-action-card,
+.erp-evaluation-v2 .erp-dispute-history {
+  border: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 .erp-evaluation-card {
+  border: 0;
+  border-radius: var(--ev2-radius);
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-evaluation-v2 .erp-evaluation-card:hover {
+  box-shadow:
+    0 2px 4px rgba(16, 24, 40, 0.06),
+    0 8px 24px rgba(16, 24, 40, 0.08);
+}
+
+.erp-evaluation-v2 .erp-evaluation-card--action {
+  box-shadow:
+    inset 0 0 0 2px var(--ev2-primary),
+    var(--ev2-shadow);
+}
+
+/* Loading shell */
+.erp-evaluation-v2 .erp-evaluation-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+@media (max-width: 1100px) {
+  .erp-evaluation-v2 .erp-evaluation-inbox-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-evaluation-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .erp-evaluation-v2 .erp-evaluation-inbox-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-evaluation-v2 .erp-users-stat {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .erp-evaluation-v2 .erp-users-stat-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .erp-evaluation-v2 .erp-users-stat-label {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  .erp-evaluation-v2 .erp-users-stat-value {
+    font-size: 22px;
+  }
+
+  .erp-evaluation-v2 .erp-users-filter-select {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+}
+
+/* ── Create cycle modal (portaled; needs own tokens) ── */
+
+.erp-evaluation-modal {
+  --ev2-radius: 16px;
+  --ev2-muted: #4b5563;
+  --ev2-strong: #0f172a;
+  --ev2-body: #1f2937;
+  --ev2-divider: #eef1f4;
+  --ev2-subtle: #f7f8fa;
+  --ev2-primary: #1d9e75;
+  --ev2-primary-strong: #0f6e56;
+}
+
+.erp-evaluation-modal .ant-modal-content,
+.erp-evaluation-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--ev2-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-evaluation-modal .ant-modal-header {
+  margin-bottom: 4px;
+}
+
+.erp-evaluation-modal .ant-modal-title {
+  color: var(--ev2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-evaluation-modal .erp-evaluation-modal-hint {
+  margin: 0 0 18px;
+  color: var(--ev2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-evaluation-modal .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.erp-evaluation-modal .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.erp-evaluation-modal .ant-form-item-label > label {
+  color: var(--ev2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-evaluation-modal .ant-select-selector,
+.erp-evaluation-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-evaluation-modal .ant-modal-footer {
+  margin-top: 20px;
+}
+
+.erp-evaluation-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--ev2-primary);
+  border-color: var(--ev2-primary);
+}
+
+.erp-evaluation-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: var(--ev2-primary-strong) !important;
+  border-color: var(--ev2-primary-strong) !important;
+}
+
+.erp-evaluation-modal .erp-evaluation-modal-preview {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ev2-subtle);
+}
+
+.erp-evaluation-modal .erp-evaluation-modal-preview-label {
+  margin: 0;
+  color: var(--ev2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-evaluation-modal .erp-evaluation-modal-preview-value {
+  margin: 4px 0 0;
+  color: var(--ev2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-evaluation-modal .erp-evaluation-modal-preview-sub {
+  margin: 2px 0 0;
+  color: var(--ev2-muted);
+  font-size: 12px;
+}
+
+/* ── Create template drawer (portaled) ── */
+
+.erp-evaluation-drawer {
+  --ev2-radius: 16px;
+  --ev2-muted: #4b5563;
+  --ev2-strong: #0f172a;
+  --ev2-body: #1f2937;
+  --ev2-divider: #eef1f4;
+  --ev2-subtle: #f7f8fa;
+  --ev2-primary: #1d9e75;
+  --ev2-primary-strong: #0f6e56;
+}
+
+.erp-evaluation-drawer .ant-drawer-header {
+  align-items: flex-start;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--ev2-divider);
+}
+
+.erp-evaluation-drawer .ant-drawer-title {
+  color: var(--ev2-strong);
+}
+
+.erp-evaluation-drawer .ant-drawer-body {
+  padding: 20px;
+  background: #ffffff;
+}
+
+.erp-evaluation-drawer .ant-drawer-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--ev2-divider);
+  background: #ffffff;
+}
+
+.erp-evaluation-drawer .erp-evaluation-drawer-footer .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-evaluation-drawer .erp-evaluation-drawer-footer .ant-btn-primary {
+  background: var(--ev2-primary);
+  border-color: var(--ev2-primary);
+}
+
+.erp-evaluation-drawer .erp-evaluation-drawer-footer .ant-btn-primary:hover {
+  background: var(--ev2-primary-strong) !important;
+  border-color: var(--ev2-primary-strong) !important;
+}
+
+.erp-evaluation-template-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-evaluation-template-form-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ev2-body, #1f2937);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-evaluation-template-form-field .ant-input,
+.erp-evaluation-template-form-field .ant-input-affix-wrapper,
+.erp-evaluation-template-form-field textarea.ant-input,
+.erp-evaluation-template-form-section .ant-input,
+.erp-evaluation-template-form-section .ant-input-number,
+.erp-evaluation-template-form-section .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-evaluation-template-form-sections-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.erp-evaluation-template-form-sections-head h4 {
+  margin: 0;
+  color: var(--ev2-strong, #0f172a);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erp-evaluation-template-form-weight {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-evaluation-template-form-weight--ok {
+  color: #067647;
+}
+
+.erp-evaluation-template-form-weight--bad {
+  color: #b42318;
+}
+
+.erp-evaluation-template-form-section {
+  padding: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ev2-subtle, #f7f8fa);
+}
+
+.erp-evaluation-template-form-section-row,
+.erp-evaluation-template-form-criteria-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-evaluation-template-form-section-row {
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.erp-evaluation-template-form-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 8px;
+}
+
+.erp-evaluation-template-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

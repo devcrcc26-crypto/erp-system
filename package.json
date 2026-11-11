@@ -1,0 +1,32 @@
+{
+  "name": "construction-erp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "lint:backend": "npm --prefix backend run lint",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "db:up": "docker compose up -d postgres redis minio mailpit",
+    "db:down": "docker compose down",
+    "db:migrate": "npm --prefix backend run prisma:migrate",
+    "db:migrate:deploy": "npm --prefix backend run prisma:migrate:deploy",
+    "db:seed": "npm --prefix backend run prisma:seed",
+    "db:studio": "npm --prefix backend run prisma:studio",
+    "test:backend": "npm --prefix backend run test",
+    "test:backend:changed": "npm --prefix backend run test:changed",
+    "test:backend:e2e": "npm --prefix backend run test:e2e",
+    "test:frontend": "npm --prefix frontend run test",
+    "test:frontend:changed": "npm --prefix frontend run test:changed",
+    "test:frontend:e2e": "npm --prefix frontend run test:e2e",
+    "docs:capture": "npm --prefix docs-capture run capture",
+    "docs:build": "npm --prefix docs-capture run build:guide",
+    "docs:pdf": "npm --prefix docs-capture run pdf"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

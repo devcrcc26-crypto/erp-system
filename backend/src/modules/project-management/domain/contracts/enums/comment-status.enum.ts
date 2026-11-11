@@ -1,0 +1,8 @@
+export enum CommentStatus {
+  OPEN = 'OPEN',
+  ACKNOWLEDGED = 'ACKNOWLEDGED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  RESOLVED = 'RESOLVED',
+  VERIFIED = 'VERIFIED',
+  CLOSED = 'CLOSED',
+}

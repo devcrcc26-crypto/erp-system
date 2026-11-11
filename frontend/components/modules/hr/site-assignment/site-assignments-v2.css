@@ -1,0 +1,557 @@
+/*
+ * Site assignments (v2) - floating tiles + soft cards matching leave / attendance.
+ * Scoped under `.erp-site-assignments-v2`.
+ */
+.erp-site-assignments-v2 {
+  --sav2-radius: 16px;
+  --sav2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --sav2-muted: #4b5563;
+  --sav2-strong: #0f172a;
+  --sav2-body: #1f2937;
+  --sav2-divider: #eef1f4;
+  --sav2-subtle: #f7f8fa;
+  --sav2-tint: rgba(29, 158, 117, 0.1);
+  --sav2-primary: #1d9e75;
+  --sav2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-site-assignments-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--sav2-radius);
+  background: #ffffff;
+  box-shadow: var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-site-assignments-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--sav2-radius);
+  background: #ffffff;
+  box-shadow: var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-site-assignments-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--sav2-primary);
+  outline-offset: 2px;
+}
+
+.erp-site-assignments-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--sav2-primary),
+    var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-site-assignments-v2 .erp-users-stat-label {
+  color: var(--sav2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-site-assignments-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-site-assignments-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sav2-strong);
+}
+
+.erp-site-assignments-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--sav2-tint);
+  color: var(--sav2-primary-strong);
+}
+
+.erp-site-assignments-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--sav2-divider);
+  background: transparent;
+}
+
+.erp-site-assignments-v2 .erp-users-search-input {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.erp-site-assignments-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 140px;
+  flex: 0 1 180px;
+}
+
+.erp-site-assignments-v2 .erp-sa-month-picker {
+  min-width: 160px;
+}
+
+.erp-site-assignments-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-site-assignments-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-site-assignments-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-site-assignments-v2 .erp-users-filter-bar .ant-picker {
+  border-radius: 10px !important;
+}
+
+.erp-site-assignments-v2 .erp-pro-table-card-body {
+  padding: 0 0 8px;
+}
+
+.erp-site-assignments-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row,
+.erp-site-assignments-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-site-assignments-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr
+  > th {
+  background: transparent;
+  color: var(--sav2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-site-assignments-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td {
+  border-color: var(--sav2-divider);
+}
+
+.erp-site-assignments-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td {
+  background: #fbfcfd;
+}
+
+.erp-site-assignments-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sav2-strong);
+}
+
+.erp-site-assignments-v2 .erp-users-cell-sub {
+  color: var(--sav2-muted);
+}
+
+.erp-site-assignments-v2 .erp-users-cell-strong {
+  color: var(--sav2-body);
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+}
+
+.erp-site-assignments-v2 .erp-sa-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--sav2-radius);
+  background: #ffffff;
+  box-shadow: var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-sa-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--sav2-tint);
+  color: var(--sav2-primary-strong);
+}
+
+.erp-site-assignments-v2 .erp-sa-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Detail */
+
+.erp-site-assignments-v2.erp-sa-detail-page {
+  gap: 20px;
+}
+
+.erp-site-assignments-v2 .erp-sa-detail-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: var(--sav2-radius);
+  background: #ffffff;
+  box-shadow: var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-sa-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-site-assignments-v2 .erp-sa-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  color: var(--sav2-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.erp-site-assignments-v2 .erp-sa-back:hover {
+  color: var(--sav2-primary-strong) !important;
+}
+
+.erp-site-assignments-v2 .erp-sa-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-hero-title {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-site-assignments-v2 .erp-sa-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-site-assignments-v2 .erp-sa-hero-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  color: var(--sav2-muted);
+  font-size: 13px;
+}
+
+.erp-site-assignments-v2 .erp-sa-detail-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-site-assignments-v2 .erp-sa-fact-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.erp-site-assignments-v2 .erp-sa-fact {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--sav2-subtle);
+}
+
+.erp-site-assignments-v2 .erp-sa-fact-label {
+  margin: 0;
+  color: var(--sav2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-site-assignments-v2 .erp-sa-fact-value {
+  margin: 4px 0 0;
+  color: var(--sav2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-sa-section-card .erp-employee-section-header {
+  padding: 16px 20px 0;
+  border-bottom: 0;
+}
+
+.erp-site-assignments-v2 .erp-sa-section-card .erp-employee-section-title {
+  color: var(--sav2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-sa-section-card .erp-employee-section-body {
+  padding: 14px 20px 20px;
+}
+
+.erp-site-assignments-v2 .erp-sa-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-field {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--sav2-subtle);
+}
+
+.erp-site-assignments-v2 .erp-sa-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-site-assignments-v2 .erp-sa-field-label {
+  margin: 0 0 4px;
+  color: var(--sav2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-site-assignments-v2 .erp-sa-field-value {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.erp-site-assignments-v2 .erp-sa-modal .ant-modal-content {
+  border-radius: 16px;
+}
+
+.erp-site-assignments-v2 .erp-sa-modal .ant-btn,
+.erp-site-assignments-v2 .erp-sa-modal .ant-picker,
+.erp-site-assignments-v2 .erp-sa-modal .ant-input,
+.erp-site-assignments-v2 .erp-sa-modal textarea.ant-input {
+  border-radius: 10px !important;
+}
+
+/* Form */
+
+.erp-site-assignments-v2.erp-sa-form-page {
+  gap: 16px;
+}
+
+.erp-site-assignments-v2 .erp-sa-form-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 18px 20px;
+  border-radius: var(--sav2-radius);
+  background: #ffffff;
+  box-shadow: var(--sav2-shadow);
+}
+
+.erp-site-assignments-v2 .erp-sa-form-hero-title {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-site-assignments-v2 .erp-sa-form-hero-desc {
+  margin: 4px 0 0;
+  color: var(--sav2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 48rem;
+}
+
+.erp-site-assignments-v2.erp-sa-form-page .erp-form-layout-pro {
+  border: 0 !important;
+  border-radius: var(--sav2-radius) !important;
+  box-shadow: var(--sav2-shadow) !important;
+  overflow: hidden;
+}
+
+.erp-site-assignments-v2.erp-sa-form-page .ant-btn,
+.erp-site-assignments-v2.erp-sa-form-page .ant-input,
+.erp-site-assignments-v2.erp-sa-form-page .ant-select-selector,
+.erp-site-assignments-v2.erp-sa-form-page .ant-picker {
+  border-radius: 10px !important;
+}
+
+.erp-site-assignments-v2 .erp-sa-day-hint {
+  margin-top: 8px;
+  color: var(--sav2-muted);
+  font-size: 13px;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-label {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-hint {
+  margin: -4px 0 0;
+  color: var(--sav2-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--sav2-subtle);
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 575px) {
+  .erp-site-assignments-v2 .erp-sa-period-editor-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.erp-site-assignments-v2 .erp-sa-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-review-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--sav2-subtle);
+}
+
+.erp-site-assignments-v2 .erp-sa-review-item--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-site-assignments-v2 .erp-sa-review-label {
+  margin: 0 0 4px;
+  color: var(--sav2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-site-assignments-v2 .erp-sa-review-value {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+  .erp-site-assignments-v2 .erp-users-stat-bar,
+  .erp-site-assignments-v2 .erp-sa-fact-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-site-assignments-v2 .erp-users-stat-bar,
+  .erp-site-assignments-v2 .erp-sa-fact-row,
+  .erp-site-assignments-v2 .erp-sa-details-grid,
+  .erp-site-assignments-v2 .erp-sa-review-grid {
+    grid-template-columns: 1fr;
+  }
+}

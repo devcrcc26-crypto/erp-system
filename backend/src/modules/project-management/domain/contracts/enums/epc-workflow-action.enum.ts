@@ -1,0 +1,21 @@
+/** Action-level permissions - replace coarse module RBAC for workflow mutations. */
+export enum EpcWorkflowAction {
+  ENGINEERING_DOCUMENT_VERSION_UPLOAD = 'engineering_document.version.upload',
+  ENGINEERING_DOCUMENT_VERSION_REGISTER = 'engineering_document.version.register',
+  ENGINEERING_DOCUMENT_VERSION_LOCK = 'engineering_document.version.lock',
+  ENGINEERING_DOCUMENT_VERSION_UNLOCK = 'engineering_document.version.unlock',
+  REVIEW_COMMENT_ASSIGN = 'review.comment.assign',
+  REVIEW_COMMENT_VERIFY = 'review.comment.verify',
+  REVIEW_COMMENT_ACKNOWLEDGE = 'review.comment.acknowledge',
+  REVIEW_COMMENT_RESOLVE = 'review.comment.resolve',
+  REVIEW_SESSION_APPROVE = 'review.session.approve',
+  REVIEW_SESSION_BATCH_APPROVE = 'review.session.batch_approve',
+  REVIEW_SESSION_BATCH_RETURN = 'review.session.batch_return',
+  DESIGN_PACKAGE_SUBMIT = 'design_package.submit',
+  DESIGN_PACKAGE_ITEM_ADD = 'design_package.item.add',
+  DESIGN_PACKAGE_ITEM_REMOVE = 'design_package.item.remove',
+  SUBMITTAL_CREATE = 'submittal.create',
+  SUBMITTAL_ISSUE = 'submittal.issue',
+  REVISION_TRIGGER = 'revision.trigger',
+  REVISION_TRIGGER_CREATE = 'revision.trigger.create',
+}

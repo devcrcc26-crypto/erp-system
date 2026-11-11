@@ -1,0 +1,15 @@
+{
+  "/": "Home dashboard for the signed-in user.",
+  "/dashboard": "Personal and company overview widgets.",
+  "/approvals": "Inbox of requests waiting for your action or already handled.",
+  "/approvals/new": "Pick a request type to start a new approval workflow.",
+  "/profile": "Your employee profile, attendance, leave balances, and settings.",
+  "/announcements": "Company announcements and notices.",
+  "/help": "In-app user guide portal.",
+  "/approvals/new/leave-request": "Multi-step leave request form.",
+  "/approvals/new/expense-claim": "Multi-step expense claim form.",
+  "/approvals/new/per-diem": "Multi-step per diem advance request.",
+  "/approvals/new/work-from-home": "Work-from-home request form.",
+  "/approvals/new/site-assignment": "Site assignment request form.",
+  "/approvals/new/field-movement-log": "Field movement / early departure explanation wizard."
+}

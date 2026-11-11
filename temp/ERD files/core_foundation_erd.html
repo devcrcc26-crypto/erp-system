@@ -1,0 +1,585 @@
+-- Active: 1781161054658@@127.0.0.1@5433
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Core Foundation ERD</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f7;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 16px; font-weight: 600; }
+    #erd {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+    }
+    #erd svg {
+      display: block;
+      width: 100%;
+      min-width: 1400px;
+      height: auto;
+    }
+    #loading { color: #6b7280; padding: 24px; text-align: center; }
+    #error {
+      display: none;
+      margin-top: 16px;
+      padding: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      color: #b91c1c;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Core Foundation ERD</h1>
+  <div id="loading">Rendering diagram…</div>
+  <div id="erd"></div>
+  <pre id="error"></pre>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    (async function () {
+      const loadingEl = document.getElementById('loading');
+      const errorEl = document.getElementById('error');
+      const erdEl = document.getElementById('erd');
+      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: dark ? 'dark' : 'default',
+          securityLevel: 'loose',
+          er: { useMaxWidth: false },
+        });
+
+        const diagram = `erDiagram
+  COMPANY {
+    uuid id PK
+    string legal_name
+    string registration_number
+    string vat_number
+    string logo_url
+    string base_currency
+    string default_language
+    string default_timezone
+    string default_date_format
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  COMPANY_SETTING {
+    uuid id PK
+    uuid company_id FK
+    string module
+    string key
+    string value
+    string data_type
+    boolean is_public
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  BRANCH {
+    uuid id PK
+    uuid company_id FK
+    string name
+    string address
+    string city
+    string country
+    string phone
+    boolean is_head_office
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DIVISION {
+    uuid id PK
+    uuid company_id FK
+    string name
+    string code
+    string description
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DEPARTMENT {
+    uuid id PK
+    uuid company_id FK
+    uuid division_id FK
+    uuid branch_id FK
+    string name
+    string code
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  COST_CENTRE {
+    uuid id PK
+    uuid company_id FK
+    uuid department_id FK
+    string name
+    string code
+    string type
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  POSITION {
+    uuid id PK
+    uuid company_id FK
+    uuid department_id FK
+    string title
+    string grade
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  FINANCIAL_YEAR {
+    uuid id PK
+    uuid company_id FK
+    string name
+    date start_date
+    date end_date
+    string status
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+  }
+  FINANCIAL_PERIOD {
+    uuid id PK
+    uuid company_id FK
+    uuid financial_year_id FK
+    string name
+    int period_number
+    date start_date
+    date end_date
+    string status
+    boolean is_adjustment_period
+    timestamp locked_at
+    uuid locked_by FK
+    timestamp closed_at
+    uuid closed_by FK
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+  }
+  NUMBER_SERIES {
+    uuid id PK
+    uuid company_id FK
+    string document_type
+    string prefix
+    string suffix
+    string sequence_name
+    int padding
+    string reset_frequency
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  USER {
+    uuid id PK
+    uuid company_id FK
+    uuid branch_id FK
+    uuid department_id FK
+    uuid position_id FK
+    string first_name
+    string last_name
+    string email
+    string phone
+    string password_hash
+    string preferred_language
+    string preferred_timezone
+    string preferred_date_format
+    boolean is_active
+    boolean mfa_enabled
+    timestamp last_login
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  USER_SESSION {
+    uuid id PK
+    uuid user_id FK
+    uuid company_id FK
+    string refresh_token_hash
+    string device_info
+    string ip_address
+    timestamp expires_at
+    timestamp last_used_at
+    timestamp created_at
+  }
+  PASSWORD_RESET_TOKEN {
+    uuid id PK
+    uuid user_id FK
+    string token_hash
+    timestamp expires_at
+    timestamp used_at
+    timestamp created_at
+  }
+  ROLE {
+    uuid id PK
+    uuid company_id FK
+    uuid parent_role_id FK
+    string name
+    string description
+    boolean is_system_role
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  USER_ROLE {
+    uuid id PK
+    uuid user_id FK
+    uuid role_id FK
+    timestamp assigned_at
+    uuid assigned_by FK
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  PERMISSION {
+    uuid id PK
+    string module
+    string action
+    string description
+  }
+  ROLE_PERMISSION {
+    uuid id PK
+    uuid role_id FK
+    uuid permission_id FK
+    boolean can_view
+    boolean can_create
+    boolean can_edit
+    boolean can_delete
+    boolean can_approve
+    boolean can_export
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DATA_SCOPE {
+    uuid id PK
+    uuid user_role_id FK
+    string scope_type
+    string scope_value
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  AUDIT_LOG {
+    uuid id PK
+    uuid user_id FK
+    uuid company_id FK
+    uuid session_id FK
+    string correlation_id
+    string batch_id
+    string source
+    string module
+    string action
+    string record_type
+    uuid record_id
+    string record_reference
+    jsonb before_value
+    jsonb after_value
+    string ip_address
+    string device_info
+    timestamp created_at
+  }
+  NOTIFICATION_TEMPLATE {
+    uuid id PK
+    uuid company_id FK
+    string event_type
+    string channel
+    string subject_template
+    string body_template
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  NOTIFICATION {
+    uuid id PK
+    uuid company_id FK
+    uuid recipient_id FK
+    uuid template_id FK
+    string channel
+    string subject
+    string body
+    string status
+    timestamp sent_at
+    timestamp read_at
+    timestamp created_at
+  }
+  NOTIFICATION_PREFERENCE {
+    uuid id PK
+    uuid user_id FK
+    string event_type
+    boolean in_app
+    boolean email
+    boolean sms
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DOCUMENT_FOLDER {
+    uuid id PK
+    uuid company_id FK
+    uuid parent_id FK
+    string name
+    string path
+    string context_type
+    uuid context_id
+    boolean is_system
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DOCUMENT {
+    uuid id PK
+    uuid folder_id FK
+    uuid company_id FK
+    string name
+    string file_key
+    string file_type
+    int file_size_bytes
+    int version
+    boolean is_current
+    date expiry_date
+    boolean is_mandatory
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DOCUMENT_VERSION {
+    uuid id PK
+    uuid document_id FK
+    uuid uploaded_by FK
+    int version_number
+    string file_key
+    int file_size_bytes
+    string change_note
+    timestamp created_at
+  }
+  DOCUMENT_ACCESS {
+    uuid id PK
+    uuid folder_id FK
+    uuid role_id FK
+    boolean can_view
+    boolean can_upload
+    boolean can_download
+    boolean can_delete
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  REPORT_DEFINITION {
+    uuid id PK
+    uuid company_id FK
+    uuid created_by FK
+    string name
+    string data_source
+    jsonb fields
+    jsonb filters
+    jsonb grouping
+    jsonb sorting
+    boolean is_system
+    boolean is_shared
+    timestamp created_at
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  REPORT_SCHEDULE {
+    uuid id PK
+    uuid report_id FK
+    string cron_expression
+    string format
+    jsonb recipients
+    boolean is_active
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+  DASHBOARD_WIDGET {
+    uuid id PK
+    uuid company_id FK
+    uuid role_id FK
+    string widget_type
+    string title
+    jsonb config
+    int position_x
+    int position_y
+    int width
+    int height
+    timestamp created_at
+    uuid created_by FK
+    timestamp updated_at
+    uuid updated_by FK
+    timestamp deleted_at
+    uuid deleted_by FK
+  }
+
+  COMPANY ||--o{ COMPANY_SETTING : configures
+  COMPANY ||--o{ BRANCH : has
+  COMPANY ||--o{ DIVISION : has
+  COMPANY ||--o{ FINANCIAL_YEAR : has
+  COMPANY ||--o{ FINANCIAL_PERIOD : has
+  COMPANY ||--o{ NUMBER_SERIES : has
+  COMPANY ||--o{ USER : has
+  COMPANY ||--o{ ROLE : has
+  DIVISION ||--o{ DEPARTMENT : contains
+  BRANCH ||--o{ DEPARTMENT : hosts
+  DEPARTMENT ||--o{ COST_CENTRE : has
+  DEPARTMENT ||--o{ POSITION : has
+  FINANCIAL_YEAR ||--o{ FINANCIAL_PERIOD : contains
+  USER ||--o{ USER_SESSION : has
+  USER ||--o{ PASSWORD_RESET_TOKEN : has
+  USER ||--o{ USER_ROLE : assigned
+  ROLE ||--o{ ROLE : inherits_from
+  ROLE ||--o{ USER_ROLE : given_to
+  ROLE ||--o{ ROLE_PERMISSION : has
+  PERMISSION ||--o{ ROLE_PERMISSION : included_in
+  USER_ROLE ||--o{ DATA_SCOPE : scoped_by
+  USER_SESSION ||--o{ AUDIT_LOG : tracks
+  USER ||--o{ AUDIT_LOG : generates
+  USER ||--o{ NOTIFICATION : receives
+  NOTIFICATION_TEMPLATE ||--o{ NOTIFICATION : used_in
+  USER ||--o{ NOTIFICATION_PREFERENCE : configures
+  DOCUMENT_FOLDER ||--o{ DOCUMENT_FOLDER : parent_of
+  DOCUMENT_FOLDER ||--o{ DOCUMENT : contains
+  DOCUMENT ||--o{ DOCUMENT_VERSION : versioned_by
+  DOCUMENT_FOLDER ||--o{ DOCUMENT_ACCESS : controlled_by
+  ROLE ||--o{ DOCUMENT_ACCESS : granted
+  USER ||--o{ REPORT_DEFINITION : creates
+  REPORT_DEFINITION ||--o{ REPORT_SCHEDULE : scheduled_by
+  ROLE ||--o{ DASHBOARD_WIDGET : sees
+`;
+
+        const { svg } = await mermaid.render('core-foundation-erd-' + Date.now(), diagram);
+        erdEl.innerHTML = svg;
+        loadingEl.style.display = 'none';
+
+        const svgRoot = erdEl.querySelector('svg');
+        if (svgRoot) {
+          const entityFill = dark ? '#334155' : '#e0f2fe';
+          const rowFill = dark ? '#1e293b' : '#ffffff';
+          const textFill = dark ? '#f1f5f9' : '#1e293b';
+          const stroke = dark ? '#94a3b8' : '#0284c7';
+
+          svgRoot.querySelectorAll('rect').forEach((rect) => {
+            const fill = rect.getAttribute('fill');
+            if (!fill || fill === 'none' || fill === 'transparent') {
+              rect.setAttribute('fill', rowFill);
+            }
+            if (!rect.getAttribute('stroke')) {
+              rect.setAttribute('stroke', stroke);
+            }
+          });
+
+          svgRoot.querySelectorAll('.entityBox rect, .entityBox').forEach((el) => {
+            if (el.tagName === 'rect') {
+              el.setAttribute('fill', entityFill);
+              el.setAttribute('stroke', stroke);
+            }
+          });
+
+          svgRoot.querySelectorAll('text').forEach((text) => {
+            const fill = text.getAttribute('fill');
+            if (!fill || fill === 'none' || fill === 'transparent') {
+              text.setAttribute('fill', textFill);
+            }
+          });
+
+          svgRoot.querySelectorAll('path').forEach((path) => {
+            const strokeColor = path.getAttribute('stroke');
+            if (strokeColor && (strokeColor === 'none' || strokeColor === 'transparent')) {
+              path.setAttribute('stroke', stroke);
+            }
+          });
+        }
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = err instanceof Error ? (err.stack || err.message) : String(err);
+      }
+    })();
+  </script>
+</body>
+</html>

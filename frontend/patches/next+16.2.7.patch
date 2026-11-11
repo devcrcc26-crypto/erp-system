@@ -1,0 +1,48 @@
+diff --git a/node_modules/next/dist/client/components/app-router.js b/node_modules/next/dist/client/components/app-router.js
+index 560525f..e2f518f 100644
+--- a/node_modules/next/dist/client/components/app-router.js
++++ b/node_modules/next/dist/client/components/app-router.js
+@@ -109,8 +109,19 @@ function Head({ headCacheNode }) {
+ }
+ /**
+  * The global router that wraps the application components.
++ * Split into Router + RouterContent so interrupted navigations cannot
++ * corrupt the hook list (Rendered more hooks than during the previous render).
++ * See https://github.com/vercel/next.js/issues/63121
+  */ function Router({ actionQueue, globalError, webSocket, staticIndicatorState }) {
+     const state = (0, _useactionqueue.useActionQueue)(actionQueue);
++    return /*#__PURE__*/ (0, _jsxruntime.jsx)(RouterContent, {
++        state: state,
++        globalError: globalError,
++        webSocket: webSocket,
++        staticIndicatorState: staticIndicatorState
++    });
++}
++function RouterContent({ state, globalError, webSocket, staticIndicatorState }) {
+     const { canonicalUrl } = state;
+     // Add memoized pathname/query for useSearchParams and usePathname.
+     const { searchParams, pathname } = (0, _react.useMemo)(()=>{
+diff --git a/node_modules/next/dist/esm/client/components/app-router.js b/node_modules/next/dist/esm/client/components/app-router.js
+index 38c0e17..6121227 100644
+--- a/node_modules/next/dist/esm/client/components/app-router.js
++++ b/node_modules/next/dist/esm/client/components/app-router.js
+@@ -97,8 +97,19 @@ function Head({ headCacheNode }) {
+ }
+ /**
+  * The global router that wraps the application components.
++ * Split into Router + RouterContent so interrupted navigations cannot
++ * corrupt the hook list (Rendered more hooks than during the previous render).
++ * See https://github.com/vercel/next.js/issues/63121
+  */ function Router({ actionQueue, globalError, webSocket, staticIndicatorState }) {
+     const state = useActionQueue(actionQueue);
++    return /*#__PURE__*/ _jsx(RouterContent, {
++        state: state,
++        globalError: globalError,
++        webSocket: webSocket,
++        staticIndicatorState: staticIndicatorState
++    });
++}
++function RouterContent({ state, globalError, webSocket, staticIndicatorState }) {
+     const { canonicalUrl } = state;
+     // Add memoized pathname/query for useSearchParams and usePathname.
+     const { searchParams, pathname } = useMemo(()=>{

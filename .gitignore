@@ -1,0 +1,78 @@
+# Local / agent / IDE (not for production remotes)
+/.cursorrules
+/.cursor
+/AGENTS.md
+/ERD files
+/.WORK_SCHEDULE.md
+.idea/
+.vscode/
+*.swp
+.VSCodeCounter/
+
+# Dependencies
+node_modules/
+
+# Environment secrets (keep *.example templates tracked)
+.env
+.env.*
+!.env.example
+!**/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+docs-capture/.env
+docs-capture/.env.*
+!docs-capture/.env.example
+
+# Local-only credentials and private data (never commit)
+backend/scripts/dev-login-credentials.csv
+backend/data/private/
+*.pem
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+
+# Build / generated
+dist/
+.next/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+backend/src/generated/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs capture (Playwright navigation guides)
+docs-capture/.auth/
+docs-capture/out/
+
+# Test / coverage / Playwright
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Deploy platform local state
+.vercel
+
+# Local scratch scripts
+**/tmp-*.js
+**/tmp-*.ts
+
+# Local-only docs / reports
+frontend/tests/attendance/TEST-REPORT.md
+frontend/components/sidebar/SIDEBAR.md
+backend/src/modules/hr-shared/application/import-export/IMPORT_EXPORT.md

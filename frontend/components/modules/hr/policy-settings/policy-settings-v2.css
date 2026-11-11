@@ -1,0 +1,324 @@
+/*
+ * Policy settings (v2) - soft pill group tabs + floating policy cards.
+ * Scoped under `.erp-policy-settings-v2`.
+ */
+
+.erp-policy-settings-v2 {
+  --psv2-radius: 16px;
+  --psv2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --psv2-muted: #4b5563;
+  --psv2-strong: #0f172a;
+  --psv2-body: #1f2937;
+  --psv2-divider: #eef1f4;
+  --psv2-subtle: #f7f8fa;
+  --psv2-tint: rgba(29, 158, 117, 0.1);
+  --psv2-primary: #1d9e75;
+  --psv2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-policy-settings-v2 > .ant-alert {
+  border-radius: 12px;
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar-card {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--psv2-radius);
+  background: #ffffff;
+  box-shadow: var(--psv2-shadow);
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar button[role='tab'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--psv2-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar button[role='tab']:hover {
+  background: var(--psv2-subtle);
+  color: var(--psv2-body);
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar button[role='tab'][aria-selected='true'] {
+  background: var(--psv2-tint);
+  color: var(--psv2-primary-strong);
+  font-weight: 600;
+}
+
+.erp-policy-settings-v2 .erp-policy-tabbar button[role='tab']:focus-visible {
+  outline: 2px solid var(--psv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-policy-settings-v2 .erp-policy-tab-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.erp-policy-settings-v2
+  .erp-policy-tabbar
+  button[role='tab'][aria-selected='true']
+  .erp-policy-tab-count {
+  background: rgba(15, 110, 86, 0.12);
+  color: var(--psv2-primary-strong);
+}
+
+.erp-policy-settings-v2 .erp-policy-card {
+  border: 0;
+  border-radius: var(--psv2-radius);
+  background: #ffffff;
+  box-shadow: var(--psv2-shadow);
+}
+
+.erp-policy-settings-v2 .erp-policy-card-title {
+  margin: 0;
+  color: var(--psv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-policy-settings-v2 .erp-policy-card-desc,
+.erp-policy-settings-v2 .erp-policy-card-example {
+  margin: 0;
+  color: var(--psv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--set {
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--default {
+  background: #f2f4f7;
+  color: #344054;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--admin {
+  background: #f4ebff;
+  color: #6941c6;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--info {
+  background: #e6f1fb;
+  color: #185fa5;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--locked {
+  background: #f1f3f5;
+  color: #5f6b7a;
+}
+
+.erp-policy-settings-v2 .erp-policy-tag--scheduled {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.erp-policy-settings-v2 .erp-policy-value-label {
+  color: var(--psv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-policy-settings-v2 .erp-policy-value {
+  color: var(--psv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.erp-policy-settings-v2 .erp-policy-actions .ant-btn {
+  border-radius: 10px;
+}
+
+/* ── Portaled edit / history modals (match evaluation / approval spacing) ── */
+
+.erp-policy-modal {
+  --psv2-radius: 16px;
+  --psv2-muted: #4b5563;
+  --psv2-strong: #0f172a;
+  --psv2-body: #1f2937;
+  --psv2-divider: #eef1f4;
+  --psv2-subtle: #f7f8fa;
+  --psv2-primary: #1d9e75;
+  --psv2-primary-strong: #0f6e56;
+}
+
+.erp-policy-modal .ant-modal-content,
+.erp-policy-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--psv2-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-policy-modal .ant-modal-header {
+  margin-bottom: 4px;
+}
+
+.erp-policy-modal .ant-modal-title {
+  color: var(--psv2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-policy-modal .erp-policy-modal-hint {
+  margin: 0 0 18px;
+  color: var(--psv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-policy-modal .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.erp-policy-modal .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.erp-policy-modal .ant-form-item-label {
+  padding-bottom: 4px !important;
+}
+
+.erp-policy-modal .ant-form-item-label > label {
+  color: var(--psv2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-policy-modal .ant-form-item-extra {
+  margin-top: 6px;
+  color: var(--psv2-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-policy-modal .ant-input,
+.erp-policy-modal textarea.ant-input,
+.erp-policy-modal .ant-input-affix-wrapper,
+.erp-policy-modal .ant-input-number,
+.erp-policy-modal .ant-input-number-affix-wrapper,
+.erp-policy-modal .ant-picker,
+.erp-policy-modal .ant-select-selector,
+.erp-policy-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-policy-modal .ant-input-number,
+.erp-policy-modal .ant-picker {
+  width: 100%;
+}
+
+.erp-policy-modal .erp-policy-modal-alert {
+  margin-top: 16px;
+  border: 0;
+  border-radius: 12px;
+}
+
+.erp-policy-modal .ant-modal-footer {
+  margin-top: 20px;
+}
+
+.erp-policy-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--psv2-primary);
+  border-color: var(--psv2-primary);
+}
+
+.erp-policy-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: var(--psv2-primary-strong) !important;
+  border-color: var(--psv2-primary-strong) !important;
+}
+
+.erp-policy-modal .erp-policy-history-empty {
+  margin: 4px 0 0;
+  padding: 28px 16px;
+  border-radius: 12px;
+  background: var(--psv2-subtle);
+  color: var(--psv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.erp-policy-modal .erp-policy-history-table {
+  margin-top: 4px;
+}
+
+.erp-policy-modal .erp-policy-history-table .ant-table-thead > tr > th {
+  background: #f7f8fa !important;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #eef1f4 !important;
+}
+
+.erp-policy-modal .erp-policy-history-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #eef1f4;
+  font-size: 13px;
+}
+
+.erp-policy-modal .erp-policy-history-table .ant-table-tbody > tr:hover > td {
+  background: #f7f8fa !important;
+}
+
+.erp-policy-modal .erp-policy-history-change {
+  color: var(--psv2-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-policy-modal .erp-policy-history-reason {
+  color: var(--psv2-muted);
+}

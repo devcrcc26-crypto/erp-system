@@ -1,0 +1,569 @@
+/*
+ * Public holidays (v2) - floating tiles + soft cards matching leave / employees.
+ * Scoped under `.erp-public-holidays-v2`.
+ */
+.erp-public-holidays-v2 {
+  --phv2-radius: 16px;
+  --phv2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --phv2-muted: #4b5563;
+  --phv2-strong: #0f172a;
+  --phv2-body: #1f2937;
+  --phv2-divider: #eef1f4;
+  --phv2-subtle: #f7f8fa;
+  --phv2-tint: rgba(29, 158, 117, 0.1);
+  --phv2-primary: #1d9e75;
+  --phv2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-public-holidays-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-public-holidays-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-public-holidays-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--phv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-public-holidays-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--phv2-primary),
+    var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-public-holidays-v2 .erp-users-stat-label {
+  color: var(--phv2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-public-holidays-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.erp-public-holidays-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-public-holidays-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--phv2-strong);
+}
+
+.erp-public-holidays-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--phv2-tint);
+  color: var(--phv2-primary-strong);
+}
+
+.erp-public-holidays-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--phv2-divider);
+  background: transparent;
+}
+
+.erp-public-holidays-v2 .erp-users-search-input {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+
+.erp-public-holidays-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 140px;
+  flex: 0 1 180px;
+}
+
+.erp-public-holidays-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-public-holidays-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-public-holidays-v2 .erp-users-filter-bar .ant-select-selector {
+  border-radius: 10px !important;
+}
+
+.erp-public-holidays-v2 .erp-pro-table-card-body {
+  padding: 0 0 8px;
+}
+
+.erp-public-holidays-v2 .erp-ph-year-block {
+  margin-bottom: 8px;
+}
+
+.erp-public-holidays-v2 .erp-ph-year-block:last-child {
+  margin-bottom: 0;
+}
+
+.erp-public-holidays-v2 .erp-ph-year-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 12px 8px;
+  color: var(--phv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erp-public-holidays-v2 .erp-ph-year-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--phv2-subtle);
+  color: var(--phv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-public-holidays-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr
+  > th {
+  background: transparent;
+  color: var(--phv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-public-holidays-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td {
+  border-color: var(--phv2-divider);
+}
+
+.erp-public-holidays-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td {
+  background: #fbfcfd;
+}
+
+.erp-public-holidays-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--phv2-strong);
+}
+
+.erp-public-holidays-v2 .erp-users-cell-sub {
+  color: var(--phv2-muted);
+}
+
+.erp-public-holidays-v2 .erp-users-cell-strong {
+  color: var(--phv2-body);
+  font-weight: 600;
+}
+
+.erp-public-holidays-v2 .erp-ph-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-ph-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--phv2-tint);
+  color: var(--phv2-primary-strong);
+}
+
+.erp-public-holidays-v2 .erp-ph-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-name,
+.erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-cell-sub,
+.erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-cell-strong {
+  color: #9ca3af;
+}
+
+.erp-public-holidays-v2 .erp-table-row-actions .ant-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.erp-public-holidays-v2 .ant-table-tbody > tr:hover .erp-table-row-actions .ant-btn,
+.erp-public-holidays-v2
+  .ant-table-tbody
+  > tr:focus-within
+  .erp-table-row-actions
+  .ant-btn,
+.erp-public-holidays-v2 .erp-table-row-actions .ant-btn:focus-visible,
+.erp-public-holidays-v2 .erp-table-row-actions .ant-btn.ant-dropdown-open {
+  opacity: 1;
+}
+
+.erp-public-holidays-v2 .erp-table-row-actions .ant-btn:hover {
+  background: #e9edf1 !important;
+}
+
+@media (hover: none) {
+  .erp-public-holidays-v2 .erp-table-row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+/* Detail */
+
+.erp-public-holidays-v2.erp-ph-detail-page {
+  gap: 20px;
+}
+
+.erp-public-holidays-v2 .erp-ph-detail-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 0;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-public-holidays-v2 .erp-ph-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  color: var(--phv2-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.erp-public-holidays-v2 .erp-ph-back:hover {
+  color: var(--phv2-primary-strong) !important;
+}
+
+.erp-public-holidays-v2 .erp-ph-back:focus-visible {
+  outline: 2px solid var(--phv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-identity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-identity .erp-ph-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 20px;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-title {
+  margin: 0;
+  color: var(--phv2-strong);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-public-holidays-v2 .erp-ph-hero-actions .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-public-holidays-v2 .erp-ph-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  color: var(--phv2-muted);
+  font-size: 13px;
+}
+
+.erp-public-holidays-v2 .erp-ph-detail-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-public-holidays-v2 .erp-ph-fact-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.erp-public-holidays-v2 .erp-ph-fact {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--phv2-subtle);
+}
+
+.erp-public-holidays-v2 .erp-ph-fact-label {
+  margin: 0;
+  color: var(--phv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-public-holidays-v2 .erp-ph-fact-value {
+  margin: 4px 0 0;
+  color: var(--phv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-public-holidays-v2 .erp-ph-section-card .erp-employee-section-header {
+  padding: 16px 20px 0;
+  border-bottom: 0;
+}
+
+.erp-public-holidays-v2 .erp-ph-section-card .erp-employee-section-title {
+  color: var(--phv2-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-public-holidays-v2 .erp-ph-section-card .erp-employee-section-body {
+  padding: 14px 20px 20px;
+}
+
+.erp-public-holidays-v2 .erp-ph-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-public-holidays-v2 .erp-ph-field {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--phv2-subtle);
+}
+
+.erp-public-holidays-v2 .erp-ph-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-public-holidays-v2 .erp-ph-field-label {
+  margin: 0 0 4px;
+  color: var(--phv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-public-holidays-v2 .erp-ph-field-value {
+  margin: 0;
+  color: var(--phv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+/* Form */
+
+.erp-public-holidays-v2.erp-ph-form-page {
+  gap: 16px;
+}
+
+.erp-public-holidays-v2 .erp-ph-form-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 18px 20px;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2 .erp-ph-form-hero-title {
+  margin: 0;
+  color: var(--phv2-strong);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-public-holidays-v2 .erp-ph-form-hero-desc {
+  margin: 4px 0 0;
+  color: var(--phv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 48rem;
+}
+
+.erp-public-holidays-v2.erp-ph-form-page .erp-form-layout-pro {
+  border: 0 !important;
+  border-radius: var(--phv2-radius) !important;
+  box-shadow: var(--phv2-shadow) !important;
+  overflow: hidden;
+}
+
+.erp-public-holidays-v2.erp-ph-form-page .erp-stepper-form__steps-shell {
+  border: 0;
+  border-radius: var(--phv2-radius);
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2.erp-ph-form-page .erp-stepper-form__footer {
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: var(--phv2-shadow);
+}
+
+.erp-public-holidays-v2.erp-ph-form-page .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-public-holidays-v2.erp-ph-form-page .ant-input,
+.erp-public-holidays-v2.erp-ph-form-page .ant-input-affix-wrapper,
+.erp-public-holidays-v2.erp-ph-form-page .ant-input-number,
+.erp-public-holidays-v2.erp-ph-form-page .ant-picker,
+.erp-public-holidays-v2.erp-ph-form-page .ant-select-selector {
+  border-radius: 10px !important;
+}
+
+.erp-public-holidays-v2 .erp-ph-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-public-holidays-v2 .erp-ph-review-field {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--phv2-subtle);
+}
+
+.erp-public-holidays-v2 .erp-ph-review-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-public-holidays-v2 .erp-ph-review-label {
+  margin: 0 0 4px;
+  color: var(--phv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-public-holidays-v2 .erp-ph-review-value {
+  margin: 0;
+  color: var(--phv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.erp-public-holidays-v2 .erp-ph-duplicate-modal .ant-modal-content {
+  border-radius: 16px;
+}
+
+@media (max-width: 900px) {
+  .erp-public-holidays-v2 .erp-users-stat-bar,
+  .erp-public-holidays-v2 .erp-ph-fact-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-public-holidays-v2 .erp-users-stat-bar,
+  .erp-public-holidays-v2 .erp-ph-fact-row,
+  .erp-public-holidays-v2 .erp-ph-details-grid,
+  .erp-public-holidays-v2 .erp-ph-review-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,313 @@
+/*
+ * Leave policies (v2) - floating tiles + soft cards matching leave / employees.
+ * Scoped under `.erp-leave-policy-v2`.
+ */
+.erp-leave-policy-v2 {
+  --lpv2-radius: 16px;
+  --lpv2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --lpv2-muted: #4b5563;
+  --lpv2-strong: #0f172a;
+  --lpv2-body: #1f2937;
+  --lpv2-divider: #eef1f4;
+  --lpv2-subtle: #f7f8fa;
+  --lpv2-tint: rgba(29, 158, 117, 0.1);
+  --lpv2-primary: #1d9e75;
+  --lpv2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+.erp-leave-policy-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2 .erp-users-stat-bar {
+  gap: 16px;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.erp-leave-policy-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-right: 0;
+  border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2 .erp-users-stat.erp-contract-stat:hover {
+  background: #fbfcfd;
+}
+
+.erp-leave-policy-v2 .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid var(--lpv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-leave-policy-v2 .erp-users-stat.erp-contract-stat--active {
+  background: #f0faf6;
+  box-shadow:
+    inset 0 0 0 2px var(--lpv2-primary),
+    var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-leave-policy-v2 .erp-users-stat-label {
+  color: var(--lpv2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-leave-policy-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.erp-leave-policy-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-leave-policy-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lpv2-strong);
+}
+
+.erp-leave-policy-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--lpv2-tint);
+  color: var(--lpv2-primary-strong);
+}
+
+.erp-leave-policy-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--lpv2-divider);
+  background: transparent;
+}
+
+.erp-leave-policy-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-leave-policy-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-leave-policy-v2 .erp-users-search-input.ant-input-affix-wrapper {
+  border-radius: 10px !important;
+}
+
+.erp-leave-policy-v2 .erp-pro-table-card-body {
+  padding: 0 0 8px;
+}
+
+.erp-leave-policy-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-thead > tr > th {
+  background: transparent;
+  color: var(--lpv2-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-leave-policy-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr > td {
+  border-color: var(--lpv2-divider);
+}
+
+.erp-leave-policy-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr:hover > td {
+  background: #fbfcfd;
+}
+
+.erp-leave-policy-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lpv2-strong);
+}
+
+.erp-leave-policy-v2 .erp-users-cell-sub {
+  color: var(--lpv2-muted);
+}
+
+.erp-leave-policy-v2 .erp-users-cell-strong {
+  color: var(--lpv2-body);
+  font-weight: 600;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 24px;
+  border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--lpv2-tint);
+  color: var(--lpv2-primary-strong);
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-person {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Form */
+
+.erp-leave-policy-v2.erp-leave-policy-form-page {
+  gap: 16px;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-form-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 18px 20px;
+  border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  color: var(--lpv2-muted) !important;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-back:hover {
+  color: var(--lpv2-primary-strong) !important;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-back:focus-visible {
+  outline: 2px solid var(--lpv2-primary);
+  outline-offset: 2px;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-form-hero-title {
+  margin: 0;
+  color: var(--lpv2-strong);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-form-hero-desc {
+  margin: 4px 0 0;
+  color: var(--lpv2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 48rem;
+}
+
+.erp-leave-policy-v2.erp-leave-policy-form-page .erp-form-layout-pro {
+  border: 0 !important;
+  border-radius: var(--lpv2-radius) !important;
+  box-shadow: var(--lpv2-shadow) !important;
+  overflow: hidden;
+}
+
+.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__steps-shell {
+  border: 0;
+  border-radius: var(--lpv2-radius);
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2.erp-leave-policy-form-page .erp-stepper-form__footer {
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: var(--lpv2-shadow);
+}
+
+.erp-leave-policy-v2.erp-leave-policy-form-page .ant-btn {
+  border-radius: 10px;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-review-field {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lpv2-subtle);
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-review-field--wide {
+  grid-column: 1 / -1;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-review-label {
+  margin: 0 0 4px;
+  color: var(--lpv2-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-leave-policy-v2 .erp-leave-policy-review-value {
+  margin: 0;
+  color: var(--lpv2-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+  .erp-leave-policy-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-leave-policy-v2 .erp-users-stat-bar,
+  .erp-leave-policy-v2 .erp-leave-policy-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
