@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Alert, Button, Skeleton, Tag, Tooltip } from 'antd';
+import { Alert, Button, Skeleton, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   FieldTimeOutlined,
@@ -11,7 +11,6 @@ import {
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import OvertimeSiteChips from '@/components/modules/hr/overtime/OvertimeSiteChips';
@@ -24,8 +23,6 @@ import {
   formatOvertimeEmployeeName,
   formatOvertimeHours,
   formatOvertimePeriod,
-  formatOvertimeStatus,
-  overtimeStatusVariant,
   unregisteredHolidayDatesFromFormData,
 } from '@/lib/utils/overtime-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -231,10 +228,6 @@ export default function OvertimeRequestDetail({
       sheet.status === 'SUBMITTED' ||
       sheet.status === 'IN_REVIEW' ||
       sheet.status === 'APPROVED');
-  const showEditedBadge =
-    Boolean(sheet.editedAfterApproval) ||
-    Boolean(sheet.editDiff?.editedAfterApproval);
-
   const employeeName = formatOvertimeEmployeeName(sheet.employee);
   const periodLabel = formatOvertimePeriod(sheet.month, sheet.year, t);
 
@@ -283,16 +276,8 @@ export default function OvertimeRequestDetail({
             </h3>
             <p className="erp-users-cell-sub m-0 mt-1">{periodLabel}</p>
           </div>
+          {/* Status and the edited badge are shown once, in the page banner. */}
           <div className="erp-ot-entries-actions">
-            <StatusBadge
-              label={formatOvertimeStatus(sheet.status, t)}
-              variant={overtimeStatusVariant(sheet.status)}
-            />
-            {showEditedBadge ? (
-              <Tag color="orange" className="!m-0 rounded-lg">
-                {t('pages.hr.overtime.resubmittedBadge')}
-              </Tag>
-            ) : null}
             {canEdit ? (
               <Link
                 href={overtimeSheetDetailHref(

@@ -2,7 +2,7 @@
 
 import './approvals-v2.css';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Button, Dropdown, Grid, Input, InputNumber, Skeleton, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -21,10 +21,7 @@ import BusinessTripDetail from '@/components/modules/approvals/detail/BusinessTr
 import ExpenseClaimDetail from '@/components/modules/approvals/detail/ExpenseClaimDetail';
 import FlightApplicationDetail from '@/components/modules/approvals/detail/FlightApplicationDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
-import {
-  OvertimeApprovalEditDiff,
-  OvertimeEditedBadge,
-} from '@/components/modules/approvals/detail/OvertimeApprovalEditChrome';
+import { OvertimeEditedBadge } from '@/components/modules/approvals/detail/OvertimeApprovalEditChrome';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import PerDiemSettlementDetail from '@/components/modules/approvals/detail/PerDiemSettlementDetail';
@@ -83,7 +80,7 @@ import {
   editRequestHref,
 } from '@/lib/utils/request-edit';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+import { CategoryIcon, requestGroupFor } from './request-category-visuals';
 
 type ActionModalKind =
   | 'approve'
@@ -94,7 +91,11 @@ type ActionModalKind =
   | 'reject'
   | null;
 
-const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page erp-approvals-v2 ${DETAIL_PAGE_V2}`;
+// No DETAIL_PAGE_V2 here: approvals-v2.css carries the detail look (brand
+// banner, KPI facts, timeline chain) and DETAIL_PAGE_V2's !important utilities
+// would override it.
+const DETAIL_ROOT =
+  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page erp-approvals-v2';
 
 function resolveCategoryCode(request: ApprovalRequestDetail): string {
   return (request.categoryCode ?? request.category?.code ?? '').trim();
@@ -611,6 +612,11 @@ export default function ApprovalDetailPageContent({
       request.category?.name,
     ) || null;
   const currentTierLabel = currentTier?.label?.trim() || null;
+  // Still moving through the chain (a current step is meaningful).
+  const isInFlight =
+    request.status === 'PENDING' ||
+    request.status === 'SUBMITTED' ||
+    request.status === 'IN_REVIEW';
   const categoryCode = resolveCategoryCode(request);
   // Leave edits inline in LeaveRequestDetail; other modules open their edit form.
   const editHref =
@@ -696,7 +702,7 @@ export default function ApprovalDetailPageContent({
 
   return (
     <div className={DETAIL_ROOT}>
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-ap-detail-hero-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -783,11 +789,18 @@ export default function ApprovalDetailPageContent({
             </div>
           ) : null}
         </div>
-        {_isOvertime && _overtimeSourceId ? (
-          <OvertimeApprovalEditDiff sheetId={_overtimeSourceId} />
-        ) : null}
-
         <div className="erp-employee-hero erp-contract-hero">
+          <span
+            aria-hidden
+            className="erp-ap-detail-type-tile"
+            style={
+              {
+                '--req-accent': requestGroupFor(categoryCode).accent,
+              } as CSSProperties
+            }
+          >
+            <CategoryIcon code={categoryCode} size={26} strokeWidth={1.75} />
+          </span>
           <div className="erp-employee-hero-copy min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="erp-users-id-chip">{request.requestNumber}</span>
@@ -798,9 +811,12 @@ export default function ApprovalDetailPageContent({
                 />
               ) : null}
               {categoryName ? (
-                <Tag className="!m-0 rounded-lg border-0 bg-slate-100 text-slate-700">
-                  {categoryName}
-                </Tag>
+                <span className="erp-ap-detail-category">{categoryName}</span>
+              ) : null}
+              {currentTierLabel && isInFlight ? (
+                <span className="erp-ap-detail-step-chip">
+                  {t('pages.approvals.table.currentTier')}: {currentTierLabel}
+                </span>
               ) : null}
               {resubmitCount > 0 ? (
                 <Tag color="orange" className="!m-0 rounded-lg">
@@ -826,37 +842,6 @@ export default function ApprovalDetailPageContent({
                 {submittedFor}
               </p>
             ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.approvals.table.submittedBy')}
-            </p>
-            <p className="erp-employee-meta-value truncate">
-              {formatApprovalUserName(request.requester)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.approvals.table.submitted')}
-            </p>
-            <p className="erp-employee-meta-value">{submittedDate || '-'}</p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('pages.approvals.table.currentTier')}
-            </p>
-            <p className="erp-employee-meta-value truncate">
-              {currentTierLabel ?? '-'}
-            </p>
           </div>
         </div>
       </div>

@@ -1,12 +1,12 @@
 'use client';
 
 import { Tag } from 'antd';
-import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useOvertimeSheet } from '@/lib/query/overtime';
 
 /**
- * Approver chrome for OT: Edited badge + diff banner.
+ * Approver chrome for OT: the Edited badge in the page banner. The diff
+ * itself is shown once, inside OvertimeRequestDetail.
  * Isolated so ApprovalDetailPageContent hook counts stay stable.
  */
 export function OvertimeEditedBadge({
@@ -26,25 +26,5 @@ export function OvertimeEditedBadge({
     <Tag color="orange" className="!m-0 rounded-lg">
       {t('pages.hr.overtime.editedBadge')}
     </Tag>
-  );
-}
-
-/**
- * Diff summary shown above Decide actions when OT was edited after approval.
- */
-export function OvertimeApprovalEditDiff({
-  sheetId,
-}: {
-  sheetId: string;
-}): React.ReactNode {
-  const sheetQuery = useOvertimeSheet(sheetId);
-  const editDiff = sheetQuery.data?.editDiff;
-  if (!editDiff?.editedAfterApproval) {
-    return null;
-  }
-  return (
-    <div className="border-t border-[var(--color-border)] px-4 py-3 sm:px-5">
-      <OvertimeEditDiffBanner editDiff={editDiff} />
-    </div>
   );
 }

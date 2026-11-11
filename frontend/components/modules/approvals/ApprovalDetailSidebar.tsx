@@ -163,10 +163,13 @@ export default function ApprovalDetailSidebar({
                   <div className="erp-approval-tier-main">
                     <div className="erp-approval-tier-top">
                       <p className="erp-approval-tier-label">{tier.label}</p>
-                      <StatusBadge
-                        label={formatApprovalStatus(tier.decision, t)}
-                        variant={approvalTierDecisionVariant(tier.decision)}
-                      />
+                      {/* The current step says "Current" once, not "Pending" + "Current". */}
+                      {isCurrent && tier.decision === 'PENDING' ? null : (
+                        <StatusBadge
+                          label={formatApprovalStatus(tier.decision, t)}
+                          variant={approvalTierDecisionVariant(tier.decision)}
+                        />
+                      )}
                       {isCurrent ? (
                         <StatusBadge
                           label={t('pages.approvals.currentTierBadge')}

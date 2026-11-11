@@ -934,16 +934,6 @@
   letter-spacing: -0.02em;
 }
 
-.erp-approvals-v2 .erp-employee-meta-bar {
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-}
-
-.erp-approvals-v2 .erp-employee-meta-value {
-  color: var(--ap2-strong);
-  font-size: 15px;
-  font-weight: 600;
-}
-
 .erp-approvals-v2 .erp-approvals-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -1108,6 +1098,500 @@
   padding-top: 12px;
   border-top: 1px solid var(--erp-n-150);
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Request DETAIL page (.erp-approvals-detail-page) - brand-layer language
+ * shared with login, dashboard, New Request and the Approvals list:
+ * - Banner: brand gradient + drawing-sheet grid + glow; glass back/secondary
+ *   buttons, solid white primary action; request-type tile + white title.
+ * - Facts: KPI tiles (accent border, surface gradient).
+ * - Panels (typed detail, chain, history): accent border + login-card bar.
+ * - Approval chain + history: connected vertical timelines.
+ * Scoped to this page; ApprovalTierTimeline on other pages is unchanged.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-approvals-detail-page {
+  --ap2-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --ap2-panel-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+.erp-approvals-detail-page :is(a, button):focus-visible {
+  outline: 2px solid var(--erp-accent);
+  outline-offset: 2px;
+}
+
+/* ── Banner (toolbar + hero) ── */
+
+.erp-approvals-detail-page .erp-pro-card.erp-ap-detail-hero-card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--ap2-radius);
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+  overflow: hidden;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -6%;
+  z-index: -1;
+  width: 26rem;
+  height: 26rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-toolbar {
+  position: relative;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+}
+
+/* Every banner button starts as glass. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: var(--radius-control, 10px);
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.16);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Back link: text-only glass. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-toolbar-back .ant-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-toolbar-back .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Primary action (Decide / Resubmit / Approve on behalf): solid white. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn-primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.24);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn-primary:not(:disabled):hover {
+  border-color: #ffffff !important;
+  background: var(--color-primary-soft, #e1f5ee) !important;
+  color: var(--erp-accent-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(10, 36, 32, 0.28);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn:disabled {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: none;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Hero: type tile + chips + title. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 22px 24px 26px;
+  background: transparent;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-type-tile {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--req-accent);
+  box-shadow: 0 10px 24px rgba(10, 36, 32, 0.24);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-hero-copy > div:first-child {
+  justify-content: flex-start;
+}
+
+/* Request #: glass mono chip. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-users-id-chip {
+  display: inline-flex;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-category {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+/* Status / resubmitted / edited tags: opaque pills so they read on the banner. */
+.erp-approvals-detail-page .erp-ap-detail-hero-card .ant-tag {
+  margin: 0;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.2);
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-hero-name {
+  color: #ffffff !important;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  text-align: left;
+}
+
+.erp-approvals-detail-page .erp-ap-detail-hero-card .erp-users-email {
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 13px;
+  text-align: left;
+}
+
+/*
+ * Current step chip in the banner. Below 1100px the approval chain drops under
+ * the content, so the banner carries the step; on wider screens the chain is
+ * beside the content and the chip would only repeat it.
+ */
+.erp-approvals-detail-page .erp-ap-detail-step-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid rgba(253, 176, 34, 0.55);
+  border-radius: 999px;
+  background: rgba(253, 176, 34, 0.18);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (min-width: 1101px) {
+  .erp-approvals-detail-page .erp-ap-detail-step-chip {
+    display: none;
+  }
+}
+
+/* Small accent rule on the left of each fact. */
+/* ── Panels in the main column (typed detail cards, sections) ── */
+
+.erp-approvals-detail-page .erp-approvals-detail-grid .erp-pro-card {
+  position: relative;
+  border: 1px solid var(--ap2-border);
+  border-radius: var(--ap2-radius);
+  background: #ffffff;
+  box-shadow: var(--ap2-panel-shadow);
+  overflow: hidden;
+}
+
+.erp-approvals-detail-page .erp-approvals-detail-grid .erp-pro-card-toolbar-title,
+.erp-approvals-detail-page .erp-employee-section-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
+/* Section cards (were DETAIL_PAGE_V2): white panel, sentence-case heading. */
+.erp-approvals-detail-page .erp-employee-section {
+  border: 1px solid var(--ap2-border);
+  border-radius: var(--ap2-radius);
+  background: #ffffff;
+  box-shadow: var(--ap2-panel-shadow);
+}
+
+.erp-approvals-detail-page .erp-pro-card .erp-employee-section {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.erp-approvals-detail-page .erp-employee-section-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--ap2-divider);
+  background: #ffffff;
+}
+
+.erp-approvals-detail-page .erp-employee-section-title {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.erp-approvals-detail-page .erp-employee-section-body {
+  padding: 16px 20px;
+}
+
+.erp-approvals-detail-page .erp-employee-section-body.erp-employee-section-body--flush,
+.erp-approvals-detail-page .erp-pro-card .erp-employee-tab-panel {
+  padding: 0;
+}
+
+.erp-approvals-detail-page .erp-users-role-tag {
+  border: 0;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
+  font-weight: 600;
+}
+
+/* ── Approval chain: accent card + connected step timeline ── */
+
+.erp-approvals-detail-page .erp-approval-chain {
+  position: relative;
+  border: 1px solid var(--ap2-border);
+  box-shadow: var(--ap2-panel-shadow);
+}
+
+.erp-approvals-detail-page .erp-approval-chain::before,
+.erp-approvals-detail-page .erp-resubmit-history::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-approvals-detail-page .erp-approval-chain-header,
+.erp-approvals-detail-page .erp-resubmit-history-header {
+  padding-top: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.05) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-approvals-detail-page .erp-approval-chain-title,
+.erp-approvals-detail-page .erp-resubmit-history-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-weight: 650;
+}
+
+.erp-approvals-detail-page .erp-approval-chain-body {
+  gap: 12px;
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card {
+  position: relative;
+  border: 1px solid var(--ap2-divider);
+  background: #ffffff;
+}
+
+/* Connector from this step's badge down to the next step. */
+.erp-approvals-detail-page .erp-approval-tier-card:not(:last-of-type)::after {
+  content: '';
+  position: absolute;
+  top: 46px;
+  bottom: -13px;
+  left: 29px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--erp-n-200);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='approved']:not(:last-of-type)::after {
+  background: var(--erp-accent);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-index {
+  position: relative;
+  z-index: 1;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--ap2-divider);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='current'] {
+  border-color: rgba(244, 123, 32, 0.45);
+  background: #fffaf3;
+  box-shadow: 0 0 0 3px rgba(244, 123, 32, 0.1);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='approved'] {
+  border-color: rgba(var(--erp-accent-rgb), 0.28);
+  background: #f6fbf9;
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='approved'] .erp-approval-tier-index {
+  background: var(--erp-accent);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='rejected'] {
+  border-color: rgba(211, 47, 47, 0.3);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card[data-state='returned'] {
+  border-color: rgba(181, 71, 8, 0.3);
+}
+
+.erp-approvals-detail-page .erp-approval-tier-card .ant-tag {
+  margin: 0;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* ── History: card + dotted vertical timeline ── */
+
+.erp-approvals-detail-page .erp-resubmit-history {
+  position: relative;
+  border: 1px solid var(--ap2-border);
+  box-shadow: var(--ap2-panel-shadow);
+}
+
+.erp-approvals-detail-page .erp-resubmit-history .erp-users-count-pill {
+  border-radius: 999px;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
+  font-weight: 650;
+}
+
+.erp-approvals-detail-page .erp-resubmit-history-list {
+  gap: 0;
+  padding: 16px 20px 18px;
+}
+
+.erp-approvals-detail-page .erp-resubmit-history-item {
+  position: relative;
+  padding: 2px 0 18px 28px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.erp-approvals-detail-page .erp-resubmit-history-item:last-child {
+  padding-bottom: 0;
+}
+
+/* Dot. */
+.erp-approvals-detail-page .erp-resubmit-history-item::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--erp-accent);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.12);
+}
+
+/* Line to the next event. */
+.erp-approvals-detail-page .erp-resubmit-history-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--erp-n-150);
+}
+
+.erp-approvals-detail-page .erp-resubmit-history-item-note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--erp-n-50);
+}
+
+@media (max-width: 640px) {
+  .erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-toolbar {
+    padding: 10px 12px;
+  }
+
+  .erp-approvals-detail-page .erp-ap-detail-hero-card .erp-employee-hero {
+    gap: 14px;
+    padding: 18px 16px 20px;
+  }
+
+  .erp-approvals-detail-page .erp-ap-detail-type-tile {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .erp-approvals-detail-page .erp-ap-detail-type-tile svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn {
+    transition: none;
+  }
+
+  .erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn-primary:not(:disabled):hover {
+    transform: none;
+  }
+}
+
 
 /* ── Overtime entries on approvals detail ── */
 
