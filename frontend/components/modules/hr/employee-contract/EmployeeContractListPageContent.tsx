@@ -1,4 +1,7 @@
 'use client';
+import '@/components/modules/hr/shared/hr-travel-v2.css';
+import '@/components/modules/users/employees-v2.css';
+import './contracts-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useMemo, useState } from 'react';
@@ -68,13 +71,17 @@ import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildEmployeeContractExportSheets } from '@/lib/utils/employee-contract-export';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
   green: { bg: '#EAF3DE', fg: '#639922' },
   amber: { bg: '#FAEEDA', fg: '#BA7517' },
   slate: { bg: '#EEF1F4', fg: '#64748B' },
 } as const;
+
+// Same list look as Employees (employees-v2.css: brand banner, list card) plus
+// contracts-v2.css. No LIST_PAGE_V2: its !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-contract-page erp-employees-v2 erp-contracts-v2 erp-hr-travel-v2';
 
 function ContractStat({
   label,
@@ -96,6 +103,7 @@ function ContractStat({
     <button
       type="button"
       className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      aria-pressed={active}
       onClick={onClick}
     >
       <span
@@ -414,7 +422,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-contract-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -423,7 +431,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-contract-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
       <ConfirmDialog
         open={Boolean(deletingContract)}
         title={t('hr.dialog.deleteContractTitle')}
@@ -461,59 +469,19 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <ContractStat
-          label={t('pages.hr.employeeContract.stats.total')}
-          value={statusCounts.all}
-          accent="teal"
-          icon={<FileTextOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        <ContractStat
-          label={t('pages.hr.employeeContract.stats.active')}
-          value={statusCounts.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'active'}
-          onClick={() => handleStatusMode('active')}
-        />
-        <ContractStat
-          label={t('pages.hr.employeeContract.stats.expiringSoon')}
-          value={statusCounts.expiringSoon}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'expiringSoon'}
-          onClick={() => handleStatusMode('expiringSoon')}
-        />
-        <ContractStat
-          label={t('pages.hr.employeeContract.stats.ended')}
-          value={statusCounts.ended}
-          accent="slate"
-          icon={<StopOutlined />}
-          active={statusMode === 'ended'}
-          onClick={() => handleStatusMode('ended')}
-        />
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-contracts-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-contracts-hero-title" className="erp-employees-hero-title">
+            {statusCounts.all === 1
+              ? t('pages.hr.employeeContract.contractCountOne')
+              : t('pages.hr.employeeContract.contractCount', {
+                  count: statusCounts.all.toLocaleString(),
+                })}
+          </h2>
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -535,6 +503,55 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
                   : undefined
               }
             />
+          </div>
+        </div>
+        {/* Status filters: click to filter, click again to show all. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <ContractStat
+            label={t('pages.hr.employeeContract.stats.active')}
+            value={statusCounts.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'active'}
+            onClick={() => handleStatusMode(statusMode === 'active' ? 'all' : 'active')}
+          />
+          <ContractStat
+            label={t('pages.hr.employeeContract.stats.expiringSoon')}
+            value={statusCounts.expiringSoon}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'expiringSoon'}
+            onClick={() => handleStatusMode(statusMode === 'expiringSoon' ? 'all' : 'expiringSoon')}
+          />
+          <ContractStat
+            label={t('pages.hr.employeeContract.stats.ended')}
+            value={statusCounts.ended}
+            accent="slate"
+            icon={<StopOutlined />}
+            active={statusMode === 'ended'}
+            onClick={() => handleStatusMode(statusMode === 'ended' ? 'all' : 'ended')}
+          />
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <FileTextOutlined />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

@@ -705,9 +705,6 @@ export default function UsersPageContent(): React.ReactNode {
                     count: userStats.totalCount.toLocaleString(),
                   })}
             </h2>
-            <p className="erp-employees-hero-subtitle">
-              {t('users.listDescription')}
-            </p>
           </div>
           <div className="erp-employees-hero-actions">
             <HrListActions

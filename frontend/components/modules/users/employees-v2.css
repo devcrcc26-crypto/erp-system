@@ -490,12 +490,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.erp-employees-v2 .erp-employees-hero-subtitle {
-  margin: 5px 0 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 13px;
-}
-
 .erp-employees-v2 .erp-employees-hero-actions {
   display: flex;
   flex-wrap: wrap;

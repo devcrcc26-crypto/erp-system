@@ -93,3 +93,53 @@
     inset 0 0 0 2px #1d9e75,
     var(--ev2-shadow);
 }
+
+/* ── Status filter tiles on the brand banner (Nov 2026) ──
+ * The banner and list card come from employees-v2.css. These tiles are
+ * toggle filters: glass at rest, brighter on hover, solid white when selected.
+ */
+.erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat {
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--active,
+.erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--active:hover {
+  border-color: #ffffff;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.24);
+}
+
+.erp-contracts-v2 .erp-employees-hero .erp-contract-stat--active .erp-users-stat-label {
+  color: var(--erp-n-600);
+}
+
+.erp-contracts-v2 .erp-employees-hero .erp-contract-stat--active .erp-users-stat-value {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat {
+    transition: none;
+  }
+
+  .erp-contracts-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat:hover {
+    transform: none;
+  }
+}
