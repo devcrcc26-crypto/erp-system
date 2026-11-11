@@ -30,8 +30,8 @@
   align-items: center;
   padding: 3px 10px;
   border-radius: 999px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
   font-weight: 500;
   line-height: 18px;
@@ -45,7 +45,7 @@
 }
 
 .erp-contracts-v2 .erp-contracts-date--strong {
-  color: #1f2937;
+  color: var(--erp-n-800);
 }
 
 .erp-contracts-v2 .erp-contracts-end {
@@ -79,7 +79,7 @@
 
 /* Stat tiles are buttons here: hover, focus and an outlined active state. */
 .erp-contracts-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-contracts-v2 .erp-users-stat.erp-contract-stat:focus-visible {

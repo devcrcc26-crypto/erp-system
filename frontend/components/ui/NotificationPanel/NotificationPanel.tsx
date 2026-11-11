@@ -135,7 +135,7 @@ export default function NotificationPanel(): React.ReactNode {
         </div>
       ) : (
         <div className="erp-hd-list max-h-[min(440px,60vh)] overflow-y-auto">
-          <div className="divide-y divide-[#eef1f4]">
+          <div className="divide-y divide-slate-150">
             {notifications.map((notification) => (
               <NotificationInboxItem
                 key={notification.id}

@@ -580,7 +580,7 @@ export default function ConsumablesRequisitionDetailPageContent({
                   <p className="erp-users-stat-label m-0">
                     {t('hr.form.purpose')}
                   </p>
-                  <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
+                  <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-900">
                     {requisition.purpose}
                   </p>
                 </div>

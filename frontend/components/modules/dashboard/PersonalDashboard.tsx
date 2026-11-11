@@ -66,7 +66,7 @@ export default function PersonalDashboard({
   if (loading) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -165,7 +165,7 @@ export default function PersonalDashboard({
           {recentLeave.length === 0 ? (
             <p className="erp-users-cell-sub m-0">{t(`${PERSONAL}.noLeave`)}</p>
           ) : (
-            <div className="divide-y divide-[#eef1f4]">
+            <div className="divide-y divide-slate-150">
               {recentLeave.map((req) => (
                 <Link
                   key={req.id}
@@ -212,7 +212,7 @@ export default function PersonalDashboard({
               {t('profile.noUpcomingHolidays')}
             </p>
           ) : (
-            <div className="divide-y divide-[#eef1f4]">
+            <div className="divide-y divide-slate-150">
               {holidays.slice(0, 8).map((holiday) => {
                 const primary =
                   locale === 'zh' && holiday.nameZh

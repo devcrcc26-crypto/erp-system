@@ -8,11 +8,11 @@
   --dv2-primary-strong: var(--erp-accent-hover);
   --dv2-primary-tint: rgba(var(--erp-accent-rgb),  0.1);
   --dv2-surface: #ffffff;
-  --dv2-subtle: #f7f8fa;
-  --dv2-text: #1f2937;
-  --dv2-text-strong: #0f172a;
-  --dv2-muted: #4b5563;
-  --dv2-divider: #eef1f4;
+  --dv2-subtle: var(--erp-n-50);
+  --dv2-text: var(--erp-n-800);
+  --dv2-text-strong: var(--erp-n-900);
+  --dv2-muted: var(--erp-n-600);
+  --dv2-divider: var(--erp-n-150);
   --dv2-urgent: #b42318;
   --dv2-warn: #b54708;
   --dv2-warn-tint: #fffaeb;
@@ -99,7 +99,7 @@
   gap: 8px;
   min-height: 40px;
   padding: 0 14px 0 11px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--erp-n-200);
   border-radius: 11px;
   background: var(--dv2-surface);
   color: var(--dv2-text-strong);
@@ -843,9 +843,9 @@ a.erp-dashboard-v2 .dv2-kpi,
   justify-content: center;
   min-height: 72px;
   padding: 14px 16px;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--erp-n-200);
   border-radius: 12px;
-  background: #fafbfc;
+  background: var(--erp-n-25);
   color: var(--dv2-muted);
   font-size: 13px;
   text-align: center;

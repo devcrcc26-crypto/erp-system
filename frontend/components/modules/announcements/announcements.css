@@ -15,11 +15,11 @@
   --ann-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --ann-muted: #4b5563;
-  --ann-strong: #0f172a;
-  --ann-body: #1f2937;
-  --ann-divider: #eef1f4;
-  --ann-subtle: #f7f8fa;
+  --ann-muted: var(--erp-n-600);
+  --ann-strong: var(--erp-n-900);
+  --ann-body: var(--erp-n-800);
+  --ann-divider: var(--erp-n-150);
+  --ann-subtle: var(--erp-n-50);
   --ann-tint: rgba(29, 158, 117, 0.1);
   --ann-primary: #1d9e75;
   --ann-primary-strong: #0f6e56;
@@ -221,8 +221,8 @@
 }
 
 .erp-ann-tag--muted {
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
 }
 
 .erp-ann-tag--ok {
@@ -374,7 +374,7 @@
 /* ── Markdown body (rendered by AnnouncementMarkdown) ── */
 
 .erp-markdown {
-  color: var(--ann-body, #1f2937);
+  color: var(--ann-body, var(--erp-n-800));
   font-size: 15px;
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -401,7 +401,7 @@
 .erp-markdown h4,
 .erp-markdown h5 {
   margin: 20px 0 8px;
-  color: var(--ann-strong, #0f172a);
+  color: var(--ann-strong, var(--erp-n-900));
   font-weight: 600;
   line-height: 1.35;
 }
@@ -447,14 +447,14 @@
   padding: 8px 14px;
   border-left: 3px solid #1d9e75;
   border-radius: 0 8px 8px 0;
-  background: #f7f8fa;
-  color: #374151;
+  background: var(--erp-n-50);
+  color: var(--erp-n-700);
 }
 
 .erp-markdown code {
   padding: 1px 6px;
   border-radius: 6px;
-  background: #f2f4f7;
+  background: var(--erp-n-100);
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
@@ -463,7 +463,7 @@
   overflow-x: auto;
   padding: 12px 14px;
   border-radius: 10px;
-  background: #f2f4f7;
+  background: var(--erp-n-100);
 }
 
 .erp-markdown pre code {
@@ -474,7 +474,7 @@
 .erp-markdown hr {
   margin: 18px 0;
   border: 0;
-  border-top: 1px solid #eef1f4;
+  border-top: 1px solid var(--erp-n-150);
 }
 
 /* ── Urgent banner (top of every page) ── */
@@ -638,7 +638,7 @@
   overflow: hidden;
   height: 6px;
   border-radius: 999px;
-  background: #eef1f4;
+  background: var(--erp-n-150);
 }
 
 .erp-ann-progress-fill {
@@ -649,7 +649,7 @@
 
 .erp-ann-progress-text {
   margin: 4px 0 0;
-  color: var(--ann-muted, #4b5563);
+  color: var(--ann-muted, var(--erp-n-600));
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -799,7 +799,7 @@
 .erp-ann-editor-preview {
   min-height: 220px;
   padding: 12px 14px;
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--erp-n-200);
   border-radius: 10px;
   background: #ffffff;
 }

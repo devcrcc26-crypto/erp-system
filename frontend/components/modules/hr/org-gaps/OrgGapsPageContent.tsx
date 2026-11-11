@@ -427,7 +427,7 @@ export default function OrgGapsPageContent(): React.ReactNode {
               />
             </div>
           ) : (
-            <ul className="m-0 list-none divide-y divide-[#eef1f4] px-0 py-0">
+            <ul className="m-0 list-none divide-y divide-slate-150 px-0 py-0">
               {supervisorNames.map((name) => (
                 <li
                   key={name}

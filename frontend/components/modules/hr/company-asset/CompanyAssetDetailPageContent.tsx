@@ -655,7 +655,7 @@ export default function CompanyAssetDetailPageContent({
                 <div className="flex items-start gap-2">
                   <Package
                     size={16}
-                    className="mt-0.5 shrink-0 text-[#6B7280]"
+                    className="mt-0.5 shrink-0 text-slate-500"
                     strokeWidth={1.75}
                   />
                   <span>{asset.serialNumber}</span>
@@ -759,7 +759,7 @@ export default function CompanyAssetDetailPageContent({
                 {pastAssignments.map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-4 sm:px-4"
+                    className="rounded-xl border border-slate-200 bg-slate-25 px-3 py-4 sm:px-4"
                   >
                     <div className="mb-4 flex flex-wrap items-center gap-2">
                       <span className="erp-users-cell-strong">
@@ -809,7 +809,7 @@ export default function CompanyAssetDetailPageContent({
         }}
       >
         <div className="mt-3 flex flex-col gap-4">
-          <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-25 px-3 py-3">
             <p className="erp-users-stat-label mb-1">
               {t('hr.assetDialog.statusCurrentLabel')}
             </p>
@@ -950,7 +950,7 @@ export default function CompanyAssetDetailPageContent({
       >
         <div className="mt-3 flex flex-col gap-4">
           {activeAssignment ? (
-            <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-25 px-3 py-3">
               <p className="erp-users-stat-label mb-1">
                 {t('hr.assetLabels.assignedTo')}
               </p>

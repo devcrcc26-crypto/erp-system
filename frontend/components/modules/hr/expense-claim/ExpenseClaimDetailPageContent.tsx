@@ -901,7 +901,7 @@ export default function ExpenseClaimDetailPageContent({
               title={t('hr.form.description')}
               className="min-w-0"
             >
-              <p className="m-0 max-w-2xl whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
+              <p className="m-0 max-w-2xl whitespace-pre-wrap break-words leading-relaxed text-[13px] text-slate-900">
                 {claim.description}
               </p>
             </DetailSection>

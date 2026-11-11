@@ -506,9 +506,9 @@ function SectionIndex({
   return (
     <nav
       aria-label={title}
-      className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EEF1F4] pt-4"
+      className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-150 pt-4"
     >
-      <span className="mr-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
+      <span className="mr-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-slate-400">
         {title}
       </span>
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
@@ -516,7 +516,7 @@ function SectionIndex({
           <li key={section.id}>
             <a
               href={`#${section.id}`}
-              className="inline-flex rounded-full border border-[#E8EBEF] bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[var(--erp-accent)] hover:!text-[color:var(--erp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--erp-accent)]"
+              className="inline-flex rounded-full border border-slate-200 bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[var(--erp-accent)] hover:!text-[color:var(--erp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--erp-accent)]"
             >
               {plainText(section.text)}
             </a>
@@ -564,7 +564,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
       return <p className="mb-3">{inline(block.text)}</p>;
     case 'label':
       return (
-        <p className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#94a3b8]">
+        <p className="mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.04em] text-slate-400">
           {inline(block.text)}
         </p>
       );
@@ -578,7 +578,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
         </p>
       );
     case 'hr':
-      return <hr className="my-8 border-[#EEF1F4]" />;
+      return <hr className="my-8 border-slate-150" />;
     case 'list':
       return block.ordered ? (
         <ol className="mb-5 list-none space-y-3 p-0">
@@ -609,14 +609,14 @@ function BlockView({ block }: { block: Block }): ReactNode {
       );
     case 'table':
       return (
-        <div className="my-4 overflow-x-auto rounded-lg border border-[#E8EBEF]">
+        <div className="my-4 overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full border-collapse text-[13px] leading-6">
             <thead>
               <tr>
                 {block.headers.map((header, index) => (
                   <th
                     key={index}
-                    className="border-b border-[#E8EBEF] bg-[#FBFCFD] px-3 py-2 text-left font-semibold text-[rgba(0,0,0,0.65)]"
+                    className="border-b border-slate-200 bg-slate-25 px-3 py-2 text-left font-semibold text-[rgba(0,0,0,0.65)]"
                   >
                     {inline(header)}
                   </th>
@@ -629,7 +629,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
                   {row.map((cell, cellIndex) => (
                     <td
                       key={cellIndex}
-                      className={`border-b border-[#EEF1F4] px-3 py-2.5 align-top ${
+                      className={`border-b border-slate-150 px-3 py-2.5 align-top ${
                         cellIndex === 0
                           ? 'min-w-[140px] font-medium text-[rgba(0,0,0,0.88)]'
                           : ''

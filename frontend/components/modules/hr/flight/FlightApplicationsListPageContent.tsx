@@ -286,7 +286,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">
               {row.originCity}, {row.originCountry}
-              <span className="mx-1 text-[#9ca3af]">→</span>
+              <span className="mx-1 text-slate-400">→</span>
               {row.destination}
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
@@ -420,7 +420,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   if (listQuery.isLoading && !listQuery.data) {
     return (
       <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-flight-applications-page ${LIST_PAGE_V2}`}>
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>

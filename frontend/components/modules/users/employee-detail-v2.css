@@ -46,8 +46,8 @@
   gap: 6px;
   padding: 3px 10px 3px 8px;
   border-radius: 999px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
@@ -132,7 +132,7 @@
   height: 8px;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 2px solid #94a3b8;
+  border: 2px solid var(--erp-n-400);
   background: transparent;
 }
 

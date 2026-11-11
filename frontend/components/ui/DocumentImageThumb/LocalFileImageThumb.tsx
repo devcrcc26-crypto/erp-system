@@ -34,7 +34,7 @@ export default function LocalFileImageThumb({
   if (!file || !url) {
     const placeholder = (
       <span
-        className="inline-flex items-center justify-center rounded-lg border border-[#e8ebef] bg-[#f8f9fb] text-[#9AA4B2]"
+        className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400"
         style={{ width: size, height: size }}
         aria-label={emptyLabel}
       >

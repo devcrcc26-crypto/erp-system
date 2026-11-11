@@ -300,9 +300,9 @@ export function RecentActivity({
             <Link
               key={`${item.type}-${item.date}-${index}`}
               href={item.link}
-              className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-2.5 no-underline transition-colors last:border-0 hover:bg-[#f8fafc]"
+              className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-2.5 no-underline transition-colors last:border-0 hover:bg-slate-50"
             >
-              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#F1F5F9]">
+              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                 <span className="text-xs text-[var(--color-text-secondary)]">
                   {ACTIVITY_TYPE_ICON[item.type] ?? <BellOutlined />}
                 </span>

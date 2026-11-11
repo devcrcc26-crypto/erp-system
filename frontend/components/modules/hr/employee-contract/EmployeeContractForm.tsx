@@ -267,7 +267,7 @@ function RenewalLeavePreviewCard({
           {intro}
         </p>
         <div
-          className="flex flex-col gap-2 rounded-xl border border-[#e8ebef] bg-[#f8f9fb] p-4"
+          className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4"
           aria-live="polite"
         >
           {!preview.alreadyOpen ? (
@@ -957,7 +957,7 @@ export default function EmployeeContractForm({
             </div>
 
             <div
-              className="mt-4 rounded-xl border border-[#e8ebef] bg-[#f8f9fb] p-4"
+              className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
               aria-live="polite"
             >
               <div className="mb-3 flex items-center justify-between gap-2">
@@ -1030,7 +1030,7 @@ export default function EmployeeContractForm({
                 {existingDocuments.map((doc) => (
                   <li
                     key={doc.id}
-                    className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
                   >
                     <ProfileFileTypeIcon
                       name={doc.name}
@@ -1209,7 +1209,7 @@ export default function EmployeeContractForm({
                     ? existingDocuments.map((doc) => (
                         <li
                           key={doc.id}
-                          className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
                         >
                           <ProfileFileTypeIcon
                             name={doc.name}
@@ -1228,7 +1228,7 @@ export default function EmployeeContractForm({
                   {selectedFiles.map((file) => (
                     <li
                       key={`${file.name}-${file.size}`}
-                      className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"
                     >
                       <ProfileFileTypeIcon
                         name={file.name}

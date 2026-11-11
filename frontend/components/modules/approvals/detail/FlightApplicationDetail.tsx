@@ -141,7 +141,7 @@ export default function FlightApplicationDetail({
           ticketClassLabel={formatTicketClass(application.ticketClass, t)}
           passengerCount={application.passengerCount}
         />
-        <div className="border-t border-[#eef1f4]">
+        <div className="border-t border-slate-150">
           <FlightCurrentStepBanner application={application} embedded />
         </div>
       </div>

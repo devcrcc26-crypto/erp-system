@@ -12,12 +12,12 @@
   --ev2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --ev2-muted: #4b5563;
-  --ev2-strong: #0f172a;
-  --ev2-body: #1f2937;
-  --ev2-divider: #eef1f4;
-  --ev2-subtle: #f7f8fa;
-  --ev2-tile: #f7f8fa;
+  --ev2-muted: var(--erp-n-600);
+  --ev2-strong: var(--erp-n-900);
+  --ev2-body: var(--erp-n-800);
+  --ev2-divider: var(--erp-n-150);
+  --ev2-subtle: var(--erp-n-50);
+  --ev2-tile: var(--erp-n-50);
   --ev2-tint: rgba(29, 158, 117, 0.1);
   --ev2-primary: #1d9e75;
   --ev2-primary-strong: #0f6e56;
@@ -78,7 +78,7 @@
 }
 
 .erp-evaluation-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-evaluation-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -184,8 +184,8 @@
 .erp-evaluation-v2 .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
   padding: 2px 8px;
   font-variant-numeric: tabular-nums;
@@ -281,7 +281,7 @@
 }
 
 .erp-evaluation-v2 .erp-table-row-actions .ant-btn:hover {
-  background: #e9edf1 !important;
+  background: var(--erp-n-200) !important;
 }
 
 @media (hover: none) {
@@ -644,11 +644,11 @@
 
 .erp-evaluation-modal {
   --ev2-radius: 16px;
-  --ev2-muted: #4b5563;
-  --ev2-strong: #0f172a;
-  --ev2-body: #1f2937;
-  --ev2-divider: #eef1f4;
-  --ev2-subtle: #f7f8fa;
+  --ev2-muted: var(--erp-n-600);
+  --ev2-strong: var(--erp-n-900);
+  --ev2-body: var(--erp-n-800);
+  --ev2-divider: var(--erp-n-150);
+  --ev2-subtle: var(--erp-n-50);
   --ev2-primary: #1d9e75;
   --ev2-primary-strong: #0f6e56;
 }
@@ -703,13 +703,13 @@
 }
 
 .erp-evaluation-modal .ant-modal-footer .ant-btn-primary {
-  background: var(--ev2-primary);
-  border-color: var(--ev2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-evaluation-modal .ant-modal-footer .ant-btn-primary:hover {
-  background: var(--ev2-primary-strong) !important;
-  border-color: var(--ev2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-evaluation-modal .erp-evaluation-modal-preview {
@@ -745,11 +745,11 @@
 
 .erp-evaluation-drawer {
   --ev2-radius: 16px;
-  --ev2-muted: #4b5563;
-  --ev2-strong: #0f172a;
-  --ev2-body: #1f2937;
-  --ev2-divider: #eef1f4;
-  --ev2-subtle: #f7f8fa;
+  --ev2-muted: var(--erp-n-600);
+  --ev2-strong: var(--erp-n-900);
+  --ev2-body: var(--erp-n-800);
+  --ev2-divider: var(--erp-n-150);
+  --ev2-subtle: var(--erp-n-50);
   --ev2-primary: #1d9e75;
   --ev2-primary-strong: #0f6e56;
 }
@@ -780,13 +780,13 @@
 }
 
 .erp-evaluation-drawer .erp-evaluation-drawer-footer .ant-btn-primary {
-  background: var(--ev2-primary);
-  border-color: var(--ev2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-evaluation-drawer .erp-evaluation-drawer-footer .ant-btn-primary:hover {
-  background: var(--ev2-primary-strong) !important;
-  border-color: var(--ev2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-evaluation-template-form-stack {
@@ -798,7 +798,7 @@
 .erp-evaluation-template-form-field label {
   display: block;
   margin-bottom: 6px;
-  color: var(--ev2-body, #1f2937);
+  color: var(--ev2-body, var(--erp-n-800));
   font-size: 13px;
   font-weight: 500;
 }
@@ -822,7 +822,7 @@
 
 .erp-evaluation-template-form-sections-head h4 {
   margin: 0;
-  color: var(--ev2-strong, #0f172a);
+  color: var(--ev2-strong, var(--erp-n-900));
   font-size: 14px;
   font-weight: 600;
 }
@@ -844,7 +844,7 @@
   padding: 16px;
   border: 0;
   border-radius: 12px;
-  background: var(--ev2-subtle, #f7f8fa);
+  background: var(--ev2-subtle, var(--erp-n-50));
 }
 
 .erp-evaluation-template-form-section-row,

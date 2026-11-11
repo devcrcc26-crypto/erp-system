@@ -71,8 +71,8 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
         key: 'name',
         render: (_, row) => (
           <div>
-            <p className="m-0 font-semibold text-[#0f172a]">{formatUserName(row.user)}</p>
-            <p className="m-0 text-xs text-[#4b5563]">{row.user.employeeId ?? '-'}</p>
+            <p className="m-0 font-semibold text-slate-900">{formatUserName(row.user)}</p>
+            <p className="m-0 text-xs text-slate-600">{row.user.employeeId ?? '-'}</p>
           </div>
         ),
       },

@@ -19,13 +19,13 @@
 }
 
 .fm-page {
-  --fm-text: #0f172a;
-  --fm-text-2: #475569;
+  --fm-text: var(--erp-n-900);
+  --fm-text-2: var(--erp-n-600);
   --fm-text-3: #556274;
-  --fm-border: #e2e8f0;
-  --fm-border-strong: #cbd5e1;
+  --fm-border: var(--erp-n-200);
+  --fm-border-strong: var(--erp-n-300);
   --fm-surface: #ffffff;
-  --fm-surface-2: #f8fafc;
+  --fm-surface-2: var(--erp-n-50);
   --fm-accent: #0f6e56;
   --fm-accent-solid: #1d9e75;
   --fm-accent-bg: #e8f7f1;

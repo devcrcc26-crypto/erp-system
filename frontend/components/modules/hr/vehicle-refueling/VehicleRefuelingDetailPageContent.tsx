@@ -389,7 +389,7 @@ export default function VehicleRefuelingDetailPageContent({
                   <div className="flex items-start gap-2">
                     <Fuel
                       size={16}
-                      className="mt-0.5 shrink-0 text-[#6B7280]"
+                      className="mt-0.5 shrink-0 text-slate-500"
                       strokeWidth={1.75}
                     />
                     <span>

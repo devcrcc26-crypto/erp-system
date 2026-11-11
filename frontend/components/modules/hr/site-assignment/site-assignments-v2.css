@@ -7,11 +7,11 @@
   --sav2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --sav2-muted: #4b5563;
-  --sav2-strong: #0f172a;
-  --sav2-body: #1f2937;
-  --sav2-divider: #eef1f4;
-  --sav2-subtle: #f7f8fa;
+  --sav2-muted: var(--erp-n-600);
+  --sav2-strong: var(--erp-n-900);
+  --sav2-body: var(--erp-n-800);
+  --sav2-divider: var(--erp-n-150);
+  --sav2-subtle: var(--erp-n-50);
   --sav2-tint: rgba(var(--erp-accent-rgb),  0.1);
   --sav2-primary: var(--erp-accent);
   --sav2-primary-strong: var(--erp-accent-hover);
@@ -48,7 +48,7 @@
 }
 
 .erp-site-assignments-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-site-assignments-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -171,7 +171,7 @@
   .ant-table-tbody
   > tr:hover
   > td {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-site-assignments-v2 .erp-users-name {
@@ -192,8 +192,8 @@
 .erp-site-assignments-v2 .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
 }
 

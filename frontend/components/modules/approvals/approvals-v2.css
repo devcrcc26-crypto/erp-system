@@ -12,11 +12,11 @@
   --ap2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --ap2-muted: #4b5563;
-  --ap2-strong: #0f172a;
-  --ap2-body: #1f2937;
-  --ap2-divider: #eef1f4;
-  --ap2-subtle: #f7f8fa;
+  --ap2-muted: var(--erp-n-600);
+  --ap2-strong: var(--erp-n-900);
+  --ap2-body: var(--erp-n-800);
+  --ap2-divider: var(--erp-n-150);
+  --ap2-subtle: var(--erp-n-50);
   --ap2-tint: rgba(var(--erp-accent-rgb),  0.1);
   --ap2-primary: var(--erp-accent);
   --ap2-primary-strong: var(--erp-accent-hover);
@@ -117,7 +117,7 @@
 }
 
 .erp-approvals-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-approvals-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -202,7 +202,7 @@
 }
 
 .erp-approvals-v2 .ant-table-thead > tr > th {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
   color: var(--ap2-muted) !important;
   font-size: 12px !important;
   letter-spacing: 0.06em;
@@ -218,7 +218,7 @@
 }
 
 .erp-approvals-v2 .ant-table-tbody > tr.ant-table-row:hover > td {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
 }
 
 .erp-approvals-v2 .ant-table-pagination.ant-pagination {
@@ -233,8 +233,8 @@
 .erp-approvals-v2 .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
 }
 
 .erp-approvals-v2 .erp-users-role-tag {
@@ -309,12 +309,12 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 20px 12px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
 }
 
 .erp-approval-chain-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: normal;
@@ -334,7 +334,7 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f7f8fa;
+  background: var(--erp-n-50);
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -364,7 +364,7 @@
   justify-content: center;
   border-radius: 10px;
   background: #ffffff;
-  color: #4b5563;
+  color: var(--erp-n-600);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
@@ -398,21 +398,21 @@
 
 .erp-approval-tier-label {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 13px;
   font-weight: 600;
 }
 
 .erp-approval-tier-meta {
   margin: 4px 0 0;
-  color: #4b5563;
+  color: var(--erp-n-600);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .erp-approval-tier-comment {
   margin: 8px 0 0;
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -430,7 +430,7 @@
 
 .erp-approval-condition-text {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -438,7 +438,7 @@
 .erp-approval-chain-footer {
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid #eef1f4;
+  border-top: 1px solid var(--erp-n-150);
 }
 
 /* ── Overtime entries on approvals detail ── */
@@ -522,7 +522,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px 20px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
   background: #fffaeb;
 }
 
@@ -541,14 +541,14 @@
 
 .erp-resubmit-card-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 15px;
   font-weight: 600;
 }
 
 .erp-resubmit-card-subtitle {
   margin: 4px 0 0;
-  color: #4b5563;
+  color: var(--erp-n-600);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -577,7 +577,7 @@
 
 .erp-resubmit-return-note-text {
   margin: 6px 0 0;
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -591,7 +591,7 @@
 
 .erp-resubmit-field-label {
   margin: 0;
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   font-weight: 500;
 }
@@ -616,15 +616,15 @@
 }
 
 .erp-resubmit-submit.ant-btn-primary {
-  background: var(--erp-accent);
-  border-color: var(--erp-accent);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
   height: 38px;
   padding-inline: 18px;
 }
 
 .erp-resubmit-submit.ant-btn-primary:hover {
-  background: var(--erp-accent-hover) !important;
-  border-color: var(--erp-accent-hover) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-resubmit-history {
@@ -644,12 +644,12 @@
   align-items: center;
   gap: 10px;
   padding: 16px 20px 12px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
 }
 
 .erp-resubmit-history-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 15px;
   font-weight: 600;
 }
@@ -666,26 +666,26 @@
 .erp-resubmit-history-item {
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f7f8fa;
+  background: var(--erp-n-50);
 }
 
 .erp-resubmit-history-item-label {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 13px;
   font-weight: 600;
 }
 
 .erp-resubmit-history-item-meta {
   margin: 4px 0 0;
-  color: #4b5563;
+  color: var(--erp-n-600);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .erp-resubmit-history-item-note {
   margin: 8px 0 0;
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -699,11 +699,11 @@
 
 .erp-approval-modal {
   --ap2-radius: 16px;
-  --ap2-muted: #4b5563;
-  --ap2-strong: #0f172a;
-  --ap2-body: #1f2937;
-  --ap2-divider: #eef1f4;
-  --ap2-subtle: #f7f8fa;
+  --ap2-muted: var(--erp-n-600);
+  --ap2-strong: var(--erp-n-900);
+  --ap2-body: var(--erp-n-800);
+  --ap2-divider: var(--erp-n-150);
+  --ap2-subtle: var(--erp-n-50);
   --ap2-primary: var(--erp-accent);
   --ap2-primary-strong: var(--erp-accent-hover);
 }
@@ -763,21 +763,21 @@
 }
 
 .erp-approval-modal .ant-modal-footer .ant-btn-primary {
-  background: var(--ap2-primary);
-  border-color: var(--ap2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-approval-modal .ant-modal-footer .ant-btn-primary:hover {
-  background: var(--ap2-primary-strong) !important;
-  border-color: var(--ap2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
-  background: var(--ap2-primary);
-  border-color: var(--ap2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous):hover {
-  background: var(--ap2-primary-strong) !important;
-  border-color: var(--ap2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }

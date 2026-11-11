@@ -161,16 +161,16 @@ export default function FieldMovementDetail({
             return (
               <div
                 key={key}
-                className="border-b border-[#E5E7EB] px-3 py-3 last:border-b-0"
+                className="border-b border-slate-200 px-3 py-3 last:border-b-0"
               >
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-[#1A1A1A]">
+                  <span className="text-sm font-semibold text-slate-900">
                     {REASON_LABELS[reason] ?? reason}
                     {destination ? ` - ${destination}` : ''}
                   </span>
                   <Tag>{entries.length} day(s)</Tag>
                 </div>
-                <p className="m-0 mb-2 text-sm text-[#64748b]">
+                <p className="m-0 mb-2 text-sm text-slate-500">
                   {formatDateList(entries.map((entry) => entry.date))}
                 </p>
                 {sample?.departureTime || sample?.returnTime || sample?.notes ? (
@@ -209,7 +209,7 @@ export default function FieldMovementDetail({
       </SectionCard>
 
       <SectionCard title={t('hr.table.notes') || 'Overall notes'}>
-        <p className="m-0 text-sm text-[#6B7280]">
+        <p className="m-0 text-sm text-slate-500">
           {log.notes?.trim() || '-'}
         </p>
       </SectionCard>

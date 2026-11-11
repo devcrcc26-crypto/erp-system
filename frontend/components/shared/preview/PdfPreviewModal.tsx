@@ -91,7 +91,7 @@ export default function PdfPreviewModal({
         body: { padding: 0 },
       }}
     >
-      <header className="flex items-center gap-3 border-b border-[#eef1f4] bg-white px-4 py-3 sm:px-5">
+      <header className="flex items-center gap-3 border-b border-slate-150 bg-white px-4 py-3 sm:px-5">
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
           style={{ background: PDF_SOFT, color: PDF_ACCENT }}
@@ -130,7 +130,7 @@ export default function PdfPreviewModal({
           >
             <span className="hidden sm:inline">{t('common.download')}</span>
           </Button>
-          <span className="mx-1 h-6 w-px bg-[#e8ebef]" aria-hidden />
+          <span className="mx-1 h-6 w-px bg-slate-200" aria-hidden />
           <Tooltip title={t('common.closePreview')}>
             <Button
               type="text"
@@ -148,7 +148,7 @@ export default function PdfPreviewModal({
         style={{ height: 'min(80vh, calc(100dvh - 120px))' }}
       >
         {canRender ? (
-          <div className="relative h-full overflow-hidden rounded-[10px] border border-[#e2e8f0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <div className="relative h-full overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             {frameLoading ? (
               <div className="absolute inset-0 z-[1] flex items-center justify-center bg-white">
                 <Spin size="large" />
@@ -164,7 +164,7 @@ export default function PdfPreviewModal({
           </div>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <div className="flex max-w-sm flex-col items-center gap-4 rounded-[14px] border border-[#e8ebef] bg-white px-8 py-10 text-center shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+            <div className="flex max-w-sm flex-col items-center gap-4 rounded-[14px] border border-slate-200 bg-white px-8 py-10 text-center shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
               <span
                 className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px]"
                 style={{ background: PDF_SOFT, color: PDF_ACCENT }}

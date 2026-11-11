@@ -18,12 +18,12 @@
   --pr-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --pr-muted: #4b5563;
-  --pr-strong: #0f172a;
-  --pr-body: #1f2937;
-  --pr-divider: #eef1f4;
-  --pr-subtle: #f7f8fa;
-  --pr-tile: #f7f8fa;
+  --pr-muted: var(--erp-n-600);
+  --pr-strong: var(--erp-n-900);
+  --pr-body: var(--erp-n-800);
+  --pr-divider: var(--erp-n-150);
+  --pr-subtle: var(--erp-n-50);
+  --pr-tile: var(--erp-n-50);
   --pr-tint: rgba(var(--erp-accent-rgb),  0.1);
   --pr-primary: var(--erp-accent);
   --pr-primary-strong: var(--erp-accent-hover);
@@ -67,7 +67,7 @@
 }
 
 .erp-payroll-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-payroll-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -512,7 +512,7 @@
 
 .erp-payroll-entries-table {
   --pr-net-bg: #f0faf6;
-  --pr-group-line: #e4e7ec;
+  --pr-group-line: var(--erp-n-200);
 }
 
 /* Header: grouped two-row header, opaque so rows don't show through when stuck. */
@@ -609,7 +609,7 @@
   height: 27px;
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px dashed #d0d5dd;
+  border-top: 1px dashed var(--erp-n-300);
   color: var(--pr-strong);
   font-size: 13px;
 }
@@ -660,7 +660,7 @@
 .erp-payroll-entries .ant-table-summary > tr > td,
 .erp-payroll-entries .ant-table-summary .ant-table-cell {
   padding: 12px !important;
-  border-top: 2px solid var(--pr-group-line, #e4e7ec);
+  border-top: 2px solid var(--pr-group-line, var(--erp-n-200));
   background: var(--pr-subtle) !important;
   color: var(--pr-strong);
 }
@@ -811,7 +811,7 @@
 
 .erp-payroll-ot-period-label {
   margin: 0;
-  color: var(--pr-muted, #6b7280);
+  color: var(--pr-muted, var(--erp-n-500));
   font-size: 12px;
   font-weight: 600;
 }
@@ -842,7 +842,7 @@
 .erp-payroll-ot-lines li.erp-payroll-ot-total {
   margin-top: 2px;
   padding-top: 6px;
-  border-top: 1px solid var(--pr-border, #e5e7eb);
+  border-top: 1px solid var(--pr-border, var(--erp-n-200));
   font-weight: 600;
 }
 
@@ -954,11 +954,11 @@
   --pr-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --pr-muted: #4b5563;
-  --pr-strong: #0f172a;
-  --pr-body: #1f2937;
-  --pr-divider: #eef1f4;
-  --pr-subtle: #f7f8fa;
+  --pr-muted: var(--erp-n-600);
+  --pr-strong: var(--erp-n-900);
+  --pr-body: var(--erp-n-800);
+  --pr-divider: var(--erp-n-150);
+  --pr-subtle: var(--erp-n-50);
   --pr-tint: rgba(var(--erp-accent-rgb),  0.1);
   --pr-primary: var(--erp-accent);
   --pr-primary-strong: var(--erp-accent-hover);
@@ -1142,7 +1142,7 @@
 .erp-payroll-settings-section-body .ant-input,
 .erp-payroll-settings-section-body .ant-input-affix-wrapper {
   min-height: 38px;
-  border-color: #e4e7ec;
+  border-color: var(--erp-n-200);
   border-radius: 10px;
   color: var(--pr-strong);
 }
@@ -1266,8 +1266,8 @@
 }
 
 .erp-payslip-state--pending {
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
 }
 
 .erp-payslips-v2 .erp-payslip-actions {

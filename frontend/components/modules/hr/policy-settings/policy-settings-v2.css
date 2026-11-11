@@ -8,11 +8,11 @@
   --psv2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --psv2-muted: #4b5563;
-  --psv2-strong: #0f172a;
-  --psv2-body: #1f2937;
-  --psv2-divider: #eef1f4;
-  --psv2-subtle: #f7f8fa;
+  --psv2-muted: var(--erp-n-600);
+  --psv2-strong: var(--erp-n-900);
+  --psv2-body: var(--erp-n-800);
+  --psv2-divider: var(--erp-n-150);
+  --psv2-subtle: var(--erp-n-50);
   --psv2-tint: rgba(29, 158, 117, 0.1);
   --psv2-primary: #1d9e75;
   --psv2-primary-strong: #0f6e56;
@@ -81,8 +81,8 @@
   justify-content: center;
   padding: 0 6px;
   border-radius: 999px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -137,8 +137,8 @@
 }
 
 .erp-policy-settings-v2 .erp-policy-tag--default {
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
 }
 
 .erp-policy-settings-v2 .erp-policy-tag--admin {
@@ -152,7 +152,7 @@
 }
 
 .erp-policy-settings-v2 .erp-policy-tag--locked {
-  background: #f1f3f5;
+  background: var(--erp-n-100);
   color: #5f6b7a;
 }
 
@@ -185,11 +185,11 @@
 
 .erp-policy-modal {
   --psv2-radius: 16px;
-  --psv2-muted: #4b5563;
-  --psv2-strong: #0f172a;
-  --psv2-body: #1f2937;
-  --psv2-divider: #eef1f4;
-  --psv2-subtle: #f7f8fa;
+  --psv2-muted: var(--erp-n-600);
+  --psv2-strong: var(--erp-n-900);
+  --psv2-body: var(--erp-n-800);
+  --psv2-divider: var(--erp-n-150);
+  --psv2-subtle: var(--erp-n-50);
   --psv2-primary: #1d9e75;
   --psv2-primary-strong: #0f6e56;
 }
@@ -272,13 +272,13 @@
 }
 
 .erp-policy-modal .ant-modal-footer .ant-btn-primary {
-  background: var(--psv2-primary);
-  border-color: var(--psv2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-policy-modal .ant-modal-footer .ant-btn-primary:hover {
-  background: var(--psv2-primary-strong) !important;
-  border-color: var(--psv2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-policy-modal .erp-policy-history-empty {
@@ -297,21 +297,21 @@
 }
 
 .erp-policy-modal .erp-policy-history-table .ant-table-thead > tr > th {
-  background: #f7f8fa !important;
-  color: #4b5563;
+  background: var(--erp-n-50) !important;
+  color: var(--erp-n-600);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid #eef1f4 !important;
+  border-bottom: 1px solid var(--erp-n-150) !important;
 }
 
 .erp-policy-modal .erp-policy-history-table .ant-table-tbody > tr > td {
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
   font-size: 13px;
 }
 
 .erp-policy-modal .erp-policy-history-table .ant-table-tbody > tr:hover > td {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
 }
 
 .erp-policy-modal .erp-policy-history-change {

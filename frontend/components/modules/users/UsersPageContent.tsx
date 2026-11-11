@@ -457,7 +457,7 @@ export default function UsersPageContent(): React.ReactNode {
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
       <div className={PAGE_ROOT}>
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>

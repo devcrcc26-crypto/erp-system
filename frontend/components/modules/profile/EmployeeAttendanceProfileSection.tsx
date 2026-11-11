@@ -147,7 +147,7 @@ function dailyRowClassName(log: AttendanceDailyLog): string {
     return 'bg-[#E8F1FB]';
   }
   if (log.isWeekend) {
-    return 'bg-[#F5F6F7]';
+    return 'bg-slate-50';
   }
   if (!log.wasPresent) {
     return 'bg-[#FCEBEB]';
@@ -614,7 +614,7 @@ export default function EmployeeAttendanceProfileSection({
                 onExpandedRowsChange: setExpandedKeys,
                 expandedRowRender: (row) => (
                   <div className="p-3">
-                    <p className="mb-2 text-[12px] font-medium text-[#6B7280]">
+                    <p className="mb-2 text-[12px] font-medium text-slate-500">
                       {t('pages.hr.attendance.daily.title', {
                         month: row.monthName || t(`hr.months.${row.month}`),
                         year: row.year,

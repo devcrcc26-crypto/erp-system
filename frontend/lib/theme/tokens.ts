@@ -44,25 +44,47 @@ export const tokens = {
   colorNavy: '#1B2B4B',
   /** Light sider - high-contrast labels, accent active states */
   colorSidebarBg: '#FFFFFF',
-  colorSidebarRailBg: '#F5F7F9',
+  colorSidebarRailBg: '#F7FAF8',
   colorSidebarActive: accent.light,
-  colorSidebarHover: 'rgba(15, 23, 42, 0.04)',
-  colorSidebarBorder: '#E8EBEF',
-  colorSidebarText: '#1A1A1A',
-  colorSidebarTextMuted: '#6B7280',
+  colorSidebarHover: 'rgba(20, 29, 25, 0.04)',
+  colorSidebarBorder: '#E1E9E5',
+  colorSidebarText: '#141D19',
+  colorSidebarTextMuted: '#5F6B66',
   colorSidebarTextActive: accent.hover,
   colorSidebarAccent: accent.primary,
-  colorSidebarGroupLabel: '#6B7280',
-  colorSidebarIcon: '#64748B',
+  colorSidebarGroupLabel: '#5F6B66',
+  colorSidebarIcon: '#5F6B66',
 
-  colorPageBg: '#F0F2F5',
+  /*
+   * Neutrals - the login page's green-grey palette. Keep in step with the
+   * `--erp-n-*` scale in app/globals.css (hex noted per token).
+   */
+  colorPageBg: '#EFF4F1', // --erp-n-100
   colorCardBg: '#FFFFFF',
-  colorSurfaceSecondary: '#FAFAFA',
-  colorBorder: 'rgba(0, 0, 0, 0.06)',
-  colorBorderSecondary: 'rgba(0, 0, 0, 0.15)',
-  colorTextPrimary: 'rgba(0, 0, 0, 0.88)',
-  colorTextSecondary: 'rgba(0, 0, 0, 0.65)',
-  colorTextTertiary: 'rgba(0, 0, 0, 0.45)',
+  colorSurfaceSecondary: '#F7FAF8', // --erp-n-50
+  /** Dividers and card outlines. */
+  colorBorder: '#E1E9E5', // --erp-n-200
+  colorBorderSecondary: '#D0DBD6', // --erp-n-300
+  colorTextPrimary: '#141D19', // --erp-n-900
+  colorTextSecondary: '#4A5651', // --erp-n-600
+  colorTextTertiary: '#7A8782', // --color-text-subtle
+  /** Form labels - matches `--color-text-body`. */
+  colorTextBody: '#33403C',
+  colorTextPlaceholder: '#93A29B', // --erp-n-400
+
+  /* Form controls - the login field treatment. */
+  /** Resting field fill - matches `--color-input-bg`. */
+  colorInputBg: '#F7FAF8',
+  /** Field and default-button outline - matches `--color-input-border`. */
+  colorControlBorder: '#D5E0DC',
+  colorControlHoverBorder: `rgba(${accent.primaryRgb}, 0.45)`,
+  /** Focus ring colour (3px) - matches `--shadow-focus-ring`. */
+  colorControlOutline: `rgba(${accent.primaryRgb}, 0.15)`,
+  controlOutlineWidth: 3,
+  /** Table header fill - the top of `--gradient-stage`. */
+  colorTableHeaderBg: '#F3F8F6',
+  /** Primary button shadow - matches `--shadow-button-sm`. */
+  shadowButton: `0 4px 12px rgba(${accent.primaryRgb}, 0.24)`,
 
   /**
    * Primary UI font - Segoe UI with system/CJK fallbacks.
@@ -70,13 +92,18 @@ export const tokens = {
   fontFamily:
     "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",
 
-  borderRadius: 6,
-  /** Global AntD `borderRadiusLG` (dropdowns, popovers, tables). */
-  borderRadiusLG: 8,
+  /** Controls (buttons, fields) - matches `--radius-control` (login fields). */
+  borderRadius: 10,
+  /** Small controls and tags. */
+  borderRadiusSM: 6,
+  /** Global AntD `borderRadiusLG` (dropdowns, popovers, tables, modals). */
+  borderRadiusLG: 12,
   /** Cards - matches `--radius-card` (login card) in globals.css. */
   borderRadiusCard: 12,
   /** Raised card shadow - matches `--shadow-card` in globals.css. */
   shadowCard: '0 8px 32px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+  /** Floating panels: dropdowns, date pickers, popovers. */
+  shadowPopup: '0 1px 2px rgba(20, 29, 25, 0.06), 0 8px 24px rgba(20, 29, 25, 0.1)',
   /** Heading text - matches `--color-text-heading` (login heading). */
   colorTextHeading: accent.hover,
   sidebarWidth: 256,

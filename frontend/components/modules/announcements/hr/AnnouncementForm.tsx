@@ -108,7 +108,7 @@ function MarkdownEditor({
                 {value?.trim() ? (
                   <AnnouncementMarkdown source={value} />
                 ) : (
-                  <p className="m-0 text-[#4b5563]">{t('announcements.form.previewEmpty')}</p>
+                  <p className="m-0 text-slate-600">{t('announcements.form.previewEmpty')}</p>
                 )}
               </div>
             ),

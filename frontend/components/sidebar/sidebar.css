@@ -4,32 +4,35 @@
  * here so the single selected state, focus ring and contrast ratios are
  * defined once. The drawer shares the variables because it renders outside
  * `.sb-theme`.
- * Contrast on --sb-bg (#FFFFFF): text 14.7:1, muted 7.6:1, icon 4.8:1,
- * focus ring 3.4:1. Active text on --sb-active-bg: 5.5:1; accent bar 5.5:1.
+ * Neutrals read from the green-grey `--erp-n-*` scale in app/globals.css
+ * (the login palette), so the sidebar and the pages share one set of greys.
+ * Contrast on --sb-bg (#FFFFFF): text 13.6:1, strong 17.2:1, muted 7.7:1,
+ * icon 5.6:1, focus ring 3.4:1. Active text on --sb-active-bg: 5.5:1;
+ * accent bar 5.5:1.
  */
 .sb-theme,
 .sb-drawer {
   --sb-bg: #ffffff;
-  --sb-border: #e8ebef;
-  --sb-text: #1f2937;
-  --sb-text-strong: #0f172a;
-  --sb-text-muted: #4b5563;
-  --sb-icon: #64748b;
+  --sb-border: var(--erp-n-200);
+  --sb-text: var(--erp-n-800);
+  --sb-text-strong: var(--erp-n-900);
+  --sb-text-muted: var(--erp-n-600);
+  --sb-icon: var(--erp-n-500);
   --sb-hover: rgba(15, 23, 42, 0.05);
   --sb-active-bg: var(--erp-accent-light);
   --sb-active-text: var(--color-primary-dark);
   --sb-accent: var(--color-primary-dark);
   --sb-focus: var(--erp-accent);
   --sb-badge-bg: #c43d3c;
-  --sb-field-bg: #f6f8fa;
-  --sb-field-border: #d0d7de;
+  --sb-field-bg: var(--erp-n-50);
+  --sb-field-border: var(--erp-n-300);
   --sb-skeleton: rgba(15, 23, 42, 0.06);
   --sb-scrollbar: rgba(15, 23, 42, 0.18);
   --sb-shadow: 4px 0 16px rgba(15, 23, 42, 0.06);
-  --sb-tile-bg: #f1f4f7;
+  --sb-tile-bg: var(--erp-n-100);
   --sb-tile-hover: var(--erp-accent-soft);
   --sb-tile-active-text: #ffffff;
-  --sb-panel-bg: #f6f8fa;
+  --sb-panel-bg: var(--erp-n-50);
 }
 
 .sb-theme {
@@ -845,7 +848,7 @@
  * Muted text on --sb-rail-bg: 7.1:1.
  */
 .sb-theme {
-  --sb-rail-bg: #f5f7f9;
+  --sb-rail-bg: var(--erp-n-50);
 }
 
 .sb-theme[data-mode='compact'] .sb-rail {
@@ -939,22 +942,22 @@
  * ══════════════════════════════════════════════════════════════════════ */
 
 .erp-sidebar-v2 {
-  --sb-border: #eef1f4;
+  --sb-border: var(--erp-n-150);
   --sb-hover: rgba(16, 24, 40, 0.04);
   --sb-active-bg: rgba(var(--erp-accent-rgb), 0.1);
   --sb-active-text: var(--color-primary-dark);
-  --sb-field-bg: #f2f4f7;
+  --sb-field-bg: var(--erp-n-100);
   --sb-field-border: transparent;
-  --sb-panel-bg: #f7f8fa;
+  --sb-panel-bg: var(--erp-n-50);
   --sb-radius: 16px;
   --sb-panel-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
   /* Icon chips: a soft square behind every destination icon. */
-  --sb-chip-bg: #f2f4f7;
+  --sb-chip-bg: var(--erp-n-100);
   --sb-chip-hover: #e6eaef;
   --sb-chip-active: rgba(var(--erp-accent-rgb), 0.16);
-  --sb-rail-bg: #fbfcfd;
+  --sb-rail-bg: var(--erp-n-25);
 }
 
 /* ── Docked panels (desktop only: the desktop <nav> carries data-mode) ── */

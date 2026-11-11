@@ -127,15 +127,15 @@ export default function OvertimeTimePeriodsEditor({
                   key={field.key}
                   className={
                     isActive
-                      ? 'rounded-[10px] border border-[#F47B20]/40 bg-[#fafbfc] p-3 shadow-[0_0_0_1px_rgba(244,123,32,0.08)]'
-                      : 'rounded-[10px] border border-[#e8ebef] bg-white'
+                      ? 'rounded-[10px] border border-[#F47B20]/40 bg-slate-25 p-3 shadow-[0_0_0_1px_rgba(244,123,32,0.08)]'
+                      : 'rounded-[10px] border border-slate-200 bg-white'
                   }
                 >
                   {!isActive ? (
                     <div className="flex items-center gap-1 px-1 py-1">
                       <button
                         type="button"
-                        className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[#fafbfc]"
+                        className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-slate-25"
                         onClick={() => setActiveIndex(index)}
                       >
                         <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">

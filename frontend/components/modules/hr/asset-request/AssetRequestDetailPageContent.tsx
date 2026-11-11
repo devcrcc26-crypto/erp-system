@@ -229,7 +229,7 @@ export default function AssetRequestDetailPageContent({
         </div>
 
         {/* Meta strip */}
-        <div className="erp-employee-meta-bar grid grid-cols-2 gap-px border-t border-[#eef1f4] sm:grid-cols-4">
+        <div className="erp-employee-meta-bar grid grid-cols-2 gap-px border-t border-slate-150 sm:grid-cols-4">
           {[
             {
               label: 'Employee',
@@ -256,7 +256,7 @@ export default function AssetRequestDetailPageContent({
         </div>
 
         {/* Body sections */}
-        <div className="flex flex-col gap-0 divide-y divide-[#eef1f4]">
+        <div className="flex flex-col gap-0 divide-y divide-slate-150">
           <DetailSection title="Request Details">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FieldRow label="Asset Category" value={request.assetCategory} />

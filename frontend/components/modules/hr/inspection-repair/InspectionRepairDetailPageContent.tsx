@@ -399,7 +399,7 @@ export default function InspectionRepairDetailPageContent({
                     <div className="flex items-start gap-2">
                       <Wrench
                         size={16}
-                        className="mt-0.5 shrink-0 text-[#6B7280]"
+                        className="mt-0.5 shrink-0 text-slate-500"
                         strokeWidth={1.75}
                       />
                       <span>
@@ -453,7 +453,7 @@ export default function InspectionRepairDetailPageContent({
                 }
               >
                 <div className="flex flex-col gap-4">
-                  <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-25 px-3 py-3">
                     <p className="erp-users-stat-label mb-1">
                       {t('hr.assetDialog.statusCurrentLabel')}
                     </p>
@@ -472,7 +472,7 @@ export default function InspectionRepairDetailPageContent({
                         {statusOptions.map((option) => (
                           <div
                             key={option.value}
-                            className="flex items-start gap-3 rounded-xl border border-[#e8ebef] px-3 py-3"
+                            className="flex items-start gap-3 rounded-xl border border-slate-200 px-3 py-3"
                           >
                             <StatusBadge
                               label={option.label}
@@ -530,7 +530,7 @@ export default function InspectionRepairDetailPageContent({
         onCancel={closeStatusModal}
       >
         <div className="mt-3 flex flex-col gap-4">
-          <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-25 px-3 py-3">
             <p className="erp-users-stat-label mb-1">
               {t('hr.assetDialog.statusCurrentLabel')}
             </p>

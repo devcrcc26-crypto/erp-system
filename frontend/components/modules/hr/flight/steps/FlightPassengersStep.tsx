@@ -106,9 +106,9 @@ export default function FlightPassengersStep({
           {values.map((passenger) => (
             <div
               key={passenger.employeeId}
-              className="overflow-hidden rounded-[10px] border border-[#e8ebef] bg-[#fbfcfd]"
+              className="overflow-hidden rounded-[10px] border border-slate-200 bg-slate-25"
             >
-              <div className="border-b border-[#eef1f4] bg-white px-3 py-2.5 sm:px-4">
+              <div className="border-b border-slate-150 bg-white px-3 py-2.5 sm:px-4">
                 <span className="erp-users-role-tag">{passenger.name}</span>
               </div>
               <div className="px-3 py-3 sm:px-4">

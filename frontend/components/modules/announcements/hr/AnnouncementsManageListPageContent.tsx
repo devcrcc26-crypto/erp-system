@@ -92,7 +92,7 @@ export default function AnnouncementsManageListPageContent({
         key: 'title',
         render: (_, row) => (
           <div className="min-w-[220px]">
-            <p className="m-0 flex flex-wrap items-center gap-2 font-semibold text-[#0f172a]">
+            <p className="m-0 flex flex-wrap items-center gap-2 font-semibold text-slate-900">
               {localized(locale, row.title, row.titleZh)}
               {row.pinned ? (
                 <span className="erp-ann-tag erp-ann-tag--pin">
@@ -106,7 +106,7 @@ export default function AnnouncementsManageListPageContent({
                 </span>
               ) : null}
             </p>
-            <p className="m-0 mt-0.5 text-xs text-[#4b5563]">{row.number}</p>
+            <p className="m-0 mt-0.5 text-xs text-slate-600">{row.number}</p>
           </div>
         ),
       },
@@ -120,7 +120,7 @@ export default function AnnouncementsManageListPageContent({
               {t(statusLabelKey(row.status))}
             </span>
             {row.status === 'SCHEDULED' ? (
-              <p className="m-0 mt-1 text-xs text-[#4b5563]">{formatAnnouncementDate(row.publishAt)}</p>
+              <p className="m-0 mt-1 text-xs text-slate-600">{formatAnnouncementDate(row.publishAt)}</p>
             ) : null}
           </div>
         ),
@@ -131,7 +131,7 @@ export default function AnnouncementsManageListPageContent({
         width: 170,
         responsive: ['md'],
         render: (_, row) => (
-          <span className="text-[13px] text-[#1f2937]">
+          <span className="text-[13px] text-slate-800">
             {row.audienceScope === 'ALL'
               ? t(scopeLabelKey('ALL'))
               : t(`announcements.scopeCount.${row.audienceScope}`, { count: row.audienceSize })}
@@ -144,7 +144,7 @@ export default function AnnouncementsManageListPageContent({
         width: 130,
         responsive: ['lg'],
         render: (_, row) => (
-          <span className="text-[13px] text-[#4b5563]">{formatAnnouncementDay(row.publishedAt)}</span>
+          <span className="text-[13px] text-slate-600">{formatAnnouncementDay(row.publishedAt)}</span>
         ),
       },
       {
@@ -160,7 +160,7 @@ export default function AnnouncementsManageListPageContent({
               requireAcknowledgement={row.requireAcknowledgement}
             />
           ) : (
-            <span className="text-[13px] text-[#6b7280]">-</span>
+            <span className="text-[13px] text-slate-500">-</span>
           ),
       },
     ],

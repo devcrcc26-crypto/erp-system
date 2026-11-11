@@ -357,7 +357,7 @@ export default function DesignPackageBuilder({
                 <Input readOnly value={editing.subtaskId} className="font-mono" />
               </Form.Item>
             ) : !isEditing ? (
-              <div className="mb-4 text-sm text-[#6B7280]">
+              <div className="mb-4 text-sm text-slate-500">
                 Subtask number will be assigned automatically when created
               </div>
             ) : null}

@@ -167,7 +167,7 @@ export default function HrDashboard({
   if (loading && !hr) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -738,7 +738,7 @@ export default function HrDashboard({
           {hr.recentLeaveRequests.length === 0 ? (
             <p className="erp-users-cell-sub m-0">{t(`${HR}.noRecentLeave`)}</p>
           ) : (
-            <div className="divide-y divide-[#eef1f4]">
+            <div className="divide-y divide-slate-150">
               {hr.recentLeaveRequests.map((req) => (
                 <div
                   key={req.id}
@@ -781,7 +781,7 @@ export default function HrDashboard({
               {t(`${HR}.upcomingTravel.empty`)}
             </p>
           ) : (
-            <div className="divide-y divide-[#eef1f4]">
+            <div className="divide-y divide-slate-150">
               {hr.upcomingTravel.map((trip) => (
                 <div
                   key={trip.id}

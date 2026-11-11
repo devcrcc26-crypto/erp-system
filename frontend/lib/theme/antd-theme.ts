@@ -22,15 +22,26 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
       colorPrimaryHover: tokens.colorPrimaryHover,
       colorBgContainer: tokens.colorCardBg,
       colorBgLayout: tokens.colorPageBg,
-      colorBorder: tokens.colorBorder,
+      /* Controls take the login field outline; dividers and cards the lighter one. */
+      colorBorder: tokens.colorControlBorder,
+      colorBorderSecondary: tokens.colorBorder,
       colorText: tokens.colorTextPrimary,
       colorTextSecondary: tokens.colorTextSecondary,
       colorTextTertiary: tokens.colorTextTertiary,
+      colorTextPlaceholder: tokens.colorTextPlaceholder,
+      /* Links follow the login "Forgot password" link (teal, 6.3:1 on white). */
+      colorLink: tokens.colorPrimaryHover,
+      colorLinkHover: tokens.colorPrimary,
+      colorLinkActive: tokens.colorPrimaryHover,
+      /* Focus ring: 3px soft accent halo, as on the login fields. */
+      controlOutline: tokens.colorControlOutline,
+      controlOutlineWidth: tokens.controlOutlineWidth,
       colorSuccess: tokens.colorGreen400,
       colorWarning: tokens.colorAmber400,
       colorError: tokens.colorRed400,
       colorInfo: tokens.colorBlue400,
       borderRadius: tokens.borderRadius,
+      borderRadiusSM: tokens.borderRadiusSM,
       borderRadiusLG: tokens.borderRadiusLG,
       fontSize,
       fontSizeSM,
@@ -40,15 +51,19 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
       controlHeight: 32,
       lineHeight: 1.5714285714285714,
       boxShadow: 'none',
-      boxShadowSecondary: 'none',
+      /* Floating panels (dropdowns, pickers, popovers) need an edge on white. */
+      boxShadowSecondary: tokens.shadowPopup,
     },
     components: {
       Button: {
-        primaryShadow: 'none',
+        /* Gradient fill for primary buttons is applied in globals.css (brand layer). */
+        primaryShadow: tokens.shadowButton,
         defaultShadow: 'none',
-        fontWeight: 400,
+        dangerShadow: 'none',
+        fontWeight: 500,
         controlHeight: 32,
         borderRadius: tokens.borderRadius,
+        defaultBorderColor: tokens.colorControlBorder,
       },
       Card: {
         borderRadiusLG: tokens.borderRadiusCard,
@@ -56,30 +71,79 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
         boxShadowTertiary: tokens.shadowCard,
         padding: tokens.cardPadding,
         paddingLG: tokens.cardPadding,
+        colorTextHeading: tokens.colorTextHeading,
       },
       Table: {
-        headerBg: tokens.colorSurfaceSecondary,
+        headerBg: tokens.colorTableHeaderBg,
         headerColor: tokens.colorTextSecondary,
         headerSplitColor: tokens.colorBorder,
+        headerSortActiveBg: tokens.colorPageBg,
+        headerSortHoverBg: tokens.colorPageBg,
+        borderColor: tokens.colorBorder,
         rowHoverBg: tokens.colorSurfaceSecondary,
         headerBorderRadius: 0,
         fontSize,
       },
+      /*
+       * Fields: tinted at rest, white with an accent border and halo when
+       * focused - the login field treatment, at the app's 32px density.
+       */
       Input: {
-        colorBgContainer: tokens.colorCardBg,
+        colorBgContainer: tokens.colorInputBg,
+        hoverBg: tokens.colorInputBg,
         activeBg: tokens.colorCardBg,
+        hoverBorderColor: tokens.colorControlHoverBorder,
+        activeBorderColor: tokens.colorPrimary,
         controlHeight: 32,
         borderRadius: tokens.borderRadius,
         fontSize,
+      },
+      InputNumber: {
+        colorBgContainer: tokens.colorInputBg,
+        hoverBg: tokens.colorInputBg,
+        activeBg: tokens.colorCardBg,
+        hoverBorderColor: tokens.colorControlHoverBorder,
+        activeBorderColor: tokens.colorPrimary,
+      },
+      Mentions: {
+        colorBgContainer: tokens.colorInputBg,
+        hoverBg: tokens.colorInputBg,
+        activeBg: tokens.colorCardBg,
+        hoverBorderColor: tokens.colorControlHoverBorder,
+        activeBorderColor: tokens.colorPrimary,
+      },
+      DatePicker: {
+        colorBgContainer: tokens.colorInputBg,
+        hoverBg: tokens.colorInputBg,
+        activeBg: tokens.colorCardBg,
+        hoverBorderColor: tokens.colorControlHoverBorder,
+        activeBorderColor: tokens.colorPrimary,
       },
       Select: {
         colorBgContainer: tokens.colorCardBg,
+        selectorBg: tokens.colorInputBg,
+        hoverBorderColor: tokens.colorControlHoverBorder,
+        activeBorderColor: tokens.colorPrimary,
+        activeOutlineColor: tokens.colorControlOutline,
         controlHeight: 32,
         borderRadius: tokens.borderRadius,
         fontSize,
       },
+      /* A 6px radius would turn a 16px box into a blob; keep checkboxes crisp. */
+      Checkbox: {
+        borderRadiusSM: 4,
+      },
+      Form: {
+        labelColor: tokens.colorTextBody,
+      },
+      Tabs: {
+        itemSelectedColor: tokens.colorPrimaryHover,
+        itemHoverColor: tokens.colorPrimary,
+        itemActiveColor: tokens.colorPrimaryHover,
+      },
       Modal: {
-        borderRadiusLG: 0,
+        borderRadiusLG: tokens.borderRadiusCard,
+        titleColor: tokens.colorTextHeading,
       },
       Menu: {
         darkItemBg: tokens.colorSidebarBg,
@@ -112,6 +176,7 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
         fontFamilyCode: tokens.fontFamily,
         titleMarginBottom: '0.5em',
         titleMarginTop: '1.2em',
+        colorTextHeading: tokens.colorTextHeading,
       },
       Drawer: {
         borderRadiusLG: 0,

@@ -13,11 +13,11 @@
   --htv2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --htv2-muted: #4b5563;
-  --htv2-strong: #0f172a;
-  --htv2-body: #1f2937;
-  --htv2-divider: #eef1f4;
-  --htv2-subtle: #f7f8fa;
+  --htv2-muted: var(--erp-n-600);
+  --htv2-strong: var(--erp-n-900);
+  --htv2-body: var(--erp-n-800);
+  --htv2-divider: var(--erp-n-150);
+  --htv2-subtle: var(--erp-n-50);
   --htv2-tint: rgba(var(--erp-accent-rgb),  0.1);
   --htv2-primary: var(--erp-accent);
   --htv2-primary-strong: var(--erp-accent-hover);
@@ -112,7 +112,7 @@
 }
 
 .erp-hr-travel-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-hr-travel-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -195,7 +195,7 @@
 }
 
 .erp-hr-travel-v2 .ant-table-thead > tr > th {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
   color: var(--htv2-muted);
   font-size: 12px;
   font-weight: 600;
@@ -204,7 +204,7 @@
 }
 
 .erp-hr-travel-v2 .ant-table-tbody > tr:hover > td {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
 }
 
 .erp-hr-travel-v2 .erp-users-cell-sub {
@@ -214,8 +214,8 @@
 .erp-hr-travel-v2 .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
 }
 
 .erp-hr-travel-v2 .erp-users-role-tag {
@@ -493,13 +493,13 @@
 
 .erp-expense-item-drawer .erp-expense-item-section-header {
   padding: 12px 16px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
   background: #ffffff;
 }
 
 .erp-expense-item-drawer .erp-expense-item-section-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: normal;
@@ -523,22 +523,22 @@
 }
 
 .erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary {
-  background: var(--erp-accent);
-  border-color: var(--erp-accent);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-expense-item-drawer .erp-expense-item-drawer-footer .ant-btn-primary:hover {
-  background: var(--erp-accent-hover) !important;
-  border-color: var(--erp-accent-hover) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 /* Portaled mark-paid / cash / confirm modals */
 
 .erp-hr-travel-modal {
   --htv2-radius: 16px;
-  --htv2-muted: #4b5563;
-  --htv2-strong: #0f172a;
-  --htv2-body: #1f2937;
+  --htv2-muted: var(--erp-n-600);
+  --htv2-strong: var(--erp-n-900);
+  --htv2-body: var(--erp-n-800);
   --htv2-primary: var(--erp-accent);
   --htv2-primary-strong: var(--erp-accent-hover);
 }
@@ -606,13 +606,13 @@
 }
 
 .erp-hr-travel-modal .ant-modal-footer .ant-btn-primary {
-  background: var(--htv2-primary);
-  border-color: var(--htv2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-hr-travel-modal .ant-modal-footer .ant-btn-primary:hover {
-  background: var(--htv2-primary-strong) !important;
-  border-color: var(--htv2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-hr-travel-modal.erp-confirm-dialog .ant-modal-content,
@@ -621,8 +621,8 @@
 }
 
 .erp-hr-travel-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
-  background: var(--htv2-primary);
-  border-color: var(--htv2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 /* Portaled drawers (employee import) share the same header/footer chrome. */
@@ -650,14 +650,14 @@
 
 .erp-hr-travel-modal.ant-drawer .ant-btn-primary,
 .erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary {
-  background: var(--htv2-primary);
-  border-color: var(--htv2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-hr-travel-modal.ant-drawer .ant-btn-primary:hover,
 .erp-hr-travel-modal .ant-drawer-footer .ant-btn-primary:hover {
-  background: var(--htv2-primary-strong) !important;
-  border-color: var(--htv2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 /* New Request picker: inherit travel tokens, give tiles a quiet hover lift. */

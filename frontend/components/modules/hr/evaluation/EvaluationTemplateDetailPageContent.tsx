@@ -255,7 +255,7 @@ export default function EvaluationTemplateDetailPageContent({
               </div>
 
               {addingToSection === section.id ? (
-                <div className="erp-assessment-add rounded-xl border border-dashed border-[#e8ebef] bg-[#f7f8fa] p-3">
+                <div className="erp-assessment-add rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3">
                   <div className="mb-2 flex flex-wrap gap-2">
                     <Input
                       placeholder="Criterion name (EN) *"

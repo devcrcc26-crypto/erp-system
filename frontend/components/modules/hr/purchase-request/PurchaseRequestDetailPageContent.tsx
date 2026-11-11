@@ -648,7 +648,7 @@ export default function PurchaseRequestDetailPageContent({
                     <p className="erp-users-stat-label m-0">
                       {t('hr.form.justification')}
                     </p>
-                    <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
+                    <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-900">
                       {request.justification}
                     </p>
                   </div>
@@ -819,7 +819,7 @@ export default function PurchaseRequestDetailPageContent({
                   multiple
                 />
                 {(request.documents?.length ?? 0) > 0 ? (
-                  <div className="mt-4 border-t border-[#e8ebef] pt-4">
+                  <div className="mt-4 border-t border-slate-200 pt-4">
                     <AttachmentDownloadList documents={request.documents!} />
                   </div>
                 ) : null}

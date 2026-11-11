@@ -684,7 +684,7 @@ export default function PerDiemRequestDetailPageContent({
                 <table className="w-full min-w-0 border-collapse">
                   <tbody>
                     {request.disbursements!.map((d, i) => (
-                      <tr key={d.id} className="border-b border-[#eef1f4]">
+                      <tr key={d.id} className="border-b border-slate-150">
                         <td className="px-4 py-3 sm:px-5" colSpan={2}>
                           <div className="mb-1 flex w-full items-center justify-between gap-2">
                             <span className="erp-users-cell-sub text-xs">

@@ -333,7 +333,7 @@ export default function BusinessTripDetailPageContent({
           }}
         />
 
-        <div className="border-t border-[#eef1f4]">
+        <div className="border-t border-slate-150">
           <BusinessTripCurrentStepBanner trip={trip} embedded />
         </div>
       </div>

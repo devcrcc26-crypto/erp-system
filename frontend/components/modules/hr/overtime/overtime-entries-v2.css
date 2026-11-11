@@ -19,7 +19,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 20px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
 }
 
 .erp-ot-entries-title {
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: calc(16px * var(--erp-font-scale));
   font-weight: 600;
 }
@@ -56,11 +56,11 @@
 /* ── Table ── */
 
 .erp-ot-entries .ant-table-thead > tr > th {
-  background: #f7f8fa !important;
-  color: #4b5563 !important;
+  background: var(--erp-n-50) !important;
+  color: var(--erp-n-600) !important;
   font-size: 12px !important;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid #eef1f4 !important;
+  border-bottom: 1px solid var(--erp-n-150) !important;
 }
 
 .erp-ot-entries .ant-table-tbody > tr.ant-table-measure-row,
@@ -74,16 +74,16 @@
 .erp-ot-entries .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   padding-top: 12px !important;
   padding-bottom: 12px !important;
-  border-bottom-color: #eef1f4 !important;
+  border-bottom-color: var(--erp-n-150) !important;
   vertical-align: top;
 }
 
 .erp-ot-entries .ant-table-tbody > tr.ant-table-row:hover > td {
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
 }
 
 .erp-ot-entries .ant-table-expanded-row > td {
-  background: #fbfcfd !important;
+  background: var(--erp-n-25) !important;
 }
 
 /* Date block: day number over month · weekday. */
@@ -101,8 +101,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: #f2f4f7;
-  color: #0f172a;
+  background: var(--erp-n-100);
+  color: var(--erp-n-900);
   font-size: 15px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -122,20 +122,20 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  color: #4b5563;
+  color: var(--erp-n-600);
   font-size: 12px;
   line-height: 1.35;
 }
 
 .erp-ot-date-meta strong {
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   font-weight: 600;
 }
 
 /* Time range. */
 .erp-ot-time {
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -143,12 +143,12 @@
 
 .erp-ot-time-arrow {
   margin: 0 4px;
-  color: #6b7280;
+  color: var(--erp-n-500);
 }
 
 /* Hours: bold total, category pills underneath. */
 .erp-ot-hours-total {
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 15px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -167,8 +167,8 @@
   gap: 4px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
   font-weight: 500;
   line-height: 18px;
@@ -187,7 +187,7 @@
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: 13px;
   line-height: 1.45;
   -webkit-box-orient: vertical;
@@ -196,11 +196,11 @@
 }
 
 .erp-ot-task--empty {
-  color: #6b7280;
+  color: var(--erp-n-500);
 }
 
 .erp-ot-task-time {
-  color: #6b7280;
+  color: var(--erp-n-500);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -232,7 +232,7 @@
 
 .erp-ot-expanded-title {
   margin: 0;
-  color: #4b5563;
+  color: var(--erp-n-600);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;

@@ -118,7 +118,7 @@ export default function GenericApprovalDetail({
             {(request.comments ?? []).map((comment) => (
               <div
                 key={comment.id}
-                className="rounded-xl border border-[#e8ebef] bg-[#f8fafc] p-3"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-3"
               >
                 <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
                   <span className="erp-users-cell-strong text-sm">

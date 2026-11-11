@@ -9,11 +9,11 @@
   --ov2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --ov2-muted: #4b5563;
-  --ov2-strong: #0f172a;
-  --ov2-body: #1f2937;
-  --ov2-divider: #eef1f4;
-  --ov2-subtle: #f7f8fa;
+  --ov2-muted: var(--erp-n-600);
+  --ov2-strong: var(--erp-n-900);
+  --ov2-body: var(--erp-n-800);
+  --ov2-divider: var(--erp-n-150);
+  --ov2-subtle: var(--erp-n-50);
   --ov2-tint: rgba(29, 158, 117, 0.1);
   --ov2-primary: #1d9e75;
   --ov2-primary-strong: #0f6e56;
@@ -60,7 +60,7 @@
 }
 
 .erp-org-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-org-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -227,7 +227,7 @@
 }
 
 .erp-org-v2 .erp-table-row-actions .ant-btn:hover {
-  background: #e9edf1 !important;
+  background: var(--erp-n-200) !important;
 }
 
 @media (hover: none) {
@@ -294,11 +294,11 @@
 
 .erp-org-drawer {
   --ov2-radius: 16px;
-  --ov2-muted: #4b5563;
-  --ov2-strong: #0f172a;
-  --ov2-body: #1f2937;
-  --ov2-divider: #eef1f4;
-  --ov2-subtle: #f7f8fa;
+  --ov2-muted: var(--erp-n-600);
+  --ov2-strong: var(--erp-n-900);
+  --ov2-body: var(--erp-n-800);
+  --ov2-divider: var(--erp-n-150);
+  --ov2-subtle: var(--erp-n-50);
   --ov2-primary: #1d9e75;
   --ov2-primary-strong: #0f6e56;
 }
@@ -338,13 +338,13 @@
 }
 
 .erp-org-drawer .erp-org-drawer-footer .ant-btn-primary {
-  background: var(--ov2-primary);
-  border-color: var(--ov2-primary);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-org-drawer .erp-org-drawer-footer .ant-btn-primary:hover {
-  background: var(--ov2-primary-strong) !important;
-  border-color: var(--ov2-primary-strong) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-org-drawer .ant-form-item-label > label {

@@ -97,7 +97,7 @@ export default function PurchaseRequestEditPageContent({
   if (detailQuery.isLoading) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Skeleton active paragraph={{ rows: 6 }} />
         </div>
       </div>

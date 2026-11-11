@@ -313,7 +313,7 @@ export default function FlightApplicationDetailPageContent({
           passengerCount={application.passengerCount}
         />
 
-        <div className="border-t border-[#eef1f4]">
+        <div className="border-t border-slate-150">
           <FlightCurrentStepBanner application={application} embedded />
         </div>
       </div>

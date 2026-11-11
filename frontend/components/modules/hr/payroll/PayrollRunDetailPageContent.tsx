@@ -1796,7 +1796,7 @@ export default function PayrollRunDetailPageContent({
   if (detailQuery.isLoading && !run) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>

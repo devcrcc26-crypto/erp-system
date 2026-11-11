@@ -241,7 +241,7 @@ export default function PmDashboard({
   if (loading && !stats) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>

@@ -239,7 +239,7 @@ export default function EmployeeRolesCard({
               <li
                 key={assignment.id}
                 data-primary={isPrimary ? 'true' : undefined}
-                className="erp-employee-role-row flex flex-wrap items-center gap-2 rounded-[10px] bg-[#f7f8fa] px-3.5 py-2.5"
+                className="erp-employee-role-row flex flex-wrap items-center gap-2 rounded-[10px] bg-slate-50 px-3.5 py-2.5"
               >
                 <span
                   data-primary={isPrimary ? 'true' : undefined}

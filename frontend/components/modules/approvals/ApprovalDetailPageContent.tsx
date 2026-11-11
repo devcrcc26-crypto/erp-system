@@ -798,7 +798,7 @@ export default function ApprovalDetailPageContent({
                 />
               ) : null}
               {categoryName ? (
-                <Tag className="!m-0 rounded-lg border-0 bg-[#f2f4f7] text-[#344054]">
+                <Tag className="!m-0 rounded-lg border-0 bg-slate-100 text-slate-700">
                   {categoryName}
                 </Tag>
               ) : null}

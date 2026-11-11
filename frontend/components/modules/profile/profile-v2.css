@@ -14,10 +14,10 @@
   --pv2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --pv2-muted: #4b5563;
-  --pv2-strong: #0f172a;
-  --pv2-divider: #eef1f4;
-  --pv2-tile: #f7f8fa;
+  --pv2-muted: var(--erp-n-600);
+  --pv2-strong: var(--erp-n-900);
+  --pv2-divider: var(--erp-n-150);
+  --pv2-tile: var(--erp-n-50);
 
   gap: 16px;
 }
@@ -56,7 +56,7 @@
 }
 
 .erp-profile-page.erp-profile-v2 .erp-profile-hero .erp-users-email {
-  color: #1f2937;
+  color: var(--erp-n-800);
   font-size: calc(14px * var(--erp-font-scale));
 }
 
@@ -68,8 +68,8 @@
 .erp-profile-page.erp-profile-v2 .erp-profile-hero .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
 }
 
@@ -110,7 +110,7 @@
 }
 
 .erp-profile-page.erp-profile-v2 .erp-profile-meta-empty {
-  color: #6b7280;
+  color: var(--erp-n-500);
   font-weight: 500;
 }
 
@@ -246,7 +246,7 @@
 
 /* Profile documents: soft tiles and clean empty state. */
 .erp-profile-page.erp-profile-v2 .erp-profile-docs-empty {
-  border: 1px dashed #d0d5dd;
+  border: 1px dashed var(--erp-n-300);
   border-radius: 12px;
   background: var(--pv2-tile);
   color: var(--pv2-muted);
@@ -262,7 +262,7 @@
 }
 
 .erp-profile-page.erp-profile-v2 .erp-profile-doc-card:hover {
-  border-color: #d0d5dd;
+  border-color: var(--erp-n-300);
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05);
 }
 
@@ -287,7 +287,7 @@
 
 .erp-profile-page.erp-profile-v2 .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--pv2-divider);
-  color: #1f2937;
+  color: var(--erp-n-800);
 }
 
 .erp-profile-page.erp-profile-v2 .ant-table-tbody > tr:hover > td {

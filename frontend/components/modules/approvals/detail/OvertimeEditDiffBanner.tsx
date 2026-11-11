@@ -85,7 +85,7 @@ export default function OvertimeEditDiffBanner({
 
   return (
     <div
-      className="rounded-xl border border-[#F5D0AE] bg-[#FEF6EE] px-4 py-3 text-[13px] text-[#1A1A1A]"
+      className="rounded-xl border border-[#F5D0AE] bg-[#FEF6EE] px-4 py-3 text-[13px] text-slate-900"
       role="status"
     >
       <p className="m-0 mb-1 font-semibold text-[#9A3412]">

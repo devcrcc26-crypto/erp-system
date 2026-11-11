@@ -28,12 +28,12 @@
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #0f172a;
+  color: var(--erp-n-900);
 }
 
 .erp-hr-import-v2 .erp-user-import-desc {
   margin-top: 4px;
-  color: #4b5563;
+  color: var(--erp-n-600);
 }
 
 .erp-hr-import-v2 .erp-user-import-steps {
@@ -44,8 +44,8 @@
 .erp-hr-import-v2 .erp-user-import-step {
   border: 0;
   border-radius: 999px;
-  background: #f7f8fa;
-  color: #6b7280;
+  background: var(--erp-n-50);
+  color: var(--erp-n-500);
   box-shadow: none;
 }
 
@@ -55,8 +55,8 @@
 }
 
 .erp-hr-import-v2 .erp-user-import-step--done {
-  background: #eef1f4;
-  color: #1f2937;
+  background: var(--erp-n-150);
+  color: var(--erp-n-800);
 }
 
 .erp-hr-import-v2 .erp-user-import-step-index {
@@ -76,9 +76,9 @@
 }
 
 .erp-hr-import-v2 .erp-user-import-dropzone.ant-upload-wrapper .ant-upload-drag {
-  border: 1px dashed #d1d5db !important;
+  border: 1px dashed var(--erp-n-300) !important;
   border-radius: 14px !important;
-  background: #f7f8fa !important;
+  background: var(--erp-n-50) !important;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -97,7 +97,7 @@
 }
 
 .erp-hr-import-v2 .erp-user-import-dropzone-hint {
-  color: #4b5563;
+  color: var(--erp-n-600);
 }
 
 .erp-hr-import-v2 .erp-user-import-file-chip {
@@ -115,7 +115,7 @@
 .erp-hr-import-v2 .erp-user-import-stat {
   border: 0;
   border-radius: 12px;
-  background: #f7f8fa;
+  background: var(--erp-n-50);
   box-shadow: none;
 }
 
@@ -139,7 +139,7 @@
   overflow: hidden;
   border: 0;
   border-radius: 12px;
-  background: #f7f8fa;
+  background: var(--erp-n-50);
   padding: 4px 6px 6px;
 }
 
@@ -157,7 +157,7 @@
 
 .erp-hr-import-v2 .erp-user-import-modal-footer {
   padding: 14px 22px !important;
-  border-top: 1px solid #eef1f4 !important;
+  border-top: 1px solid var(--erp-n-150) !important;
   background: #ffffff;
 }
 

@@ -38,7 +38,7 @@
 .erp-hr-item-drawer .erp-hr-item-drawer-section,
 .erp-hr-item-drawer .erp-expense-item-section {
   overflow: hidden;
-  border: 1px solid #e8ebef;
+  border: 1px solid var(--erp-n-200);
   border-radius: 12px;
   background: #ffffff;
   box-shadow:
@@ -49,7 +49,7 @@
 .erp-hr-item-drawer .erp-hr-item-drawer-section-header,
 .erp-hr-item-drawer .erp-expense-item-section-header {
   padding: 12px 16px;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--erp-n-150);
   background: #ffffff;
   text-align: left;
 }
@@ -57,7 +57,7 @@
 .erp-hr-item-drawer .erp-hr-item-drawer-section-title,
 .erp-hr-item-drawer .erp-expense-item-section-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--erp-n-900);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: normal;
@@ -121,13 +121,13 @@
 }
 
 .erp-hr-item-drawer .erp-hr-item-drawer-footer .ant-btn-primary {
-  background: var(--erp-accent);
-  border-color: var(--erp-accent);
+  background: var(--gradient-primary) border-box;
+  border-color: transparent;
 }
 
 .erp-hr-item-drawer .erp-hr-item-drawer-footer .ant-btn-primary:hover {
-  background: var(--erp-accent-hover) !important;
-  border-color: var(--erp-accent-hover) !important;
+  background: var(--gradient-primary-hover) border-box !important;
+  border-color: transparent !important;
 }
 
 .erp-hr-item-drawer-hint-card {
@@ -135,11 +135,11 @@
   padding: 12px 14px;
   font-size: 13px;
   line-height: 1.45;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary, var(--erp-n-500));
   text-align: left;
-  border: 1px solid #e8ebef;
+  border: 1px solid var(--erp-n-200);
   border-radius: 12px;
-  background: #fafbfc;
+  background: var(--erp-n-25);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
 }
 
@@ -147,7 +147,7 @@
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary, var(--erp-n-500));
 }
 
 .erp-hr-item-drawer .erp-drawer-form {

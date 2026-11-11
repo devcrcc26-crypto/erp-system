@@ -7,11 +7,11 @@
   --phv2-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --phv2-muted: #4b5563;
-  --phv2-strong: #0f172a;
-  --phv2-body: #1f2937;
-  --phv2-divider: #eef1f4;
-  --phv2-subtle: #f7f8fa;
+  --phv2-muted: var(--erp-n-600);
+  --phv2-strong: var(--erp-n-900);
+  --phv2-body: var(--erp-n-800);
+  --phv2-divider: var(--erp-n-150);
+  --phv2-subtle: var(--erp-n-50);
   --phv2-tint: rgba(var(--erp-accent-rgb),  0.1);
   --phv2-primary: var(--erp-accent);
   --phv2-primary-strong: var(--erp-accent-hover);
@@ -48,7 +48,7 @@
 }
 
 .erp-public-holidays-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-public-holidays-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -186,7 +186,7 @@
   .ant-table-tbody
   > tr:hover
   > td {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-public-holidays-v2 .erp-users-name {
@@ -235,7 +235,7 @@
 .erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-name,
 .erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-cell-sub,
 .erp-public-holidays-v2 .erp-ph-row-inactive .erp-users-cell-strong {
-  color: #9ca3af;
+  color: var(--erp-n-400);
 }
 
 .erp-public-holidays-v2 .erp-table-row-actions .ant-btn {
@@ -258,7 +258,7 @@
 }
 
 .erp-public-holidays-v2 .erp-table-row-actions .ant-btn:hover {
-  background: #e9edf1 !important;
+  background: var(--erp-n-200) !important;
 }
 
 @media (hover: none) {

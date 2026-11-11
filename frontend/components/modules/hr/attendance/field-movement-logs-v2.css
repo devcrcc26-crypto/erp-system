@@ -13,11 +13,11 @@
   --fml-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 4px 16px rgba(16, 24, 40, 0.06);
-  --fml-muted: #4b5563;
-  --fml-strong: #0f172a;
-  --fml-body: #1f2937;
-  --fml-divider: #eef1f4;
-  --fml-subtle: #f7f8fa;
+  --fml-muted: var(--erp-n-600);
+  --fml-strong: var(--erp-n-900);
+  --fml-body: var(--erp-n-800);
+  --fml-divider: var(--erp-n-150);
+  --fml-subtle: var(--erp-n-50);
   --fml-tint: rgba(29, 158, 117, 0.1);
   --fml-primary: #1d9e75;
   --fml-primary-strong: #0f6e56;
@@ -60,7 +60,7 @@
 }
 
 .erp-fml-v2 .erp-users-stat.erp-contract-stat:hover {
-  background: #fbfcfd;
+  background: var(--erp-n-25);
 }
 
 .erp-fml-v2 .erp-users-stat.erp-contract-stat:focus-visible {
@@ -259,13 +259,13 @@
 .erp-fml-v2 .erp-users-id-chip {
   border: 0;
   border-radius: 8px;
-  background: #f2f4f7;
-  color: #344054;
+  background: var(--erp-n-100);
+  color: var(--erp-n-700);
   font-size: 12px;
 }
 
 .erp-fml-v2 .erp-fml-dash {
-  color: #6b7280;
+  color: var(--erp-n-500);
 }
 
 .erp-fml-v2 .erp-fml-num {

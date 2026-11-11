@@ -191,7 +191,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
   if (auditLogsQuery.isLoading && !auditLogsQuery.data) {
     return (
       <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
       </div>

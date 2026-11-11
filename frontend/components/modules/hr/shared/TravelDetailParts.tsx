@@ -319,7 +319,7 @@ export function TravelTextBlock({
       <p className="m-0 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
         {label}
       </p>
-      <p className="m-0 whitespace-pre-wrap break-words rounded-lg bg-[#f8fafc] px-3.5 py-3 text-sm leading-relaxed text-slate-700">
+      <p className="m-0 whitespace-pre-wrap break-words rounded-lg bg-slate-50 px-3.5 py-3 text-sm leading-relaxed text-slate-700">
         {text}
       </p>
     </div>
@@ -361,7 +361,7 @@ function SummaryPill({
   children: React.ReactNode;
 }): React.ReactNode {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f9] px-2.5 py-1 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
       <span className="text-slate-400" aria-hidden>
         {icon}
       </span>
@@ -384,7 +384,7 @@ export function TravelPassengerList({
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 border-b border-[#eef1f4] px-4 py-3">
+      <div className="flex flex-wrap gap-2 border-b border-slate-150 px-4 py-3">
         <SummaryPill icon={<Users size={13} strokeWidth={2} />}>
           {passengers.length === 1
             ? t('hr.travel.passengerCountOne')
@@ -400,7 +400,7 @@ export function TravelPassengerList({
           })}
         </SummaryPill>
       </div>
-      <ul className="m-0 list-none divide-y divide-[#eef1f4] p-0">
+      <ul className="m-0 list-none divide-y divide-slate-150 p-0">
         {passengers.map((row) => (
           <li
             key={row.id}
@@ -581,7 +581,7 @@ export function TravelBudgetBreakdown({
                 </span>
               </div>
               <div
-                className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#eef1f4]"
+                className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-150"
                 role="img"
                 aria-label={t('hr.travel.shareOfTotal', { percent })}
                 title={t('hr.travel.shareOfTotal', { percent })}

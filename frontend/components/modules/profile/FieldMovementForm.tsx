@@ -491,7 +491,7 @@ export default function FieldMovementForm({
                 : `Select All (${selectableDays.length} days)`}
             </Checkbox>
           ) : (
-            <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 text-sm text-[#64748b]">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
               {orphanDraftIds.length > 0
                 ? 'All flagged days are locked by an unsubmitted draft.'
                 : 'All flagged days already have a pending explanation.'}
@@ -503,8 +503,8 @@ export default function FieldMovementForm({
               key={day.id}
               className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 ${
                 day.alreadySubmitted
-                  ? 'border-[#E5E7EB] bg-[#F8FAFC] opacity-70'
-                  : 'border-[#E5E7EB] bg-white'
+                  ? 'border-slate-200 bg-slate-50 opacity-70'
+                  : 'border-slate-200 bg-white'
               }`}
             >
               <Checkbox
@@ -519,7 +519,7 @@ export default function FieldMovementForm({
                 }}
               />
               <div className="flex-1">
-                <div className="text-sm font-semibold text-[#1A1A1A]">
+                <div className="text-sm font-semibold text-slate-900">
                   {formatFlaggedDate(day.date)}
                 </div>
                 <Tag className="!mt-1">{FLAG_LABELS[day.flag]}</Tag>
@@ -549,12 +549,12 @@ export default function FieldMovementForm({
       {step === 1 ? (
         <div className="flex max-h-[480px] flex-col gap-4 overflow-y-auto pr-1">
           {selectedDays.length > 0 ? (
-            <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-3 fm-stack">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 fm-stack">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-[#1A1A1A]">
+                <span className="text-sm font-semibold text-slate-900">
                   Bulk Actions
                 </span>
-                <span className="text-xs text-[#64748b]">
+                <span className="text-xs text-slate-500">
                   {filledCount} of {selectedDays.length} filled
                   {filledCount === selectedDays.length && selectedDays.length > 0
                     ? ' ✅'
@@ -607,10 +607,10 @@ export default function FieldMovementForm({
             return (
               <div
                 key={day.id}
-                className="rounded-lg border border-[#E5E7EB] p-3 fm-stack"
+                className="rounded-lg border border-slate-200 p-3 fm-stack"
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-[#1A1A1A]">
+                  <span className="text-sm font-semibold text-slate-900">
                     {formatFlaggedDate(day.date)}
                   </span>
                   <Tag>{FLAG_LABELS[day.flag]}</Tag>
@@ -668,15 +668,15 @@ export default function FieldMovementForm({
               return (
                 <div
                   key={key}
-                  className="rounded-lg border border-[#E5E7EB] px-3 py-2"
+                  className="rounded-lg border border-slate-200 px-3 py-2"
                 >
                   <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-[#1A1A1A]">
+                    <span className="text-sm font-semibold text-slate-900">
                       {titleParts.join(' - ')}
                     </span>
                     <Tag>{days.length} day(s)</Tag>
                   </div>
-                  <p className="m-0 text-xs text-[#64748b]">
+                  <p className="m-0 text-xs text-slate-500">
                     {formatDateList(days.map((d) => d.date))}
                   </p>
                 </div>
@@ -684,7 +684,7 @@ export default function FieldMovementForm({
             })}
           </div>
           <div>
-            <div className="mb-1 text-xs font-medium text-[#6B7280]">
+            <div className="mb-1 text-xs font-medium text-slate-500">
               Overall notes {optionalSuffix}
             </div>
             <Input.TextArea
@@ -702,7 +702,7 @@ export default function FieldMovementForm({
           <Typography.Title level={4} className="!mb-1 !text-[color:var(--erp-accent)]">
             ✓ Field Movement Log {submittedNumber} submitted
           </Typography.Title>
-          <Typography.Paragraph className="!mb-0 text-[#6B7280]">
+          <Typography.Paragraph className="!mb-0 text-slate-500">
             Your explanation has been sent for approval. You can track the
             status in Approvals → My Requests.
           </Typography.Paragraph>

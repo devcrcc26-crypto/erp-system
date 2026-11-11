@@ -54,8 +54,8 @@ function JsonBlock({
 }): React.ReactNode {
   if (value === null || value === undefined) {
     return (
-      <div className="rounded-xl border border-dashed border-[#e8ebef] bg-[#f8f9fb] px-4 py-6 text-center">
-        <p className="m-0 text-sm leading-relaxed text-[#9AA4B2]">
+      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
+        <p className="m-0 text-sm leading-relaxed text-slate-400">
           {emptyLabel ?? '-'}
         </p>
       </div>
@@ -63,7 +63,7 @@ function JsonBlock({
   }
 
   return (
-    <pre className="m-0 max-h-[24rem] overflow-auto rounded-xl border border-[#e8ebef] bg-[#f8f9fb] p-4 text-xs leading-relaxed text-[#1A1A1A]">
+    <pre className="m-0 max-h-[24rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-900">
       {JSON.stringify(value, null, 2)}
     </pre>
   );
@@ -212,7 +212,7 @@ export default function AuditLogDetailPageContent({
                   {formatAuditLogUserName(log)}
                 </p>
                 {log.user?.email ? (
-                  <p className="m-0 mt-1 text-xs text-[#6B7280]">
+                  <p className="m-0 mt-1 text-xs text-slate-500">
                     {log.user.email}
                   </p>
                 ) : null}
@@ -288,7 +288,7 @@ export default function AuditLogDetailPageContent({
         <DetailSection title={t('auditLogs.detail.changes')}>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="min-w-0">
-              <p className="mb-2 mt-0 text-xs font-semibold uppercase tracking-wide text-[#9AA4B2]">
+              <p className="mb-2 mt-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {t('auditLogs.detail.beforeValue')}
               </p>
               <JsonBlock
@@ -301,7 +301,7 @@ export default function AuditLogDetailPageContent({
               />
             </div>
             <div className="min-w-0">
-              <p className="mb-2 mt-0 text-xs font-semibold uppercase tracking-wide text-[#9AA4B2]">
+              <p className="mb-2 mt-0 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {t('auditLogs.detail.afterValue')}
               </p>
               <JsonBlock
