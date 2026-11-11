@@ -161,10 +161,6 @@ function LoginForm(): React.ReactNode {
           <h1 className="erp-login-brand-title">Construction ERP</h1>
           <p className="erp-login-brand-line">{labels.brandLine}</p>
         </div>
-
-        <p className="erp-login-brand-foot">
-          © {new Date().getFullYear()} CRCC
-        </p>
       </aside>
 
       <div className="erp-login-stage">

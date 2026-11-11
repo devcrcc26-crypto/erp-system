@@ -20,7 +20,7 @@ export default function PageHeader({
   return (
     <header
       className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-6 py-5 shadow-sm md:px-8 md:py-6"
-      style={{ borderRadius: 8 }}
+      style={{ borderRadius: 'var(--radius-card)' }}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
         {onMenuClick && (
@@ -35,7 +35,7 @@ export default function PageHeader({
         )}
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+          <h1 className="text-lg font-semibold text-text-heading">{title}</h1>
           {showSearch && (
             <div className="mt-2 w-full sm:w-[50%] md:w-[40%] lg:w-[30%]">
               <Input

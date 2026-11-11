@@ -17,8 +17,8 @@
   --sb-icon: #64748b;
   --sb-hover: rgba(15, 23, 42, 0.05);
   --sb-active-bg: var(--erp-accent-light);
-  --sb-active-text: var(--erp-accent-hover);
-  --sb-accent: var(--erp-accent-hover);
+  --sb-active-text: var(--color-primary-dark);
+  --sb-accent: var(--color-primary-dark);
   --sb-focus: var(--erp-accent);
   --sb-badge-bg: #c43d3c;
   --sb-field-bg: #f6f8fa;
@@ -942,7 +942,7 @@
   --sb-border: #eef1f4;
   --sb-hover: rgba(16, 24, 40, 0.04);
   --sb-active-bg: rgba(var(--erp-accent-rgb), 0.1);
-  --sb-active-text: var(--erp-accent-hover);
+  --sb-active-text: var(--color-primary-dark);
   --sb-field-bg: #f2f4f7;
   --sb-field-border: transparent;
   --sb-panel-bg: #f7f8fa;

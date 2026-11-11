@@ -31,7 +31,7 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
       colorError: tokens.colorRed400,
       colorInfo: tokens.colorBlue400,
       borderRadius: tokens.borderRadius,
-      borderRadiusLG: tokens.borderRadiusCard,
+      borderRadiusLG: tokens.borderRadiusLG,
       fontSize,
       fontSizeSM,
       fontSizeLG,
@@ -52,6 +52,8 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
       },
       Card: {
         borderRadiusLG: tokens.borderRadiusCard,
+        /** Borderless cards only; bordered cards stay flat (see globals.css tokens). */
+        boxShadowTertiary: tokens.shadowCard,
         padding: tokens.cardPadding,
         paddingLG: tokens.cardPadding,
       },

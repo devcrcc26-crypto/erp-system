@@ -71,7 +71,14 @@ export const tokens = {
     "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",
 
   borderRadius: 6,
-  borderRadiusCard: 8,
+  /** Global AntD `borderRadiusLG` (dropdowns, popovers, tables). */
+  borderRadiusLG: 8,
+  /** Cards - matches `--radius-card` (login card) in globals.css. */
+  borderRadiusCard: 12,
+  /** Raised card shadow - matches `--shadow-card` in globals.css. */
+  shadowCard: '0 8px 32px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
+  /** Heading text - matches `--color-text-heading` (login heading). */
+  colorTextHeading: accent.hover,
   sidebarWidth: 256,
 
   /** Outer page padding */
