@@ -34,8 +34,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env secrets (keep .env.example tracked as a template)
+.env
+.env.*
+!.env.example
+
+# certificates / keys
+*.pem
+*.p12
+*.pfx
 
 # vercel
 .vercel
