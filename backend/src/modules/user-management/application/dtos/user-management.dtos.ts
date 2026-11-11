@@ -305,7 +305,7 @@ export class CreateUserDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ example: 'EMP-0001' })
+  @ApiPropertyOptional({ example: 'CC-0001' })
   @IsOptional()
   @IsOptionalText()
   @Transform(trimString)

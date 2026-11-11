@@ -34,6 +34,14 @@ const PAYROLL_PERMISSION_DEFS = [
   },
 ] as const;
 
+const PAYROLL_OVERSIGHT_DEFS = [
+  {
+    module: 'payroll-oversight',
+    action: 'view',
+    description: 'View all payroll runs (read-only; bank details masked)',
+  },
+] as const;
+
 const COMPANY_SETTINGS_DEFS = [
   { module: 'company_settings', action: 'view', description: 'View company settings' },
   { module: 'company_settings', action: 'edit', description: 'Edit company settings' },
@@ -63,13 +71,16 @@ const PAYROLL_APPROVE_ROLES = [
   'System Administrator',
 ] as const;
 
+// Managing Director is view-only on payroll: no export (see PAYROLL_OVERSIGHT_ROLES).
 const PAYROLL_EXPORT_ROLES = [
   'HR Assistant',
   'HR Manager',
   'General Manager',
-  'Managing Director',
   'System Administrator',
 ] as const;
+
+/** Read-only access to every payroll run (payroll-oversight.view). */
+const PAYROLL_OVERSIGHT_ROLES = ['Managing Director'] as const;
 
 const COMPANY_SETTINGS_VIEW_ROLES = [
   'HR Manager',
@@ -84,7 +95,11 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
     const permissions = [];
-    for (const def of [...PAYROLL_PERMISSION_DEFS, ...COMPANY_SETTINGS_DEFS]) {
+    for (const def of [
+      ...PAYROLL_PERMISSION_DEFS,
+      ...PAYROLL_OVERSIGHT_DEFS,
+      ...COMPANY_SETTINGS_DEFS,
+    ]) {
       permissions.push(
         await prisma.permission.upsert({
           where: {
@@ -115,6 +130,7 @@ async function main(): Promise<void> {
         ...PAYROLL_CREATE_EDIT_ROLES,
         ...PAYROLL_APPROVE_ROLES,
         ...PAYROLL_EXPORT_ROLES,
+        ...PAYROLL_OVERSIGHT_ROLES,
         ...COMPANY_SETTINGS_VIEW_ROLES,
         ...COMPANY_SETTINGS_EDIT_ROLES,
       ]),
@@ -214,6 +230,20 @@ async function main(): Promise<void> {
           canDelete: false,
           canApprove: false,
           canExport: true,
+        });
+      }
+      if (
+        PAYROLL_OVERSIGHT_ROLES.includes(
+          role.name as (typeof PAYROLL_OVERSIGHT_ROLES)[number],
+        )
+      ) {
+        await grant('payroll-oversight', 'view', {
+          canView: true,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
         });
       }
       if (

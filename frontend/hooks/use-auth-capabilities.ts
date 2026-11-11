@@ -211,6 +211,11 @@ export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);
 }
 
+/** True when the session holds users.create (add or import employees). */
+export function useCanCreateUsers(): boolean {
+  return useAuthStore((state) => state.capabilities.canCreateUsers);
+}
+
 /**
  * True when the session holds users.edit - the permission the backend requires
  * for login-name changes, the approver-only flag and HR password resets.

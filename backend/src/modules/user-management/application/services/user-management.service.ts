@@ -17,6 +17,8 @@ import {
 } from '../../domain/years-of-experience';
 
 const USERS_AUDIT_MODULE = 'users';
+/** Employee IDs are CC-NNNN (4-digit zero-padded). See nextEmployeeId. */
+const EMPLOYEE_ID_PREFIX = 'CC-';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import {
   assertPasswordPolicy,
@@ -1896,12 +1898,46 @@ export class UserManagementService {
     return folder.id;
   }
 
+  /**
+   * Next employee ID: CC-NNNN, continuing from the highest CC number in use
+   * (CC-0001 when there is none).
+   *
+   * The ID is written to the user later in the create flow, so a bare MAX + 1
+   * would hand two simultaneous creates the same value. Instead, under a
+   * transaction-scoped advisory lock, `employee_id_seq` is lifted to at least
+   * MAX(CC number) - never lowered - and `nextval` issues the number. The
+   * sequence gives each caller a distinct value even before any row is saved;
+   * the lift keeps it in step with manual IDs and the normalization script.
+   * Soft-deleted users count: `employee_id` is unique across all rows.
+   */
   private async nextEmployeeId(): Promise<string> {
-    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
-      SELECT nextval('employee_id_seq')
-    `;
-    const seq = Number(result[0].nextval);
-    return `EMP-${String(seq).padStart(4, '0')}`;
+    const seq = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('employee_id_seq'))`;
+
+      const [{ max_cc: maxCc }] = await tx.$queryRaw<Array<{ max_cc: bigint }>>`
+        SELECT COALESCE(
+          MAX(substring(employee_id FROM '^CC-([0-9]+)$')::bigint),
+          0
+        ) AS max_cc
+        FROM "user"
+      `;
+      const [state] = await tx.$queryRaw<
+        Array<{ last_value: bigint; is_called: boolean }>
+      >`SELECT last_value, is_called FROM employee_id_seq`;
+      // Highest number the sequence has already issued (0 if never used).
+      const issued = state.is_called
+        ? Number(state.last_value)
+        : Number(state.last_value) - 1;
+      if (Number(maxCc) > issued) {
+        await tx.$queryRaw`SELECT setval('employee_id_seq', ${Number(maxCc)}::bigint, true)`;
+      }
+
+      const [{ nextval }] = await tx.$queryRaw<Array<{ nextval: bigint }>>`
+        SELECT nextval('employee_id_seq') AS nextval
+      `;
+      return Number(nextval);
+    });
+    return `${EMPLOYEE_ID_PREFIX}${String(seq).padStart(4, '0')}`;
   }
 
   private async assertEmployeeIdAvailable(

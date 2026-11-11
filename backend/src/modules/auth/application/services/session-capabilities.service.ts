@@ -10,6 +10,7 @@ import { isSystemAdministrator, isTrueSystemAdministrator } from '../../../../sh
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { hasDirectReports } from '../../../../shared/org/team-scope.util';
+import { PAYROLL_OVERSIGHT_MODULE } from '../../../../shared/permissions/permission.types';
 import {
   CapabilitiesDto,
   EpcCapabilitiesDto,
@@ -87,6 +88,7 @@ export class SessionCapabilitiesService {
       'business-trip',
       'purchase-request',
       'payroll',
+      PAYROLL_OVERSIGHT_MODULE,
       'announcements',
       'schedule',
       'engineering_documents',
@@ -140,8 +142,13 @@ export class SessionCapabilitiesService {
       canCreateLeave: leave.canCreate,
       canViewOvertime: overtime.canView,
       canCreateOvertime: overtime.canCreate,
+      // payroll.view alone is "my payslips" (every employee has it); read-only
+      // access to all runs comes from payroll-oversight.view (Managing Director).
       canAccessPayroll:
-        payroll.canCreate || payroll.canEdit || payroll.canApprove,
+        payroll.canCreate ||
+        payroll.canEdit ||
+        payroll.canApprove ||
+        permissionMap[PAYROLL_OVERSIGHT_MODULE].canView,
       canCreatePayroll: payroll.canCreate,
       canEditPayroll: payroll.canEdit,
       canApprovePayroll: payroll.canApprove,

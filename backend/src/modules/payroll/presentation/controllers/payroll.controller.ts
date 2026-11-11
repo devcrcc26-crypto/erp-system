@@ -44,6 +44,7 @@ import { PayrollExcelExportService } from '../../application/services/payroll-ex
 import { PayrollPayslipService } from '../../application/services/payroll-payslip.service';
 import { PayrollRunService } from '../../application/services/payroll-run.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PAYROLL_OVERSIGHT_MODULE } from '../../../../shared/permissions/permission.types';
 
 @ApiTags('Payroll')
 @ApiBearerAuth()
@@ -103,6 +104,8 @@ export class PayrollController {
     { module: 'payroll', action: 'create' },
     { module: 'payroll', action: 'approve' },
     { module: 'payroll', action: 'edit' },
+    // Read-only: Managing Director sees runs; bank details stay masked.
+    { module: PAYROLL_OVERSIGHT_MODULE, action: 'view' },
   )
   @ApiOperation({ summary: 'List payroll runs (HR payroll staff)' })
   listRuns(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
@@ -114,6 +117,8 @@ export class PayrollController {
     { module: 'payroll', action: 'create' },
     { module: 'payroll', action: 'approve' },
     { module: 'payroll', action: 'edit' },
+    // Read-only: Managing Director sees runs; bank details stay masked.
+    { module: PAYROLL_OVERSIGHT_MODULE, action: 'view' },
   )
   @ApiOperation({ summary: 'Get payroll run detail' })
   async getRun(

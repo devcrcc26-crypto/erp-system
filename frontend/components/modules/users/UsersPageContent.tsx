@@ -1,4 +1,5 @@
 'use client';
+import type { ColumnsType } from 'antd/es/table';
 import { accent } from '@/lib/theme/accent';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
@@ -50,7 +51,11 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useCanEditUsers, useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
+import {
+  useCanCreateUsers,
+  useCanEditUsers,
+  useIsSystemAdmin,
+} from '@/hooks/use-auth-capabilities';
 import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -239,6 +244,8 @@ export default function UsersPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const viewerIsAdmin = useIsSystemAdmin();
   const canEditUsers = useCanEditUsers();
+  // users.view alone (e.g. Managing Director) is read-only: no add/import/row actions.
+  const canCreateUsers = useCanCreateUsers();
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -551,6 +558,9 @@ export default function UsersPageContent(): React.ReactNode {
   }
 
   function buildActionMenu(user: User): MenuProps['items'] {
+    if (!canEditUsers) {
+      return [];
+    }
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
     const isProtectedAccount =
       user.employeeId === PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID;
@@ -740,11 +750,15 @@ export default function UsersPageContent(): React.ReactNode {
                     ),
                 },
               ]}
-              onImport={() => setImportOpen(true)}
-              primary={{
-                label: t('users.addEmployee'),
-                onClick: () => router.push('/users/new'),
-              }}
+              onImport={canCreateUsers ? () => setImportOpen(true) : undefined}
+              primary={
+                canCreateUsers
+                  ? {
+                      label: t('users.addEmployee'),
+                      onClick: () => router.push('/users/new'),
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -966,10 +980,14 @@ export default function UsersPageContent(): React.ReactNode {
                   icon={<Users />}
                   title={t('users.noTeamMembers')}
                   description={t('users.noTeamMembersDescription')}
-                  action={{
-                    label: t('users.addEmployee'),
-                    onClick: () => router.push('/users/new'),
-                  }}
+                  action={
+                    canCreateUsers
+                      ? {
+                          label: t('users.addEmployee'),
+                          onClick: () => router.push('/users/new'),
+                        }
+                      : undefined
+                  }
                 />
               ),
             }}
@@ -1156,7 +1174,7 @@ export default function UsersPageContent(): React.ReactNode {
                   <UserStatusIndicator user={record} t={t} />
                 ),
               },
-              {
+              ...(canEditUsers ? ([{
                 title: '',
                 key: 'actions',
                 width: 44,
@@ -1186,7 +1204,7 @@ export default function UsersPageContent(): React.ReactNode {
                     </Dropdown>
                   </div>
                 ),
-              },
+              }] satisfies ColumnsType<User>) : []),
             ]}
           />
         </div>

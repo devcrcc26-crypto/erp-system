@@ -34,3 +34,9 @@ export const ACTION_TO_FLAG: Record<PermissionAction, keyof PermissionFlags> = {
   export: 'canExport',
   manage: 'canEdit',
 };
+
+/**
+ * Read-only access to every payroll run (Managing Director). Separate from
+ * `payroll.view`, which every employee holds for their own payslips.
+ */
+export const PAYROLL_OVERSIGHT_MODULE = 'payroll-oversight';
