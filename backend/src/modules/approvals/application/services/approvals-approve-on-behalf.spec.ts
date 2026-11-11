@@ -80,6 +80,8 @@ function setup(request?: { requestedBy?: string; createdBy?: string }) {
       }),
     },
     fieldMovementLog: { findFirst: jest.fn(async () => null) },
+    // Durable decision-history row written on return/approve/reject.
+    approvalResponse: { create: jest.fn(async () => ({})) },
     user: {
       findMany: jest.fn(async () => [
         { id: GM, firstName: 'Gena', middleName: null, lastName: 'Manager' },

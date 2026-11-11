@@ -207,12 +207,12 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
       { bypassApproverCheck: true },
     );
 
-    const adjustPendingForDate = jest.fn(async () => undefined);
+    const adjustPendingForLeavePeriods = jest.fn(async () => undefined);
     const recordLeaveUsed = jest.fn(async () => undefined);
     const leave = new LeaveService(
       prisma as unknown as PrismaService,
       {} as never,
-      { adjustPendingForDate } as unknown as LeaveBalanceService,
+      { adjustPendingForLeavePeriods } as unknown as LeaveBalanceService,
       {} as never,
       {} as never,
       {} as never,
@@ -232,12 +232,16 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
       )
       .mockResolvedValue(undefined);
     await leave.onApprovalDecision(REQUEST_ID, 'APPROVED');
-    expect(adjustPendingForDate).toHaveBeenCalledWith(
+    // Pending is released per leave-year segment (sign -1), falling back to the
+    // request start date and its 2 days. Replaces the old adjustPendingForDate(-2).
+    expect(adjustPendingForLeavePeriods).toHaveBeenCalledWith(
       'emp-1',
-      LeaveType.ANNUAL,
-      expect.any(Date),
-      -2,
       COMPANY_ID,
+      LeaveType.ANNUAL,
+      [expect.objectContaining({ startDate: expect.any(Date), endDate: expect.any(Date) })],
+      -1,
+      expect.any(Date),
+      2,
     );
     expect(recordLeaveUsed).toHaveBeenCalledWith('leave-1');
   });
@@ -250,6 +254,8 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
           companyId: COMPANY_ID,
           status: OvertimeSheetStatus.SUBMITTED,
           employeeId: 'emp-1',
+          // Loaded with `include: { entries: true }` for the approved snapshot.
+          entries: [],
         })),
         update: jest.fn(async () => ({})),
       },
@@ -257,6 +263,7 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
 
     const service = new OvertimeService(
       prisma as unknown as PrismaService,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -302,6 +309,7 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
 
     await service.onApprovalDecision(REQUEST_ID, 'APPROVED');
@@ -332,21 +340,20 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
       },
     };
 
+    // Arguments follow the current SiteAssignmentService constructor order.
     const service = new SiteAssignmentService(
       prisma as unknown as PrismaService,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      { recalculateCompanyAttendanceMonth: recalculate } as never,
-      {} as never,
-      {} as never,
+      {} as never, // decisionRegistry
+      {} as never, // permissionService
+      {} as never, // notificationService
+      { recalculateCompanyAttendanceMonth: recalculate } as never, // attendanceService
+      {} as never, // dayCoverage
+      {} as never, // backdatingPolicy
       {
         create: jest.fn(async () => undefined),
         buildFromRequestContext: (input: unknown) => input,
-      } as never,
-      { syncAfterApproval: jest.fn(async () => undefined) } as never,
+      } as never, // audit
+      { syncAfterApproval: jest.fn(async () => undefined) } as never, // overtimeSiteSync
     );
 
     await service.onApprovalDecision(REQUEST_ID, 'APPROVED');
@@ -667,6 +674,8 @@ describe('AUTO_APPROVE_ALL (scenarios)', () => {
         })),
       },
       document: { findMany: jest.fn(async () => []) },
+      // Pending-approval notification looks up active HR managers.
+      user: { findMany: jest.fn(async () => []) },
       $queryRawUnsafe: jest.fn(async () => [{ nextval: 1 }]),
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn({

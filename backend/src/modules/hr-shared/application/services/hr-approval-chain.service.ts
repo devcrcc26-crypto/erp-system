@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { SealStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -1105,8 +1106,13 @@ export class HrApprovalChainService {
    * `official-seal` / `project-seal` manage permission; it is not an approver.
    *
    * Empty array (direct APPROVED) only when the submitter is the Managing
-   * Director or a System Administrator. With several active Managing
-   * Directors, the earliest-created one is the approver.
+   * Director or a System Administrator.
+   *
+   * Several active Managing Directors: round-robin by the company's count of
+   * submitted seal requests (official + project, excluding drafts and deleted
+   * rows). Directors are ordered by createdAt ASC; approver index =
+   * count % directors.length. The new request is not saved yet, so the count
+   * is its position in the rotation.
    */
   private async buildSealManagingDirectorChain(
     submitterId: string,
@@ -1118,12 +1124,27 @@ export class HrApprovalChainService {
       return [];
     }
 
-    const managingDirector = await this.findActiveUserByPrimaryRoleName(
+    const managingDirectors = await this.findActiveUsersByPrimaryRoleName(
       companyId,
       'Managing Director',
     );
-    if (!managingDirector) {
+    if (managingDirectors.length === 0) {
       throw new BadRequestException(SEAL_NO_MANAGING_DIRECTOR_MESSAGE);
+    }
+
+    let managingDirector = managingDirectors[0];
+    if (managingDirectors.length > 1) {
+      const submittedSeal = {
+        companyId,
+        deletedAt: null,
+        status: { not: SealStatus.DRAFT },
+      };
+      const [officialCount, projectCount] = await Promise.all([
+        this.prisma.officialSeal.count({ where: submittedSeal }),
+        this.prisma.projectSeal.count({ where: submittedSeal }),
+      ]);
+      managingDirector =
+        managingDirectors[(officialCount + projectCount) % managingDirectors.length];
     }
 
     return [
