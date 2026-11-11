@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -692,6 +693,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-form-page erp-leave-v2">
       <HrFormPageShell
+        icon={<CategoryIcon code="LEAVE_REQUEST" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.leave.new')}
         description={t('pages.hr.leave.detailsStepDescription')}
         cancelLabel={t('hr.buttons.cancel')}

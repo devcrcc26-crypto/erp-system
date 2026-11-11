@@ -30,6 +30,7 @@ import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 import './leave-v2.css';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -226,6 +227,7 @@ export default function LeaveRequestEditPageContent({
 
   return (
     <HrFormPageShell
+      icon={<CategoryIcon code="LEAVE_REQUEST" size={24} strokeWidth={1.75} />}
       title={t('pages.hr.leave.edit')}
       description={t('pages.hr.leave.detailsStepDescription')}
       cancelLabel={t('hr.buttons.cancel')}

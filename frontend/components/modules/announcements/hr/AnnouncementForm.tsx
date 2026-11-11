@@ -20,7 +20,12 @@ import {
   Upload,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { Paperclip, Users, X } from 'lucide-react';
+import {
+  Megaphone,
+  Paperclip,
+  Users,
+  X,
+} from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanPublishAnnouncements } from '@/hooks/use-auth-capabilities';
@@ -308,6 +313,7 @@ export default function AnnouncementForm({
   return (
     <div className="erp-ann-page">
       <HrFormPageShell
+        icon={<Megaphone size={24} strokeWidth={1.75} />}
         title={
           existing
             ? t('announcements.pages.edit')

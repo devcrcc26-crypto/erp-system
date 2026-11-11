@@ -33,6 +33,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface WfhRequestFormValues {
   reason?: string;
@@ -403,6 +404,7 @@ export default function WorkFromHomeRequestFormContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-wfh-form-page erp-wfh-v2 flex flex-col">
       <HrFormPageShell
+        icon={<CategoryIcon code="WORK_FROM_HOME" size={24} strokeWidth={1.75} />}
         title={
           isEdit
             ? t('pages.approvals.edit.pageTitle')

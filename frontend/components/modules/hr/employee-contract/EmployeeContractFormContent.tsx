@@ -9,6 +9,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmployeeContractDetail } from '@/lib/api/employee-contract.types';
 import { useEmployeeContract } from '@/lib/query/employee-contract';
+import { FileSignature } from 'lucide-react';
 
 /**
  * Full-page create / edit employee contract - stepper chrome like Add Employee.
@@ -85,6 +86,7 @@ export default function EmployeeContractFormContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-contract-form-page">
       <HrFormPageShell
+        icon={<FileSignature size={24} strokeWidth={1.75} />}
         title={
           isEdit
             ? t('pages.hr.employeeContract.edit')

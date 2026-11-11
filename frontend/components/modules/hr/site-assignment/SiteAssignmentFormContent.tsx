@@ -29,6 +29,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { isBeforeCurrentMonthEat } from '@/lib/utils/backdating-date.util';
 import { formatUserName } from '@/lib/utils/user-display';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface SiteAssignmentFormValues {
   siteName?: string;
@@ -650,6 +651,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-sa-form-page erp-site-assignments-v2 flex flex-col">
       <HrFormPageShell
+        icon={<CategoryIcon code="SITE_ASSIGNMENT" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.siteAssignments.form.title')}
         description={t('pages.hr.siteAssignments.form.description')}
         cancelLabel={t('common.cancel')}

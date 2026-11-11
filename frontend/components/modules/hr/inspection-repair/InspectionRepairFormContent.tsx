@@ -9,6 +9,7 @@ import type { InspectionRepairDetail } from '@/lib/api/inspection-repair.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { inspectionRepairKeys } from '@/lib/query/inspection-repair';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New inspection & repair request - shared HR form banner + stepper form.
@@ -33,6 +34,7 @@ export default function InspectionRepairFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-inspection-repair-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="INSPECTION_REPAIR" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.inspectionRepair.new')}
         description={t('pages.hr.inspectionRepair.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

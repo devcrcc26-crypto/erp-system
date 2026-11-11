@@ -18,6 +18,7 @@ import {
 } from '@/lib/query/purchase-request';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface HeaderFormValues {
   title: string;
@@ -147,6 +148,7 @@ export default function PurchaseRequestEditPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-purchase-request-form-page">
       <HrFormPageShell
+        icon={<CategoryIcon code="PURCHASE_REQUEST" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.purchaseRequest.edit')}
         description={t('pages.hr.purchaseRequest.editDescription')}
         cancelLabel={t('hr.buttons.cancel')}

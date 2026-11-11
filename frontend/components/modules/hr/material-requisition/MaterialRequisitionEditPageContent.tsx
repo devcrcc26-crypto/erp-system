@@ -9,6 +9,7 @@ import RequestEditPageShell, {
 } from '@/components/modules/approvals/RequestEditPageShell';
 import MaterialRequisitionForm from '@/components/modules/hr/material-requisition/MaterialRequisitionForm';
 import { useMaterialRequisition } from '@/lib/query/material-requisition';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * Employee edit of their own DRAFT / RETURNED material requisition, reusing
@@ -39,6 +40,7 @@ export default function MaterialRequisitionEditPageContent({
       {() =>
         record ? (
           <RequestEditPageShell
+            icon={<CategoryIcon code="MATERIAL_REQUISITION" size={24} strokeWidth={1.75} />}
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}

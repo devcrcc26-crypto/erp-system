@@ -11,6 +11,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useUser } from '@/lib/query/users';
 import { formatUserName } from '@/lib/utils/user-display';
+import { UserPen } from 'lucide-react';
 
 const FORM_ROOT = `erp-pro-list-page erp-users-page erp-employee-form-page erp-hr-travel-v2 ${DETAIL_PAGE_V2}`;
 
@@ -52,6 +53,7 @@ export default function EditEmployeeFormContent({
   return (
     <div className={`${FORM_ROOT} min-w-0 max-w-full`}>
       <HrFormPageShell
+        icon={<UserPen size={24} strokeWidth={1.75} />}
         title={t('pages.users.edit')}
         description={t('users.form.editEmployeeDescription')}
         cancelLabel={t('users.form.cancel')}

@@ -9,6 +9,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useMyFlaggedDays } from '@/lib/query/attendance';
 import type { FlaggedDay } from '@/lib/api/attendance.types';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 function previousPeriod(month: number, year: number): { month: number; year: number } {
   if (month <= 1) {
@@ -94,6 +95,7 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
     return (
       <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
         <HrFormPageShell
+          icon={<CategoryIcon code="FIELD_MOVEMENT_LOG" size={24} strokeWidth={1.75} />}
           title={shellTitle}
           description={shellDescription}
           cancelLabel={t('hr.buttons.cancel')}
@@ -115,6 +117,7 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="FIELD_MOVEMENT_LOG" size={24} strokeWidth={1.75} />}
         title={shellTitle}
         description={shellDescription}
         cancelLabel={t('hr.buttons.cancel')}

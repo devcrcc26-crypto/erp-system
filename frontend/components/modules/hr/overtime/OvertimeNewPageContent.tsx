@@ -24,6 +24,7 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { disableFutureMonths } from '@/lib/utils/date-validation';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 const EDITABLE_SHEET_STATUSES: OvertimeSheetStatus[] = ['DRAFT', 'RETURNED'];
 const SUBMITTED_SHEET_STATUSES: OvertimeSheetStatus[] = [
@@ -163,6 +164,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
 
   return (
     <HrFormPageShell
+      icon={<CategoryIcon code="OVERTIME_APPLICATION" size={24} strokeWidth={1.75} />}
       title={title}
       description={
         hasOnBehalfAccess

@@ -1,7 +1,6 @@
 'use client';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
-import './exit-permit-form-v2.css';
 
 import { useRouter } from 'next/navigation';
 import RequestEditGate from '@/components/modules/approvals/RequestEditGate';
@@ -43,7 +42,6 @@ export default function ExitPermitEditPageContent({
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}
-            tone="brand"
             icon={<CategoryIcon code="EXIT_PERMIT" size={24} strokeWidth={1.75} />}
             className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-exit-permit-form-page flex flex-col gap-4"
           >

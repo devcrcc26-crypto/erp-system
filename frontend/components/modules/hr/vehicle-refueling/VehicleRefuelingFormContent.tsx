@@ -9,6 +9,7 @@ import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { vehicleRefuelingKeys } from '@/lib/query/vehicle-refueling';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New vehicle refueling request - shared HR form banner + stepper form.
@@ -33,6 +34,7 @@ export default function VehicleRefuelingFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-vehicle-refueling-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="VEHICLE_REFUELING" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.vehicleRefueling.new')}
         description={t('pages.hr.vehicleRefueling.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

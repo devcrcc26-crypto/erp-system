@@ -9,6 +9,7 @@ import type { VehicleApplicationDetail } from '@/lib/api/vehicle-application.typ
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { vehicleApplicationKeys } from '@/lib/query/vehicle-application';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New vehicle application - shared HR form banner + stepper form.
@@ -33,6 +34,7 @@ export default function VehicleApplicationFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-vehicle-application-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="VEHICLE_APPLICATION" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.vehicleApplication.new')}
         description={t('pages.hr.vehicleApplication.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

@@ -95,16 +95,6 @@
   letter-spacing: -0.01em;
 }
 
-.erp-employees-v2 .erp-users-count-pill {
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--ev2-tint);
-  color: var(--ev2-primary-strong);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 /* Filters: quiet tray under the header */
 .erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar {
   flex-wrap: wrap;
@@ -413,5 +403,316 @@
     height: 36px !important;
     border-radius: 10px !important;
     line-height: 36px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Brand layer (Nov 2026) - same language as dashboard, Approvals and the
+ * add / edit forms:
+ * - Banner: brand gradient + drawing-sheet grid + glow; total as heading,
+ *   white Add employee, glass Import / Export, glass status tiles.
+ * - List card: login-card gradient bar, tinted header + icon tile, tinted
+ *   filter strip with white fields, white table header, green row hover,
+ *   tinted pagination footer.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-employees-v2 {
+  --ev2-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --ev2-panel-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+/* ── Banner ── */
+
+.erp-employees-v2 .erp-employees-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--ev2-radius);
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12);
+  overflow: hidden;
+}
+
+.erp-employees-v2 .erp-employees-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-employees-v2 .erp-employees-hero::after {
+  content: '';
+  position: absolute;
+  top: -70%;
+  right: -6%;
+  z-index: -1;
+  width: 26rem;
+  height: 26rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+.erp-employees-v2 .erp-employees-hero-top {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+
+.erp-employees-v2 .erp-employees-hero-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-employees-v2 .erp-employees-hero-subtitle {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+}
+
+.erp-employees-v2 .erp-employees-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Import / Export / overflow: glass. */
+.erp-employees-v2 .erp-employees-hero-actions .ant-btn {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  font-weight: 550;
+  box-shadow: none;
+}
+
+.erp-employees-v2 .erp-employees-hero-actions .ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Add employee: solid white, accent text. */
+.erp-employees-v2 .erp-employees-hero-actions .ant-btn-primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+}
+
+.erp-employees-v2 .erp-employees-hero-actions .ant-btn-primary:not(:disabled):hover {
+  border-color: #ffffff !important;
+  background: var(--color-primary-soft, #e1f5ee) !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+.erp-employees-v2 .erp-employees-hero-actions .ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Status tiles: glass on the banner. */
+.erp-employees-v2 .erp-employees-hero .erp-users-stat-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat-chip {
+  box-shadow: 0 2px 6px rgba(10, 36, 32, 0.2);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat-label {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat-value {
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── List card ── */
+
+.erp-employees-v2 .erp-employees-list-card.erp-pro-card {
+  position: relative;
+  border: 1px solid var(--ev2-border);
+  box-shadow: var(--ev2-panel-shadow);
+  overflow: hidden;
+}
+
+.erp-employees-v2 .erp-employees-list-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar {
+  padding: 22px 20px 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-employees-v2 .erp-employees-card-icon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-button-sm, 0 4px 12px rgba(var(--erp-accent-rgb), 0.24));
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-pro-card-toolbar-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-weight: 650;
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ev2-divider);
+  border-radius: var(--radius-control, 10px);
+  background: #ffffff;
+  color: var(--ev2-muted);
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn:hover {
+  border-color: var(--erp-accent) !important;
+  background: rgba(var(--erp-accent-rgb), 0.06) !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+/* Filters: tinted strip, white fields. */
+.erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar {
+  padding: 12px 20px;
+  border-top: 1px solid var(--ev2-divider);
+  border-bottom: 1px solid var(--ev2-divider);
+  background: var(--erp-n-25);
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar .ant-input-affix-wrapper,
+.erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar .ant-select-selector,
+.erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar .ant-picker {
+  background: #ffffff !important;
+}
+
+/* Table: white header under the strip, green row hover with accent edge. */
+.erp-employees-v2 .erp-employees-list-card .ant-table-thead > tr > th {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--ev2-divider) !important;
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
+  box-shadow: inset 3px 0 0 var(--erp-accent);
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-table-tbody > tr.ant-table-row:hover .erp-users-name {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 12px 20px !important;
+  border-top: 1px solid var(--ev2-divider);
+  background: var(--erp-n-25);
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-pagination .ant-pagination-item-active {
+  border-color: var(--erp-accent);
+  background: rgba(var(--erp-accent-rgb), 0.1);
+}
+
+.erp-employees-v2 .erp-employees-list-card .ant-pagination .ant-pagination-item-active a {
+  color: var(--erp-accent-hover);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-employees-v2 .erp-employees-hero {
+    padding: 18px 16px;
+  }
+
+  .erp-employees-v2 .erp-employees-hero-actions {
+    width: 100%;
+  }
+
+  .erp-employees-v2 .erp-employees-hero .erp-users-stat-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-employees-v2 .erp-employees-list-card .erp-users-toolbar {
+    padding: 18px 14px 12px;
+  }
+
+  .erp-employees-v2 .erp-employees-list-card .erp-users-filter-bar,
+  .erp-employees-v2 .erp-employees-list-card .ant-table-pagination.ant-pagination {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
   }
 }

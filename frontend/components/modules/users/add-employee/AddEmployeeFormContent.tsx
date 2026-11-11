@@ -10,6 +10,7 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { UserPlus } from 'lucide-react';
 
 const FORM_ROOT = `erp-pro-list-page erp-users-page erp-employee-form-page erp-hr-travel-v2 ${DETAIL_PAGE_V2}`;
 
@@ -47,6 +48,7 @@ export default function AddEmployeeFormContent(): React.ReactNode {
   return (
     <div className={`${FORM_ROOT} min-w-0 max-w-full`}>
       <HrFormPageShell
+        icon={<UserPlus size={24} strokeWidth={1.75} />}
         title={t('pages.users.new')}
         description={t('users.form.addEmployeeDescription')}
         cancelLabel={t('users.form.cancel')}

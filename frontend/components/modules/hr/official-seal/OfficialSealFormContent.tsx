@@ -10,6 +10,7 @@ import type { OfficialSealDetail } from '@/lib/api/official-seal.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { officialSealKeys } from '@/lib/query/official-seal';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New official seal usage request - shared HR form banner + stepper form.
@@ -34,6 +35,7 @@ export default function OfficialSealFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-official-seal-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="OFFICIAL_SEAL_USAGE" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.officialSeal.new')}
         description={t('pages.hr.officialSeal.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

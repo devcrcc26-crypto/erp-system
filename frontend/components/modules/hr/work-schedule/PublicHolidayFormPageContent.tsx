@@ -19,6 +19,7 @@ import {
 } from '@/lib/query/work-schedule';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CalendarHeart } from 'lucide-react';
 
 const LIST_PATH = '/hr/public-holidays';
 
@@ -86,6 +87,7 @@ export default function PublicHolidayFormPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-ph-form-page erp-public-holidays-v2 flex flex-col">
       <HrFormPageShell
+        icon={<CalendarHeart size={24} strokeWidth={1.75} />}
         title={
           isEdit
             ? t('pages.hr.publicHolidays.edit')

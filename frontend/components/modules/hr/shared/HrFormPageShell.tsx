@@ -25,8 +25,9 @@ export interface HrFormPageShellProps {
   /** Extra controls next to Cancel in the banner. */
   headerExtra?: React.ReactNode;
   /**
-   * 'brand': dark brand-gradient banner (dashboard / approvals look), styled by
-   * .erp-form-banner--brand in globals.css. 'default' keeps the white banner.
+   * 'brand' (default): dark brand-gradient banner plus the brand form body
+   * (step bar, section cards, item cards, footer) - see .erp-form-shell--brand
+   * in globals.css. 'default': the earlier white banner, no body styling.
    */
   tone?: 'default' | 'brand';
   /** Optional request-type icon shown in a tile beside the title (brand tone). */
@@ -47,7 +48,7 @@ export default function HrFormPageShell({
   onCancel,
   showCancelButton = true,
   headerExtra,
-  tone = 'default',
+  tone = 'brand',
   icon,
   children,
 }: HrFormPageShellProps): React.ReactNode {
@@ -71,7 +72,7 @@ export default function HrFormPageShell({
 
   if (tone === 'brand') {
     return (
-      <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
+      <div className="erp-form-shell erp-form-shell--brand flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-4">
         <section className="erp-form-banner erp-form-banner--brand">
           {backHref ? (
             <Link href={backHref} className="erp-form-banner-back">

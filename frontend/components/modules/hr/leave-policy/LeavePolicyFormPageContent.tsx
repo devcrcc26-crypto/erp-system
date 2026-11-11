@@ -19,6 +19,7 @@ import {
 } from '@/lib/query/leave-policy';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { ScrollText } from 'lucide-react';
 
 const LIST_PATH = '/hr/leave-policy';
 
@@ -102,6 +103,7 @@ export default function LeavePolicyFormPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page erp-leave-policy-v2 flex flex-col">
       <HrFormPageShell
+        icon={<ScrollText size={24} strokeWidth={1.75} />}
         title={
           isEdit
             ? t('pages.hr.leavePolicy.edit')

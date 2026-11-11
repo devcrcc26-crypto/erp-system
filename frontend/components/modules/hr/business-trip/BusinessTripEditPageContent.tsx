@@ -10,6 +10,7 @@ import RequestEditPageShell, {
 import BusinessTripForm from '@/components/modules/hr/business-trip/BusinessTripForm';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useBusinessTrip } from '@/lib/query/business-trip';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * Employee edit of their own DRAFT / RETURNED business trip, reusing the
@@ -39,6 +40,7 @@ export default function BusinessTripEditPageContent({
       {() =>
         record ? (
           <RequestEditPageShell
+            icon={<CategoryIcon code="BUSINESS_TRIP" size={24} strokeWidth={1.75} />}
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}

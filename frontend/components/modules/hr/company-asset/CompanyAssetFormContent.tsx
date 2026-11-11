@@ -10,6 +10,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { CompanyAssetDetail } from '@/lib/api/company-asset.types';
 import { useCompanyAsset } from '@/lib/query/company-asset';
+import { Laptop } from 'lucide-react';
 
 const LIST_PATH = '/hr/company-asset';
 
@@ -59,6 +60,7 @@ export default function CompanyAssetFormContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-company-asset-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<Laptop size={24} strokeWidth={1.75} />}
         title={
           isEdit
             ? t('pages.hr.companyAsset.edit')

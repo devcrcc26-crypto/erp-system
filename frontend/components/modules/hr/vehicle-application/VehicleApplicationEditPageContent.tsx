@@ -9,6 +9,7 @@ import RequestEditPageShell, {
 } from '@/components/modules/approvals/RequestEditPageShell';
 import VehicleApplicationForm from '@/components/modules/hr/vehicle-application/VehicleApplicationForm';
 import { useVehicleApplication } from '@/lib/query/vehicle-application';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * Employee edit of their own DRAFT / RETURNED vehicle application, reusing
@@ -38,6 +39,7 @@ export default function VehicleApplicationEditPageContent({
       {() =>
         record ? (
           <RequestEditPageShell
+            icon={<CategoryIcon code="VEHICLE_APPLICATION" size={24} strokeWidth={1.75} />}
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}

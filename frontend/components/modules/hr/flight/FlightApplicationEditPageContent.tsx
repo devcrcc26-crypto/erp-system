@@ -10,6 +10,7 @@ import RequestEditPageShell, {
 import FlightApplicationForm from '@/components/modules/hr/flight/FlightApplicationForm';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useFlightApplication } from '@/lib/query/flight';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * Employee edit of their own DRAFT / RETURNED flight application, reusing the
@@ -39,6 +40,7 @@ export default function FlightApplicationEditPageContent({
       {() =>
         record ? (
           <RequestEditPageShell
+            icon={<CategoryIcon code="FLIGHT_APPLICATION" size={24} strokeWidth={1.75} />}
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}

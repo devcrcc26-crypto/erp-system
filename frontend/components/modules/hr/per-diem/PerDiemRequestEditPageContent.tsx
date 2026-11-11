@@ -10,6 +10,7 @@ import RequestEditPageShell, {
 import PerDiemRequestForm from '@/components/modules/hr/per-diem/PerDiemRequestForm';
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { usePerDiemRequest } from '@/lib/query/per-diem';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * Employee edit of their own DRAFT / RETURNED per diem request, reusing the
@@ -39,6 +40,7 @@ export default function PerDiemRequestEditPageContent({
       {() =>
         record ? (
           <RequestEditPageShell
+            icon={<CategoryIcon code="PER_DIEM" size={24} strokeWidth={1.75} />}
             status={record.status}
             approvalRequestId={record.approvalRequestId}
             backHref={backHref}

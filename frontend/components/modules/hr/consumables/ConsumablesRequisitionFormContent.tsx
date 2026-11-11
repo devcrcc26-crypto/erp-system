@@ -9,6 +9,7 @@ import type { ConsumablesRequisitionDetail } from '@/lib/api/consumables-requisi
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { consumablesRequisitionKeys } from '@/lib/query/consumables-requisition';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New consumables requisition - shared HR form banner + stepper form.
@@ -36,6 +37,7 @@ export default function ConsumablesRequisitionFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-consumables-form-page">
       <HrFormPageShell
+        icon={<CategoryIcon code="CONSUMABLES_REQUISITION" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.consumables.new')}
         description={t('pages.hr.consumables.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

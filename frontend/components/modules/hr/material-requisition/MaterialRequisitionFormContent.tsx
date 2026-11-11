@@ -9,6 +9,7 @@ import type { MaterialRequisitionDetail } from '@/lib/api/material-requisition.t
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { materialRequisitionKeys } from '@/lib/query/material-requisition';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New material requisition - shared HR form banner + stepper form.
@@ -33,6 +34,7 @@ export default function MaterialRequisitionFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-material-requisition-form-page">
       <HrFormPageShell
+        icon={<CategoryIcon code="MATERIAL_REQUISITION" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.materialRequisition.new')}
         description={t('pages.hr.materialRequisition.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

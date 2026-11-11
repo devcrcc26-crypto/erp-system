@@ -11,6 +11,7 @@ import type { PerDiemRequestDetail } from '@/lib/api/per-diem.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { perDiemKeys } from '@/lib/query/per-diem';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New per diem request - shared HR form banner + stepper form.
@@ -32,6 +33,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-per-diem-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
+        icon={<CategoryIcon code="PER_DIEM" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.perDiem.new')}
         description={t('pages.hr.perDiem.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

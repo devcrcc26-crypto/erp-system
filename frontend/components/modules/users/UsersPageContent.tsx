@@ -85,7 +85,6 @@ import {
 } from '@/lib/utils/users-list-filter';
 import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
 import { avatarTint, userInitials } from '@/lib/utils/avatar-tint';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { canResetUserPassword } from '@/lib/utils/user-permissions';
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import {
@@ -93,7 +92,10 @@ import {
   userStatusVariant,
 } from '@/lib/utils/user-status';
 
-const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 ${LIST_PAGE_V2}`;
+// No LIST_PAGE_V2: employees-v2.css carries the full list look (brand banner,
+// table card) and LIST_PAGE_V2's !important utilities would override it.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2';
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
@@ -690,51 +692,24 @@ export default function UsersPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <UserStat
-          label={t('users.stats.total')}
-          value={userStats.totalCount}
-          accent="teal"
-          icon={<Users size={15} />}
-        />
-        <UserStat
-          label={t('users.stats.active')}
-          value={userStats.activeCount}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-        />
-        <UserStat
-          label={t('users.stats.pending')}
-          value={userStats.pendingCount}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-        />
-        <UserStat
-          label={t('users.stats.inactive')}
-          value={userStats.inactiveCount}
-          accent="slate"
-          icon={<UserDeleteOutlined />}
-        />
-      </div>
-
-      <div className="erp-pro-card erp-employees-list-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
-            <span className="erp-users-count-pill">
-              {meta.total.toLocaleString()}
-            </span>
+      <section
+        className="erp-employees-hero"
+        aria-labelledby="erp-employees-hero-title"
+      >
+        <div className="erp-employees-hero-top">
+          <div className="min-w-0">
+            <h2 id="erp-employees-hero-title" className="erp-employees-hero-title">
+              {userStats.totalCount === 1
+                ? t('users.userCountOne')
+                : t('users.userCount', {
+                    count: userStats.totalCount.toLocaleString(),
+                  })}
+            </h2>
+            <p className="erp-employees-hero-subtitle">
+              {t('users.listDescription')}
+            </p>
           </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={usersQuery.isFetching && !usersQuery.isLoading}
-                onClick={() => void handleRefresh()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -760,6 +735,49 @@ export default function UsersPageContent(): React.ReactNode {
                   : undefined
               }
             />
+          </div>
+        </div>
+        {/* Total is the heading above; these split it by status. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <UserStat
+            label={t('users.stats.active')}
+            value={userStats.activeCount}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+          />
+          <UserStat
+            label={t('users.stats.pending')}
+            value={userStats.pendingCount}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+          />
+          <UserStat
+            label={t('users.stats.inactive')}
+            value={userStats.inactiveCount}
+            accent="slate"
+            icon={<UserDeleteOutlined />}
+          />
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-employees-list-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Users size={18} />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={usersQuery.isFetching && !usersQuery.isLoading}
+                onClick={() => void handleRefresh()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
           </div>
         </div>
 

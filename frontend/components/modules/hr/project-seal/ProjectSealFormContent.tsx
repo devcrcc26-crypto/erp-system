@@ -10,6 +10,7 @@ import type { ProjectSealDetail } from '@/lib/api/project-seal.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { projectSealKeys } from '@/lib/query/project-seal';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New project seal usage request - shared HR form banner + stepper form.
@@ -31,6 +32,7 @@ export default function ProjectSealFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-project-seal-form-page flex flex-col gap-4">
       <HrFormPageShell
+        icon={<CategoryIcon code="PROJECT_SEAL_USAGE" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.projectSeal.new')}
         description={t('pages.hr.projectSeal.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

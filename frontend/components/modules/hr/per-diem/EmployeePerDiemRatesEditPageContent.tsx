@@ -12,6 +12,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useUser } from '@/lib/query/users';
 import { formatUserName } from '@/lib/utils/user-display';
+import { Wallet } from 'lucide-react';
 
 const LIST_PATH = '/hr/employee-per-diem-rates';
 
@@ -74,6 +75,7 @@ export default function EmployeePerDiemRatesEditPageContent({
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-employee-per-diem-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
+        icon={<Wallet size={24} strokeWidth={1.75} />}
         title={t('pages.hr.employeePerDiemRates.editTitle')}
         description={
           userQuery.data.email

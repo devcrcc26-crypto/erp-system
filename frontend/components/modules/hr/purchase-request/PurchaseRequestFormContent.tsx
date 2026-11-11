@@ -10,6 +10,7 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useCanCreatePurchaseRequest } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New purchase request — header only, then detail page for line items and submit.
@@ -43,6 +44,7 @@ export default function PurchaseRequestFormContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-purchase-request-form-page">
       <HrFormPageShell
+        icon={<CategoryIcon code="PURCHASE_REQUEST" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.purchaseRequest.new')}
         description={t('pages.hr.purchaseRequest.newFormDescription')}
         cancelLabel={t('hr.buttons.cancel')}

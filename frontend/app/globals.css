@@ -8000,3 +8000,235 @@ main::-webkit-scrollbar,
     transition: none;
   }
 }
+
+/*
+ * Brand form body (HrFormPageShell tone="brand", the default) for every
+ * add / edit page - brand-layer language shared with login, dashboard and
+ * Approvals; the banner itself is .erp-form-banner--brand above.
+ * - Step bar: accent-bordered panel; step badges keep antd's own colours.
+ * - Section cards (FormLayout pro) and item cards: faint accent outline +
+ *   login-card gradient bar, tinted header, dark-green titles.
+ * - Item tables: clean header, green row hover.
+ * - Footers (stepper + FormPageFooter): frosted bar with an accent hairline.
+ * - Item drawers (portaled): matched by .erp-hr-item-drawer.
+ * Selectors use .erp-form-shell.erp-form-shell--brand (0,2,0) so they win
+ * over the module form CSS (.erp-hr-travel-v2 / .erp-employee-form-page).
+ *
+ * FormLayout pro cards set border/shadow with !important Tailwind utilities,
+ * which page CSS cannot override; the outline and bar are drawn on ::after /
+ * ::before instead, which those utilities do not touch.
+ */
+
+.erp-form-shell.erp-form-shell--brand {
+  --fs-border: var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  --fs-divider: var(--erp-n-150);
+  --fs-muted: var(--erp-n-600);
+  --fs-strong: var(--erp-n-900);
+  --fs-heading: var(--color-text-heading, var(--erp-accent-hover));
+  --fs-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+/* ── Step bar ── */
+
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__steps-shell {
+  border: 1px solid var(--fs-border) !important;
+  border-radius: 16px !important;
+  background: #ffffff;
+  box-shadow: var(--fs-shadow) !important;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__steps-shell .ant-steps-item-title {
+  font-weight: 550;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__steps-shell .ant-steps-item-process .ant-steps-item-title {
+  color: var(--fs-heading) !important;
+  font-weight: 650;
+}
+
+/* Mobile progress bar: brand gradient fill. */
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__mobile-progress .bg-emerald-600 {
+  background: var(--gradient-primary);
+}
+
+/* ── Section cards (FormLayout pro, incl. on-behalf) ── */
+
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro {
+  position: relative;
+}
+
+/* Accent outline (see file note). */
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid var(--fs-border);
+  border-radius: inherit;
+}
+
+/* Login-card gradient bar along the top. */
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro-header {
+  padding-top: 20px;
+  border-bottom-color: var(--fs-divider);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+/* Header title (first line of the header copy). */
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro-header > div:first-child > div:first-child {
+  color: var(--fs-heading);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+/* Header description. */
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro-header > div:first-child > div + div {
+  color: var(--fs-muted);
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-form-layout-pro .ant-form-item-label > label {
+  color: var(--color-text-body, var(--erp-n-800));
+  font-weight: 550;
+}
+
+/* Plain cards inside forms (sections not built on FormLayout). */
+.erp-form-shell.erp-form-shell--brand .erp-pro-card {
+  border: 1px solid var(--fs-border);
+  border-radius: 16px;
+  box-shadow: var(--fs-shadow);
+}
+
+/* ── Items step ── */
+
+.erp-form-shell.erp-form-shell--brand .erp-pro-card.erp-ot-entries {
+  position: relative;
+  border: 1px solid var(--fs-border);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: var(--fs-shadow);
+  overflow: hidden;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-pro-card.erp-ot-entries::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries-header {
+  padding-top: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries-title {
+  color: var(--fs-heading);
+  font-weight: 650;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries-count {
+  border-radius: 999px;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
+  font-weight: 650;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries .ant-table-thead > tr > th {
+  background: var(--erp-n-50) !important;
+  color: var(--fs-muted) !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--fs-divider) !important;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-ot-entries .ant-table-footer {
+  border-top: 1px solid var(--fs-divider);
+  background: var(--erp-n-25);
+}
+
+/* ── Footer: frosted bar with accent hairline ── */
+
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__footer,
+.erp-form-shell.erp-form-shell--brand .erp-form-page-footer {
+  border-top: 1px solid var(--fs-border) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -10px 28px -14px rgba(var(--erp-accent-hover-rgb), 0.22) !important;
+}
+
+.erp-form-shell.erp-form-shell--brand .erp-stepper-form__footer .ant-btn,
+.erp-form-shell.erp-form-shell--brand .erp-form-page-footer .ant-btn {
+  border-radius: var(--radius-control, 10px) !important;
+}
+
+/* ── Item drawer (portaled; matched by its drawer class) ── */
+
+.erp-hr-item-drawer .ant-drawer-header {
+  position: relative;
+  border-bottom: 1px solid var(--erp-n-150);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--erp-accent-rgb), 0.06) 0%,
+    rgba(var(--erp-accent-rgb), 0) 100%
+  );
+}
+
+.erp-hr-item-drawer .ant-drawer-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.erp-hr-item-drawer .ant-drawer-title > div > div {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+  font-weight: 650;
+}
+
+.erp-hr-item-drawer .erp-hr-item-drawer-hint-card {
+  border: 1px solid rgba(var(--erp-accent-rgb), 0.2);
+  border-radius: 12px;
+  background: rgba(var(--erp-accent-rgb), 0.06);
+  color: var(--erp-n-800);
+}

@@ -28,6 +28,7 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 interface ClaimFormValues {
   title: string;
@@ -160,6 +161,7 @@ export default function ExpenseClaimEditPageContent({
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
+        icon={<CategoryIcon code="EXPENSE_CLAIM" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.expenseClaim.edit')}
         description={t('pages.hr.expenseClaim.editDescription')}
         cancelLabel={t('hr.buttons.cancel')}

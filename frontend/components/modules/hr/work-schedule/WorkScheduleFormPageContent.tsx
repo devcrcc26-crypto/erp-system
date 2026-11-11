@@ -20,6 +20,7 @@ import {
 } from '@/lib/query/work-schedule';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CalendarClock } from 'lucide-react';
 
 const LIST_PATH = '/hr/work-schedules';
 
@@ -127,6 +128,7 @@ export default function WorkScheduleFormPageContent({
 
   return (
     <HrFormPageShell
+      icon={<CalendarClock size={24} strokeWidth={1.75} />}
       title={
         isEdit
           ? t('pages.hr.workSchedules.edit')

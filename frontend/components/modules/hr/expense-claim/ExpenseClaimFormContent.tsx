@@ -11,6 +11,7 @@ import type { ExpenseClaimDetail } from '@/lib/api/expense-claim.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { expenseClaimKeys } from '@/lib/query/expense-claim';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New expense claim page - shared HR form banner + stepper form.
@@ -32,6 +33,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-expense-claim-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
+        icon={<CategoryIcon code="EXPENSE_CLAIM" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.expenseClaim.new')}
         description={t('pages.hr.expenseClaim.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

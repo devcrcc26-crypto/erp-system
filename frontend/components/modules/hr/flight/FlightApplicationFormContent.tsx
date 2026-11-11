@@ -11,6 +11,7 @@ import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { flightKeys } from '@/lib/query/flight';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New flight application - shared HR form banner + stepper form.
@@ -32,6 +33,7 @@ export default function FlightApplicationFormContent(): React.ReactNode {
   return (
     <div className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page erp-flight-form-page ${DETAIL_PAGE_V2}`}>
       <HrFormPageShell
+        icon={<CategoryIcon code="FLIGHT_APPLICATION" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.flight.new')}
         description={t('pages.hr.flight.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

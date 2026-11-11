@@ -12,6 +12,7 @@ import type { AssetRequestDetail } from '@/lib/api/asset-request.types';
 import { navigateAfterRequestSubmit } from '@/lib/navigation/after-request-submit';
 import { assetRequestKeys } from '@/lib/query/asset-request';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 /**
  * New asset request. AssetRequestForm only creates a draft, so submit it for
@@ -41,6 +42,7 @@ export default function NewAssetRequestPage(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-form-page">
       <HrFormPageShell
+        icon={<CategoryIcon code="ASSET_REQUEST" size={24} strokeWidth={1.75} />}
         title={t('pages.hr.assetRequest.new')}
         description={t('pages.hr.assetRequest.formDescription')}
         cancelLabel={t('hr.buttons.cancel')}

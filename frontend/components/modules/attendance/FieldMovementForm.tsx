@@ -88,6 +88,7 @@ import {
   REASON_ICONS,
   formatLongDate,
 } from './field-movement-display';
+import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
 export {
   combineLateReasons,
@@ -1512,6 +1513,7 @@ export default function FieldMovementForm({
     <div className={pageClassName}>
       {/* Same banner as the other request forms. Cancel lives in the stepper footer. */}
       <HrFormPageShell
+        icon={<CategoryIcon code="FIELD_MOVEMENT_LOG" size={24} strokeWidth={1.75} />}
         title={t('pages.approvals.categories.FIELD_MOVEMENT_LOG.name')}
         description={t('pages.approvals.categories.FIELD_MOVEMENT_LOG.description')}
         cancelLabel={resolvedCancelLabel}
