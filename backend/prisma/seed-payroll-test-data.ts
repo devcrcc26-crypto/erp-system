@@ -1,5 +1,5 @@
 /**
- * Payroll module end-to-end test data seed (CCECC PWF local test DB).
+ * Payroll module end-to-end test data seed (CRCC PWF local test DB).
  *
  * Usage (from backend/, SEED_MODE required, localhost DATABASE_URL only):
  *   $env:SEED_MODE='true'; npx ts-node -r tsconfig-paths/register --transpile-only prisma/seed-payroll-test-data.ts

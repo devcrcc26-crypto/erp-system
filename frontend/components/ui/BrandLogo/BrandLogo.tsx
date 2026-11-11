@@ -1,17 +1,12 @@
 'use client';
 
-import Image from 'next/image';
-
-const LOGO_SRC = '/ccecc-logo.png';
-
 /**
- * CCECC brand mark - used on login, shell nav, and related chrome.
- * Use `onDark` on dark surfaces so the blue mark sits on a light tile.
+ * CRCC text brand mark — used on shell nav and related chrome.
+ * Logo image removed; brand is text-only.
  */
 export default function BrandLogo({
   size = 32,
   className,
-  priority = false,
   onDark = false,
 }: {
   size?: number;
@@ -19,46 +14,26 @@ export default function BrandLogo({
   priority?: boolean;
   onDark?: boolean;
 }): React.ReactNode {
-  const image = (
-    <Image
-      src={LOGO_SRC}
-      alt="CCECC"
-      width={size}
-      height={size}
-      className={[
-        'object-contain',
-        onDark ? undefined : className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      priority={priority}
-    />
-  );
-
-  if (!onDark) {
-    return image;
-  }
-
-  const pad = Math.max(2, Math.round(size * 0.1));
-  const tile = size + pad * 2;
+  const fontSize = Math.max(12, Math.round(size * 0.45));
 
   return (
     <span
       className={[
-        'inline-flex shrink-0 items-center justify-center bg-white',
+        'inline-flex shrink-0 items-center justify-center font-semibold tracking-wide',
+        onDark ? 'text-white' : 'text-[var(--sb-text,#1B2B4B)]',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
       style={{
-        width: tile,
-        height: tile,
-        borderRadius: Math.round(tile * 0.22),
-        padding: pad,
-        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.12)',
+        height: size,
+        minWidth: size,
+        fontSize,
+        lineHeight: 1,
       }}
+      aria-hidden={false}
     >
-      {image}
+      CRCC
     </span>
   );
 }

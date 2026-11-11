@@ -244,7 +244,7 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional({
     description:
-      'Client name - suggested presets: CCECC Ethiopia, CCECC Djibouti, CCECC Kenya; custom names allowed.',
+      'Client name - suggested presets: CRCC Ethiopia, CRCC Djibouti, CRCC Kenya; custom names allowed.',
     maxLength: PROJECT_CLIENT_MAX_LENGTH,
   })
   @IsOptional()

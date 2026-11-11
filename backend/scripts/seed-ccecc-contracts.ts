@@ -8,7 +8,7 @@
  *
  * Usage:
  *   $env:SEED_MODE='true'
- *   npx ts-node --transpile-only scripts/seed-ccecc-contracts.ts
+ *   npx ts-node --transpile-only scripts/seed-ccecc-contracts.ts (legacy filename)
  */
 import { randomUUID } from 'crypto';
 import {
@@ -331,6 +331,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error('seed-ccecc-contracts failed:', error);
+  console.error('seed-crcc-contracts failed:', error);
   process.exit(1);
 });

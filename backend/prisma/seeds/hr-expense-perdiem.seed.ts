@@ -714,7 +714,7 @@ async function seedPerDiemRequests(
       status: 'APPROVED',
       linkedFlightId: null,
       linkedBusinessTripId: null,
-      notes: 'CCECC HQ annual review per diem',
+      notes: 'CRCC HQ annual review per diem',
     },
     {
       employee: otherEmployees[3],

@@ -353,7 +353,7 @@ export class PayrollBankLetterService {
 
     const accountNo = settings.companyAccountNumber.trim() || '__________';
     const bodyParagraph =
-      `As you may know, CCECC Ethiopian Branch–FZY has opened current account in your branch. ` +
+      `As you may know, CRCC Ethiopian Branch–FZY has opened current account in your branch. ` +
       `Therefore, we would like to transfer an amount of birr ${totalFormatted} Birr ` +
       `(${amountWords}) from our account No-${accountNo} to attached ` +
       `${integerInWords(count)} (${count}) company employees according to the corresponding ` +
@@ -405,7 +405,7 @@ export class PayrollBankLetterService {
     const table = this.buildSalaryTable(selection, totalFormatted);
 
     return new Document({
-      creator: 'CCECC PWF ERP',
+      creator: 'CRCC PWF ERP',
       title: `Bank letter ${refNo}`,
       sections: [
         {

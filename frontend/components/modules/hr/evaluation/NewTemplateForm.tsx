@@ -312,7 +312,7 @@ const NewTemplateForm = forwardRef<NewTemplateFormHandle, NewTemplateFormProps>(
               id="eval-template-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. CCECC Ethiopia Standard Evaluation Form v2"
+              placeholder="e.g. CRCC Ethiopia Standard Evaluation Form v2"
             />
           </div>
           <div className="erp-evaluation-template-form-field">

@@ -3,9 +3,9 @@
  * Keys must match display labels exactly.
  */
 export const PROJECT_CLIENT_PRESET_VALUES = [
-  'CCECC Ethiopia',
-  'CCECC Djibouti',
-  'CCECC Kenya',
+  'CRCC Ethiopia',
+  'CRCC Djibouti',
+  'CRCC Kenya',
 ] as const;
 
 export type ProjectClientPreset =

@@ -1,6 +1,6 @@
 # Work Schedule & Public Holidays
 
-This module is the **only** source of working days and working hours in CCECC PWF.
+This module is the **only** source of working days and working hours in CRCC PWF.
 
 Do **not** hardcode weekends, Saturdays as half days, or public holidays in leave, overtime, attendance, or any new module. HR manages schedules and holidays from the UI.
 

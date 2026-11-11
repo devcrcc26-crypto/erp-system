@@ -176,7 +176,7 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
   const lines: PayslipLine[] = [
     {
       kind: 'brand',
-      left: 'CCECC Ethiopia Branch',
+      left: 'CRCC Ethiopia Branch',
       right: isCorrection
         ? 'PAYROLL CORRECTION / 工资更正单'
         : 'PAYSLIP / 工资单',

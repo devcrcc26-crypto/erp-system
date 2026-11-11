@@ -5,7 +5,7 @@ import PDFDocument from 'pdfkit';
 const FONT_FILE = 'NotoSansSC-Regular.otf';
 
 /** Same brand and font as payroll payslips. */
-export const PAYSLIP_COMPANY = 'CCECC Ethiopia Branch';
+export const PAYSLIP_COMPANY = 'CRCC Ethiopia Branch';
 export const PAYSLIP_FONT = 'NotoSansSC';
 export const PAYSLIP_AMOUNT_WIDTH = 150;
 

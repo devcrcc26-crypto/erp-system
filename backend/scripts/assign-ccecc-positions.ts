@@ -5,7 +5,7 @@
  *
  * Usage:
  *   $env:SEED_MODE='true'
- *   npx ts-node --transpile-only scripts/assign-ccecc-positions.ts
+ *   npx ts-node --transpile-only scripts/assign-ccecc-positions.ts (legacy filename)
  */
 import { PrismaClient } from '@prisma/client';
 import { assertLocalhostSeedGuards } from './lib/localhost-seed-guard';
@@ -330,6 +330,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error('assign-ccecc-positions failed:', error);
+  console.error('assign-crcc-positions failed:', error);
   process.exit(1);
 });

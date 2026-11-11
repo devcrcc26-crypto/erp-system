@@ -4,12 +4,8 @@ import { QueryProvider } from "@/lib/query/provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CCECC",
-  description: "CCECC Construction ERP",
-  icons: {
-    icon: [{ url: "/ccecc-logo.png", type: "image/png" }],
-    apple: [{ url: "/ccecc-logo.png", type: "image/png" }],
-  },
+  title: "CRCC",
+  description: "CRCC Construction ERP",
 };
 
 export default function RootLayout({

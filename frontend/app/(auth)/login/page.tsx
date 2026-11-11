@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
@@ -144,48 +143,25 @@ function LoginForm(): React.ReactNode {
 
   return (
     <div className="erp-login-page">
-      <aside className="erp-login-brand" aria-label="CCECC">
+      <aside className="erp-login-brand" aria-label="CRCC">
         <div className="erp-login-brand-glow" aria-hidden />
         <div className="erp-login-brand-grid" aria-hidden />
         <div className="erp-login-brand-inner">
           <div className="erp-login-brand-mark">
-            <span className="erp-login-logo-chip erp-login-logo-chip--hero">
-              <Image
-                src="/ccecc-logo.png"
-                alt=""
-                width={48}
-                height={48}
-                className="h-auto w-auto max-h-12 max-w-12 object-contain"
-                priority
-                suppressHydrationWarning
-              />
-            </span>
-            <p className="erp-login-brand-name">CCECC</p>
+            <p className="erp-login-brand-name">CRCC</p>
           </div>
           <h1 className="erp-login-brand-title">Construction ERP</h1>
           <p className="erp-login-brand-line">{labels.brandLine}</p>
         </div>
         <p className="erp-login-brand-foot">
-          © {new Date().getFullYear()} China Civil Engineering Construction
-          Corporation
+          © {new Date().getFullYear()} CRCC
         </p>
       </aside>
 
       <div className="erp-login-stage">
         <header className="erp-login-stage-header">
-          <span className="erp-login-logo-chip erp-login-logo-chip--compact">
-            <Image
-              src="/ccecc-logo.png"
-              alt="CCECC"
-              width={28}
-              height={28}
-              className="h-auto w-auto max-h-7 max-w-7 object-contain"
-              priority
-              suppressHydrationWarning
-            />
-          </span>
           <div className="erp-login-stage-brand-text">
-            <span className="erp-login-stage-name">CCECC</span>
+            <span className="erp-login-stage-name">CRCC</span>
             <span className="erp-login-stage-product">Construction ERP</span>
           </div>
         </header>
@@ -324,7 +300,7 @@ function LoginForm(): React.ReactNode {
         </main>
 
         <footer className="erp-login-footer">
-          © {new Date().getFullYear()} CCECC · Construction ERP
+          © {new Date().getFullYear()} CRCC · Construction ERP
         </footer>
       </div>
     </div>

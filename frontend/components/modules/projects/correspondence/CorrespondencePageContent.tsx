@@ -82,7 +82,7 @@ const DIRECTION_OPTIONS: { value: CorrespondenceDirection; label: string }[] = [
   { value: 'INCOMING', label: 'Incoming' },
 ];
 
-const DEFAULT_COMPANY = 'CCECC';
+const DEFAULT_COMPANY = 'CRCC';
 
 interface CorrespondenceFormValues {
   direction: CorrespondenceDirection;

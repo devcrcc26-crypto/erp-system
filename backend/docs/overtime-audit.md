@@ -1,4 +1,4 @@
-# Overtime module audit - CCECC PWF
+# Overtime module audit - CRCC PWF
 
 **Date:** 2026-10-07  
 **Scope:** Classification (`overtime-hours.util.ts`), entry path (`overtime-entry.service.ts`, `overtime.service.ts`), Excel import, frontend drawer/preview, payroll handoff.  

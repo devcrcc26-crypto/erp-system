@@ -51,7 +51,7 @@ export default function SubtaskExternalPartiesFormFields({
             }
           >
             <Radio value="EXTERNAL">External (contractor)</Radio>
-            <Radio value="INTERNAL">Internal (CCECC staff)</Radio>
+            <Radio value="INTERNAL">Internal (CRCC staff)</Radio>
           </Radio.Group>
 
           {siteRepType === 'EXTERNAL' ? (
@@ -74,7 +74,7 @@ export default function SubtaskExternalPartiesFormFields({
               <ProjectTeamUserSelect
                 projectId={projectId}
                 memberScope="company_active"
-                placeholder="Select CCECC staff member"
+                placeholder="Select CRCC staff member"
                 allowClear
               />
             </Form.Item>

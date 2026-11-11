@@ -9,7 +9,7 @@ function d(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-/** Mon–Fri full, Sat half, Sun off - standard CCECC schedule. */
+/** Mon–Fri full, Sat half, Sun off - standard CRCC schedule. */
 function standardSchedule(date: Date): {
   isWorkingDay: boolean;
   isHalfDay: boolean;

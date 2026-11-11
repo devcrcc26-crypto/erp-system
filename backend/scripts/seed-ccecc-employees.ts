@@ -1,9 +1,9 @@
 /**
- * Seed CCECC employee roster onto the current local DB with CC-0001… IDs.
+ * Seed CRCC employee roster onto the current local DB with CC-0001… IDs.
  *
  * Usage (from backend/):
  *   $env:SEED_MODE='true'
- *   npx ts-node --transpile-only scripts/seed-ccecc-employees.ts
+ *   npx ts-node --transpile-only scripts/seed-CRCC-employees.ts
  *
  * New accounts get a random temporary password (mustChangePassword=true),
  * written only to backend/data/private/initial-credentials.csv (never printed).
@@ -135,7 +135,7 @@ function employeeIdForIndex(index: number): string {
 }
 
 function placeholderEmail(employeeId: string): string {
-  return `${employeeId.toLowerCase()}@ccecc.local`;
+  return `${employeeId.toLowerCase()}@CRCC.local`;
 }
 
 function isSamuelRow(row: { firstName: string; lastName: string }): boolean {
@@ -311,13 +311,13 @@ async function main(): Promise<void> {
     console.log(
       'Temporary passwords: backend/data/private/initial-credentials.csv (not printed)',
     );
-    console.log('Emails: cc-0001@ccecc.local … (Samuel keeps his real email)');
+    console.log('Emails: cc-0001@CRCC.local … (Samuel keeps his real email)');
   } finally {
     await prisma.$disconnect();
   }
 }
 
 main().catch((error: unknown) => {
-  console.error('seed-ccecc-employees failed:', error);
+  console.error('seed-CRCC-employees failed:', error);
   process.exit(1);
 });

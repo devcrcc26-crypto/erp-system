@@ -445,7 +445,7 @@ function fullMonthlyAmount(sheetValue: number, workedDays: number): number {
 }
 
 /**
- * Build lookup keys for ERP users. Many CCECC employees are stored as
+ * Build lookup keys for ERP users. Many CRCC employees are stored as
  * firstName + middleName with an empty lastName (Ethiopian naming).
  * Never emit single-token keys - they collide across employees.
  */

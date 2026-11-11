@@ -96,7 +96,7 @@ const USER = {
   lastName: 'Dong',
   middleName: 'M',
   chineseName: '董锦霞',
-  email: 'jinxia.dong@ccecc.com',
+  email: 'jinxia.dong@CRCC.com',
   phone: '+251911000000',
   loginName: 'Jinxia M Dong',
   gender: 'FEMALE',
@@ -158,7 +158,7 @@ describe('AddEmployeeForm (edit mode)', () => {
     renderEditForm();
 
     const email = screen.getByPlaceholderText('users.form.emailPlaceholder');
-    await waitFor(() => expect(email).toHaveValue('jinxia.dong@ccecc.com'));
+    await waitFor(() => expect(email).toHaveValue('jinxia.dong@CRCC.com'));
     expect(email).toBeDisabled();
     expect(screen.getByDisplayValue('Jinxia')).toBeInTheDocument();
     expect(screen.getByDisplayValue('董锦霞')).toBeInTheDocument();
@@ -381,7 +381,7 @@ describe('AddEmployeeForm (create mode)', () => {
     await user.type(inputFor('users.form.chineseName'), '阿贝贝');
     await user.type(
       screen.getByPlaceholderText('users.form.emailPlaceholder'),
-      'abebe@ccecc.com',
+      'abebe@CRCC.com',
     );
     await user.type(inputFor('users.form.phone'), '+251911111111');
     await user.type(inputFor('users.form.nationalId'), 'NID-9');
@@ -398,7 +398,7 @@ describe('AddEmployeeForm (create mode)', () => {
       lastName: 'Kebede',
       middleName: 'Tesfaye',
       chineseName: '阿贝贝',
-      email: 'abebe@ccecc.com',
+      email: 'abebe@CRCC.com',
       phone: '+251911111111',
       nationalId: 'NID-9',
       addressCity: 'Addis Ababa',

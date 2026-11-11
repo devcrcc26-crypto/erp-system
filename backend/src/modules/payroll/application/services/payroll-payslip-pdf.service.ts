@@ -48,7 +48,7 @@ export class PayrollPayslipPdfService {
         margin: 40,
         info: {
           Title: 'Payslip',
-          Author: 'CCECC Ethiopia Branch',
+          Author: 'CRCC Ethiopia Branch',
         },
       });
       const chunks: Buffer[] = [];

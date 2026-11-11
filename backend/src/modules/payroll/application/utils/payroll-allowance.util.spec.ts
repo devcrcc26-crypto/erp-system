@@ -273,7 +273,7 @@ describe('Abenezer Aug 2026 - full payroll with mid-month renewal', () => {
 
     expect(result.earnedSalary).toBeCloseTo(54666.67, 2);
     expect(result.pensionEmployee).toBeCloseTo(3826.67, 2);
-    // taxable = earned + bonus + OT (transport is non-taxable at CCECC)
+    // taxable = earned + bonus + OT (transport is non-taxable at CRCC)
     expect(result.taxableIncome).toBeCloseTo(141517.48, 0);
     expect(result.incomeTax).toBeCloseTo(47481.12, 2);
   });

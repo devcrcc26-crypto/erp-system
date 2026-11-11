@@ -34,7 +34,7 @@ export async function seedEvaluationTemplate(
     data: {
       id: '00000000-0000-4000-8000-000000000e01',
       companyId,
-      name: 'CCECC Ethiopia Standard Evaluation Form',
+      name: 'CRCC Ethiopia Standard Evaluation Form',
       description: 'Standard quarterly evaluation form for all employees',
       version: 1,
       isActive: true,

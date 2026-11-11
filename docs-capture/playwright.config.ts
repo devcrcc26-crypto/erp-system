@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const baseURL = process.env.DOCS_BASE_URL ?? 'http://localhost:3000';
 
-if (/prod|production|ccecc\.com|onrender\.com\/(?!.*staging)/i.test(baseURL)) {
+if (/prod|production|ccecc\.com|crcc\.com|onrender\.com\/(?!.*staging)/i.test(baseURL)) {
   console.warn(
     `\n[docs-capture] WARNING: DOCS_BASE_URL looks like production: ${baseURL}\n` +
       `This tool must only run against STAGING with seeded fake data.\n`,

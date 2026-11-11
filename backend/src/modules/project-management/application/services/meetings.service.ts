@@ -657,7 +657,7 @@ export class MeetingsService {
     }
 
     let organization: string | undefined =
-      attendeeType === 'INTERNAL' ? 'CCECC' : (dto.organization ?? undefined);
+      attendeeType === 'INTERNAL' ? 'CRCC' : (dto.organization ?? undefined);
     let roleAtMeeting: string | null | undefined =
       attendeeType === 'INTERNAL' ? undefined : (dto.roleAtMeeting ?? undefined);
     let email: string | undefined =
@@ -1228,7 +1228,7 @@ export class MeetingsService {
       const profile = profileMap.get(attendee.userId);
       return {
         ...attendee,
-        organization: 'CCECC',
+        organization: 'CRCC',
         roleAtMeeting:
           profile?.engineeringDiscipline?.name ??
           profile?.department?.name ??

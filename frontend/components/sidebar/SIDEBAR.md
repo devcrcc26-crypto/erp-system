@@ -1,6 +1,6 @@
 # Sidebar
 
-The application sidebar is the only persistent navigation surface in CCECC PWF. If a
+The application sidebar is the only persistent navigation surface in CRCC PWF. If a
 destination is not in the sidebar, users cannot find it. Everything it shows comes from
 one data file, filtered by the signed-in user's permissions.
 

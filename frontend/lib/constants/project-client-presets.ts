@@ -3,9 +3,9 @@
  * Users may enter other company names; the API stores free text.
  */
 export const PROJECT_CLIENT_PRESET_VALUES = [
-  'CCECC Ethiopia',
-  'CCECC Djibouti',
-  'CCECC Kenya',
+  'CRCC Ethiopia',
+  'CRCC Djibouti',
+  'CRCC Kenya',
 ] as const;
 
 export type ProjectClientPreset =
