@@ -1218,7 +1218,7 @@ export class PayrollRunService {
   /**
    * Creates a CORRECTION draft for a locked REGULAR run (GM_APPROVED / PAID).
    * Recalculates with current inputs via the same entry builder, diffs net pay
-   * against the original, and keeps only employees with a non-zero delta.
+   * against the original, and stores every employee with original/corrected/delta.
    * Prior DRAFT corrections are replaced; finalized corrections are SUPERSEDED.
    */
   async createCorrectionRun(
@@ -1318,7 +1318,7 @@ export class PayrollRunService {
       includeFreelancerIds,
     });
 
-    const deltaDrafts: EntryDraft[] = [];
+    const correctionDrafts: EntryDraft[] = [];
     const seenEmployees = new Set<string>();
 
     for (const draft of drafts) {
@@ -1330,10 +1330,7 @@ export class PayrollRunService {
       const originalAmount = originalNetByEmployee.get(employeeId) ?? 0;
       const deltaAmount =
         Math.round((correctedAmount - originalAmount) * 100) / 100;
-      if (deltaAmount === 0) {
-        continue;
-      }
-      deltaDrafts.push({
+      correctionDrafts.push({
         entry: {
           ...draft.entry,
           originalAmount: new Decimal(originalAmount),
@@ -1346,13 +1343,10 @@ export class PayrollRunService {
 
     // Employees on the original run who drop out of the recalculation.
     for (const [employeeId, originalAmount] of originalNetByEmployee) {
-      if (seenEmployees.has(employeeId) || originalAmount === 0) {
+      if (seenEmployees.has(employeeId)) {
         continue;
       }
       const deltaAmount = Math.round((0 - originalAmount) * 100) / 100;
-      if (deltaAmount === 0) {
-        continue;
-      }
       const originalEntry = await this.prisma.payrollEntry.findFirst({
         where: {
           runId: original.id,
@@ -1363,7 +1357,7 @@ export class PayrollRunService {
       if (!originalEntry) {
         continue;
       }
-      deltaDrafts.push({
+      correctionDrafts.push({
         entry: {
           id: randomUUID(),
           companyId: ctx.companyId,
@@ -1419,11 +1413,14 @@ export class PayrollRunService {
       });
     }
 
-    await this.persistEntryDrafts(deltaDrafts, ctx);
+    await this.persistEntryDrafts(correctionDrafts, ctx);
     await this.updateRunTotals(correctionRun.id, ctx);
 
+    const changedCount = correctionDrafts.filter(
+      (draft) => this.toNumber(draft.entry.deltaAmount as Decimal | number | null) !== 0,
+    ).length;
     this.logger.log(
-      `[PayrollRun] Created correction ${runNumber} for ${original.runNumber} with ${deltaDrafts.length} delta entries`,
+      `[PayrollRun] Created correction ${runNumber} for ${original.runNumber} with ${correctionDrafts.length} entries (${changedCount} changed)`,
     );
 
     return this.getRun(correctionRun.id, ctx.companyId);

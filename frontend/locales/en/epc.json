@@ -5888,16 +5888,17 @@
       },
       "correction": {
         "bannerTitle": "Correction run for {{period}}",
-        "bannerBody": "Only employees with a changed amount are shown.",
+        "bannerBody": "All employees are recalculated. Delta shows the difference from the original run; correction payslips are only generated when Delta is not zero.",
         "viewOriginal": "View original run {{runNumber}}",
-        "createHint": "This will re-run payroll for {{period}} using current data and calculate the difference. A correction payslip will be generated for affected employees.",
+        "createHint": "This will re-run payroll for {{period}} using current data for all employees and calculate the difference. A correction payslip will be generated only for employees whose amount changed.",
         "rerunWarning": "A correction run already exists for this month. Running again will supersede it. The previous correction payslips will be voided.",
         "reasonLabel": "Reason for correction",
         "reasonPlaceholder": "Optional — why this correction is needed",
         "unlockHint": "Unlocking this run will void all generated payslips for this month and set the run back to Draft. Are you sure?",
         "originalAmount": "Original",
         "correctedAmount": "Corrected",
-        "deltaAmount": "Delta"
+        "deltaAmount": "Delta",
+        "changedOnly": "Changed only"
       },
       "create": {
         "title": "New payroll run",

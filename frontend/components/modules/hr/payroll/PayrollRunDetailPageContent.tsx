@@ -361,6 +361,7 @@ export default function PayrollRunDetailPageContent({
     null,
   );
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [changedOnly, setChangedOnly] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -497,6 +498,12 @@ export default function PayrollRunDetailPageContent({
       if (flaggedOnly && entry.flag === 'NONE') {
         return false;
       }
+      if (
+        changedOnly &&
+        parsePayrollMoney(entry.deltaAmount) === 0
+      ) {
+        return false;
+      }
       if (departmentFilter && entry.employee.department?.name !== departmentFilter) {
         return false;
       }
@@ -513,10 +520,10 @@ export default function PayrollRunDetailPageContent({
       const empId = (entry.employee.employeeId ?? '').toLowerCase();
       return name.includes(q) || empId.includes(q);
     });
-  }, [run, search, departmentFilter, disciplineFilter, flaggedOnly]);
+  }, [run, search, departmentFilter, disciplineFilter, flaggedOnly, changedOnly]);
 
   // Phone card list shows a page at a time; any filter change starts over.
-  const mobileFilterKey = [search, departmentFilter, disciplineFilter, flaggedOnly].join('|');
+  const mobileFilterKey = [search, departmentFilter, disciplineFilter, flaggedOnly, changedOnly].join('|');
   const mobileVisible =
     mobilePage.key === mobileFilterKey ? mobilePage.count : MOBILE_PAGE_SIZE;
 
@@ -536,13 +543,15 @@ export default function PayrollRunDetailPageContent({
     Boolean(search.trim()) ||
     departmentFilter !== undefined ||
     disciplineFilter !== undefined ||
-    flaggedOnly;
+    flaggedOnly ||
+    changedOnly;
 
   function resetEntryFilters(): void {
     setSearch('');
     setDepartmentFilter(undefined);
     setDisciplineFilter(undefined);
     setFlaggedOnly(false);
+    setChangedOnly(false);
   }
 
   const totalsRow = useMemo(() => {
@@ -2655,6 +2664,12 @@ export default function PayrollRunDetailPageContent({
             <Switch size="small" checked={flaggedOnly} onChange={setFlaggedOnly} />
             {t('hr.payroll.entry.flaggedOnly')}
           </label>
+          {isCorrectionRun ? (
+            <label className="erp-payroll-switch">
+              <Switch size="small" checked={changedOnly} onChange={setChangedOnly} />
+              {t('hr.payroll.correction.changedOnly')}
+            </label>
+          ) : null}
           {hasEntryFilters ? (
             <Button type="link" onClick={resetEntryFilters} className="!px-1">
               {t('common.reset')}

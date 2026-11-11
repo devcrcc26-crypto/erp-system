@@ -181,13 +181,28 @@ export class PayrollPayslipService {
 
     const entries = await this.prisma.payrollEntry.findMany({
       where: { runId, companyId: ctx.companyId },
-      select: { id: true, employeeId: true, payrollDays: true, netPay: true },
+      select: {
+        id: true,
+        employeeId: true,
+        payrollDays: true,
+        netPay: true,
+        deltaAmount: true,
+      },
     });
 
-    const eligible = entries.filter(
-      (entry) =>
-        !(this.toNumber(entry.payrollDays) === 0 && this.toNumber(entry.netPay) === 0),
-    );
+    const eligible = entries.filter((entry) => {
+      if (
+        this.toNumber(entry.payrollDays) === 0 &&
+        this.toNumber(entry.netPay) === 0
+      ) {
+        return false;
+      }
+      // Correction payslips only for employees whose amount changed.
+      if (run.type === 'CORRECTION' && this.toNumber(entry.deltaAmount) === 0) {
+        return false;
+      }
+      return true;
+    });
     const skipped = entries.length - eligible.length;
     if (eligible.length === 0) {
       return { created: 0, updated: 0, skipped, total: 0 };
@@ -594,10 +609,24 @@ export class PayrollPayslipService {
   private async requireRun(
     runId: string,
     companyId: string,
-  ): Promise<{ id: string; status: string; month: number; year: number; runNumber: string }> {
+  ): Promise<{
+    id: string;
+    status: string;
+    month: number;
+    year: number;
+    runNumber: string;
+    type: string;
+  }> {
     const run = await this.prisma.payrollRun.findFirst({
       where: { id: runId, companyId, deletedAt: null },
-      select: { id: true, status: true, month: true, year: true, runNumber: true },
+      select: {
+        id: true,
+        status: true,
+        month: true,
+        year: true,
+        runNumber: true,
+        type: true,
+      },
     });
     if (!run) {
       throw new NotFoundException('Payroll run not found');
