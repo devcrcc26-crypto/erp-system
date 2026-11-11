@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
+import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { DemoLoginPanel } from '@/components/auth/DemoLoginPanel';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
@@ -13,7 +14,6 @@ import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { signOutLocally, completeLocalSignIn } from '@/lib/auth/sign-out-locally';
 import { useAuthStore } from '@/stores/auth.store';
 import { ApiRequestError } from '@/lib/api/errors';
-import { tokens } from '@/lib/theme/tokens';
 
 interface LoginFormValues {
   identifier: string;
@@ -22,6 +22,7 @@ interface LoginFormValues {
 
 function useLoginLabels(): {
   fullName: string;
+  welcome: string;
   subtitle: string;
   brandLine: string;
   signIn: string;
@@ -34,6 +35,7 @@ function useLoginLabels(): {
     const isZh = lang.toLowerCase().startsWith('zh');
     return {
       fullName: isZh ? '姓名' : 'Full name',
+      welcome: isZh ? '欢迎回来' : 'Welcome back',
       subtitle: isZh
         ? '请输入姓名和密码以继续'
         : 'Enter your full name and password to continue',
@@ -146,39 +148,20 @@ function LoginForm(): React.ReactNode {
 
   return (
     <div className="erp-login-page">
-      <aside className="erp-login-brand" aria-label="CRCC">
-        <div className="erp-login-brand-atmosphere" aria-hidden>
-          <span className="erp-login-beam erp-login-beam--a" />
-          <span className="erp-login-beam erp-login-beam--b" />
-          <span className="erp-login-beam erp-login-beam--c" />
-          <span className="erp-login-brand-grain" />
-        </div>
-
-        <div className="erp-login-brand-inner">
-          <div className="erp-login-brand-logo">
-            <BrandLogo size={168} priority />
-          </div>
-          <h1 className="erp-login-brand-title">Construction ERP</h1>
-          <p className="erp-login-brand-line">{labels.brandLine}</p>
-        </div>
-      </aside>
-
       <div className="erp-login-stage">
-        <main className="erp-login-main">
-          <div className="erp-login-mobile-brand" aria-hidden={false}>
-            <BrandLogo size={72} priority />
-            <p className="erp-login-mobile-brand-product">Construction ERP</p>
-          </div>
+        <header className="erp-login-topbar">
+          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
+          <span className="erp-login-topbar-divider" aria-hidden />
+          <span className="erp-login-topbar-product">Construction ERP</span>
+        </header>
 
+        <main className="erp-login-main">
           <div className="erp-login-layout">
             <section className="erp-login-panel" aria-labelledby="erp-login-heading">
               <header className="erp-login-panel-head">
-                <div className="erp-login-panel-logo" aria-hidden>
-                  <BrandLogo size={52} priority />
-                </div>
-                <h2 id="erp-login-heading" className="erp-login-heading">
-                  {labels.signIn}
-                </h2>
+                <h1 id="erp-login-heading" className="erp-login-heading">
+                  {labels.welcome}
+                </h1>
                 <p className="erp-login-subtitle">{labels.subtitle}</p>
               </header>
 
@@ -200,6 +183,7 @@ function LoginForm(): React.ReactNode {
                   ]}
                 >
                   <Input
+                    prefix={<UserOutlined aria-hidden />}
                     placeholder={labels.fullName}
                     autoComplete="username"
                     size="large"
@@ -218,6 +202,7 @@ function LoginForm(): React.ReactNode {
                   ]}
                 >
                   <Input.Password
+                    prefix={<LockOutlined aria-hidden />}
                     autoComplete="current-password"
                     size="large"
                   />
@@ -281,7 +266,6 @@ function LoginForm(): React.ReactNode {
                         : '/forgot-password'
                     }
                     className="erp-login-forgot-link"
-                    style={{ color: tokens.colorPrimary }}
                   >
                     Forgot password?
                   </Link>
@@ -305,6 +289,19 @@ function LoginForm(): React.ReactNode {
           © {new Date().getFullYear()} CRCC · Construction ERP
         </footer>
       </div>
+
+      <aside className="erp-login-brand" aria-label="CRCC">
+        <div className="erp-login-brand-atmosphere" aria-hidden>
+          <span className="erp-login-brand-grid" />
+          <span className="erp-login-brand-glow" />
+          <span className="erp-login-brand-globe" />
+        </div>
+
+        <div className="erp-login-brand-inner">
+          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
+          <p className="erp-login-brand-title">{labels.brandLine}</p>
+        </div>
+      </aside>
     </div>
   );
 }
