@@ -132,41 +132,36 @@ export default function HeaderActions({
     <button
       type="button"
       className={[
-        'erp-shell-profile-trigger flex shrink-0 items-center rounded-[10px] transition-colors',
-        compact ? 'gap-0 p-0.5' : 'gap-2 px-1.5 py-1',
-        menuOpen
-          ? 'bg-[var(--color-teal-50)]'
-          : 'hover:bg-[var(--color-surface-secondary)]',
+        'erp-shell-profile-trigger flex shrink-0 items-center transition-colors',
+        compact ? 'gap-0 p-1' : 'gap-2.5 py-1 pl-1 pr-3',
       ].join(' ')}
       aria-label={t('common.openProfile')}
       aria-expanded={menuOpen}
     >
       <Avatar
-        size={compact ? 28 : 32}
+        size={compact ? 28 : 30}
         src={photoQuery.data?.url}
         style={{
-          backgroundColor: photoQuery.data?.url
+          background: photoQuery.data?.url
             ? undefined
-            : tokens.colorPrimaryLight,
-          color: tokens.colorTeal600,
-          fontWeight: 600,
+            : 'var(--gradient-primary)',
+          color: '#ffffff',
+          fontWeight: 650,
           fontSize: 12,
-          border: menuOpen
-            ? `2px solid ${tokens.colorPrimary}`
-            : '2px solid transparent',
+          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.22)',
         }}
       >
         {avatarInitial}
       </Avatar>
       <div className="erp-shell-profile-meta hidden text-left text-[13px] xl:block">
         <p
-          className="m-0 max-w-[140px] truncate font-medium leading-[1.4]"
+          className="m-0 max-w-[140px] truncate font-semibold leading-[1.3]"
           style={{ color: tokens.colorTextPrimary }}
         >
           {displayName}
         </p>
         <p
-          className="m-0 max-w-[140px] truncate text-[12px] font-normal leading-[1.4]"
+          className="m-0 max-w-[140px] truncate text-[11px] font-medium leading-[1.3]"
           style={{ color: tokens.colorTextSecondary }}
         >
           {roleName}

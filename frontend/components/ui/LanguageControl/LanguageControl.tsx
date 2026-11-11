@@ -56,10 +56,10 @@ export default function LanguageControl({
         icon={<GlobalOutlined />}
         onClick={() => void handleToggle()}
         aria-label={tooltip}
-        className={compact ? '!h-8 !px-1.5' : '!h-8 !px-2'}
+        className={`erp-shell-header-icon-btn ${compact ? '!h-[34px] !px-2.5' : '!h-[34px] !px-3'}`}
         style={{ color: tokens.colorTextSecondary }}
       >
-        <span className="text-[12px] font-medium tabular-nums">{label}</span>
+        <span className="text-[12px] font-semibold tabular-nums">{label}</span>
       </Button>
     </Tooltip>
   );

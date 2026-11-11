@@ -759,7 +759,7 @@ export default function SidebarShell({
               href="/"
               aria-label={t('shell.brandWorkspace')}
               onClick={closeFlyout}
-              className="inline-flex items-center gap-2.5 rounded-md"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white ring-1 ring-inset ring-slate-200 shadow-xs transition-all hover:ring-[rgba(var(--erp-accent-rgb),0.36)]"
             >
               <BrandLogo size={28} />
             </Link>

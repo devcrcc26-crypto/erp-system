@@ -184,12 +184,7 @@ export default function NotificationPanel(): React.ReactNode {
       <Tooltip title={t('nav.notifications')} open={open ? false : undefined}>
         <button
           type="button"
-          className={[
-            'relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
-            open
-              ? 'bg-[var(--color-teal-50)] text-[var(--color-teal-600)]'
-              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]',
-          ].join(' ')}
+          className="erp-shell-header-icon-btn relative"
           aria-label={t('pages.notifications.panelAria')}
           aria-expanded={open}
         >

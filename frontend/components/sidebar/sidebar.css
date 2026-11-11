@@ -943,21 +943,29 @@
 
 .erp-sidebar-v2 {
   --sb-border: var(--erp-n-150);
-  --sb-hover: rgba(16, 24, 40, 0.04);
-  --sb-active-bg: rgba(var(--erp-accent-rgb), 0.1);
+  --sb-hover: rgba(var(--erp-accent-rgb), 0.06);
+  --sb-active-bg: var(--erp-accent-light);
   --sb-active-text: var(--color-primary-dark);
-  --sb-field-bg: var(--erp-n-100);
-  --sb-field-border: transparent;
+  --sb-field-bg: var(--color-input-bg, var(--erp-n-50));
+  --sb-field-border: var(--color-input-border, var(--erp-n-300));
   --sb-panel-bg: var(--erp-n-50);
   --sb-radius: 16px;
-  --sb-panel-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 16px rgba(16, 24, 40, 0.06);
+  --sb-panel-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
   /* Icon chips: a soft square behind every destination icon. */
-  --sb-chip-bg: var(--erp-n-100);
-  --sb-chip-hover: #e6eaef;
-  --sb-chip-active: rgba(var(--erp-accent-rgb), 0.16);
-  --sb-rail-bg: var(--erp-n-25);
+  --sb-chip-bg: var(--erp-n-50);
+  --sb-chip-ring: var(--erp-n-200);
+  --sb-chip-hover: var(--erp-accent-light);
+  --sb-chip-active: var(--erp-accent-soft);
+  --sb-rail-bg: linear-gradient(180deg, #ffffff 0%, var(--erp-n-50) 100%);
+  --sb-header-bg: linear-gradient(180deg, #ffffff 0%, #fafdfc 100%);
+  --sb-flyout-shadow:
+    1px 0 0 rgba(var(--erp-accent-rgb), 0.14),
+    12px 0 32px -6px rgba(var(--erp-accent-hover-rgb), 0.16),
+    4px 0 12px -2px rgba(20, 29, 25, 0.06);
 }
 
 /* ── Docked panels (desktop only: the desktop <nav> carries data-mode) ── */
@@ -989,29 +997,32 @@
 .erp-sidebar-v2 .sb-panel-header {
   gap: 10px;
   min-height: 56px;
-  padding: 0 8px 0 14px;
+  padding: 0 10px 0 14px;
   border-bottom-color: var(--sb-border);
+  background: var(--sb-header-bg);
 }
 
 /* Folder icon beside the panel title, tinted like the selected state. */
 .erp-sidebar-v2 .sb-panel-icon {
   display: inline-flex;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.22);
   font-size: 16px;
   line-height: 1;
 }
 
 .erp-sidebar-v2 .sb-panel-title {
+  color: var(--sb-active-text);
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 /* ── One selected state: soft tinted pill, primary text and icon ── */
@@ -1025,7 +1036,8 @@
 .erp-sidebar-v2 .sb-selectable[data-active='true'] {
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.22);
 }
 
 .erp-sidebar-v2 .sb-selectable[aria-current='page']::before,
@@ -1051,11 +1063,12 @@
   background: var(--sb-chip-bg);
   color: var(--sb-icon);
   font-size: 16px;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px var(--sb-chip-ring);
   transition:
-    background-color 120ms ease,
-    color 120ms ease,
-    transform 120ms ease;
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
 }
 
 .erp-sidebar-v2 .sb-selectable:hover .sb-icon-tile,
@@ -1063,13 +1076,13 @@
 .erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon-tile,
 .erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[aria-expanded='true'] .sb-icon-tile {
   background: var(--sb-chip-hover);
-  color: var(--sb-text-strong);
-  box-shadow: none;
+  color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.24);
 }
 
 .erp-sidebar-v2 .sb-selectable:hover .sb-icon,
 .erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon {
-  color: var(--sb-text-strong);
+  color: var(--sb-active-text);
 }
 
 .erp-sidebar-v2 .sb-selectable[aria-current='page'] .sb-icon,
@@ -1083,7 +1096,7 @@
 .erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[data-active='true'] .sb-icon-tile {
   background: var(--sb-chip-active);
   color: var(--sb-active-text);
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
 }
 
 /* Rail rows (drawer / expanded tree): chip + 14px label. */
@@ -1109,17 +1122,23 @@
   background: var(--sb-chip-bg);
   color: var(--sb-icon);
   font-size: 15px;
-  transition: background-color 120ms ease, color 120ms ease;
+  box-shadow: inset 0 0 0 1px var(--sb-chip-ring);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .erp-sidebar-v2 .erp-sidebar-module-link:hover > .sb-icon {
   background: var(--sb-chip-hover);
-  color: var(--sb-text-strong);
+  color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.24);
 }
 
 .erp-sidebar-v2 .erp-sidebar-module-link[aria-current='page'] > .sb-icon {
   background: var(--sb-chip-active);
   color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
 }
 
 /* Coming-soon rows keep a quiet chip. */
@@ -1197,21 +1216,30 @@
 /* ── Fields and footer ── */
 
 .erp-sidebar-v2 .sb-search-input {
+  border-radius: var(--radius-control, 10px);
   border-color: var(--sb-field-border);
+  background: var(--sb-field-bg);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .erp-sidebar-v2 .sb-search-input:hover {
-  border-color: transparent;
-  background: #eceff3;
+  border-color: rgba(var(--erp-accent-rgb), 0.45);
+  background: var(--sb-field-bg);
+  box-shadow: var(--shadow-hover-ring);
 }
 
 .erp-sidebar-v2 .sb-search-input:focus-visible {
   border-color: var(--sb-focus);
   background: var(--sb-bg);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .erp-sidebar-v2 .sb-kbd {
-  border-color: #dfe3e8;
+  border-color: var(--sb-field-border);
+  background: var(--sb-bg);
 }
 
 .erp-sidebar-v2 .sb-footer {
@@ -1219,18 +1247,25 @@
 }
 
 .erp-sidebar-v2 .sb-account-card {
-  border: 0;
+  border: 1px solid var(--sb-border);
   background: var(--sb-panel-bg);
 }
 
-.erp-sidebar-v2 .sb-mode-toggle {
-  border-color: transparent;
-  background: var(--sb-field-bg);
+.erp-sidebar-v2 .sb-account-card:hover {
+  border-color: rgba(var(--erp-accent-rgb), 0.28);
+  background: var(--sb-hover);
 }
 
-.erp-sidebar-v2 .sb-mode-toggle:hover {
-  border-color: transparent;
+.erp-sidebar-v2 .sb-mode-toggle {
+  border-color: var(--sb-chip-ring);
+  background: var(--sb-chip-bg);
+}
+
+.erp-sidebar-v2 .sb-mode-toggle:hover,
+.erp-sidebar-v2 .sb-mode-toggle[aria-pressed='true'] {
+  border-color: rgba(var(--erp-accent-rgb), 0.28);
   background: var(--sb-active-bg);
+  color: var(--sb-active-text);
 }
 
 /* ── Compact: icon-only rail (~72px), labels in hover/focus tooltips ── */
@@ -1259,11 +1294,13 @@
 .erp-sidebar-v2 .sb-tile:hover,
 .erp-sidebar-v2 .sb-tile[aria-expanded='true'] {
   background: transparent;
+  box-shadow: none;
 }
 
 .erp-sidebar-v2 .sb-tile[aria-current='page'],
 .erp-sidebar-v2 .sb-tile[data-active='true'] {
   background: transparent;
+  box-shadow: none;
 }
 
 .erp-sidebar-v2 .sb-tile:hover .sb-icon-tile,
@@ -1277,7 +1314,9 @@
 .erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-tile[data-active='true'] .sb-icon-tile {
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
-  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.32),
+    0 3px 10px rgba(var(--erp-accent-rgb), 0.14);
 }
 
 /* Compact rail: a short rule under the search/favorites tools. */
@@ -1296,8 +1335,12 @@
   height: 34px;
   border-radius: 10px;
   background: var(--sb-chip-bg);
+  box-shadow: inset 0 0 0 1px var(--sb-chip-ring);
   font-size: 17px;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button:hover {
@@ -1306,17 +1349,21 @@
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button:hover .sb-icon {
   background: var(--sb-chip-hover);
-  color: var(--sb-text-strong);
+  color: var(--sb-active-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.24);
 }
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page'] {
   background: transparent;
+  box-shadow: none;
 }
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page'] .sb-icon {
   background: var(--sb-active-bg);
   color: var(--sb-active-text);
-  box-shadow: inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--erp-accent-rgb), 0.32),
+    0 3px 10px rgba(var(--erp-accent-rgb), 0.14);
 }
 
 .erp-sidebar-v2 .sb-footer--compact .sb-utility-button[aria-current='page']::before {
@@ -1432,6 +1479,12 @@
 
 .erp-sidebar-v2.sb-drawer .ant-drawer-header {
   border-bottom-color: var(--sb-border);
+  background: var(--sb-header-bg);
+}
+
+.erp-sidebar-v2.sb-drawer .ant-drawer-title {
+  color: var(--sb-active-text);
+  font-weight: 650;
 }
 
 /* ── Unpinned flyout: module panel as an overlay beside the rail ── */
@@ -1442,11 +1495,6 @@
  * closing: `inert` + visibility keep it out of the tab order and the
  * accessibility tree, and the visibility delay lets the fade finish.
  */
-.erp-sidebar-v2 {
-  --sb-flyout-shadow:
-    1px 0 0 rgba(16, 24, 40, 0.04),
-    8px 0 24px -6px rgba(16, 24, 40, 0.14);
-}
 
 .erp-sidebar-v2 .sb-flyout {
   position: absolute;
