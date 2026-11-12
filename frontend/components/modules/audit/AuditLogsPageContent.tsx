@@ -1,6 +1,8 @@
 'use client';
 import { accent } from '@/lib/theme/accent';
 
+import '@/components/modules/approvals/approvals-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,7 +44,10 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No LIST_PAGE_V2: approvals-v2.css carries the list look.
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-audit-logs-page erp-approvals-page erp-approvals-v2';
+
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
   blue: { bg: '#E6F1FB', fg: '#378ADD' },
@@ -190,7 +195,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
 
   if (auditLogsQuery.isLoading && !auditLogsQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -205,7 +210,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         : 0;
 
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
+      <div className={PAGE_ROOT}>
         <ErpNotice
           tone="error"
           title={
@@ -232,7 +237,23 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
+      <section
+        className="erp-approvals-hero"
+        aria-labelledby="erp-audit-hero-title"
+      >
+        <div className="erp-approvals-hero-top">
+          <div className="erp-approvals-hero-heading min-w-0">
+            <h2 id="erp-audit-hero-title" className="erp-approvals-hero-title">
+              {t('auditLogs.title')}
+            </h2>
+            <p className="erp-approvals-hero-subtitle">
+              {t('auditLogs.description')}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="erp-users-stat-bar">
         <AuditStat
           label={t('auditLogs.stats.total')}
@@ -260,9 +281,12 @@ export default function AuditLogsPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-approvals-table-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-ap-card-icon">
+              <ScrollText size={18} strokeWidth={2} />
+            </span>
             <h3 className="erp-pro-card-toolbar-title">
               {t('auditLogs.allEntries')}
             </h3>

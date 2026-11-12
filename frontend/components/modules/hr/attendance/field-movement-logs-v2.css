@@ -561,3 +561,16 @@
     font-size: 19px;
   }
 }
+
+/* Brand layer (Nov 2026): tiles sit on the employees-v2 hero banner. */
+.erp-fml-v2 .erp-employees-hero .erp-fml-stat-hint {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.erp-fml-v2 .erp-employees-hero .erp-contract-stat--active .erp-fml-stat-hint {
+  color: var(--erp-n-600);
+}
+
+.erp-fml-v2 .erp-employees-list-card .erp-fml-toolbar-sub {
+  margin: 2px 0 0;
+}

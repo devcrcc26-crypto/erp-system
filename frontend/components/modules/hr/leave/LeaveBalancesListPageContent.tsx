@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/approvals/approvals-v2.css';
 
 import { useMemo, useState } from 'react';
 import {
@@ -260,20 +261,20 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-employees-hero"
+        className="erp-approvals-hero"
         aria-labelledby="erp-leave-balances-hero-title"
       >
-        <div className="erp-employees-hero-top">
+        <div className="erp-approvals-hero-top">
           <h2
             id="erp-leave-balances-hero-title"
-            className="erp-employees-hero-title"
+            className="erp-approvals-hero-title"
           >
             {t('pages.hr.listHeroTitle', {
               title: t('hr.tabs.leaveBalances'),
               count: meta.total.toLocaleString(),
             })}
           </h2>
-          <div className="erp-employees-hero-actions">
+          <div className="erp-approvals-hero-actions">
             <ExportExcelButton
               compact={isCompact}
               actions={[
@@ -287,7 +288,9 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             />
           </div>
         </div>
-        <div className="erp-users-stat-bar erp-employees-hero-stats">
+        </section>
+
+      <div className="erp-users-stat-bar">
         <EvaluationStat
           label={t('pages.hr.leave.balanceStats.employees')}
           value={meta.total}
@@ -313,7 +316,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
           icon={<ClockCircleOutlined />}
         />
         </div>
-      </section>
+
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

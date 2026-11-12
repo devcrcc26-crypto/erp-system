@@ -545,11 +545,26 @@
 
 .erp-hr-travel-modal .ant-modal-content,
 .erp-hr-travel-modal .ant-modal-container {
+  position: relative;
+  overflow: hidden;
   padding: 24px !important;
   border-radius: var(--htv2-radius) !important;
   box-shadow:
     0 12px 32px rgba(16, 24, 40, 0.12),
     0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-hr-travel-modal .ant-modal-content::before,
+.erp-hr-travel-modal .ant-modal-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 4px;
+  pointer-events: none;
+  background: var(--gradient-primary);
 }
 
 .erp-hr-travel-modal .ant-modal-header {

@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
@@ -330,7 +331,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-material-requisitions-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-material-requisitions-page erp-approvals-page erp-approvals-v2">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -339,7 +340,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-material-requisitions-page">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-material-requisitions-page erp-approvals-page erp-approvals-v2">
       {importOpen ? (
         <HrImportModal
           entity="materialRequisitions"
@@ -367,14 +368,14 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-employees-hero"
+        className="erp-approvals-hero"
         aria-labelledby="erp-list-hero-title"
       >
-        <div className="erp-employees-hero-top">
-          <h2 id="erp-list-hero-title" className="erp-employees-hero-title">
+        <div className="erp-approvals-hero-top">
+          <h2 id="erp-list-hero-title" className="erp-approvals-hero-title">
             {pageTitle}
           </h2>
-          <div className="erp-employees-hero-actions">
+          <div className="erp-approvals-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -409,7 +410,9 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
             />
           </div>
         </div>
-        <div className="erp-users-stat-bar erp-employees-hero-stats">
+        </section>
+
+      <div className="erp-users-stat-bar">
           <MaterialRequisitionStat
             label={t('pages.hr.materialRequisition.stats.total')}
             value={statusCounts.all}
@@ -453,7 +456,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
             onClick={() => handleStatusMode('rejected')}
           />
         </div>
-      </section>
+
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

@@ -1739,3 +1739,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ── Brand layer (Nov 2026): list card under the employees-v2 banner ──
+ * payroll-v2 table rules are more specific than employees-v2's, so restate
+ * the brand table chrome here (list page only: `.erp-employees-list-card`). */
+.erp-payroll-v2 .erp-employees-list-card .ant-table-wrapper .ant-table-thead > tr:not(.ant-table-measure-row) > th {
+  background: #ffffff !important;
+}
+
+.erp-payroll-v2 .erp-employees-list-card .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+.erp-payroll-v2 .erp-employees-list-card .ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td:first-child {
+  box-shadow: inset 3px 0 0 var(--erp-accent);
+}
+
+.erp-payroll-v2 .erp-employees-list-card .ant-table-pagination.ant-pagination {
+  padding: 12px 20px;
+  border-top: 1px solid var(--erp-n-150);
+  background: var(--erp-n-25);
+}
+
+.erp-payroll-v2 .erp-employees-hero .erp-users-stat-label {
+  letter-spacing: 0;
+  text-transform: none;
+}

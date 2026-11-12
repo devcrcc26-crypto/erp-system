@@ -5,10 +5,8 @@ import { Alert, Button, InputNumber, Select, Skeleton, Spin } from 'antd';
 import { ArrowLeft, Clock } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import {
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import '@/components/modules/approvals/approvals-v2.css';
+import '@/components/modules/users/employees-v2.css';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -38,7 +36,9 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+// No LIST_PAGE_V2: employees-v2.css carries the brand look.
+const HISTORY_ROOT =
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-approvals-page erp-approvals-v2 flex flex-col';
 const HISTORY_PAGE_SIZE = 15;
 
 export type OvertimeHistoryPageMode = 'self' | 'employee';
@@ -373,7 +373,7 @@ export default function OvertimeHistoryPageContent({
 
   if (!allowed) {
     return (
-      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
+      <div className={HISTORY_ROOT}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -386,54 +386,73 @@ export default function OvertimeHistoryPageContent({
     canViewHr
   ) {
     return (
-      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
+      <div className={HISTORY_ROOT}>
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
   }
 
   return (
-    <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} />}
-            onClick={handleBack}
-            className="!mb-2 !px-0"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('hr.buttons.back')}
-          </Button>
+    <div className={HISTORY_ROOT}>
+      <section
+        className="erp-approvals-hero"
+        aria-labelledby="erp-overtime-history-hero-title"
+      >
+        <div className="erp-approvals-hero-top">
+          <div className="erp-approvals-hero-heading min-w-0">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={handleBack}
+              className="!mb-2 !px-2 !text-white/90 hover:!text-white"
+            >
+              {t('hr.buttons.back')}
+            </Button>
+            <h2
+              id="erp-overtime-history-hero-title"
+              className="erp-approvals-hero-title break-words"
+            >
+              {displayName}
+            </h2>
+            <p className="erp-approvals-hero-subtitle">
+              {t('hr.overtime.historyTitle')}
+            </p>
+          </div>
         </div>
+      </section>
+
+      <div className="erp-users-stat-bar">
+          {[
+            { label: t('hr.table.year'), value: String(year) },
+            {
+              label: t('hr.overtimeCategory.total'),
+              value: formatOvertimeHours(yearTotals.total),
+            },
+            {
+              label: t('hr.table.items'),
+              value: String(yearTotals.sheets),
+            },
+          ].map((item) => (
+            <div key={item.label} className="erp-users-stat">
+              <div className="min-w-0 text-left">
+                <p className="erp-users-stat-label">{item.label}</p>
+                <p className="erp-users-stat-value">{item.value}</p>
+              </div>
+            </div>
+          ))}
       </div>
 
-      <SummaryStrip
-        items={[
-          {
-            label: t('hr.table.employee'),
-            value: displayName,
-          },
-          {
-            label: t('hr.table.year'),
-            value: String(year),
-          },
-          {
-            label: t('hr.overtimeCategory.total'),
-            value: formatOvertimeHours(yearTotals.total),
-          },
-          {
-            label: t('hr.table.items'),
-            value: String(yearTotals.sheets),
-          },
-        ]}
-      />
-
-      <SectionCard
-        title={t('hr.overtime.yearSummaryTitle')}
-        bodyClassName="p-4"
-        action={
-          <div className="flex items-center gap-2">
+      <div className="erp-pro-card erp-approvals-table-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Clock size={18} />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('hr.overtime.yearSummaryTitle')}
+            </h3>
+          </div>
+          <div className="erp-users-toolbar-actions flex items-center gap-2">
             <span
               className="text-xs"
               style={{ color: tokens.colorTextSecondary }}
@@ -453,49 +472,57 @@ export default function OvertimeHistoryPageContent({
               style={{ width: 96 }}
             />
           </div>
-        }
-      >
-        {historyQuery.isError ? (
-          <Alert
-            type="error"
-            showIcon
-            title={errorMessage(historyQuery.error)}
-          />
-        ) : historyQuery.isLoading ? (
-          <div className="flex justify-center py-8">
-            <Spin />
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <HoursTile
-              label={t('hr.overtimeCategory.regular')}
-              value={formatOvertimeHours(yearTotals.regular)}
+        </div>
+        <div className="p-4">
+          {historyQuery.isError ? (
+            <Alert
+              type="error"
+              showIcon
+              title={errorMessage(historyQuery.error)}
             />
-            <HoursTile
-              label={t('hr.overtimeCategory.night')}
-              value={formatOvertimeHours(yearTotals.night)}
-            />
-            <HoursTile
-              label={t('hr.overtimeCategory.weekend')}
-              value={formatOvertimeHours(yearTotals.weekend)}
-            />
-            <HoursTile
-              label={t('hr.overtimeCategory.holiday')}
-              value={formatOvertimeHours(yearTotals.holiday)}
-            />
-            <HoursTile
-              label={t('hr.overtimeCategory.total')}
-              value={formatOvertimeHours(yearTotals.total)}
-            />
-          </div>
-        )}
-      </SectionCard>
+          ) : historyQuery.isLoading ? (
+            <div className="flex justify-center py-8">
+              <Spin />
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <HoursTile
+                label={t('hr.overtimeCategory.regular')}
+                value={formatOvertimeHours(yearTotals.regular)}
+              />
+              <HoursTile
+                label={t('hr.overtimeCategory.night')}
+                value={formatOvertimeHours(yearTotals.night)}
+              />
+              <HoursTile
+                label={t('hr.overtimeCategory.weekend')}
+                value={formatOvertimeHours(yearTotals.weekend)}
+              />
+              <HoursTile
+                label={t('hr.overtimeCategory.holiday')}
+                value={formatOvertimeHours(yearTotals.holiday)}
+              />
+              <HoursTile
+                label={t('hr.overtimeCategory.total')}
+                value={formatOvertimeHours(yearTotals.total)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
-      <SectionCard title={t('hr.overtime.historyTitle')} bodyClassName="p-0">
-        <div
-          className="erp-filter-bar border-b px-3 py-3 sm:px-4"
-          style={{ borderColor: tokens.colorBorder }}
-        >
+      <div className="erp-pro-card erp-approvals-table-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-employees-card-icon">
+              <Clock size={18} />
+            </span>
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('hr.overtime.historyTitle')}
+            </h3>
+          </div>
+        </div>
+        <div className="erp-users-filter-bar">
           <Select
             allowClear
             placeholder={t('common.status')}
@@ -518,37 +545,40 @@ export default function OvertimeHistoryPageContent({
             />
           </div>
         ) : (
-          <DataTable<OvertimeSheetListItem>
-            rowKey="id"
-            size="small"
-            loading={historyQuery.isLoading}
-            columns={columns}
-            dataSource={historyRows}
-            onRow={(record) => ({
-              onClick: () =>
-                router.push(
-                  overtimeSheetDetailHref(record.id, detailReturnTo),
+          <div className="erp-pro-table-card-body">
+            <DataTable<OvertimeSheetListItem>
+              rowKey="id"
+              className="erp-pro-table erp-users-table"
+              size="small"
+              loading={historyQuery.isLoading}
+              columns={columns}
+              dataSource={historyRows}
+              onRow={(record) => ({
+                onClick: () =>
+                  router.push(
+                    overtimeSheetDetailHref(record.id, detailReturnTo),
+                  ),
+                style: { cursor: 'pointer' },
+              })}
+              pagination={{
+                current: historyMeta.page,
+                pageSize: historyMeta.limit,
+                total: historyMeta.total,
+                showSizeChanger: false,
+                onChange: (page) => setHistoryPage(page),
+              }}
+              locale={{
+                emptyText: (
+                  <TableEmptyState
+                    icon={<Clock />}
+                    title={t('hr.overtime.noHistory')}
+                  />
                 ),
-              style: { cursor: 'pointer' },
-            })}
-            pagination={{
-              current: historyMeta.page,
-              pageSize: historyMeta.limit,
-              total: historyMeta.total,
-              showSizeChanger: false,
-              onChange: (page) => setHistoryPage(page),
-            }}
-            locale={{
-              emptyText: (
-                <TableEmptyState
-                  icon={<Clock />}
-                  title={t('hr.overtime.noHistory')}
-                />
-              ),
-            }}
-          />
+              }}
+            />
+          </div>
         )}
-      </SectionCard>
+      </div>
     </div>
   );
 }

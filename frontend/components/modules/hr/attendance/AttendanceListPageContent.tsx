@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/approvals/approvals-v2.css';
 
 import '@/components/modules/users/employees-v2.css';
 import './attendance-v2.css';
@@ -152,7 +153,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2 erp-approvals-page erp-approvals-v2">
         <div className="erp-att-loading">
           <Spin />
         </div>
@@ -185,7 +186,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-employees-v2 erp-attendance-v2 erp-approvals-page erp-approvals-v2">
       {listQuery.isError ? (
         <Alert
           type="error"

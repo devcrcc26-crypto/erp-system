@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/approvals/approvals-v2.css';
 
 import '@/components/modules/users/employees-v2.css';
 import './field-movement-logs-v2.css';
@@ -326,7 +327,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   if (!canViewTeam) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2 erp-approvals-page erp-approvals-v2">
         <Alert
           type="error"
           showIcon
@@ -338,7 +339,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2 erp-approvals-page erp-approvals-v2">
         <div className="erp-pro-card flex justify-center p-12">
           <Spin />
         </div>
@@ -420,7 +421,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   ];
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-employees-v2 erp-fml-v2 erp-approvals-page erp-approvals-v2">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -435,17 +436,17 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-employees-hero"
+        className="erp-approvals-hero"
         aria-labelledby="erp-fml-hero-title"
       >
-        <div className="erp-employees-hero-top">
-          <h2 id="erp-fml-hero-title" className="erp-employees-hero-title">
+        <div className="erp-approvals-hero-top">
+          <h2 id="erp-fml-hero-title" className="erp-approvals-hero-title">
             {t('pages.hr.listHeroTitle', {
               title: t('pages.hr.fieldMovementLogs.listTitle'),
               count: filtered.length.toLocaleString(),
             })}
           </h2>
-          <div className="erp-employees-hero-actions">
+          <div className="erp-approvals-hero-actions">
             {canAddOnBehalf ? (
               <Button
                 icon={<UserAddOutlined />}
@@ -467,7 +468,9 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
             ) : null}
           </div>
         </div>
-        <div className="erp-users-stat-bar erp-employees-hero-stats">
+        </section>
+
+      <div className="erp-users-stat-bar">
         {stats.map((stat) => {
           const active = statMode === stat.mode && !status;
           return (
@@ -499,7 +502,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           );
         })}
         </div>
-      </section>
+
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

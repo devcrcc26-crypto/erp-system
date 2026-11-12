@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import './contracts-v2.css';
@@ -81,7 +82,7 @@ const STAT_ACCENT = {
 // Same list look as Employees (employees-v2.css: brand banner, list card) plus
 // contracts-v2.css. No LIST_PAGE_V2: its !important utilities would override it.
 const PAGE_ROOT =
-  'erp-pro-list-page erp-users-page erp-contract-page erp-employees-v2 erp-contracts-v2 erp-hr-travel-v2';
+  'erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2 erp-contract-page erp-employees-v2 erp-contracts-v2 erp-hr-travel-v2';
 
 function ContractStat({
   label,

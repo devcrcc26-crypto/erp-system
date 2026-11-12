@@ -1,8 +1,8 @@
 'use client';
 
+import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/dashboard/home/dashboard-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
-import '@/components/modules/users/employees-v2.css';
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -35,7 +35,6 @@ import ContractsAttendanceTab from '@/components/modules/hr/reports/tabs/Contrac
 import LeaveOtTab from '@/components/modules/hr/reports/tabs/LeaveOtTab';
 import OverviewTab from '@/components/modules/hr/reports/tabs/OverviewTab';
 import PayrollSpendTab from '@/components/modules/hr/reports/tabs/PayrollSpendTab';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useCanViewHr, useIsHrManager } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -68,7 +67,8 @@ function panelDomId(id: HrReportTabId): string {
   return `hr-report-panel-${id}`;
 }
 
-const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employees-v2 erp-dashboard-v2 erp-hr-reports-page w-full max-w-none ${LIST_PAGE_V2}`;
+const PAGE_ROOT =
+  'erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-approvals-page erp-approvals-v2 erp-dashboard-v2 erp-hr-reports-page w-full max-w-none';
 
 function TabPanelContent({
   tab,
@@ -222,15 +222,29 @@ function HrReportsPageInner(): React.ReactNode {
 
   return (
     <div className={PAGE_ROOT}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 flex-col">
-            <h3 className="erp-pro-card-toolbar-title m-0">
+      <section
+        className="erp-approvals-hero"
+        aria-labelledby="erp-hr-reports-hero-title"
+      >
+        <div className="erp-approvals-hero-top">
+          <div className="erp-approvals-hero-heading min-w-0">
+            <h2 id="erp-hr-reports-hero-title" className="erp-approvals-hero-title">
               {t(`${PAGE}.title`)}
-            </h3>
-            <span className="erp-users-cell-sub">
-              {t(`${PAGE}.description`)}
+            </h2>
+            <p className="erp-approvals-hero-subtitle">{t(`${PAGE}.description`)}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="erp-pro-card erp-approvals-table-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+            <span aria-hidden className="erp-ap-card-icon">
+              <LayoutDashboard size={18} strokeWidth={2} />
             </span>
+            <h3 className="erp-pro-card-toolbar-title m-0">
+              {t(`${PAGE}.periodFilters`, { defaultValue: 'Period & filters' })}
+            </h3>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
