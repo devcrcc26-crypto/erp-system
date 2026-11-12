@@ -1,8 +1,5 @@
 'use client';
 
-import '@/components/modules/hr/shared/hr-travel-v2.css';
-import '@/components/ui/brand-detail-v2.css';
-
 import { useMemo, useState } from 'react';
 import { Button, Dropdown, Grid, Skeleton, Tag } from 'antd';
 import type { MenuProps } from 'antd';
@@ -28,9 +25,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { previewEntitlement } from '@/lib/utils/leave-policy-preview';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-// No DETAIL_PAGE_V2: brand-detail-v2.css carries the look.
-const DETAIL_ROOT =
-  'erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page erp-brand-detail-v2 erp-hr-travel-v2';
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/leave-policy';
 const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
 const PREVIEW_YEARS = 3;
@@ -140,7 +135,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (!canViewHr) {
     return (
-      <div className={DETAIL_ROOT}>
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -148,7 +143,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (policyQuery.isLoading && !policy) {
     return (
-      <div className={DETAIL_ROOT}>
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -158,7 +153,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (policyQuery.isError || !policy) {
     return (
-      <div className={DETAIL_ROOT}>
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -194,7 +189,7 @@ export default function LeavePolicyDetailPageContent({
   const showOverflowMenu = isNarrow;
 
   return (
-    <div className={DETAIL_ROOT}>
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
       <ConfirmDialog
         open={confirmDelete}
         title={t('hr.leavePolicy.deleteTitle')}
@@ -206,7 +201,7 @@ export default function LeavePolicyDetailPageContent({
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <div className="erp-pro-card erp-brand-detail-hero">
+      <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -287,45 +282,45 @@ export default function LeavePolicyDetailPageContent({
             )}
           </div>
         </div>
+      </div>
 
-        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-          <div className="erp-users-stat">
-            <div className="min-w-0">
-              <p className="erp-users-stat-label">
-                {t('hr.leavePolicy.governedBy')}
-              </p>
-              <p className="erp-employee-meta-value truncate">
-                {policy.governedBy || '-'}
-              </p>
-            </div>
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.leavePolicy.governedBy')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {policy.governedBy || '-'}
+            </p>
           </div>
-          <div className="erp-users-stat">
-            <div className="min-w-0">
-              <p className="erp-users-stat-label">
-                {t('hr.leavePolicy.employees')}
-              </p>
-              <p className="erp-employee-meta-value">
-                {policy.employeeCount.toLocaleString()}
-              </p>
-            </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.leavePolicy.employees')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {policy.employeeCount.toLocaleString()}
+            </p>
           </div>
-          <div className="erp-users-stat">
-            <div className="min-w-0">
-              <p className="erp-users-stat-label">{t('hr.leavePolicy.rules')}</p>
-              <p className="erp-employee-meta-value">
-                {policy.ruleCount.toLocaleString()}
-              </p>
-            </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.leavePolicy.rules')}</p>
+            <p className="erp-employee-meta-value">
+              {policy.ruleCount.toLocaleString()}
+            </p>
           </div>
-          <div className="erp-users-stat">
-            <div className="min-w-0">
-              <p className="erp-users-stat-label">
-                {t('hr.assetLabels.updatedAt')}
-              </p>
-              <p className="erp-employee-meta-value">
-                {formatProjectDate(policy.updatedAt)}
-              </p>
-            </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.assetLabels.updatedAt')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(policy.updatedAt)}
+            </p>
           </div>
         </div>
       </div>
@@ -338,7 +333,7 @@ export default function LeavePolicyDetailPageContent({
         />
       ) : null}
 
-      <div className="erp-pro-card erp-brand-detail-body min-w-0 overflow-hidden">
+      <div className="erp-pro-card min-w-0 overflow-hidden">
         <div className="erp-employee-tab-panel erp-contract-detail-body">
           <DetailSection title={t('hr.leavePolicy.steps.details')}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

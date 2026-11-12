@@ -1,5 +1,4 @@
 'use client';
-import '@/components/modules/approvals/approvals-v2.css';
 
 import '@/components/modules/users/employees-v2.css';
 import './leave-v2.css';
@@ -449,7 +448,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2 erp-approvals-page erp-approvals-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -501,17 +500,17 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-leave-hero-title"
       >
-        <div className="erp-approvals-hero-top">
-          <h2 id="erp-leave-hero-title" className="erp-approvals-hero-title">
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-leave-hero-title" className="erp-employees-hero-title">
             {t('pages.hr.listHeroTitle', {
               title: pageTitle,
               count: meta.total.toLocaleString(),
             })}
           </h2>
-          <div className="erp-approvals-hero-actions">
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -534,9 +533,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             />
           </div>
         </div>
-        </section>
-
-      <div className="erp-users-stat-bar">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <EvaluationStat
           label={t('pages.hr.leave.stats.total')}
           value={statusCounts.all}
@@ -580,7 +577,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('rejected')}
         />
         </div>
-
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
@@ -722,7 +719,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2 erp-approvals-page erp-approvals-v2">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
         <div className="erp-pro-card">
           <div className="erp-profile-tabbar erp-employee-tabbar" role="tablist">
             <button
@@ -758,7 +755,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2 erp-approvals-page erp-approvals-v2">
+    <div className="erp-pro-list-page erp-users-page erp-leave-page erp-employees-v2 erp-leave-v2">
       {requestsPanel}
     </div>
   );

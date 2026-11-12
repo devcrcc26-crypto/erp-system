@@ -720,6 +720,17 @@
   color: var(--color-text-heading, var(--erp-accent-hover));
 }
 
+/* Read-only tiles (no filter action) stay glass and non-interactive. */
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--static {
+  cursor: default;
+}
+
+.erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat--static:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.09);
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .erp-employees-v2 .erp-employees-hero .erp-users-stat.erp-contract-stat {
     transition: none;

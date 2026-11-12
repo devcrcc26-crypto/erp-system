@@ -5,7 +5,6 @@ import { Alert, Button, InputNumber, Select, Skeleton, Spin } from 'antd';
 import { ArrowLeft, CalendarDays, Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -46,9 +45,10 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
-// No LIST_PAGE_V2: employees-v2.css carries the brand look.
+// No LIST_PAGE_V2: employees-v2.css carries the brand look and the
+// utilities' !important rules would override it.
 const HISTORY_ROOT =
-  'erp-pro-list-page erp-users-page erp-employees-v2 erp-approvals-page erp-approvals-v2 flex flex-col';
+  'erp-pro-list-page erp-users-page erp-employees-v2 flex flex-col';
 const HISTORY_PAGE_SIZE = 15;
 const LOW_BALANCE_THRESHOLD = 5;
 
@@ -464,33 +464,31 @@ export default function LeaveHistoryPageContent({
   return (
     <div className={HISTORY_ROOT}>
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-leave-history-hero-title"
       >
-        <div className="erp-approvals-hero-top">
-          <div className="erp-approvals-hero-heading min-w-0">
+        <div className="erp-employees-hero-top">
+          <div className="min-w-0">
             <Button
               type="text"
               icon={<ArrowLeft size={16} />}
               onClick={handleBack}
-              className="!mb-2 !px-2 !text-white/90 hover:!text-white"
+              className="!mb-2 !px-2"
             >
               {t('hr.buttons.back')}
             </Button>
             <h2
               id="erp-leave-history-hero-title"
-              className="erp-approvals-hero-title break-words"
+              className="erp-employees-hero-title break-words"
             >
               {displayName}
             </h2>
-            <p className="erp-approvals-hero-subtitle">
+            <p className="m-0 mt-1 text-[13px] text-white/80">
               {t('hr.leave.historyTitle')}
             </p>
           </div>
         </div>
-      </section>
-
-      <div className="erp-users-stat-bar">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
           {[
             { label: t('hr.table.year'), value: String(year) },
             {
@@ -515,9 +513,10 @@ export default function LeaveHistoryPageContent({
               </div>
             </div>
           ))}
-      </div>
+        </div>
+      </section>
 
-      <div className="erp-pro-card erp-approvals-table-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
             <span aria-hidden className="erp-employees-card-icon">
@@ -573,7 +572,7 @@ export default function LeaveHistoryPageContent({
         </div>
       </div>
 
-      <div className="erp-pro-card erp-approvals-table-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
             <span aria-hidden className="erp-employees-card-icon">

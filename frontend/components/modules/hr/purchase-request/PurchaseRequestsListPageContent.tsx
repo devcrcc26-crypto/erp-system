@@ -1,5 +1,4 @@
 'use client';
-import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
@@ -360,7 +359,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-purchase-requests-page erp-approvals-page erp-approvals-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-purchase-requests-page">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -369,7 +368,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-purchase-requests-page erp-approvals-page erp-approvals-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-purchase-requests-page">
       {importOpen ? (
         <HrImportModal
           entity="purchaseRequests"
@@ -397,14 +396,14 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-list-hero-title"
       >
-        <div className="erp-approvals-hero-top">
-          <h2 id="erp-list-hero-title" className="erp-approvals-hero-title">
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-list-hero-title" className="erp-employees-hero-title">
             {pageTitle}
           </h2>
-          <div className="erp-approvals-hero-actions">
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -439,9 +438,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             />
           </div>
         </div>
-        </section>
-
-      <div className="erp-users-stat-bar">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
           <PurchaseRequestStat
             label={t('pages.hr.purchaseRequest.stats.total')}
             value={statusCounts.all}
@@ -485,7 +482,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             onClick={() => handleStatusMode('rejected')}
           />
         </div>
-
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

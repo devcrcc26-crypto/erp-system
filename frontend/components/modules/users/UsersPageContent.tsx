@@ -2,7 +2,6 @@
 import type { ColumnsType } from 'antd/es/table';
 import { accent } from '@/lib/theme/accent';
 
-import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import './employees-v2.css';
 
@@ -96,7 +95,7 @@ import {
 // No LIST_PAGE_V2: employees-v2.css carries the full list look (brand banner,
 // table card) and LIST_PAGE_V2's !important utilities would override it.
 const PAGE_ROOT =
-  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-approvals-page erp-approvals-v2';
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2';
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
@@ -694,23 +693,20 @@ export default function UsersPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-employees-hero-title"
       >
-        <div className="erp-approvals-hero-top">
-          <div className="erp-approvals-hero-heading min-w-0">
-            <h2 id="erp-employees-hero-title" className="erp-approvals-hero-title">
+        <div className="erp-employees-hero-top">
+          <div className="min-w-0">
+            <h2 id="erp-employees-hero-title" className="erp-employees-hero-title">
               {userStats.totalCount === 1
                 ? t('users.userCountOne')
                 : t('users.userCount', {
                     count: userStats.totalCount.toLocaleString(),
                   })}
             </h2>
-            <p className="erp-approvals-hero-subtitle">
-              {t('users.exportSubtitle')}
-            </p>
           </div>
-          <div className="erp-approvals-hero-actions">
+          <div className="erp-employees-hero-actions">
             <HrListActions
               compact={isCompact}
               exports={[
@@ -738,30 +734,30 @@ export default function UsersPageContent(): React.ReactNode {
             />
           </div>
         </div>
+        {/* Total is the heading above; these split it by status. */}
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <UserStat
+            label={t('users.stats.active')}
+            value={userStats.activeCount}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+          />
+          <UserStat
+            label={t('users.stats.pending')}
+            value={userStats.pendingCount}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+          />
+          <UserStat
+            label={t('users.stats.inactive')}
+            value={userStats.inactiveCount}
+            accent="slate"
+            icon={<UserDeleteOutlined />}
+          />
+        </div>
       </section>
 
-      <div className="erp-users-stat-bar">
-        <UserStat
-          label={t('users.stats.active')}
-          value={userStats.activeCount}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-        />
-        <UserStat
-          label={t('users.stats.pending')}
-          value={userStats.pendingCount}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-        />
-        <UserStat
-          label={t('users.stats.inactive')}
-          value={userStats.inactiveCount}
-          accent="slate"
-          icon={<UserDeleteOutlined />}
-        />
-      </div>
-
-      <div className="erp-pro-card erp-approvals-table-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
             <span aria-hidden className="erp-employees-card-icon">

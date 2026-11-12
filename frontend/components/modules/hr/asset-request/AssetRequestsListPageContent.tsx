@@ -1,5 +1,4 @@
 'use client';
-import '@/components/modules/approvals/approvals-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
@@ -217,19 +216,17 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
     : null;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-asset-requests-page erp-approvals-page erp-approvals-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-asset-requests-page">
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-asset-requests-hero-title"
       >
-        <div className="erp-approvals-hero-top">
-          <h2 id="erp-asset-requests-hero-title" className="erp-approvals-hero-title">
+        <div className="erp-employees-hero-top">
+          <h2 id="erp-asset-requests-hero-title" className="erp-employees-hero-title">
             Asset Requests
           </h2>
         </div>
-        </section>
-
-      <div className="erp-users-stat-bar">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
           <AssetRequestStat
             label="All Requests"
             value={meta?.total ?? total}
@@ -263,7 +260,7 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
             onClick={() => { setStatusMode('rejected'); resetPage(); }}
           />
         </div>
-
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

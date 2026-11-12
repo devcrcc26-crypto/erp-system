@@ -1,7 +1,5 @@
 'use client';
 
-import '@/components/modules/approvals/approvals-v2.css';
-
 import { useMemo, useState } from 'react';
 import { Button, Input, Skeleton, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -18,16 +16,13 @@ import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { OrgGapEmployee, OrgGapUnit } from '@/lib/api/org-gaps';
 import { useOrgGapReport } from '@/lib/query/org-gaps';
 
 const P = 'pages.hr.orgGaps';
-
-// No LIST_PAGE_V2: approvals-v2.css carries the list look.
-const PAGE_ROOT =
-  'erp-pro-list-page erp-users-page erp-org-gaps-page erp-approvals-page erp-approvals-v2';
 
 type GapSection =
   | 'withoutSupervisor'
@@ -225,7 +220,9 @@ export default function OrgGapsPageContent(): React.ReactNode {
 
   if (!canViewHr) {
     return (
-      <div className={PAGE_ROOT}>
+      <div
+        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+      >
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -233,7 +230,9 @@ export default function OrgGapsPageContent(): React.ReactNode {
 
   if (query.isLoading && !data) {
     return (
-      <div className={PAGE_ROOT}>
+      <div
+        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+      >
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -243,28 +242,18 @@ export default function OrgGapsPageContent(): React.ReactNode {
 
   if (query.isError || !data) {
     return (
-      <div className={PAGE_ROOT}>
+      <div
+        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+      >
         <ErpNotice tone="error" title={t(`${P}.loadError`)} />
       </div>
     );
   }
 
   return (
-    <div className={PAGE_ROOT}>
-      <section
-        className="erp-approvals-hero"
-        aria-labelledby="erp-org-gaps-hero-title"
-      >
-        <div className="erp-approvals-hero-top">
-          <div className="erp-approvals-hero-heading min-w-0">
-            <h2 id="erp-org-gaps-hero-title" className="erp-approvals-hero-title">
-              {t(`${P}.title`)}
-            </h2>
-            <p className="erp-approvals-hero-subtitle">{t(`${P}.description`)}</p>
-          </div>
-        </div>
-      </section>
-
+    <div
+      className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+    >
       <div className="erp-users-stat-bar !grid-cols-2 lg:!grid-cols-4">
         <EvaluationStat
           label={t(`${P}.noSupervisor`)}
@@ -330,16 +319,18 @@ export default function OrgGapsPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card erp-approvals-table-card">
+      <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
-            <span aria-hidden className="erp-ap-card-icon">
-              <Users size={18} strokeWidth={2} />
-            </span>
-            <h3 className="erp-pro-card-toolbar-title m-0">{active.title}</h3>
-            <span className="erp-users-count-pill">
-              {active.count.toLocaleString()}
-            </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="erp-pro-card-toolbar-title m-0">{active.title}</h1>
+              <span className="erp-users-count-pill">
+                {active.count.toLocaleString()}
+              </span>
+            </div>
+            <p className="m-0 text-[13px] text-slate-600">
+              {t(`${P}.description`)}
+            </p>
           </div>
           <Tooltip title={t('common.refresh')}>
             <Button

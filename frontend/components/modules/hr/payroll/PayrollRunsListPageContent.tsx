@@ -1,5 +1,4 @@
 'use client';
-import '@/components/modules/approvals/approvals-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import '@/components/modules/users/employees-v2.css';
@@ -395,7 +394,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2 erp-approvals-page erp-approvals-v2">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -403,7 +402,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2 erp-approvals-page erp-approvals-v2">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -412,7 +411,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2 erp-approvals-page erp-approvals-v2">
+    <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
       <Modal
         title={t('hr.payroll.create.title')}
         open={createOpen}
@@ -473,20 +472,20 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
       ) : null}
 
       <section
-        className="erp-approvals-hero"
+        className="erp-employees-hero"
         aria-labelledby="erp-payroll-hero-title"
       >
-        <div className="erp-approvals-hero-top">
+        <div className="erp-employees-hero-top">
           <h2
             id="erp-payroll-hero-title"
-            className="erp-approvals-hero-title"
+            className="erp-employees-hero-title"
           >
             {t('pages.hr.listHeroTitle', {
               title: t('hr.payroll.list.title'),
               count: meta.total.toLocaleString(),
             })}
           </h2>
-          <div className="erp-approvals-hero-actions">
+          <div className="erp-employees-hero-actions">
             {canAccess ? (
               <Button
                 icon={<SettingOutlined />}
@@ -512,9 +511,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
             ) : null}
           </div>
         </div>
-        </section>
-
-      <div className="erp-users-stat-bar">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
         <PayrollStat
           label={t('hr.payroll.list.statTotalRuns')}
           value={statusCounts.all}
@@ -548,7 +545,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
           onClick={() => handleFilterMode('flagged')}
         />
         </div>
-
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card overflow-hidden">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

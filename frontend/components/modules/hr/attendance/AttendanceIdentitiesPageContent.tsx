@@ -1,6 +1,5 @@
 'use client';
 
-import '@/components/modules/approvals/approvals-v2.css';
 import './attendance-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -16,6 +15,7 @@ import Link from 'next/link';
 import { ArrowLeft, Fingerprint, Link2, Pencil, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   listAttendanceIdentities,
@@ -34,8 +34,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 type StatusFilter = AttendanceIdentityStatus | 'ALL';
 
 const IDENTITIES_KEY = ['attendance-identities'] as const;
-const PAGE_ROOT =
-  'erp-pro-list-page erp-users-page erp-attendance-v2 erp-approvals-page erp-approvals-v2';
+const PAGE_V2 = `erp-pro-list-page erp-users-page erp-attendance-v2 ${LIST_PAGE_V2}`;
 
 /**
  * HR maintenance page for attendance-machine identities: which machine name /
@@ -296,32 +295,14 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
   const hasFilters = statusFilter !== 'ALL' || search.trim().length > 0;
 
   return (
-    <div className={PAGE_ROOT}>
-      <section
-        className="erp-approvals-hero"
-        aria-labelledby="erp-attendance-identities-hero-title"
+    <div className={PAGE_V2}>
+      <Link
+        href="/hr/attendance"
+        className="inline-flex items-center gap-1.5 self-start rounded-md text-[13px] font-medium !text-slate-500 hover:!text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
       >
-        <div className="erp-approvals-hero-top">
-          <div className="erp-approvals-hero-heading min-w-0">
-            <Link
-              href="/hr/attendance"
-              className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-white/90 no-underline hover:text-white"
-            >
-              <ArrowLeft size={15} aria-hidden />
-              {t('pages.hr.attendance.identities.back')}
-            </Link>
-            <h2
-              id="erp-attendance-identities-hero-title"
-              className="erp-approvals-hero-title"
-            >
-              {t('pages.hr.attendance.identities.title')}
-            </h2>
-            <p className="erp-approvals-hero-subtitle">
-              {t('pages.hr.attendance.identities.description')}
-            </p>
-          </div>
-        </div>
-      </section>
+        <ArrowLeft size={15} aria-hidden />
+        {t('pages.hr.attendance.identities.back')}
+      </Link>
 
       {identitiesQuery.isError ? (
         <Alert
@@ -363,18 +344,20 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card erp-approvals-table-card">
+      <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
-            <span aria-hidden className="erp-ap-card-icon">
-              <Fingerprint size={18} strokeWidth={2} />
-            </span>
-            <h3 className="erp-pro-card-toolbar-title m-0">
-              {t('pages.hr.attendance.identities.title')}
-            </h3>
-            <span className="erp-users-count-pill">
-              {rows.length.toLocaleString()}
-            </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="erp-pro-card-toolbar-title m-0">
+                {t('pages.hr.attendance.identities.title')}
+              </h1>
+              <span className="erp-users-count-pill">
+                {rows.length.toLocaleString()}
+              </span>
+            </div>
+            <p className="m-0 text-[13px] text-slate-600">
+              {t('pages.hr.attendance.identities.description')}
+            </p>
           </div>
           <Tooltip title={t('common.refresh')}>
             <Button

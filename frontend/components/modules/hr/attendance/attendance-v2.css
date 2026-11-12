@@ -450,13 +450,3 @@
 .erp-att-import-v2 .erp-data-table .ant-table {
   background: transparent;
 }
-
-/* Brand layer (Nov 2026): tiles sit on the employees-v2 hero banner. */
-.erp-attendance-v2 .erp-employees-hero .erp-att-stat-hint {
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.erp-attendance-v2 .erp-employees-hero .erp-users-stat-label {
-  letter-spacing: 0;
-  text-transform: none;
-}

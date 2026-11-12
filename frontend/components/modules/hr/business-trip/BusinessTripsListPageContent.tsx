@@ -1,5 +1,4 @@
 'use client';
-import '@/components/modules/approvals/approvals-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
@@ -79,7 +78,7 @@ import { buildBusinessTripExportSheets } from '@/lib/utils/business-trip-export'
 // Same list look as Employees (employees-v2.css: brand banner, list card).
 // No LIST_PAGE_V2: its !important utilities would override it.
 const PAGE_ROOT =
-  'erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2 erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page';
+  'erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-business-trips-page';
 
 type ListTab = 'ALL' | 'NEEDS_TICKET';
 
