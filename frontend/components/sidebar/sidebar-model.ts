@@ -31,6 +31,8 @@ export interface SidebarLink {
   readonly accountCard: boolean;
   /** Open in a new browser tab. */
   readonly openInNewTab: boolean;
+  /** `data-tour` anchor for the first-login product tour. */
+  readonly tourId?: string;
 }
 
 export interface SidebarGroup {
@@ -56,6 +58,8 @@ export interface SidebarFolder {
   readonly groups: readonly SidebarGroup[];
   /** Present when this folder currently hosts a project's workspace nav. */
   readonly project: SidebarProjectHeader | null;
+  /** `data-tour` anchor for the first-login product tour. */
+  readonly tourId?: string;
 }
 
 export type SidebarEntry = SidebarLink | SidebarFolder;
@@ -109,6 +113,7 @@ function toLink(config: SidebarLinkConfig): SidebarLink {
     pinnable: config.comingSoon !== true,
     accountCard: config.accountCard === true,
     openInNewTab: config.openInNewTab === true,
+    tourId: config.tourId,
   };
 }
 
@@ -148,6 +153,7 @@ function filterFolder(
     icon: folder.icon,
     groups,
     project: hostsProject && projectContext ? projectContext.header : null,
+    tourId: folder.tourId,
   };
 }
 

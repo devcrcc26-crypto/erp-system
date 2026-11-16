@@ -1,8 +1,14 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import en from '@/locales/en/epc.json';
-import zh from '@/locales/zh/epc.json';
+import enEpc from '@/locales/en/epc.json';
+import zhEpc from '@/locales/zh/epc.json';
+import enTour from '@/locales/en/tour.json';
+import zhTour from '@/locales/zh/tour.json';
+
+// Same merge as lib/i18n/epc-messages.ts: tour.json lives under `tour.`.
+const en = { ...enEpc, tour: enTour };
+const zh = { ...zhEpc, tour: zhTour };
 
 /**
  * Guards against untranslated screens: English and Chinese must have the same

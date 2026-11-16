@@ -218,6 +218,21 @@ export class AuthController {
     );
   }
 
+  @Patch('mark-tour-seen')
+  @ApiOperation({
+    summary: 'Mark the first-login product tour as seen for the current user',
+  })
+  @ApiResponse({ status: 200, schema: { example: { success: true } } })
+  async markTourSeen(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: true }> {
+    return this.profileService.markTourSeen({
+      userId: user.userId,
+      companyId: user.companyId,
+      sessionId: user.sessionId,
+    });
+  }
+
   @Patch('me')
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiResponse({ status: 200, type: ProfileResponseDto })

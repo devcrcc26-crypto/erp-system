@@ -187,6 +187,7 @@ export default function NotificationPanel(): React.ReactNode {
           className="erp-shell-header-icon-btn relative"
           aria-label={t('pages.notifications.panelAria')}
           aria-expanded={open}
+          data-tour="topbar-notifications"
         >
           <Badge
             count={unreadCount}

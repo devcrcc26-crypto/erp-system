@@ -733,6 +733,8 @@ model User {
   employmentStatus    EmploymentStatus @default(ACTIVE) @map("employment_status")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  /// First-login product tour finished or skipped (frontend `AppTour`).
+  hasSeenTour         Boolean   @default(false) @map("has_seen_tour")
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
   emailVerifiedAt     DateTime? @map("email_verified_at")

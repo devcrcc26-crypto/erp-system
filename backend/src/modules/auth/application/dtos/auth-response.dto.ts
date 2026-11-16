@@ -42,6 +42,9 @@ export class AuthUserDto {
 
   @ApiProperty()
   mustChangePassword!: boolean;
+
+  @ApiProperty({ description: 'First-login product tour finished or skipped' })
+  hasSeenTour!: boolean;
 }
 
 export class AuthTokensDto {

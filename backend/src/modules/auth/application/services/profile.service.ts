@@ -135,6 +135,12 @@ export class ProfileService {
     };
   }
 
+  /** Records that the signed-in user finished or skipped the first-login tour. */
+  async markTourSeen(ctx: SessionContext): Promise<{ success: true }> {
+    await this.authRepository.markTourSeen(ctx.userId);
+    return { success: true };
+  }
+
   /**
    * Lists the signed-in user's own profile documents (read-only).
    * Returns an empty list when no profile folder has been created yet.
@@ -553,6 +559,7 @@ export class ProfileService {
       lastName: user.lastName,
       chineseName: user.chineseName,
       mustChangePassword: user.mustChangePassword,
+      hasSeenTour: user.hasSeenTour,
       excludedFromHrProcesses: user.excludedFromHrProcesses,
       phone: user.phone,
       companyId: user.companyId,

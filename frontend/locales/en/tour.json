@@ -1,0 +1,78 @@
+{
+  "replay": "Take the tour again",
+  "replayHint": "Replay the short introduction to the main navigation.",
+  "buttons": {
+    "next": "Next →",
+    "previous": "← Back",
+    "done": "Done",
+    "progress": "{{current}} of {{total}}"
+  },
+  "hr": {
+    "hr": {
+      "title": "Human Resources",
+      "description": "Manage employees, attendance, payroll, leave and approvals from here."
+    },
+    "approvals": {
+      "title": "Approvals",
+      "description": "Review and act on pending requests submitted by employees."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "You'll be notified here when requests need your attention."
+    },
+    "profile": {
+      "title": "Your Profile",
+      "description": "Update your profile, change your password, or set your email for password recovery."
+    }
+  },
+  "management": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Get an overview of the organization's activity."
+    },
+    "approvals": {
+      "title": "Approvals",
+      "description": "Seal requests and other approvals that need your sign-off appear here."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "You'll be notified when something needs your attention."
+    },
+    "profile": {
+      "title": "Your Profile",
+      "description": "Change your password or set your email for password recovery here."
+    }
+  },
+  "project": {
+    "projects": {
+      "title": "Projects",
+      "description": "View and work on your assigned projects from here."
+    },
+    "approvals": {
+      "title": "My Requests",
+      "description": "Submit and track your requests — leave, overtime, travel and more."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Stay updated on approvals and project activity."
+    },
+    "profile": {
+      "title": "Your Profile",
+      "description": "Change your password or set your email for password recovery here."
+    }
+  },
+  "employee": {
+    "approvals": {
+      "title": "My Requests",
+      "description": "Submit requests for leave, overtime, exit permits and more."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "You'll be notified when your requests are approved or rejected."
+    },
+    "profile": {
+      "title": "Your Profile",
+      "description": "Change your password or set your email for password recovery here."
+    }
+  }
+}

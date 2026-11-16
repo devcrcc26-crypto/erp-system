@@ -1,0 +1,91 @@
+/*
+ * Driver.js (v1) theme for the first-login product tour (components/tour/AppTour.tsx).
+ * Driver.js v1 does not read CSS variables itself, so the rules below map these
+ * tokens onto its classes. The overlay colour/opacity is passed in the driver()
+ * config (overlayColor / overlayOpacity) because v1 draws the overlay as an SVG.
+ */
+:root {
+  --driver-popover-bg-color: #ffffff;
+  --driver-popover-title-color: #1a5c3a;
+  --driver-popover-description-color: #4b5563;
+  --driver-popover-border-radius: 12px;
+  --driver-popover-arrow-color: #ffffff;
+  --driver-btn-next-color: #ffffff;
+  --driver-btn-next-bg-color: #1a7a4a;
+  --driver-btn-next-border-color: #1a7a4a;
+  --driver-btn-prev-color: #1a7a4a;
+  --driver-btn-prev-bg-color: #ffffff;
+  --driver-btn-prev-border-color: #d1d5db;
+  --driver-btn-skip-color: #6b7280;
+  --driver-btn-skip-bg-color: transparent;
+  --driver-overlay-color: rgba(0, 0, 0, 0.45);
+}
+
+.driver-popover.erp-tour-popover {
+  background-color: var(--driver-popover-bg-color);
+  border-radius: var(--driver-popover-border-radius);
+  padding: 16px 18px;
+  max-width: min(340px, calc(100vw - 32px));
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+
+.erp-tour-popover .driver-popover-title {
+  color: var(--driver-popover-title-color);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.erp-tour-popover .driver-popover-description {
+  color: var(--driver-popover-description-color);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.erp-tour-popover .driver-popover-progress-text {
+  color: var(--driver-btn-skip-color);
+  font-size: 12px;
+}
+
+.erp-tour-popover .driver-popover-footer button {
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 5px 12px;
+  text-shadow: none;
+}
+
+.erp-tour-popover .driver-popover-footer .driver-popover-next-btn {
+  color: var(--driver-btn-next-color);
+  background-color: var(--driver-btn-next-bg-color);
+  border: 1px solid var(--driver-btn-next-border-color);
+}
+
+.erp-tour-popover .driver-popover-footer .driver-popover-prev-btn {
+  color: var(--driver-btn-prev-color);
+  background-color: var(--driver-btn-prev-bg-color);
+  border: 1px solid var(--driver-btn-prev-border-color);
+}
+
+.erp-tour-popover .driver-popover-close-btn {
+  color: var(--driver-btn-skip-color);
+  background-color: var(--driver-btn-skip-bg-color);
+}
+
+/* Visible keyboard focus (never remove the outline without a replacement). */
+.erp-tour-popover button:focus-visible {
+  outline: 2px solid var(--driver-btn-next-bg-color);
+  outline-offset: 2px;
+}
+
+.erp-tour-popover .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--driver-popover-arrow-color);
+}
+.erp-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--driver-popover-arrow-color);
+}
+.erp-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--driver-popover-arrow-color);
+}
+.erp-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--driver-popover-arrow-color);
+}

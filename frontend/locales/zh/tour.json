@@ -1,0 +1,78 @@
+{
+  "replay": "重新查看导览",
+  "replayHint": "重新播放主要导航的简短介绍。",
+  "buttons": {
+    "next": "下一步 →",
+    "previous": "← 上一步",
+    "done": "完成",
+    "progress": "第 {{current}} 步，共 {{total}} 步"
+  },
+  "hr": {
+    "hr": {
+      "title": "人力资源",
+      "description": "在这里管理员工、考勤、薪资、请假和审批。"
+    },
+    "approvals": {
+      "title": "审批",
+      "description": "审阅并处理员工提交的待办申请。"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "当有申请需要您处理时，会在这里通知您。"
+    },
+    "profile": {
+      "title": "个人资料",
+      "description": "更新个人资料、修改密码，或设置用于找回密码的邮箱。"
+    }
+  },
+  "management": {
+    "dashboard": {
+      "title": "仪表板",
+      "description": "查看组织各项活动的总览。"
+    },
+    "approvals": {
+      "title": "审批",
+      "description": "需要您签批的用印申请及其他审批会显示在这里。"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "当有事项需要您关注时，会在这里通知您。"
+    },
+    "profile": {
+      "title": "个人资料",
+      "description": "在这里修改密码或设置用于找回密码的邮箱。"
+    }
+  },
+  "project": {
+    "projects": {
+      "title": "项目",
+      "description": "在这里查看并处理分配给您的项目。"
+    },
+    "approvals": {
+      "title": "我的申请",
+      "description": "提交并跟踪您的申请——请假、加班、出差等。"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "及时了解审批和项目动态。"
+    },
+    "profile": {
+      "title": "个人资料",
+      "description": "在这里修改密码或设置用于找回密码的邮箱。"
+    }
+  },
+  "employee": {
+    "approvals": {
+      "title": "我的申请",
+      "description": "提交请假、加班、出门证等申请。"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "您的申请被批准或驳回时，会在这里通知您。"
+    },
+    "profile": {
+      "title": "个人资料",
+      "description": "在这里修改密码或设置用于找回密码的邮箱。"
+    }
+  }
+}

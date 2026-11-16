@@ -61,6 +61,8 @@ export interface IAuthRepository {
    */
   consumeOneTimePassword(userId: string, oneTimePasswordHash: string): Promise<void>;
   clearOneTimePassword(userId: string): Promise<void>;
+  /** Sets hasSeenTour = true (first-login product tour finished or skipped). */
+  markTourSeen(userId: string): Promise<void>;
   createPasswordResetToken(input: CreatePasswordResetInput): Promise<void>;
   findActivePasswordResetTokens(userId: string): Promise<
     Array<{

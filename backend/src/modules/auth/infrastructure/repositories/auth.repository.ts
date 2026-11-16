@@ -193,6 +193,13 @@ export class AuthRepository implements IAuthRepository {
     });
   }
 
+  async markTourSeen(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hasSeenTour: true },
+    });
+  }
+
   async clearOneTimePassword(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },

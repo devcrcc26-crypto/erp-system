@@ -89,6 +89,8 @@ interface SidebarLinkBase {
   readonly accountCard?: boolean;
   /** Open the href in a new browser tab (e.g. User Guide). */
   readonly openInNewTab?: boolean;
+  /** `data-tour` anchor for the first-login product tour (top-level entries only; see lib/tours/tour-steps.ts). */
+  readonly tourId?: string;
 }
 
 export type SidebarLinkConfig = SidebarLinkBase &
@@ -119,6 +121,8 @@ export interface SidebarFolderConfig {
    * (from `lib/navigation/project-workspace-nav.ts`) to this folder.
    */
   readonly hostsProjectContext?: boolean;
+  /** `data-tour` anchor for the first-login product tour (see lib/tours/tour-steps.ts). */
+  readonly tourId?: string;
 }
 
 export type SidebarEntryConfig = SidebarLinkConfig | SidebarFolderConfig;
@@ -229,6 +233,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       icon: 'dashboard',
       href: '/',
       keywords: ['home', 'overview'],
+      tourId: 'sidebar-dashboard',
     },
     {
       // Direct link to the request picker. Its prefix also keeps New Request
@@ -242,7 +247,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       keywords: ['apply', 'submit', 'form'],
     },
     // ── Daily work: the two inboxes sit right under New Request ──
-    { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
+    { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'], tourId: 'sidebar-approvals' },
     // Non-HR discipline/team leads (limitedNavigation + evaluation.inbox).
     // HR users get the same inbox inside People › Performance.
     { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-evaluation-inbox', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
@@ -255,6 +260,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       labelKey: 'nav.groups.people',
       shortLabelKey: 'nav.short.people',
       icon: 'domain-hr',
+      tourId: 'sidebar-hr',
       groups: [
         {
           id: 'people-employees',
@@ -415,6 +421,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       shortLabelKey: 'nav.short.projectManagement',
       icon: 'domain-projects',
       hostsProjectContext: true,
+      tourId: 'sidebar-projects',
       groups: [
         {
           id: 'pm-workspace',

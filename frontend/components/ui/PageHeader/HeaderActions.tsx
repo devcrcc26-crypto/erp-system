@@ -137,6 +137,7 @@ export default function HeaderActions({
       ].join(' ')}
       aria-label={t('common.openProfile')}
       aria-expanded={menuOpen}
+      data-tour="topbar-profile"
     >
       <Avatar
         size={compact ? 28 : 30}

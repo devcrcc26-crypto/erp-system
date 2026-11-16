@@ -489,6 +489,7 @@ export default function SidebarShell({
             badgeCount={badge.count}
             badgeLabel={badge.label}
             onNavigate={onNavigate}
+            tourId={entry.tourId}
           />
         </li>
       );
@@ -509,6 +510,7 @@ export default function SidebarShell({
           controlsId={controlsId}
           onToggle={() => toggleFolder(entry.id, surface)}
           buttonId={surface === 'desktop' ? folderButtonId(entry.id) : undefined}
+          tourId={entry.tourId}
         />
         {!isCompact && open ? (
           <SidebarModulePanel

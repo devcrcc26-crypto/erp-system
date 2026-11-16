@@ -29,6 +29,7 @@
     "axios": "^1.17.0",
     "country-state-city": "^3.2.1",
     "dayjs": "^1.11.21",
+    "driver.js": "^1.14.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^14.6.0",
     "jspdf": "^4.2.1",

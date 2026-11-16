@@ -94,6 +94,7 @@ export class RefreshTokenHandler
           user.preferredDateFormat ?? user.company.defaultDateFormat,
         emailVerifiedAt: user.emailVerifiedAt,
         mustChangePassword: user.mustChangePassword,
+        hasSeenTour: user.hasSeenTour,
       },
     };
   }

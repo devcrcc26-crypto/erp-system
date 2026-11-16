@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useAutoMarkNotificationsRead } from '@/hooks/use-auto-mark-notifications-read';
 import { useEffect, useMemo, useState } from 'react';
 import SidebarShell from '@/components/sidebar/SidebarShell';
+import AppTour from '@/components/tour/AppTour';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
 import {
   AnnouncementModals,
@@ -136,6 +137,7 @@ export default function AppShell({
 
         <UrgentAnnouncementBanner />
         <AnnouncementModals />
+        <AppTour />
 
         <div
           className={

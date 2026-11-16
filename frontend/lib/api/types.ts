@@ -50,6 +50,11 @@ export interface AuthUser {
   preferredTimezone: string | null;
   preferredDateFormat: string | null;
   mustChangePassword?: boolean;
+  /**
+   * First-login product tour finished or skipped. Undefined for sessions
+   * persisted before the field existed (AppTour then falls back to /auth/me).
+   */
+  hasSeenTour?: boolean;
 }
 
 export interface AuthTokens {
@@ -123,6 +128,8 @@ export interface UserProfile {
   preferredDateFormat: string | null;
   emailVerifiedAt: string | null;
   photoDocumentId?: string | null;
+  /** First-login product tour finished or skipped. */
+  hasSeenTour?: boolean;
   roles: ProfileRole[];
   /** Approver-only account: no HR processes of their own (no self field movement, leave …). */
   excludedFromHrProcesses?: boolean;

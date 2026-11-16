@@ -63,6 +63,9 @@ export class ProfileResponseDto {
   @ApiProperty()
   mustChangePassword!: boolean;
 
+  @ApiProperty({ description: 'First-login product tour finished or skipped' })
+  hasSeenTour!: boolean;
+
   @ApiProperty({
     description:
       'Approver-only account: takes no part in HR processes (no own leave, overtime, attendance or field movement)',

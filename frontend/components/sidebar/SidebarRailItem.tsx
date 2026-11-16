@@ -17,6 +17,8 @@ interface RailItemBase {
   active: boolean;
   badgeCount?: number;
   badgeLabel?: string;
+  /** `data-tour` anchor for the first-login product tour. */
+  tourId?: string;
 }
 
 interface RailLinkProps extends RailItemBase {
@@ -43,7 +45,7 @@ export type SidebarRailItemProps = RailLinkProps | RailFolderProps;
  * sound like links.
  */
 export default function SidebarRailItem(props: SidebarRailItemProps): React.ReactNode {
-  const { icon, label, caption, compact, active, badgeCount = 0, badgeLabel = '' } = props;
+  const { icon, label, caption, compact, active, badgeCount = 0, badgeLabel = '', tourId } = props;
   const className = `sb-selectable ${compact ? 'sb-tile' : 'sb-row'} sb-rail-item`;
   const isFolder = props.kind === 'folder';
   const shortCaption = caption && caption !== label ? caption : null;
@@ -88,6 +90,7 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
         onClick={props.onNavigate}
         aria-current={active ? 'page' : undefined}
         className={className}
+        data-tour={tourId}
       >
         {content}
       </Link>
@@ -102,6 +105,7 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
         aria-haspopup="true"
         aria-controls={props.controlsId}
         data-active={active ? 'true' : undefined}
+        data-tour={tourId}
         onClick={props.onToggle}
       >
         {content}

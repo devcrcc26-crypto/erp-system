@@ -47,6 +47,7 @@ import {
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAuthStore } from '@/stores/auth.store';
 import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
@@ -139,6 +140,7 @@ export default function ProfilePageContent(): React.ReactNode {
   const watchedNewEmail = Form.useWatch('newEmail', emailForm) ?? '';
 
   const profileQuery = useCurrentUser();
+  const updateAuthUser = useAuthStore((state) => state.updateUser);
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
   const changeEmail = useChangeEmail();
@@ -628,6 +630,16 @@ export default function ProfilePageContent(): React.ReactNode {
                 {t('profile.changePassword')}
               </Button>
             </Form>
+
+            {/* Local-only reset: AppTour (in the shell) starts the tour again. */}
+            <Button
+              size="small"
+              className="self-start"
+              title={t('tour.replayHint')}
+              onClick={() => updateAuthUser({ hasSeenTour: false })}
+            >
+              {t('tour.replay')}
+            </Button>
           </div>
         </ProfileSection>
       </div>

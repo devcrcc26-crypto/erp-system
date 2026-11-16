@@ -1,13 +1,16 @@
 import enEpc from '@/locales/en/epc.json';
 import zhEpc from '@/locales/zh/epc.json';
+import enTour from '@/locales/en/tour.json';
+import zhTour from '@/locales/zh/tour.json';
 
 export type EpcLocale = 'en' | 'zh';
 
-export type EpcMessages = typeof enEpc;
+/** epc.json plus namespaced files (`tour.json` is served under the `tour.` prefix). */
+export type EpcMessages = typeof enEpc & { tour: typeof enTour };
 
 const MESSAGES: Record<EpcLocale, EpcMessages> = {
-  en: enEpc,
-  zh: zhEpc,
+  en: { ...enEpc, tour: enTour },
+  zh: { ...zhEpc, tour: zhTour },
 };
 
 export const EPC_LOCALES: readonly EpcLocale[] = ['en', 'zh'] as const;

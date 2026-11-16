@@ -174,6 +174,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
           user.preferredDateFormat ?? user.company.defaultDateFormat,
         emailVerifiedAt: user.emailVerifiedAt,
         mustChangePassword: user.mustChangePassword,
+        hasSeenTour: user.hasSeenTour,
       },
     };
   }
