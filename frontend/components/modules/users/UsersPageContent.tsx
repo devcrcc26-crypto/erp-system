@@ -54,6 +54,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanCreateUsers,
   useCanEditUsers,
+  useIsHrManager,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
@@ -63,6 +64,7 @@ import {
   PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID,
   SYSTEM_ADMINISTRATOR_ROLE,
 } from '@/lib/constants/protected-accounts';
+import { useBulkGenerateOtp } from '@/lib/query/auth';
 import {
   useAdminResetPassword,
   useAllUsers,
@@ -70,7 +72,12 @@ import {
   useResendInvitation,
   useUserPhotoUrl,
 } from '@/lib/query/users';
-import type { EmployeeType, Nationality, User } from '@/lib/api/types';
+import type {
+  BulkGenerateOtpResponse,
+  EmployeeType,
+  Nationality,
+  User,
+} from '@/lib/api/types';
 import {
   useDepartments,
   useEngineeringDisciplineOptions,
@@ -245,9 +252,15 @@ export default function UsersPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const viewerIsAdmin = useIsSystemAdmin();
+  const isHrManager = useIsHrManager();
+  const canBulkGenerateOtp = viewerIsAdmin || isHrManager;
   const canEditUsers = useCanEditUsers();
   // users.view alone (e.g. Managing Director) is read-only: no add/import/row actions.
   const canCreateUsers = useCanCreateUsers();
+  const bulkGenerateOtp = useBulkGenerateOtp();
+  const [bulkOtpConfirmOpen, setBulkOtpConfirmOpen] = useState(false);
+  const [bulkOtpResult, setBulkOtpResult] =
+    useState<BulkGenerateOtpResponse | null>(null);
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -534,6 +547,39 @@ export default function UsersPageContent(): React.ReactNode {
     }
   }
 
+  async function handleBulkGenerateOtp(): Promise<void> {
+    setActionMessage(null);
+    try {
+      const result = await bulkGenerateOtp.mutateAsync();
+      setBulkOtpConfirmOpen(false);
+      setBulkOtpResult(result);
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text:
+          error instanceof ApiRequestError
+            ? error.message
+            : t('users.bulkOtp.error'),
+      });
+      setBulkOtpConfirmOpen(false);
+    }
+  }
+
+  function downloadBulkOtpCsv(): void {
+    if (!bulkOtpResult?.csv) {
+      return;
+    }
+    const blob = new Blob([bulkOtpResult.csv], {
+      type: 'text/csv;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `one-time-passwords-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleDeleteUser(): Promise<void> {
     if (!deletingUser) {
       return;
@@ -682,6 +728,79 @@ export default function UsersPageContent(): React.ReactNode {
         ) : null}
       </Modal>
 
+      <ConfirmDialog
+        className="erp-hr-travel-modal"
+        open={bulkOtpConfirmOpen}
+        title={t('users.bulkOtp.confirmTitle')}
+        description={t('users.bulkOtp.confirmDescription')}
+        confirmLabel={t('users.bulkOtp.confirmAction')}
+        confirmLoading={bulkGenerateOtp.isPending}
+        onConfirm={() => void handleBulkGenerateOtp()}
+        onCancel={() => setBulkOtpConfirmOpen(false)}
+      />
+
+      <Modal
+        open={Boolean(bulkOtpResult)}
+        title={t('users.bulkOtp.resultTitle')}
+        width={720}
+        onCancel={() => setBulkOtpResult(null)}
+        destroyOnHidden
+        rootClassName="erp-hr-travel-modal"
+        className="erp-hr-travel-modal"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="primary" onClick={downloadBulkOtpCsv}>
+              {t('users.bulkOtp.downloadCsv')}
+            </Button>
+            <Button onClick={() => setBulkOtpResult(null)}>
+              {t('common.close')}
+            </Button>
+          </div>
+        }
+      >
+        {bulkOtpResult ? (
+          <div className="space-y-3">
+            <Alert
+              type="warning"
+              showIcon
+              title={t('users.bulkOtp.saveWarning')}
+            />
+            <div className="max-h-80 overflow-auto rounded border border-slate-200">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr>
+                    <th className="border-b border-slate-200 px-3 py-2 font-medium">
+                      {t('users.bulkOtp.columnEmployeeId')}
+                    </th>
+                    <th className="border-b border-slate-200 px-3 py-2 font-medium">
+                      {t('users.bulkOtp.columnFullName')}
+                    </th>
+                    <th className="border-b border-slate-200 px-3 py-2 font-medium">
+                      {t('users.bulkOtp.columnOtp')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkOtpResult.rows.map((row, index) => (
+                    <tr key={`${row.employeeId}-${index}`}>
+                      <td className="border-b border-slate-100 px-3 py-2 font-mono">
+                        {row.employeeId}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2">
+                        {row.fullName}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2 font-mono tracking-wide">
+                        {row.otp}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
       {actionMessage ? (
         <Alert
           type={actionMessage.type === 'success' ? 'success' : 'error'}
@@ -707,6 +826,15 @@ export default function UsersPageContent(): React.ReactNode {
             </h2>
           </div>
           <div className="erp-employees-hero-actions">
+            {canBulkGenerateOtp ? (
+              <Button
+                icon={<KeyOutlined />}
+                onClick={() => setBulkOtpConfirmOpen(true)}
+                loading={bulkGenerateOtp.isPending}
+              >
+                {t('users.bulkOtp.generateButton')}
+              </Button>
+            ) : null}
             <HrListActions
               compact={isCompact}
               exports={[

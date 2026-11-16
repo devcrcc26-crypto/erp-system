@@ -394,6 +394,8 @@ export default function OvertimeHistoryPageContent({
 
   return (
     <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
+      {/* Brand banner: back link + year summary. */}
+      <section className="erp-brand-hero flex flex-col gap-3 px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Button
@@ -428,6 +430,7 @@ export default function OvertimeHistoryPageContent({
           },
         ]}
       />
+      </section>
 
       <SectionCard
         title={t('hr.overtime.yearSummaryTitle')}

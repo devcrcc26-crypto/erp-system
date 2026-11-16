@@ -697,11 +697,12 @@ export default function ReportsPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`system-reports-page ${layout.pageStack}`}>
-      <FormLayout
-        title={t('pages.systemReports.title')}
-        description={t('pages.systemReports.description')}
-        extra={
+    <div className={`system-reports-page erp-pro-list-page ${layout.pageStack}`}>
+      {/* Brand banner. The app header already says "Reports", so the
+          banner leads with the description instead of repeating a title. */}
+      <section className="erp-brand-hero erp-reports-hero">
+        <div className="erp-reports-hero-top">
+          <p className="erp-reports-hero-lead">{t('pages.systemReports.description')}</p>
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
@@ -710,8 +711,21 @@ export default function ReportsPageContent(): React.ReactNode {
           >
             {t('pages.systemReports.exportPdf')}
           </Button>
-        }
-      >
+        </div>
+        {/* Total projects and completion rate are in the Portfolio KPIs below. */}
+        <dl className="erp-reports-hero-facts">
+          <div className="erp-reports-hero-fact">
+            <dt>{t('pages.systemReports.generatedAt')}</dt>
+            <dd>{formatDisplayDateTime(summary.generatedAt)}</dd>
+          </div>
+          <div className="erp-reports-hero-fact">
+            <dt>{t('pages.systemReports.metrics.auditLast30Days')}</dt>
+            <dd>{formatCount(summary.audit.last30Days)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <FormLayout>
         {summaryApiUnavailable && (
           <Alert
             type="info"
@@ -721,68 +735,6 @@ export default function ReportsPageContent(): React.ReactNode {
             description={t('pages.systemReports.partialDataDescription')}
           />
         )}
-
-        <div
-          className="mb-4 grid gap-4 rounded-[12px] p-[18px] sm:grid-cols-2 lg:grid-cols-4"
-          style={{
-            border: `0.5px solid ${tokens.colorBorder}`,
-            background: tokens.colorCardBg,
-          }}
-        >
-          <div>
-            <p
-              className="text-[10px] font-medium uppercase tracking-[0.06em]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {t('pages.systemReports.generatedAt')}
-            </p>
-            <p className="mt-1 text-[13px]" style={{ color: tokens.colorTextPrimary }}>
-              {formatDisplayDateTime(summary.generatedAt)}
-            </p>
-          </div>
-          <div>
-            <p
-              className="text-[10px] font-medium uppercase tracking-[0.06em]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {t('pages.systemReports.metrics.totalProjects')}
-            </p>
-            <p
-              className="mt-1 text-[18px] font-medium tabular-nums"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatCount(summary.projects.total)}
-            </p>
-          </div>
-          <div>
-            <p
-              className="text-[10px] font-medium uppercase tracking-[0.06em]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {t('pages.systemReports.metrics.completionRate')}
-            </p>
-            <p
-              className="mt-1 text-[18px] font-medium tabular-nums"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {summary.completionRate}%
-            </p>
-          </div>
-          <div>
-            <p
-              className="text-[10px] font-medium uppercase tracking-[0.06em]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {t('pages.systemReports.metrics.auditLast30Days')}
-            </p>
-            <p
-              className="mt-1 text-[18px] font-medium tabular-nums"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatCount(summary.audit.last30Days)}
-            </p>
-          </div>
-        </div>
 
         <p
           className="mb-3 text-[11px] font-medium uppercase tracking-[0.06em]"

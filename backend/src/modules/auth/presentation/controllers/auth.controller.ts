@@ -36,12 +36,15 @@ import { CapabilitiesDto } from '../../application/dtos/capabilities.dto';
 import { ActivateAccountDto } from '../../application/dtos/activate-account.dto';
 import { ResendActivationDto } from '../../application/dtos/resend-activation.dto';
 import {
+  BulkGenerateOtpResponseDto,
   ChangeEmailDto,
   ChangePasswordDto,
   ConfirmEmailChangeDto,
   ProfileResponseDto,
+  SetEmailDto,
   UpdateProfileDto,
 } from '../../application/dtos/profile.dto';
+import { BulkOtpService } from '../../application/services/bulk-otp.service';
 import { SessionCapabilitiesService } from '../../application/services/session-capabilities.service';
 import { ProfileService } from '../../application/services/profile.service';
 import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
@@ -64,6 +67,7 @@ export class AuthController {
     private readonly commandBus: CommandBus,
     private readonly sessionCapabilitiesService: SessionCapabilitiesService,
     private readonly profileService: ProfileService,
+    private readonly bulkOtpService: BulkOtpService,
   ) {}
 
   @Public()
@@ -247,6 +251,41 @@ export class AuthController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  @Post('set-email')
+  @ApiOperation({
+    summary:
+      'Set or replace recovery email without confirmation (authenticated user)',
+  })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  async setEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetEmailDto,
+  ): Promise<{ message: string }> {
+    return this.profileService.setEmail(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        sessionId: user.sessionId,
+      },
+      dto.email,
+    );
+  }
+
+  @Post('bulk-generate-otp')
+  @ApiOperation({
+    summary:
+      'Generate one-time passwords for all active employees (System Administrator or HR Manager)',
+  })
+  @ApiResponse({ status: 201, type: BulkGenerateOtpResponseDto })
+  async bulkGenerateOtp(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<BulkGenerateOtpResponseDto> {
+    return this.bulkOtpService.generateForCompany({
+      companyId: user.companyId,
+      actorUserId: user.userId,
+    });
   }
 
   @Post('change-email')

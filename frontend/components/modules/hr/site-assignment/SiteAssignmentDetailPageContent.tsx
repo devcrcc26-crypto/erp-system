@@ -163,7 +163,7 @@ export default function SiteAssignmentDetailPageContent({
         onCancel={() => setConfirmCancelSubmitted(false)}
       />
 
-      <section className="erp-sa-detail-hero">
+      <section className="erp-sa-detail-hero erp-brand-hero">
         <div className="erp-sa-hero-top">
           <div className="min-w-0">
             <Link href={LIST_PATH} className="erp-sa-back">

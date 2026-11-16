@@ -147,9 +147,16 @@ export class AuthMailService {
 
   private renderPasswordResetBody(url: string): string {
     return `
-      <p>You requested a password reset for your Construction ERP account.</p>
-      <p><a href="${url}">Reset your password</a></p>
-      <p>This link expires in 1 hour. If you did not request this, you can ignore this email.</p>
+      <div style="font-family: Arial, sans-serif; color: #1a1a1a; line-height: 1.5;">
+        <p>You requested a password reset for your Construction ERP account.</p>
+        <p style="margin: 24px 0;">
+          <a href="${url}"
+             style="display: inline-block; background: #1a7a4a; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 4px; font-weight: 600;">
+            Reset Password
+          </a>
+        </p>
+        <p>This link expires in 2 hours. If you did not request this, you can ignore this email.</p>
+      </div>
     `;
   }
 

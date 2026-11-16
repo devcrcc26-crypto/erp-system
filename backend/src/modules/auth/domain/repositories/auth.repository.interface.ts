@@ -55,6 +55,12 @@ export interface IAuthRepository {
   deleteSession(sessionId: string): Promise<void>;
   updateUserLastLogin(userId: string): Promise<void>;
   updateUserPassword(userId: string, passwordHash: string): Promise<void>;
+  /**
+   * Consumes a one-time password after successful OTP login:
+   * copies the OTP hash into passwordHash, clears oneTimePassword, forces password change.
+   */
+  consumeOneTimePassword(userId: string, oneTimePasswordHash: string): Promise<void>;
+  clearOneTimePassword(userId: string): Promise<void>;
   createPasswordResetToken(input: CreatePasswordResetInput): Promise<void>;
   findActivePasswordResetTokens(userId: string): Promise<
     Array<{

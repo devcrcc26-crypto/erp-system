@@ -75,10 +75,10 @@ export class TokenService {
   }
 
   /**
-   * Returns password-reset token expiry (1 hour).
+   * Returns password-reset token expiry (2 hours).
    */
   getPasswordResetExpiryDate(): Date {
-    return new Date(Date.now() + 60 * 60 * 1000);
+    return new Date(Date.now() + 2 * 60 * 60 * 1000);
   }
 
   /**

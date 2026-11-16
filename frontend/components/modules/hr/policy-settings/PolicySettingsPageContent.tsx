@@ -732,7 +732,7 @@ export default function PolicySettingsPageContent(): React.ReactNode {
         <Alert type="info" showIcon title={t(`${P}.readOnlyNotice`)} />
       ) : null}
 
-      <div className="erp-policy-tabbar-card">
+      <div className="erp-policy-tabbar-card erp-brand-hero">
         <div
           className="erp-policy-tabbar"
           role="tablist"

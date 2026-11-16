@@ -714,6 +714,8 @@ model User {
   profileFolderId       String?         @map("profile_folder_id")
   photoDocumentId       String?         @map("photo_document_id")
   passwordHash        String    @map("password_hash")
+  /// Hashed one-time password for first login / bulk HR issuance. Cleared after OTP login or password change.
+  oneTimePassword     String?   @map("one_time_password")
   preferredLanguage   String?   @map("preferred_language")
   preferredTimezone   String?   @map("preferred_timezone")
   preferredDateFormat String?   @map("preferred_date_format")

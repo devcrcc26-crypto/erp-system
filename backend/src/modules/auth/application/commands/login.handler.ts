@@ -55,7 +55,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
       throw new UnauthorizedException(AUTH_ACCOUNT_LOCKED_MESSAGE);
     }
 
-    if (!user.passwordHash) {
+    if (!user.passwordHash && !user.oneTimePassword) {
       await this.loginLockoutService.recordFailedAttempt(
         user.id,
         user.companyId,
@@ -65,12 +65,23 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
       throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
     }
 
-    const passwordValid = await this.passwordService.verify(
-      command.password,
-      user.passwordHash,
-    );
+    let authenticatedViaOtp = false;
+    if (user.oneTimePassword) {
+      authenticatedViaOtp = await this.passwordService.verify(
+        command.password,
+        user.oneTimePassword,
+      );
+    }
 
-    if (!passwordValid) {
+    let passwordValid = false;
+    if (!authenticatedViaOtp && user.passwordHash) {
+      passwordValid = await this.passwordService.verify(
+        command.password,
+        user.passwordHash,
+      );
+    }
+
+    if (!authenticatedViaOtp && !passwordValid) {
       await this.loginLockoutService.recordFailedAttempt(
         user.id,
         user.companyId,
@@ -78,6 +89,14 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
         command.ipAddress,
       );
       throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
+    }
+
+    if (authenticatedViaOtp && user.oneTimePassword) {
+      await this.authRepository.consumeOneTimePassword(
+        user.id,
+        user.oneTimePassword,
+      );
+      user.mustChangePassword = true;
     }
 
     // When EMAIL_DISABLED is off, verification applies only to users who have an

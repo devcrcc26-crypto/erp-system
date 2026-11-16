@@ -19,6 +19,7 @@ describe('LoginHandler', () => {
     loginName: 'Abebe Bekele Kebede',
     loginNameNormalized: 'abebe bekele kebede',
     passwordHash: 'hashed',
+    oneTimePassword: null,
     firstName: 'Abebe',
     lastName: 'Kebede',
     middleName: 'Bekele',
@@ -45,6 +46,7 @@ describe('LoginHandler', () => {
       | 'findActiveUserByLoginNameNormalized'
       | 'createSession'
       | 'updateUserLastLogin'
+      | 'consumeOneTimePassword'
     >
   >;
   let passwordService: jest.Mocked<Pick<PasswordService, 'verify'>>;
@@ -76,6 +78,7 @@ describe('LoginHandler', () => {
       findActiveUserByLoginNameNormalized: jest.fn(),
       createSession: jest.fn(),
       updateUserLastLogin: jest.fn(),
+      consumeOneTimePassword: jest.fn(),
     };
     passwordService = { verify: jest.fn() };
     tokenService = {
@@ -245,6 +248,51 @@ describe('LoginHandler', () => {
     const result = await handler.execute(
       new LoginCommand('Abebe Bekele Kebede', 'password'),
     );
+    expect(result.user.mustChangePassword).toBe(true);
+  });
+
+  it('accepts a one-time password, consumes it, and forces password change', async () => {
+    authRepository.findActiveUserByLoginNameNormalized.mockResolvedValue({
+      ...mockUser,
+      oneTimePassword: 'otp-hash',
+      mustChangePassword: false,
+    });
+    passwordService.verify.mockImplementation(async (_plain, hash) => {
+      return hash === 'otp-hash';
+    });
+    authRepository.createSession.mockResolvedValue({
+      id: 'session-1',
+    } as Awaited<ReturnType<IAuthRepository['createSession']>>);
+
+    const result = await handler.execute(
+      new LoginCommand('Abebe Bekele Kebede', 'K7XP2MNQ'),
+    );
+
+    expect(authRepository.consumeOneTimePassword).toHaveBeenCalledWith(
+      'user-1',
+      'otp-hash',
+    );
+    expect(result.user.mustChangePassword).toBe(true);
+  });
+
+  it('still accepts the regular password when an OTP is also set', async () => {
+    authRepository.findActiveUserByLoginNameNormalized.mockResolvedValue({
+      ...mockUser,
+      oneTimePassword: 'otp-hash',
+      mustChangePassword: true,
+    });
+    passwordService.verify.mockImplementation(async (_plain, hash) => {
+      return hash === 'hashed';
+    });
+    authRepository.createSession.mockResolvedValue({
+      id: 'session-1',
+    } as Awaited<ReturnType<IAuthRepository['createSession']>>);
+
+    const result = await handler.execute(
+      new LoginCommand('Abebe Bekele Kebede', 'password'),
+    );
+
+    expect(authRepository.consumeOneTimePassword).not.toHaveBeenCalled();
     expect(result.user.mustChangePassword).toBe(true);
   });
 

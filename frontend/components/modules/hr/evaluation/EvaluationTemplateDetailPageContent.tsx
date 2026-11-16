@@ -123,7 +123,7 @@ export default function EvaluationTemplateDetailPageContent({
     <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-template-detail erp-evaluation-v2">
       {contextHolder}
 
-      <section className="erp-evaluation-detail-hero">
+      <section className="erp-evaluation-detail-hero erp-brand-hero">
         <div className="erp-evaluation-hero-top">
           <div className="min-w-0">
             <Link

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Form, Input } from 'antd';
+import { LockOutlined } from '@ant-design/icons';
+import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -11,7 +13,6 @@ import {
 } from '@/lib/auth/pending-temporary-password';
 import { useChangePassword } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
-import { tokens } from '@/lib/theme/tokens';
 
 interface FormValues {
   currentPassword?: string;
@@ -19,14 +20,64 @@ interface FormValues {
   confirmPassword: string;
 }
 
+function useChangePasswordLabels(): {
+  heading: string;
+  subheading: string;
+  currentPassword: string;
+  currentPasswordHelp: string;
+  newPassword: string;
+  confirmPassword: string;
+  submit: string;
+  required: string;
+  minLength: string;
+  mismatch: string;
+  loginNameConflict: string;
+} {
+  return useMemo(() => {
+    const lang =
+      typeof document !== 'undefined'
+        ? document.documentElement.lang || navigator.language
+        : 'en';
+    const isZh = lang.toLowerCase().startsWith('zh');
+    return isZh
+      ? {
+          heading: '设置密码',
+          subheading: '继续使用前，必须设置新密码。',
+          currentPassword: '当前密码',
+          currentPasswordHelp: 'HR 提供的一次性密码，或您刚才登录时使用的密码。',
+          newPassword: '新密码',
+          confirmPassword: '确认新密码',
+          submit: '设置密码',
+          required: '必填',
+          minLength: '至少 8 个字符',
+          mismatch: '两次输入的新密码不一致',
+          loginNameConflict: '密码不能与登录名相同',
+        }
+      : {
+          heading: 'Set your password',
+          subheading: 'You must set a new password before continuing.',
+          currentPassword: 'Current password',
+          currentPasswordHelp:
+            'Your one-time password or the password you just used to sign in.',
+          newPassword: 'New password',
+          confirmPassword: 'Confirm new password',
+          submit: 'Set Password',
+          required: 'Required',
+          minLength: 'At least 8 characters',
+          mismatch: 'New passwords do not match',
+          loginNameConflict: 'Password must not equal the login name',
+        };
+  }, []);
+}
+
 export default function ForceChangePasswordPage(): React.ReactNode {
   const router = useRouter();
   const changePassword = useChangePassword();
   const updateUser = useAuthStore((s) => s.updateUser);
   const loginName = useAuthStore((s) => s.user?.loginName);
+  const labels = useChangePasswordLabels();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // The temporary password just used to sign in (memory only). While we have
-  // it, the user is not asked to type it again.
+  // The temporary / OTP password just used to sign in (memory only).
   const [signInPassword, setSignInPassword] = useState<string | null>(() =>
     peekPendingTemporaryPassword(),
   );
@@ -34,14 +85,14 @@ export default function ForceChangePasswordPage(): React.ReactNode {
   async function handleSubmit(values: FormValues): Promise<void> {
     setErrorMessage(null);
     if (values.newPassword !== values.confirmPassword) {
-      setErrorMessage('New passwords do not match');
+      setErrorMessage(labels.mismatch);
       return;
     }
     if (
       loginName &&
       values.newPassword.trim().toLowerCase() === loginName.trim().toLowerCase()
     ) {
-      setErrorMessage('Password must not equal the login name');
+      setErrorMessage(labels.loginNameConflict);
       return;
     }
 
@@ -57,7 +108,6 @@ export default function ForceChangePasswordPage(): React.ReactNode {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
         if (signInPassword && /current password/i.test(error.message)) {
-          // Fall back to asking for it explicitly.
           clearPendingTemporaryPassword();
           setSignInPassword(null);
         }
@@ -68,65 +118,113 @@ export default function ForceChangePasswordPage(): React.ReactNode {
   }
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-10">
-      <h1
-        className="m-0 text-xl font-semibold text-slate-900"
-        style={{ fontFamily: tokens.fontFamily }}
-      >
-        Change password
-      </h1>
-      <p className="mt-2 text-sm text-slate-500">
-        You must set a new password before continuing.
-      </p>
+    <div className="erp-login-page">
+      <div className="erp-login-stage">
+        <header className="erp-login-topbar">
+          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
+          <span className="erp-login-topbar-divider" aria-hidden />
+          <span className="erp-login-topbar-product">Construction ERP</span>
+        </header>
 
-      <Form<FormValues>
-        layout="vertical"
-        className="mt-6"
-        onFinish={(values) => void handleSubmit(values)}
-      >
-        {signInPassword ? null : (
-          <Form.Item
-            label="Current temporary password"
-            name="currentPassword"
-            extra="The temporary password HR gave you (the one you just signed in with)."
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            {/* No autofill: a saved password for another account was being filled in here. */}
-            <Input.Password autoComplete="off" size="large" />
-          </Form.Item>
-        )}
-        <Form.Item
-          label="New password"
-          name="newPassword"
-          rules={[
-            { required: true, message: 'Required' },
-            { min: 8, message: 'At least 8 characters' },
-          ]}
-        >
-          <Input.Password autoComplete="new-password" size="large" />
-        </Form.Item>
-        <Form.Item
-          label="Confirm new password"
-          name="confirmPassword"
-          rules={[{ required: true, message: 'Required' }]}
-        >
-          <Input.Password autoComplete="new-password" size="large" />
-        </Form.Item>
+        <main className="erp-login-main">
+          <div className="erp-login-layout">
+            <section
+              className="erp-login-panel"
+              aria-labelledby="erp-change-password-heading"
+            >
+              <header className="erp-login-panel-head">
+                <h1
+                  id="erp-change-password-heading"
+                  className="erp-login-heading"
+                >
+                  {labels.heading}
+                </h1>
+                <p className="erp-login-subtitle">{labels.subheading}</p>
+              </header>
 
-        {errorMessage ? (
-          <ErpNotice tone="error" className="mb-4" title={errorMessage} />
-        ) : null}
+              <Form<FormValues>
+                layout="vertical"
+                requiredMark={false}
+                className="erp-login-form"
+                onFinish={(values) => void handleSubmit(values)}
+              >
+                {signInPassword ? null : (
+                  <Form.Item
+                    label={labels.currentPassword}
+                    name="currentPassword"
+                    extra={labels.currentPasswordHelp}
+                    rules={[{ required: true, message: labels.required }]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined aria-hidden />}
+                      autoComplete="off"
+                      size="large"
+                    />
+                  </Form.Item>
+                )}
+                <Form.Item
+                  label={labels.newPassword}
+                  name="newPassword"
+                  rules={[
+                    { required: true, message: labels.required },
+                    { min: 8, message: labels.minLength },
+                  ]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined aria-hidden />}
+                    autoComplete="new-password"
+                    size="large"
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={labels.confirmPassword}
+                  name="confirmPassword"
+                  rules={[{ required: true, message: labels.required }]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined aria-hidden />}
+                    autoComplete="new-password"
+                    size="large"
+                  />
+                </Form.Item>
 
-        <Button
-          type="primary"
-          htmlType="submit"
-          block
-          size="large"
-          loading={changePassword.isPending}
-        >
-          Save new password
-        </Button>
-      </Form>
+                {errorMessage ? (
+                  <ErpNotice tone="error" className="mb-4" title={errorMessage} />
+                ) : null}
+
+                <Form.Item className="!mb-0 !mt-1">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    size="large"
+                    loading={changePassword.isPending}
+                    className="erp-login-submit"
+                  >
+                    {labels.submit}
+                  </Button>
+                </Form.Item>
+              </Form>
+            </section>
+          </div>
+        </main>
+
+        <footer className="erp-login-footer">
+          © {new Date().getFullYear()} CRCC · Construction ERP
+        </footer>
+      </div>
+
+      <aside className="erp-login-brand" aria-label="CRCC">
+        <div className="erp-login-brand-atmosphere" aria-hidden>
+          <span className="erp-login-brand-grid" />
+          <span className="erp-login-brand-glow" />
+          <span className="erp-login-brand-globe" />
+        </div>
+        <div className="erp-login-brand-inner">
+          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
+          <p className="erp-login-brand-title">{labels.subheading}</p>
+        </div>
+      </aside>
     </div>
   );
 }

@@ -2279,7 +2279,7 @@ export default function PayrollRunDetailPageContent({
         </Form>
       </Modal>
 
-      <section className="erp-pro-card erp-payroll-hero">
+      <section className="erp-pro-card erp-payroll-hero erp-brand-hero">
         <div className="erp-payroll-hero-top">
           <div className="min-w-0">
             <Link href="/hr/payroll" className="erp-payroll-back">

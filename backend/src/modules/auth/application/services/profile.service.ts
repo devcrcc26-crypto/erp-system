@@ -12,6 +12,7 @@ import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { hasDirectReports } from '../../../../shared/org/team-scope.util';
+import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { DocumentService } from '../../../documents/application/services/document.service';
 import {
   AUTH_REPOSITORY,
@@ -340,7 +341,8 @@ export class ProfileService {
   }
 
   /**
-   * Changes password after verifying the current password.
+   * Changes password after verifying the current password (or unused OTP).
+   * Works for forced first-login change and voluntary change.
    */
   async changePassword(
     ctx: SessionContext,
@@ -355,12 +357,20 @@ export class ProfileService {
 
     assertPasswordPolicy(newPassword, user.loginName);
 
-    const valid = await this.passwordService.verify(
-      currentPassword,
-      user.passwordHash,
-    );
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
 
-    if (!valid) {
+    const validPassword = user.passwordHash
+      ? await this.passwordService.verify(currentPassword, user.passwordHash)
+      : false;
+    const validOtp = user.oneTimePassword
+      ? await this.passwordService.verify(currentPassword, user.oneTimePassword)
+      : false;
+
+    if (!validPassword && !validOtp) {
       // 400, not 401: the session is valid. A 401 makes the client refresh the
       // session and resend the change (and log the user out if that fails).
       throw new BadRequestException('Current password is incorrect');
@@ -374,6 +384,52 @@ export class ProfileService {
     );
 
     return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Sets or replaces the account recovery email without a confirmation link.
+   * Marks the email verified so name-based login is not blocked afterward.
+   */
+  async setEmail(
+    ctx: SessionContext,
+    email: string,
+  ): Promise<{ message: string }> {
+    const user = await this.authRepository.findActiveUserById(ctx.userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const normalized = normalizeEmail(email);
+    if (!normalized || !normalized.includes('@')) {
+      throw new BadRequestException('Invalid email address');
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        email: normalized,
+        NOT: { id: ctx.userId },
+      }),
+    });
+
+    if (existing) {
+      throw new ConflictException('Email already in use');
+    }
+
+    await this.prisma.user.update({
+      where: { id: ctx.userId },
+      data: {
+        email: normalized,
+        pendingEmail: null,
+        emailVerifiedAt: new Date(),
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return {
+      message: 'Email saved. You can now use it to reset your password.',
+    };
   }
 
   /**

@@ -55,9 +55,6 @@ function LoginForm(): React.ReactNode {
   const [form] = Form.useForm<LoginFormValues>();
   const identifierValue = Form.useWatch('identifier', form) ?? '';
   const identifierTrimmed = identifierValue.trim();
-  /** Full-name login (no @) → staff without email; hide self-serve reset. */
-  const showForgotPassword =
-    !identifierTrimmed || identifierTrimmed.includes('@');
   const setAuth = useAuthStore((state) => state.setAuth);
   const labels = useLoginLabels();
 
@@ -257,24 +254,21 @@ function LoginForm(): React.ReactNode {
                 </Form.Item>
               </Form>
 
-              {showForgotPassword ? (
-                <p className="erp-login-forgot">
-                  <Link
-                    href={
-                      identifierTrimmed.includes('@')
-                        ? `/forgot-password?email=${encodeURIComponent(identifierTrimmed)}`
-                        : '/forgot-password'
-                    }
-                    className="erp-login-forgot-link"
-                  >
-                    Forgot password?
-                  </Link>
-                </p>
-              ) : (
-                <p className="erp-login-help">
-                  No email on your account? Ask HR to reset your password.
-                </p>
-              )}
+              <p className="erp-login-forgot">
+                <Link
+                  href={
+                    identifierTrimmed.includes('@')
+                      ? `/forgot-password?email=${encodeURIComponent(identifierTrimmed)}`
+                      : '/forgot-password'
+                  }
+                  className="erp-login-forgot-link"
+                >
+                  Forgot your password?
+                </Link>
+              </p>
+              <p className="erp-login-help">
+                No email on your account? Ask HR to reset your password.
+              </p>
             </section>
 
             {isDemoLoginEnabled() ? (

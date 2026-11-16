@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import type {
   ActivateAccountRequest,
   AuthTokens,
+  BulkGenerateOtpResponse,
   Capabilities,
   ConfirmEmailChangeRequest,
   ForgotPasswordRequest,
@@ -126,6 +127,17 @@ export function useConfirmEmailChange() {
       return apiPost<MessageResponse>('/auth/confirm-email-change', body);
     },
     retry: false,
+  });
+}
+
+/**
+ * HR/admin bulk OTP generation. Plaintext OTPs exist only in the response.
+ */
+export function useBulkGenerateOtp() {
+  return useMutation({
+    mutationFn: async (): Promise<BulkGenerateOtpResponse> => {
+      return apiPost<BulkGenerateOtpResponse>('/auth/bulk-generate-otp');
+    },
   });
 }
 

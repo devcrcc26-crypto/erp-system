@@ -930,3 +930,240 @@
     transition: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Brand layer (Nov 2026) - same language as dashboard, Approvals and the
+ * HR lists. Lists: the card toolbar is the brand band (gradient + grid +
+ * glow, white title, glass count / buttons / segmented), filters sit on a
+ * tinted strip. Details: .erp-ann-detail-hero is the banner across the top
+ * of the card. Cards: faint accent outline.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-ann-page .erp-ann-card {
+  position: relative;
+  border: 1px solid var(--color-card-border, rgba(var(--erp-accent-rgb), 0.16));
+  border-radius: 16px;
+  box-shadow: var(
+    --shadow-panel,
+    0 1px 2px rgba(20, 29, 25, 0.04),
+    0 4px 16px rgba(var(--erp-accent-hover-rgb), 0.06)
+  );
+}
+
+/* Shared banner surface: list toolbar band + detail hero. */
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar,
+.erp-ann-page .erp-ann-detail-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar::before,
+.erp-ann-page .erp-ann-detail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar::after,
+.erp-ann-page .erp-ann-detail-hero::after {
+  content: '';
+  position: absolute;
+  top: -120%;
+  right: -6%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+/* ── List toolbar band ── */
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar {
+  padding: 22px 24px;
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .erp-ann-toolbar-title {
+  color: #ffffff;
+  font-size: clamp(18px, 1.8vw, 21px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .erp-ann-count {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Buttons on a banner: glass; primary solid white. */
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  box-shadow: none;
+}
+
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn-primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+}
+
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn-primary:not(:disabled):hover {
+  background: var(--color-primary-soft, #e1f5ee) !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn-dangerous {
+  border-color: rgba(254, 205, 202, 0.6) !important;
+  color: #fecdca !important;
+}
+
+.erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Segmented (All / Unread, Company / System) on the band: glass track. */
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .ant-segmented {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .ant-segmented-item:hover:not(.ant-segmented-item-selected) {
+  color: #ffffff;
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .ant-segmented-item-selected {
+  background: #ffffff;
+  color: var(--erp-accent-hover);
+  font-weight: 600;
+}
+
+.erp-ann-page .erp-ann-card > .erp-ann-toolbar .ant-segmented-thumb {
+  background: #ffffff;
+}
+
+/* Filters: tinted strip under the band, white fields. */
+.erp-ann-page .erp-ann-filters {
+  padding: 12px 20px;
+  background: var(--erp-n-25);
+}
+
+.erp-ann-page .erp-ann-filters :is(.ant-input-affix-wrapper, .ant-select-selector) {
+  background: #ffffff !important;
+}
+
+/* List rows + table: green hover. */
+.erp-ann-page .erp-ann-item:hover {
+  background: rgba(var(--erp-accent-rgb), 0.05);
+}
+
+.erp-ann-page .erp-ann-card .ant-table-thead > tr > th {
+  background: var(--erp-n-50) !important;
+  color: var(--erp-n-600) !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-ann-page .erp-ann-card .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(var(--erp-accent-rgb), 0.05) !important;
+}
+
+.erp-ann-page .erp-ann-pagination,
+.erp-ann-page .erp-ann-card .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 12px 20px !important;
+  border-top: 1px solid var(--ann-divider);
+  background: var(--erp-n-25);
+}
+
+/* ── Detail hero ── */
+
+.erp-ann-page .erp-ann-detail-hero {
+  margin: -24px -24px 20px;
+  padding: 18px 24px 22px;
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-back {
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-back:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff !important;
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-back:focus-visible {
+  outline-color: #ffffff;
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-detail-title {
+  color: #ffffff;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-meta {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Tags keep their colours as opaque pills so they read on the banner. */
+.erp-ann-page .erp-ann-detail-hero .erp-ann-tag {
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.2);
+}
+
+.erp-ann-page .erp-ann-detail-hero .erp-ann-tag--muted {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Body directly under the banner: no second divider. */
+.erp-ann-page .erp-ann-detail-hero + .erp-ann-detail-body {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.erp-ann-page .erp-ann-section-title {
+  color: var(--color-text-heading, var(--erp-accent-hover));
+}
+
+@media (max-width: 640px) {
+  .erp-ann-page .erp-ann-card > .erp-ann-toolbar {
+    padding: 18px 16px;
+  }
+
+  /* Matches .erp-ann-detail's mobile padding (18px 16px). */
+  .erp-ann-page .erp-ann-detail-hero {
+    margin: -18px -16px 16px;
+    padding: 14px 16px 18px;
+  }
+}

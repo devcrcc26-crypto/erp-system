@@ -250,6 +250,33 @@ export class ChangeEmailDto {
   newEmail!: string;
 }
 
+export class SetEmailDto {
+  @ApiProperty({ example: 'employee@company.com' })
+  @IsEmail()
+  email!: string;
+}
+
+export class BulkOtpRowDto {
+  @ApiProperty()
+  employeeId!: string;
+
+  @ApiProperty()
+  fullName!: string;
+
+  @ApiProperty()
+  otp!: string;
+}
+
+export class BulkGenerateOtpResponseDto {
+  @ApiProperty({ type: [BulkOtpRowDto] })
+  rows!: BulkOtpRowDto[];
+
+  @ApiProperty({
+    description: 'CSV string with Employee ID, Full Name, One-Time Password',
+  })
+  csv!: string;
+}
+
 export class ConfirmEmailChangeDto {
   @ApiProperty({ minLength: 32 })
   @IsString()

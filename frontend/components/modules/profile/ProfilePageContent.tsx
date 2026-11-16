@@ -56,6 +56,7 @@ import {
   useChangeEmail,
   useChangePassword,
   useCurrentUser,
+  useSetEmail,
   useUpdateProfile,
 } from '@/lib/query/profile';
 import type { UserProfile } from '@/lib/api/types';
@@ -141,6 +142,7 @@ export default function ProfilePageContent(): React.ReactNode {
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
   const changeEmail = useChangeEmail();
+  const setEmail = useSetEmail();
   const resendActivation = useResendActivation();
 
   const profile = profileQuery.data;
@@ -355,7 +357,11 @@ export default function ProfilePageContent(): React.ReactNode {
     setEmailSuccess(null);
 
     try {
-      const result = await changeEmail.mutateAsync({ newEmail: values.newEmail });
+      // Accounts without email use set-email (no confirmation). Accounts that
+      // already have one keep the confirmation-email change flow.
+      const result = profile?.email?.trim()
+        ? await changeEmail.mutateAsync({ newEmail: values.newEmail })
+        : await setEmail.mutateAsync({ email: values.newEmail });
       setEmailSuccess(result.message);
       emailForm.resetFields();
       setShowChangeEmail(false);
@@ -441,7 +447,7 @@ export default function ProfilePageContent(): React.ReactNode {
           </Form>
         </ProfileSection>
 
-        <ProfileSection title={t('profile.emailAddress')}>
+        <ProfileSection title={t('profile.accountSecurity')}>
           <div className="flex flex-col gap-3">
             <div className="erp-employee-contact-card">
               <div className="flex items-start gap-3">
@@ -450,7 +456,11 @@ export default function ProfilePageContent(): React.ReactNode {
                 </span>
                 <div className="min-w-0 flex-1">
                   <MetaItem label={t('common.email')}>
-                    <span className="break-all">{displayText(profile.email)}</span>
+                    <span className="break-all">
+                      {profile.email?.trim()
+                        ? displayText(profile.email)
+                        : t('profile.noEmailSet')}
+                    </span>
                   </MetaItem>
                   <div className="mt-3">
                     <MetaItem label={t('users.loginName')}>
@@ -461,16 +471,18 @@ export default function ProfilePageContent(): React.ReactNode {
                       </span>
                     </MetaItem>
                   </div>
-                  <div className="mt-2">
-                    <StatusBadge
-                      label={
-                        isEmailVerified
-                          ? t('common.verified')
-                          : t('common.unverified')
-                      }
-                      variant={isEmailVerified ? 'success' : 'warning'}
-                    />
-                  </div>
+                  {profile.email?.trim() ? (
+                    <div className="mt-2">
+                      <StatusBadge
+                        label={
+                          isEmailVerified
+                            ? t('common.verified')
+                            : t('common.unverified')
+                        }
+                        variant={isEmailVerified ? 'success' : 'warning'}
+                      />
+                    </div>
+                  ) : null}
                   {profile.pendingEmail && (
                     <p className="erp-users-cell-sub mt-2 mb-0">
                       {t('common.pendingConfirmation', {
@@ -491,7 +503,9 @@ export default function ProfilePageContent(): React.ReactNode {
                   setEmailSuccess(null);
                 }}
               >
-                {t('common.changeEmail')}
+                {profile.email?.trim()
+                  ? t('profile.changeEmail')
+                  : t('profile.setEmail')}
               </Button>
             ) : (
               <Form
@@ -510,7 +524,11 @@ export default function ProfilePageContent(): React.ReactNode {
                     { required: true, message: t('common.requiredEmail') },
                     { type: 'email', message: t('common.invalidEmail') },
                   ]}
-                  extra={t('common.emailChangeHint')}
+                  extra={
+                    profile.email?.trim()
+                      ? t('common.emailChangeHint')
+                      : t('profile.setEmailHint')
+                  }
                 >
                   <Input type="email" />
                 </Form.Item>
@@ -525,9 +543,11 @@ export default function ProfilePageContent(): React.ReactNode {
                   <Button
                     type="primary"
                     htmlType="submit"
-                    loading={changeEmail.isPending}
+                    loading={changeEmail.isPending || setEmail.isPending}
                   >
-                    {t('common.sendConfirmation')}
+                    {profile.email?.trim()
+                      ? t('common.sendConfirmation')
+                      : t('common.save')}
                   </Button>
                   <Button
                     onClick={() => {
@@ -541,57 +561,76 @@ export default function ProfilePageContent(): React.ReactNode {
                 </div>
               </Form>
             )}
+
+            <p className="erp-users-cell-sub m-0">{t('profile.passwordDescription')}</p>
+            <Form
+              form={passwordForm}
+              layout="vertical"
+              requiredMark={false}
+              onFinish={(values: PasswordFormValues) =>
+                void handlePasswordSubmit(values)
+              }
+            >
+              <div className="grid gap-x-3 md:grid-cols-3">
+                <Form.Item
+                  label={t('common.currentPassword')}
+                  name="currentPassword"
+                  rules={[
+                    {
+                      required: true,
+                      message: t('common.requiredCurrentPassword'),
+                    },
+                  ]}
+                >
+                  <Input.Password autoComplete="current-password" />
+                </Form.Item>
+                <Form.Item
+                  label={t('common.newPassword')}
+                  name="newPassword"
+                  rules={[
+                    { required: true, message: t('common.requiredNewPassword') },
+                    { min: 8, message: t('common.passwordMinLength') },
+                  ]}
+                >
+                  <Input.Password autoComplete="new-password" />
+                </Form.Item>
+                <Form.Item
+                  label={t('common.confirmPassword')}
+                  name="confirmPassword"
+                  rules={[
+                    {
+                      required: true,
+                      message: t('common.requiredConfirmPassword'),
+                    },
+                  ]}
+                >
+                  <Input.Password autoComplete="new-password" />
+                </Form.Item>
+              </div>
+
+              {passwordError && (
+                <Alert type="error" showIcon title={passwordError} className="!mb-3" />
+              )}
+              {passwordSuccess && (
+                <Alert
+                  type="success"
+                  showIcon
+                  title={passwordSuccess}
+                  className="!mb-3"
+                />
+              )}
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={changePassword.isPending}
+              >
+                {t('profile.changePassword')}
+              </Button>
+            </Form>
           </div>
         </ProfileSection>
       </div>
-
-      <ProfileSection title={t('profile.passwordSection')}>
-        <p className="erp-users-cell-sub m-0 mb-3">{t('profile.passwordDescription')}</p>
-        <Form
-          form={passwordForm}
-          layout="vertical"
-          requiredMark={false}
-          onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
-        >
-          <div className="grid gap-x-3 md:grid-cols-3">
-            <Form.Item
-              label={t('common.currentPassword')}
-              name="currentPassword"
-              rules={[{ required: true, message: t('common.requiredCurrentPassword') }]}
-            >
-              <Input.Password autoComplete="current-password" />
-            </Form.Item>
-            <Form.Item
-              label={t('common.newPassword')}
-              name="newPassword"
-              rules={[
-                { required: true, message: t('common.requiredNewPassword') },
-                { min: 8, message: t('common.passwordMinLength') },
-              ]}
-            >
-              <Input.Password autoComplete="new-password" />
-            </Form.Item>
-            <Form.Item
-              label={t('common.confirmPassword')}
-              name="confirmPassword"
-              rules={[{ required: true, message: t('common.requiredConfirmPassword') }]}
-            >
-              <Input.Password autoComplete="new-password" />
-            </Form.Item>
-          </div>
-
-          {passwordError && (
-            <Alert type="error" showIcon title={passwordError} className="!mb-3" />
-          )}
-          {passwordSuccess && (
-            <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
-          )}
-
-          <Button type="primary" htmlType="submit" loading={changePassword.isPending}>
-            {t('profile.changePassword')}
-          </Button>
-        </Form>
-      </ProfileSection>
     </div>
   );
 

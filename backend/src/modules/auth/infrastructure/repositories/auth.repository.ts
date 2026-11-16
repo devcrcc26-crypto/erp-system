@@ -169,10 +169,34 @@ export class AuthRepository implements IAuthRepository {
       where: { id: userId },
       data: {
         passwordHash,
+        oneTimePassword: null,
         mustChangePassword: false,
         failedLoginAttempts: 0,
         lockedUntil: null,
       },
+    });
+  }
+
+  async consumeOneTimePassword(
+    userId: string,
+    oneTimePasswordHash: string,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: oneTimePasswordHash,
+        oneTimePassword: null,
+        mustChangePassword: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+  }
+
+  async clearOneTimePassword(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { oneTimePassword: null },
     });
   }
 

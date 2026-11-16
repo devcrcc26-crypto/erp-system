@@ -304,7 +304,7 @@ export default function FieldMovementLogDetailPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
-      <section className="erp-pro-card erp-fml-hero">
+      <section className="erp-pro-card erp-fml-hero erp-brand-hero">
         <Link href="/hr/field-movement-logs" className="erp-fml-back">
           <ArrowLeft size={14} strokeWidth={2} aria-hidden />
           {t('pages.hr.fieldMovementLogs.listTitle')}

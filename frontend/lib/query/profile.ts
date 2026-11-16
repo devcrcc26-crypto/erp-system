@@ -11,6 +11,7 @@ import type {
   ChangeEmailRequest,
   ChangePasswordRequest,
   MessageResponse,
+  SetEmailRequest,
   UpdateProfileRequest,
   UserProfile,
   UserProfileDocument,
@@ -159,6 +160,23 @@ export function useChangeEmail() {
     mutationFn: (body: ChangeEmailRequest): Promise<MessageResponse> =>
       apiPost<MessageResponse>('/auth/change-email', body),
     onSuccess: () => {
+      if (sessionId) {
+        void queryClient.invalidateQueries({ queryKey: profileKeys.me(sessionId) });
+      }
+    },
+  });
+}
+
+export function useSetEmail() {
+  const queryClient = useQueryClient();
+  const sessionId = useAuthStore((state) => state.sessionId);
+  const updateUser = useAuthStore((state) => state.updateUser);
+
+  return useMutation({
+    mutationFn: (body: SetEmailRequest): Promise<MessageResponse> =>
+      apiPost<MessageResponse>('/auth/set-email', body),
+    onSuccess: (_result, variables) => {
+      updateUser({ email: variables.email });
       if (sessionId) {
         void queryClient.invalidateQueries({ queryKey: profileKeys.me(sessionId) });
       }

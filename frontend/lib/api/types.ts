@@ -189,6 +189,21 @@ export interface ChangeEmailRequest {
   newEmail: string;
 }
 
+export interface SetEmailRequest {
+  email: string;
+}
+
+export interface BulkOtpRow {
+  employeeId: string;
+  fullName: string;
+  otp: string;
+}
+
+export interface BulkGenerateOtpResponse {
+  rows: BulkOtpRow[];
+  csv: string;
+}
+
 import type { UserDiscipline } from '@/lib/constants/user-discipline';
 
 export type { UserDiscipline };

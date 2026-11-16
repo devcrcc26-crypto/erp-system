@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -302,7 +303,7 @@ export default function SettingsPageContent(): React.ReactNode {
 
   if (rolesQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-settings-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-settings-page">
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -317,7 +318,7 @@ export default function SettingsPageContent(): React.ReactNode {
         : 0;
 
     return (
-      <div className="erp-pro-list-page erp-users-page erp-settings-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-settings-page">
         <ErpNotice
           tone="error"
           title={
@@ -379,31 +380,33 @@ export default function SettingsPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-settings-page">
-      <div className="erp-users-stat-bar">
-        <SettingsStat
-          label={t('settings.stats.roles')}
-          value={String(roles.length)}
-          accent="teal"
-          icon={<TeamOutlined />}
-        />
-        <SettingsStat
-          label={t('settings.stats.modules')}
-          value={String(modules.length || '-')}
-          accent="blue"
-          icon={<AppstoreOutlined />}
-        />
-        <SettingsStat
-          label={t('settings.stats.granted')}
-          value={selectedRole ? String(grantedCount) : '-'}
-          accent="amber"
-          icon={<SafetyCertificateOutlined />}
-        />
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-settings-page">
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <SettingsStat
+            label={t('settings.stats.roles')}
+            value={String(roles.length)}
+            accent="teal"
+            icon={<TeamOutlined />}
+          />
+          <SettingsStat
+            label={t('settings.stats.modules')}
+            value={String(modules.length || '-')}
+            accent="blue"
+            icon={<AppstoreOutlined />}
+          />
+          <SettingsStat
+            label={t('settings.stats.granted')}
+            value={selectedRole ? String(grantedCount) : '-'}
+            accent="amber"
+            icon={<SafetyCertificateOutlined />}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <div className="lg:col-span-4">
-          <div className="erp-pro-card">
+          <div className="erp-pro-card erp-employees-list-card">
             <div className="erp-pro-card-toolbar erp-users-toolbar">
               <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
                 <h3 className="erp-pro-card-toolbar-title">

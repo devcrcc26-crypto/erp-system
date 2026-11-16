@@ -254,7 +254,7 @@ export default function LeaveRequestDetailPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page erp-leave-v2">
-      <section className="erp-leave-detail-hero">
+      <section className="erp-leave-detail-hero erp-brand-hero">
         <div className="erp-leave-hero-top">
           <div className="min-w-0">
             <Link href={backHref} className="erp-leave-back">

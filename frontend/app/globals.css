@@ -8278,3 +8278,266 @@ main::-webkit-scrollbar,
   background: rgba(var(--erp-accent-rgb), 0.06);
   color: var(--erp-n-800);
 }
+
+/*
+ * Shared brand hero (.erp-brand-hero) - opt-in class for module detail heroes
+ * that have their own markup (Leave request, Site assignment, Field movement
+ * log, Public holiday, Evaluation, Evaluation template, Payroll run). Turns
+ * the hero container into the brand banner used by the dashboard, Approvals
+ * and the HR detail pages, without touching each module's layout rules.
+ * Children are matched by the modules' shared naming: *-hero-title, *-back,
+ * *-meta, *-hero-actions. Selectors carry (0,3,0)+ and !important on text
+ * colours so they win over module CSS (which uses (0,2,0) and !important on
+ * back links). Tags / status badges keep their colours as opaque pills.
+ */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px;
+  background: var(--gradient-brand-panel) !important;
+  color: #ffffff;
+  box-shadow:
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 2px 6px rgba(10, 36, 32, 0.12) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -6%;
+  z-index: -1;
+  width: 26rem;
+  height: 26rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
+/* Title, back link, meta lines. */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero :is(h1, h2, h3, [class*='hero-title']) {
+  color: #ffffff !important;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero :is([class*='-back'], [class*='-back'] *) {
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero a[class*='-back'] {
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero a[class*='-back']:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero a[class*='-back']:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero :is([class*='-meta'], .erp-users-email, .erp-users-cell-sub) {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero :is([class*='-meta']) strong {
+  color: #ffffff !important;
+}
+
+/* Request # chip: glass mono. */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .erp-users-id-chip {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-tag {
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(10, 36, 32, 0.2);
+}
+
+/* Avatar: white ring. */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero :is(.ant-avatar, .erp-users-avatar) {
+  box-shadow: 0 0 0 2px #ffffff, 0 6px 14px rgba(10, 36, 32, 0.24);
+}
+
+/* Buttons: glass; primary solid white; danger keeps a red hint. */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  background-image: none !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff !important;
+  box-shadow: none;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn-primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn-primary:not(:disabled):hover {
+  background: var(--color-primary-soft, #e1f5ee) !important;
+  color: var(--erp-accent-hover) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn-dangerous {
+  border-color: rgba(254, 205, 202, 0.6) !important;
+  color: #fecdca !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn:disabled {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Tabs inside a brand hero (e.g. Policy settings groups): glass pills,
+ * selected = solid white with accent text; count badges follow. */
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tablist'] {
+  gap: 6px;
+  border: 0;
+  background: transparent;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab'] {
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+  font-weight: 550;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab']:hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab'][aria-selected='true'] {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--erp-accent-hover) !important;
+  font-weight: 650;
+  box-shadow: 0 4px 12px rgba(10, 36, 32, 0.2);
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab']::after {
+  display: none;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab']:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab'] [class*='count'] {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero [role='tab'][aria-selected='true'] [class*='count'] {
+  background: rgba(var(--erp-accent-rgb), 0.12);
+  color: var(--erp-accent-hover);
+}
+
+/* System reports banner (.erp-brand-hero supplies the brand surface). */
+.system-reports-page .erp-reports-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+.system-reports-page .erp-reports-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+
+.system-reports-page .erp-reports-hero-lead {
+  max-width: 44rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.system-reports-page .erp-reports-hero-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.system-reports-page .erp-reports-hero-fact {
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(8px);
+}
+
+.system-reports-page .erp-reports-hero-fact dt {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.system-reports-page .erp-reports-hero-fact dd {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .system-reports-page .erp-reports-hero {
+    padding: 18px 16px;
+  }
+
+  .system-reports-page .erp-reports-hero-top .ant-btn {
+    width: 100%;
+  }
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Button, Pagination, Segmented, Spin } from 'antd';
@@ -9,7 +10,6 @@ import {
   MailOutlined,
 } from '@ant-design/icons';
 import NotificationInboxItem from '@/components/ui/NotificationInboxItem/NotificationInboxItem';
-import KPICard from '@/components/ui/KPICard/KPICard';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -103,30 +103,47 @@ export default function NotificationsPageContent(): React.ReactNode {
   const readCount = Math.max(0, (meta?.total ?? 0) - unreadCount);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <KPICard
-          label={t('pages.notifications.stats.total')}
-          value={String(meta?.total ?? 0)}
-          icon={BellOutlined}
-          iconBg={tokens.colorTeal50}
-          iconColor={tokens.colorTeal400}
-        />
-        <KPICard
-          label={t('pages.notifications.stats.unread')}
-          value={String(unreadCount)}
-          icon={MailOutlined}
-          iconBg={tokens.colorAmber50}
-          iconColor={tokens.colorAmber400}
-        />
-        <KPICard
-          label={t('pages.notifications.stats.read')}
-          value={String(readCount)}
-          icon={CheckCircleOutlined}
-          iconBg={tokens.colorBlue50}
-          iconColor={tokens.colorBlue400}
-        />
-      </div>
+    <div className="erp-users-page erp-employees-v2 flex flex-col gap-4">
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <div className="erp-users-stat">
+            <span
+              className="erp-users-stat-chip"
+              style={{ background: tokens.colorTeal50, color: tokens.colorTeal600 }}
+            >
+              <BellOutlined />
+            </span>
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('pages.notifications.stats.total')}</p>
+              <p className="erp-users-stat-value">{(meta?.total ?? 0).toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <span
+              className="erp-users-stat-chip"
+              style={{ background: tokens.colorAmber50, color: tokens.colorAmber400 }}
+            >
+              <MailOutlined />
+            </span>
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('pages.notifications.stats.unread')}</p>
+              <p className="erp-users-stat-value">{unreadCount.toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="erp-users-stat">
+            <span
+              className="erp-users-stat-chip"
+              style={{ background: tokens.colorBlue50, color: tokens.colorBlue400 }}
+            >
+              <CheckCircleOutlined />
+            </span>
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('pages.notifications.stats.read')}</p>
+              <p className="erp-users-stat-value">{readCount.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div
         className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 py-3"

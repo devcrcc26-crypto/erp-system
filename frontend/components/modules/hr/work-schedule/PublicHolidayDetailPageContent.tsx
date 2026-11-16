@@ -212,7 +212,7 @@ export default function PublicHolidayDetailPageContent({
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <section className="erp-ph-detail-hero">
+      <section className="erp-ph-detail-hero erp-brand-hero">
         <div className="erp-ph-hero-top">
           <div className="min-w-0">
             <Link href={LIST_PATH} className="erp-ph-back">

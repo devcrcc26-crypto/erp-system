@@ -38,3 +38,18 @@ export function generateTemporaryPassword(length = 12): string {
   }
   return result;
 }
+
+/**
+ * Generates an 8-character uppercase OTP for bulk first-login issuance.
+ * Alphabet excludes ambiguous characters: 0, O, I, 1.
+ * Never logs the result - caller must handle display securely.
+ */
+export function generateOneTimePassword(length = 8): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(length);
+  let result = '';
+  for (let i = 0; i < length; i += 1) {
+    result += alphabet[bytes[i]! % alphabet.length];
+  }
+  return result;
+}

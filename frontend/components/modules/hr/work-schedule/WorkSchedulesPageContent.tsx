@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -91,6 +92,14 @@ function WeekStrip({
   );
 }
 
+const STAT_TINT = {
+  teal: { bg: '#E1F5EE', fg: '#0F6E56' },
+  green: { bg: '#EAF3DE', fg: '#4A7319' },
+  slate: { bg: '#EEF1F4', fg: '#475569' },
+  amber: { bg: '#FAEEDA', fg: '#7A4D0F' },
+} as const;
+
+/** Status filter tile - shared markup, glass on the brand banner. */
 function StatTile({
   label,
   value,
@@ -101,41 +110,29 @@ function StatTile({
 }: {
   label: string;
   value: number;
-  accent: 'teal' | 'green' | 'slate' | 'amber';
+  accent: keyof typeof STAT_TINT;
   icon: React.ReactNode;
   active: boolean;
   onClick: () => void;
 }): React.ReactNode {
-  const chip = {
-    teal: 'bg-emerald-50 text-emerald-700',
-    green: 'bg-lime-50 text-lime-700',
-    slate: 'bg-slate-100 text-slate-600',
-    amber: 'bg-amber-50 text-amber-700',
-  }[accent];
-
+  const tint = STAT_TINT[accent];
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-w-0 items-center gap-3.5 rounded-2xl bg-white px-5 py-4 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] transition-colors hover:bg-slate-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
-        active
-          ? 'bg-emerald-50/80 shadow-[inset_0_0_0_2px_#1d9e75,0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]'
-          : ''
-      }`}
+      aria-pressed={active}
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
     >
       <span
-        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ${chip}`}
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
       >
         {icon}
       </span>
-      <span className="min-w-0">
-        <span className="block text-[12px] font-medium tracking-[0.06em] text-slate-500 uppercase">
-          {label}
-        </span>
-        <span className="mt-1 block text-2xl font-semibold tracking-tight text-slate-900">
-          {value.toLocaleString()}
-        </span>
-      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
     </button>
   );
 }
@@ -305,7 +302,7 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="erp-users-page erp-employees-v2 flex flex-col gap-5">
       <AssignWorkScheduleModal
         open={Boolean(assignSchedule)}
         schedule={assignSchedule}
@@ -337,13 +334,8 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div
-        className={`grid gap-4 ${
-          isCompact
-            ? 'grid-cols-2'
-            : 'grid-cols-2 xl:grid-cols-4'
-        }`}
-      >
+      <section className="erp-employees-hero erp-employees-hero--stats">
+      <div className="erp-users-stat-bar erp-employees-hero-stats">
         <StatTile
           label={t('hr.workSchedule.stats.total')}
           value={statusCounts.all}
@@ -377,11 +369,12 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
           onClick={() => setStatusMode('default')}
         />
       </div>
+      </section>
 
-      <section className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <section className="erp-pro-card erp-employees-list-card overflow-hidden rounded-2xl bg-white">
+        <div className="erp-pro-card-toolbar erp-users-toolbar flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h3 className="m-0 text-base font-semibold text-slate-900">
+            <h3 className="erp-pro-card-toolbar-title m-0 text-base font-semibold">
               {t('pages.hr.workSchedules.listTitle')}
             </h3>
             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
