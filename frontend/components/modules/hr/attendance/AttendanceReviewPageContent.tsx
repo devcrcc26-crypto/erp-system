@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import './attendance-v2.css';
@@ -620,7 +621,7 @@ export default function AttendanceReviewPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-attendance-page erp-attendance-review-page erp-attendance-v2">
         <Alert
           type="error"
           showIcon
@@ -635,7 +636,7 @@ export default function AttendanceReviewPageContent({
     (approvalQuery.isLoading && approvalQuery.data === undefined)
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-attendance-page erp-attendance-review-page erp-attendance-v2">
         <div className="erp-att-loading">
           <Spin />
         </div>
@@ -694,7 +695,7 @@ export default function AttendanceReviewPageContent({
   ];
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-attendance-page erp-attendance-review-page erp-attendance-v2">
       <section className="erp-att-review-hero">
         <div className="erp-att-review-hero-top">
           <div className="min-w-0">
@@ -805,35 +806,37 @@ export default function AttendanceReviewPageContent({
         ) : null}
       </section>
 
-      <div className="erp-users-stat-bar">
-        {reviewStats.map((stat) => (
-          <div
-            key={stat.key}
-            className="erp-users-stat erp-contract-stat erp-contract-stat--static"
-          >
-            <span
-              className="erp-users-stat-chip"
-              style={{ background: stat.chipBg, color: stat.chipFg }}
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          {reviewStats.map((stat) => (
+            <div
+              key={stat.key}
+              className="erp-users-stat erp-contract-stat erp-contract-stat--static"
             >
-              {stat.icon}
-            </span>
-            <div className="min-w-0 flex-1 text-left">
-              <p className="erp-users-stat-label">{stat.label}</p>
-              <p className="erp-users-stat-value">
-                {stat.value}
-                {stat.suffix ? (
-                  <span className="erp-att-stat-hint ml-1 text-sm font-normal">
-                    {stat.suffix}
-                  </span>
-                ) : null}
-              </p>
-              <p className="erp-att-stat-hint">{stat.hint}</p>
+              <span
+                className="erp-users-stat-chip"
+                style={{ background: stat.chipBg, color: stat.chipFg }}
+              >
+                {stat.icon}
+              </span>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="erp-users-stat-label">{stat.label}</p>
+                <p className="erp-users-stat-value">
+                  {stat.value}
+                  {stat.suffix ? (
+                    <span className="erp-att-stat-hint ml-1 text-sm font-normal">
+                      {stat.suffix}
+                    </span>
+                  ) : null}
+                </p>
+                <p className="erp-att-stat-hint">{stat.hint}</p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">

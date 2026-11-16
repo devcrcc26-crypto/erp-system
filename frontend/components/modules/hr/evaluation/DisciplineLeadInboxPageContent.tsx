@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './evaluation-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -392,7 +393,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
 
   if (isLoading && !hasData) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
         <div className="erp-evaluation-loading">
           <Spin />
         </div>
@@ -401,59 +402,61 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
-      <div className="erp-users-stat-bar erp-evaluation-inbox-stats">
-        <EvaluationStat
-          label="Needs Action"
-          value={totalNeedsAction}
-          accent="amber"
-          icon={<ExclamationCircleOutlined />}
-          active={queue === 'needs-action'}
-          onClick={() => setQueue('needs-action')}
-        />
-        <EvaluationStat
-          label="Team Lead"
-          value={needsTLAction.length}
-          accent="blue"
-          icon={<TeamOutlined />}
-          active={queue === 'team-lead'}
-          onClick={() => setQueue('team-lead')}
-        />
-        <EvaluationStat
-          label="Awaiting"
-          value={queues.awaiting.length}
-          accent="teal"
-          icon={<FieldTimeOutlined />}
-          active={queue === 'awaiting'}
-          onClick={() => setQueue('awaiting')}
-        />
-        <EvaluationStat
-          label="Escalated"
-          value={queues.escalated.length}
-          accent="red"
-          icon={<WarningOutlined />}
-          active={queue === 'escalated'}
-          onClick={() => setQueue('escalated')}
-        />
-        <EvaluationStat
-          label="In Progress"
-          value={queues['in-progress'].length}
-          accent="slate"
-          icon={<ClockCircleOutlined />}
-          active={queue === 'in-progress'}
-          onClick={() => setQueue('in-progress')}
-        />
-        <EvaluationStat
-          label="Completed"
-          value={queues.completed.length}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={queue === 'completed'}
-          onClick={() => setQueue('completed')}
-        />
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats erp-evaluation-inbox-stats">
+          <EvaluationStat
+            label="Needs Action"
+            value={totalNeedsAction}
+            accent="amber"
+            icon={<ExclamationCircleOutlined />}
+            active={queue === 'needs-action'}
+            onClick={() => setQueue('needs-action')}
+          />
+          <EvaluationStat
+            label="Team Lead"
+            value={needsTLAction.length}
+            accent="blue"
+            icon={<TeamOutlined />}
+            active={queue === 'team-lead'}
+            onClick={() => setQueue('team-lead')}
+          />
+          <EvaluationStat
+            label="Awaiting"
+            value={queues.awaiting.length}
+            accent="teal"
+            icon={<FieldTimeOutlined />}
+            active={queue === 'awaiting'}
+            onClick={() => setQueue('awaiting')}
+          />
+          <EvaluationStat
+            label="Escalated"
+            value={queues.escalated.length}
+            accent="red"
+            icon={<WarningOutlined />}
+            active={queue === 'escalated'}
+            onClick={() => setQueue('escalated')}
+          />
+          <EvaluationStat
+            label="In Progress"
+            value={queues['in-progress'].length}
+            accent="slate"
+            icon={<ClockCircleOutlined />}
+            active={queue === 'in-progress'}
+            onClick={() => setQueue('in-progress')}
+          />
+          <EvaluationStat
+            label="Completed"
+            value={queues.completed.length}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={queue === 'completed'}
+            onClick={() => setQueue('completed')}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{meta.title}</h3>

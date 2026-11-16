@@ -31,7 +31,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -57,7 +56,7 @@ import { useFullUsersDirectory } from '@/lib/query/users';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_CHROME =
-  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2 ${LIST_PAGE_V2}`;
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2`;
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -362,32 +361,34 @@ export default function PositionsPageContent(): React.ReactNode {
 
   return (
     <div className={PAGE_CHROME}>
-      <div className="erp-users-stat-bar">
-        <OrgListStat
-          label={t('pages.positions.stats.total')}
-          value={statsLoading ? 0 : stats.total}
-          accent="blue"
-          icon={<IdcardOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        <OrgListStat
-          label={t('common.active')}
-          value={statsLoading ? 0 : stats.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'active'}
-          onClick={() => handleStatusMode('active')}
-        />
-        <OrgListStat
-          label={t('common.inactive')}
-          value={statsLoading ? 0 : stats.inactive}
-          accent="slate"
-          icon={<StopOutlined />}
-          active={statusMode === 'inactive'}
-          onClick={() => handleStatusMode('inactive')}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <OrgListStat
+            label={t('pages.positions.stats.total')}
+            value={statsLoading ? 0 : stats.total}
+            accent="blue"
+            icon={<IdcardOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => handleStatusMode('all')}
+          />
+          <OrgListStat
+            label={t('common.active')}
+            value={statsLoading ? 0 : stats.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'active'}
+            onClick={() => handleStatusMode('active')}
+          />
+          <OrgListStat
+            label={t('common.inactive')}
+            value={statsLoading ? 0 : stats.inactive}
+            accent="slate"
+            icon={<StopOutlined />}
+            active={statusMode === 'inactive'}
+            onClick={() => handleStatusMode('inactive')}
+          />
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

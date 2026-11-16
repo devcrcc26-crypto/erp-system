@@ -31,7 +31,6 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import SeniorityLevelFormDrawer from '@/components/modules/org/SeniorityLevelFormDrawer';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -52,7 +51,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_CHROME =
-  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2 ${LIST_PAGE_V2}`;
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-positions-page erp-org-v2`;
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -240,38 +239,40 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
 
   return (
     <div className={PAGE_CHROME}>
-      <div className="erp-users-stat-bar">
-        <OrgListStat
-          label={t('pages.positions.stats.total')}
-          value={stats.total}
-          accent="blue"
-          icon={<RiseOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => setStatusMode('all')}
-        />
-        <OrgListStat
-          label={t('common.active')}
-          value={stats.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'active'}
-          onClick={() => setStatusMode('active')}
-        />
-        <OrgListStat
-          label={t('common.inactive')}
-          value={stats.inactive}
-          accent="slate"
-          icon={<StopOutlined />}
-          active={statusMode === 'inactive'}
-          onClick={() => setStatusMode('inactive')}
-        />
-        <OrgListStat
-          label={t('pages.seniorityLevels.stats.peopleAssigned')}
-          value={stats.people}
-          accent="teal"
-          icon={<TeamOutlined />}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <OrgListStat
+            label={t('pages.positions.stats.total')}
+            value={stats.total}
+            accent="blue"
+            icon={<RiseOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => setStatusMode('all')}
+          />
+          <OrgListStat
+            label={t('common.active')}
+            value={stats.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'active'}
+            onClick={() => setStatusMode('active')}
+          />
+          <OrgListStat
+            label={t('common.inactive')}
+            value={stats.inactive}
+            accent="slate"
+            icon={<StopOutlined />}
+            active={statusMode === 'inactive'}
+            onClick={() => setStatusMode('inactive')}
+          />
+          <OrgListStat
+            label={t('pages.seniorityLevels.stats.peopleAssigned')}
+            value={stats.people}
+            accent="teal"
+            icon={<TeamOutlined />}
+          />
+        </div>
+      </section>
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

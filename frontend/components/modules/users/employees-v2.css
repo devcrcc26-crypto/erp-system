@@ -775,3 +775,28 @@
     padding-right: 14px !important;
   }
 }
+
+/*
+ * Stats-only banner (.erp-employees-hero--stats): list pages whose banner holds
+ * just the status tiles (no heading row). No divider above the tiles, and the
+ * grid fits however many tiles the page has (3 or 4).
+ */
+.erp-employees-v2 .erp-employees-hero.erp-employees-hero--stats {
+  padding: 20px 22px;
+}
+
+.erp-employees-v2 .erp-employees-hero--stats > .erp-users-stat-bar {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  padding-top: 0;
+  border-top: 0;
+}
+
+@media (max-width: 640px) {
+  .erp-employees-v2 .erp-employees-hero.erp-employees-hero--stats {
+    padding: 14px;
+  }
+
+  .erp-employees-v2 .erp-employees-hero--stats > .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

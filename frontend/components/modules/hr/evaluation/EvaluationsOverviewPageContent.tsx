@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import './evaluation-v2.css';
@@ -261,7 +262,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
 
   if (evaluationsQuery.isLoading && !evaluationsQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
         <div className="erp-evaluation-loading">
           <Spin />
         </div>
@@ -270,35 +271,37 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
       {contextHolder}
 
-      <div className="erp-users-stat-bar">
-        <EvaluationStat
-          label="Total"
-          value={total}
-          accent="slate"
-          icon={<TeamOutlined />}
-        />
-        <EvaluationStat
-          label="Completed"
-          value={completed}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-        />
-        <EvaluationStat
-          label="Disputed"
-          value={disputed}
-          accent="amber"
-          icon={<ExclamationCircleOutlined />}
-        />
-        <EvaluationStat
-          label="Pending"
-          value={pending}
-          accent="blue"
-          icon={<ClockCircleOutlined />}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <EvaluationStat
+            label="Total"
+            value={total}
+            accent="slate"
+            icon={<TeamOutlined />}
+          />
+          <EvaluationStat
+            label="Completed"
+            value={completed}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+          />
+          <EvaluationStat
+            label="Disputed"
+            value={disputed}
+            accent="amber"
+            icon={<ExclamationCircleOutlined />}
+          />
+          <EvaluationStat
+            label="Pending"
+            value={pending}
+            accent="blue"
+            icon={<ClockCircleOutlined />}
+          />
+        </div>
+      </section>
 
       {total > 0 ? (
         <div className="erp-evaluation-progress">
@@ -311,7 +314,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
         </div>
       ) : null}
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">Employee Evaluations</h3>

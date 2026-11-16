@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/ui/brand-detail-v2.css';
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useState } from 'react';
@@ -35,9 +36,8 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 
-const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-vehicle-detail-page ${DETAIL_PAGE_V2}`;
+const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-company-vehicle-detail-page erp-brand-detail-v2`;
 
 export default function VehicleDetailPageContent({
   vehicleId,
@@ -99,7 +99,7 @@ export default function VehicleDetailPageContent({
   if (detailQuery.isError || !vehicle) {
     return (
       <div
-        className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page ${DETAIL_PAGE_V2}`}
+        className={`erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employee-detail-page erp-brand-detail-v2`}
       >
         <ErpNotice
           tone="error"
@@ -152,7 +152,7 @@ export default function VehicleDetailPageContent({
         onCancel={() => setDeleteOpen(false)}
       />
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button

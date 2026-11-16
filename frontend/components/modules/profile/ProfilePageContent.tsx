@@ -1,6 +1,8 @@
 'use client';
 
 import './profile-v2.css';
+// Same brand banner + tab card as the HR employee detail page.
+import '@/components/modules/users/employee-detail-v2.css';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
@@ -692,7 +694,7 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2">
       {!isEmailVerified && (
         <Alert
           type="warning"
@@ -717,7 +719,7 @@ export default function ProfilePageContent(): React.ReactNode {
         />
       )}
 
-      <div className="erp-pro-card erp-profile-identity">
+      <div className="erp-pro-card erp-profile-identity erp-employee-detail-hero">
         <div className="erp-employee-hero erp-profile-hero">
           <EmployeeProfilePhoto
             source="self"

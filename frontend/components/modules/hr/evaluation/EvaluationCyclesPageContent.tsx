@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './evaluation-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -274,7 +275,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
 
   if (cyclesQuery.isLoading && !cyclesQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
         <div className="erp-evaluation-loading">
           <Spin />
         </div>
@@ -283,45 +284,47 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
       {contextHolder}
 
-      <div className="erp-users-stat-bar">
-        <EvaluationStat
-          label="Total"
-          value={stats.total}
-          accent="slate"
-          icon={<FileTextOutlined />}
-          active={statusFilter === 'all'}
-          onClick={() => setStatusFilter('all')}
-        />
-        <EvaluationStat
-          label="Active"
-          value={stats.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusFilter === 'ACTIVE'}
-          onClick={() => setStatusFilter('ACTIVE')}
-        />
-        <EvaluationStat
-          label="Draft"
-          value={stats.draft}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusFilter === 'DRAFT'}
-          onClick={() => setStatusFilter('DRAFT')}
-        />
-        <EvaluationStat
-          label="Closed"
-          value={stats.closed}
-          accent="slate"
-          icon={<LockOutlined />}
-          active={statusFilter === 'CLOSED'}
-          onClick={() => setStatusFilter('CLOSED')}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <EvaluationStat
+            label="Total"
+            value={stats.total}
+            accent="slate"
+            icon={<FileTextOutlined />}
+            active={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+          />
+          <EvaluationStat
+            label="Active"
+            value={stats.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusFilter === 'ACTIVE'}
+            onClick={() => setStatusFilter('ACTIVE')}
+          />
+          <EvaluationStat
+            label="Draft"
+            value={stats.draft}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusFilter === 'DRAFT'}
+            onClick={() => setStatusFilter('DRAFT')}
+          />
+          <EvaluationStat
+            label="Closed"
+            value={stats.closed}
+            accent="slate"
+            icon={<LockOutlined />}
+            active={statusFilter === 'CLOSED'}
+            onClick={() => setStatusFilter('CLOSED')}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">Evaluation Cycles</h3>

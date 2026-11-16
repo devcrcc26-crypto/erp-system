@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import { useMemo, useState } from 'react';
 import { Button, Input, Skeleton, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -16,7 +17,6 @@ import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { OrgGapEmployee, OrgGapUnit } from '@/lib/api/org-gaps';
@@ -221,7 +221,7 @@ export default function OrgGapsPageContent(): React.ReactNode {
   if (!canViewHr) {
     return (
       <div
-        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+        className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-gaps-page`}
       >
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
@@ -231,7 +231,7 @@ export default function OrgGapsPageContent(): React.ReactNode {
   if (query.isLoading && !data) {
     return (
       <div
-        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+        className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-gaps-page`}
       >
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
@@ -243,7 +243,7 @@ export default function OrgGapsPageContent(): React.ReactNode {
   if (query.isError || !data) {
     return (
       <div
-        className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+        className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-gaps-page`}
       >
         <ErpNotice tone="error" title={t(`${P}.loadError`)} />
       </div>
@@ -252,74 +252,76 @@ export default function OrgGapsPageContent(): React.ReactNode {
 
   return (
     <div
-      className={`erp-pro-list-page erp-users-page erp-org-gaps-page ${LIST_PAGE_V2}`}
+      className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-gaps-page`}
     >
-      <div className="erp-users-stat-bar !grid-cols-2 lg:!grid-cols-4">
-        <EvaluationStat
-          label={t(`${P}.noSupervisor`)}
-          value={totals?.withoutSupervisor ?? 0}
-          accent="amber"
-          icon={<UserDeleteOutlined />}
-          active={section === 'withoutSupervisor'}
-          onClick={() => setSection('withoutSupervisor')}
-        />
-        <EvaluationStat
-          label={t(`${P}.vacantSupervisor`)}
-          value={totals?.withVacantSupervisor ?? 0}
-          accent="red"
-          icon={<UserOutlined />}
-          active={section === 'vacantSupervisor'}
-          onClick={() => setSection('vacantSupervisor')}
-        />
-        <EvaluationStat
-          label={t(`${P}.noDepartment`)}
-          value={totals?.withoutDepartment ?? 0}
-          accent="blue"
-          icon={<ApartmentOutlined />}
-          active={section === 'withoutDepartment'}
-          onClick={() => setSection('withoutDepartment')}
-        />
-        <EvaluationStat
-          label={t(`${P}.noDiscipline`)}
-          value={totals?.withoutDiscipline ?? 0}
-          accent="teal"
-          icon={<TeamOutlined />}
-          active={section === 'withoutDiscipline'}
-          onClick={() => setSection('withoutDiscipline')}
-        />
-        <EvaluationStat
-          label={t(`${P}.departmentsNoLeaderStat`)}
-          value={totals?.departmentsWithoutLeader ?? 0}
-          accent="slate"
-          icon={<Building2 size={18} strokeWidth={2} />}
-          active={section === 'departmentsWithoutLeader'}
-          onClick={() => setSection('departmentsWithoutLeader')}
-        />
-        <EvaluationStat
-          label={t(`${P}.disciplinesNoLeaderStat`)}
-          value={totals?.disciplinesWithoutLeader ?? 0}
-          accent="slate"
-          icon={<GitBranch size={18} strokeWidth={2} />}
-          active={section === 'disciplinesWithoutLeader'}
-          onClick={() => setSection('disciplinesWithoutLeader')}
-        />
-        <EvaluationStat
-          label={t(`${P}.supervisorsNoAccount`)}
-          value={totals?.supervisorsWithoutAccount ?? 0}
-          accent="amber"
-          icon={<UserRoundX size={18} strokeWidth={2} />}
-          active={section === 'supervisorsWithoutAccount'}
-          onClick={() => setSection('supervisorsWithoutAccount')}
-        />
-        <EvaluationStat
-          label={t(`${P}.totalEmployees`)}
-          value={totals?.employees ?? 0}
-          accent="green"
-          icon={<Users size={18} strokeWidth={2} />}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats !grid-cols-2 lg:!grid-cols-4">
+          <EvaluationStat
+            label={t(`${P}.noSupervisor`)}
+            value={totals?.withoutSupervisor ?? 0}
+            accent="amber"
+            icon={<UserDeleteOutlined />}
+            active={section === 'withoutSupervisor'}
+            onClick={() => setSection('withoutSupervisor')}
+          />
+          <EvaluationStat
+            label={t(`${P}.vacantSupervisor`)}
+            value={totals?.withVacantSupervisor ?? 0}
+            accent="red"
+            icon={<UserOutlined />}
+            active={section === 'vacantSupervisor'}
+            onClick={() => setSection('vacantSupervisor')}
+          />
+          <EvaluationStat
+            label={t(`${P}.noDepartment`)}
+            value={totals?.withoutDepartment ?? 0}
+            accent="blue"
+            icon={<ApartmentOutlined />}
+            active={section === 'withoutDepartment'}
+            onClick={() => setSection('withoutDepartment')}
+          />
+          <EvaluationStat
+            label={t(`${P}.noDiscipline`)}
+            value={totals?.withoutDiscipline ?? 0}
+            accent="teal"
+            icon={<TeamOutlined />}
+            active={section === 'withoutDiscipline'}
+            onClick={() => setSection('withoutDiscipline')}
+          />
+          <EvaluationStat
+            label={t(`${P}.departmentsNoLeaderStat`)}
+            value={totals?.departmentsWithoutLeader ?? 0}
+            accent="slate"
+            icon={<Building2 size={18} strokeWidth={2} />}
+            active={section === 'departmentsWithoutLeader'}
+            onClick={() => setSection('departmentsWithoutLeader')}
+          />
+          <EvaluationStat
+            label={t(`${P}.disciplinesNoLeaderStat`)}
+            value={totals?.disciplinesWithoutLeader ?? 0}
+            accent="slate"
+            icon={<GitBranch size={18} strokeWidth={2} />}
+            active={section === 'disciplinesWithoutLeader'}
+            onClick={() => setSection('disciplinesWithoutLeader')}
+          />
+          <EvaluationStat
+            label={t(`${P}.supervisorsNoAccount`)}
+            value={totals?.supervisorsWithoutAccount ?? 0}
+            accent="amber"
+            icon={<UserRoundX size={18} strokeWidth={2} />}
+            active={section === 'supervisorsWithoutAccount'}
+            onClick={() => setSection('supervisorsWithoutAccount')}
+          />
+          <EvaluationStat
+            label={t(`${P}.totalEmployees`)}
+            value={totals?.employees ?? 0}
+            accent="green"
+            icon={<Users size={18} strokeWidth={2} />}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2.5">

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './evaluation-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -273,7 +274,7 @@ export default function MyEvaluationsPageContent({
 
   if (evaluationsQuery.isLoading && !evaluationsQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
         <div className="erp-evaluation-loading">
           <Spin />
         </div>
@@ -282,7 +283,7 @@ export default function MyEvaluationsPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
       {completed.length >= 2 ? (
         <div className="erp-pro-card erp-evaluation-trend-card">
           <div className="erp-pro-card-body">
@@ -292,7 +293,7 @@ export default function MyEvaluationsPageContent({
         </div>
       ) : null}
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">

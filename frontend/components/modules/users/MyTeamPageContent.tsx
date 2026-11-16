@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import { useMemo, useState } from 'react';
 import { Button, Grid, Input, Tooltip } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
@@ -102,14 +103,14 @@ export default function MyTeamPageContent(): React.ReactNode {
 
   if (!canViewTeam) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2">
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -122,7 +123,7 @@ export default function MyTeamPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{t('pages.hr.myTeam.title')}</h3>

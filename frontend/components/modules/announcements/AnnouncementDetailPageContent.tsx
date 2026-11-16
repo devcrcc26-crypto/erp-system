@@ -128,6 +128,8 @@ export default function AnnouncementDetailPageContent({ id }: { id: string }): R
   return (
     <div className="erp-ann-page">
       <article className="erp-ann-card erp-ann-detail">
+        {/* Brand banner: back link, tags, title, meta. */}
+        <header className="erp-ann-detail-hero">
         <Link href={backHref} className="erp-ann-back">
           <ArrowLeft size={14} strokeWidth={2} aria-hidden />
           {item.type === 'SYSTEM_UPDATE'
@@ -164,6 +166,7 @@ export default function AnnouncementDetailPageContent({ id }: { id: string }): R
             </span>
           ) : null}
         </p>
+        </header>
 
         <div className="erp-ann-detail-body">
           <AnnouncementMarkdown source={localized(locale, item.body, item.bodyZh)} />

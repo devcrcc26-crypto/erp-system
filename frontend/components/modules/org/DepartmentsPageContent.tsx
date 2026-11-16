@@ -33,7 +33,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import HrPersonCell from '@/components/modules/hr/shared/HrPersonCell';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import DepartmentFormDrawer from '@/components/modules/org/DepartmentFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -62,7 +61,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const LEADER_WARNING_DISMISS_KEY = 'erp-departments-leader-warning-dismissed';
 const PAGE_CHROME =
-  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-departments-page erp-org-v2 ${LIST_PAGE_V2}`;
+  `erp-pro-list-page erp-users-page erp-employees-v2 erp-hr-travel-v2 erp-org-departments-page erp-org-v2`;
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -551,32 +550,34 @@ export default function DepartmentsPageContent(): React.ReactNode {
         <>
           {/* <DepartmentPortfolioStats departments={allDepartmentsForMetrics} /> */}
 
-          <div className="erp-users-stat-bar">
-            <OrgListStat
-              label={t('pages.departments.stats.departmentsTotal')}
-              value={stats.total}
-              accent="blue"
-              icon={<BankOutlined />}
-              active={statusMode === 'all'}
-              onClick={() => handleStatusMode('all')}
-            />
-            <OrgListStat
-              label={t('common.active')}
-              value={stats.active}
-              accent="green"
-              icon={<CheckCircleOutlined />}
-              active={statusMode === 'active'}
-              onClick={() => handleStatusMode('active')}
-            />
-            <OrgListStat
-              label={t('common.inactive')}
-              value={stats.inactive}
-              accent="slate"
-              icon={<StopOutlined />}
-              active={statusMode === 'inactive'}
-              onClick={() => handleStatusMode('inactive')}
-            />
-          </div>
+          <section className="erp-employees-hero erp-employees-hero--stats">
+            <div className="erp-users-stat-bar erp-employees-hero-stats">
+              <OrgListStat
+                label={t('pages.departments.stats.departmentsTotal')}
+                value={stats.total}
+                accent="blue"
+                icon={<BankOutlined />}
+                active={statusMode === 'all'}
+                onClick={() => handleStatusMode('all')}
+              />
+              <OrgListStat
+                label={t('common.active')}
+                value={stats.active}
+                accent="green"
+                icon={<CheckCircleOutlined />}
+                active={statusMode === 'active'}
+                onClick={() => handleStatusMode('active')}
+              />
+              <OrgListStat
+                label={t('common.inactive')}
+                value={stats.inactive}
+                accent="slate"
+                icon={<StopOutlined />}
+                active={statusMode === 'inactive'}
+                onClick={() => handleStatusMode('inactive')}
+              />
+            </div>
+          </section>
 
           <div className="erp-pro-card erp-employees-list-card">
             <div className="erp-pro-card-toolbar erp-users-toolbar">

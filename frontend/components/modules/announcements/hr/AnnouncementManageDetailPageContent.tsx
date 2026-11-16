@@ -141,6 +141,8 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
   return (
     <div className="erp-ann-page">
       <article className="erp-ann-card erp-ann-detail">
+        {/* Brand banner: back link, tags, title, meta, actions. */}
+        <header className="erp-ann-detail-hero">
         <Link href="/hr/announcements" className="erp-ann-back">
           <ArrowLeft size={14} strokeWidth={2} aria-hidden />
           {t('announcements.manage.title')}
@@ -243,6 +245,7 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
             ) : null}
           </div>
         </div>
+        </header>
 
         <div className="erp-ann-facts">
           <div className="erp-ann-fact">

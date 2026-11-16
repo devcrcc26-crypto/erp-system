@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/ui/brand-detail-v2.css';
 import { Button, Grid, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -19,7 +20,6 @@ import {
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/audit-logs';
 
 function DetailSection({
@@ -88,7 +88,7 @@ export default function AuditLogDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page erp-brand-detail-v2`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -98,7 +98,7 @@ export default function AuditLogDetailPageContent({
 
   if (detailQuery.isError || !log) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-brand-detail-v2`}>
         <ErpNotice
           tone="error"
           title={
@@ -121,8 +121,8 @@ export default function AuditLogDetailPageContent({
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page erp-brand-detail-v2`}>
+      <div className="erp-pro-card erp-brand-detail-hero">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
@@ -203,7 +203,7 @@ export default function AuditLogDetailPageContent({
         </div>
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-brand-detail-body">
         <DetailSection title={t('auditLogs.detail.overview')}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <MetaItem label={t('auditLogs.columns.user')}>

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -60,7 +61,6 @@ import { buildCompanyVehicleExportSheets } from '@/lib/utils/company-vehicle-exp
 import { companyVehicleImportSchema } from '@/lib/utils/hr-import-configs';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
  * Company vehicles list - Users chrome (stat bar, filter row, rounded table).
  */
@@ -239,7 +239,7 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-org-vehicles-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-vehicles-page`}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -250,7 +250,7 @@ export default function VehiclesPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-org-vehicles-page ${LIST_PAGE_V2}`}>
+    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-org-vehicles-page`}>
       {importOpen ? (
         <ImportModal
           schema={companyVehicleImportSchema}
@@ -311,42 +311,44 @@ export default function VehiclesPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <OrgListStat
-          label={t('vehicles.stats.total')}
-          value={vehicleStats.totalCount}
-          accent="teal"
-          icon={<CarFront size={14} strokeWidth={2} />}
-          active={statusFilter === undefined}
-          onClick={() => handleStatusStatFilter(undefined)}
-        />
-        <OrgListStat
-          label={t('vehicles.stats.available')}
-          value={vehicleStats.availableCount}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusFilter === 'AVAILABLE'}
-          onClick={() => handleStatusStatFilter('AVAILABLE')}
-        />
-        <OrgListStat
-          label={t('vehicles.stats.inUse')}
-          value={vehicleStats.inUseCount}
-          accent="amber"
-          icon={<CarOutlined />}
-          active={statusFilter === 'IN_USE'}
-          onClick={() => handleStatusStatFilter('IN_USE')}
-        />
-        <OrgListStat
-          label={t('vehicles.stats.maintenanceRetired')}
-          value={vehicleStats.maintenanceCount}
-          accent="slate"
-          icon={<ToolOutlined />}
-          active={statusFilter === 'MAINTENANCE'}
-          onClick={() => handleStatusStatFilter('MAINTENANCE')}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <OrgListStat
+            label={t('vehicles.stats.total')}
+            value={vehicleStats.totalCount}
+            accent="teal"
+            icon={<CarFront size={14} strokeWidth={2} />}
+            active={statusFilter === undefined}
+            onClick={() => handleStatusStatFilter(undefined)}
+          />
+          <OrgListStat
+            label={t('vehicles.stats.available')}
+            value={vehicleStats.availableCount}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusFilter === 'AVAILABLE'}
+            onClick={() => handleStatusStatFilter('AVAILABLE')}
+          />
+          <OrgListStat
+            label={t('vehicles.stats.inUse')}
+            value={vehicleStats.inUseCount}
+            accent="amber"
+            icon={<CarOutlined />}
+            active={statusFilter === 'IN_USE'}
+            onClick={() => handleStatusStatFilter('IN_USE')}
+          />
+          <OrgListStat
+            label={t('vehicles.stats.maintenanceRetired')}
+            value={vehicleStats.maintenanceCount}
+            accent="slate"
+            icon={<ToolOutlined />}
+            active={statusFilter === 'MAINTENANCE'}
+            onClick={() => handleStatusStatFilter('MAINTENANCE')}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">

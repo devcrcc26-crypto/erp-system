@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './public-holidays-v2.css';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -399,7 +400,7 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-public-holidays-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-public-holidays-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -407,7 +408,7 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-public-holidays-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-public-holidays-v2">
         <div className="erp-ph-loading">
           <Spin />
         </div>
@@ -416,7 +417,7 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-public-holidays-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-public-holidays-v2">
       <ConfirmDialog
         open={deleteTarget !== null}
         title={t('hr.publicHoliday.deleteTitle')}
@@ -474,42 +475,44 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar">
-        <EvaluationStat
-          label={t('hr.publicHoliday.stats.total')}
-          value={statusCounts.all}
-          accent="teal"
-          icon={<CalendarOutlined />}
-          active={statusMode === 'all'}
-          onClick={() => handleStatusMode('all')}
-        />
-        <EvaluationStat
-          label={t('hr.publicHoliday.stats.active')}
-          value={statusCounts.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusMode === 'active'}
-          onClick={() => handleStatusMode('active')}
-        />
-        <EvaluationStat
-          label={t('hr.publicHoliday.stats.inactive')}
-          value={statusCounts.inactive}
-          accent="slate"
-          icon={<StopOutlined />}
-          active={statusMode === 'inactive'}
-          onClick={() => handleStatusMode('inactive')}
-        />
-        <EvaluationStat
-          label={t('hr.publicHoliday.stats.upcoming')}
-          value={statusCounts.upcoming}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statusMode === 'upcoming'}
-          onClick={() => handleStatusMode('upcoming')}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <EvaluationStat
+            label={t('hr.publicHoliday.stats.total')}
+            value={statusCounts.all}
+            accent="teal"
+            icon={<CalendarOutlined />}
+            active={statusMode === 'all'}
+            onClick={() => handleStatusMode('all')}
+          />
+          <EvaluationStat
+            label={t('hr.publicHoliday.stats.active')}
+            value={statusCounts.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusMode === 'active'}
+            onClick={() => handleStatusMode('active')}
+          />
+          <EvaluationStat
+            label={t('hr.publicHoliday.stats.inactive')}
+            value={statusCounts.inactive}
+            accent="slate"
+            icon={<StopOutlined />}
+            active={statusMode === 'inactive'}
+            onClick={() => handleStatusMode('inactive')}
+          />
+          <EvaluationStat
+            label={t('hr.publicHoliday.stats.upcoming')}
+            value={statusCounts.upcoming}
+            accent="amber"
+            icon={<ClockCircleOutlined />}
+            active={statusMode === 'upcoming'}
+            onClick={() => handleStatusMode('upcoming')}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">

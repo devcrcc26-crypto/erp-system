@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './attendance-v2.css';
 
 import { useMemo, useState } from 'react';
@@ -15,7 +16,6 @@ import Link from 'next/link';
 import { ArrowLeft, Fingerprint, Link2, Pencil, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   listAttendanceIdentities,
@@ -34,7 +34,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 type StatusFilter = AttendanceIdentityStatus | 'ALL';
 
 const IDENTITIES_KEY = ['attendance-identities'] as const;
-const PAGE_V2 = `erp-pro-list-page erp-users-page erp-attendance-v2 ${LIST_PAGE_V2}`;
+const PAGE_V2 = `erp-pro-list-page erp-users-page erp-employees-v2 erp-attendance-v2`;
 
 /**
  * HR maintenance page for attendance-machine identities: which machine name /
@@ -317,34 +317,36 @@ export default function AttendanceIdentitiesPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-users-stat-bar !grid-cols-1 sm:!grid-cols-3">
-        <EvaluationStat
-          label={t('pages.hr.attendance.identities.statAll')}
-          value={counts.ALL}
-          accent="slate"
-          icon={<Fingerprint size={18} strokeWidth={2} />}
-          active={statusFilter === 'ALL'}
-          onClick={() => setStatusFilter('ALL')}
-        />
-        <EvaluationStat
-          label={t('pages.hr.attendance.identities.statMapped')}
-          value={counts.MAPPED}
-          accent="green"
-          icon={<LinkOutlined />}
-          active={statusFilter === 'MAPPED'}
-          onClick={() => setStatusFilter('MAPPED')}
-        />
-        <EvaluationStat
-          label={t('pages.hr.attendance.identities.statIgnored')}
-          value={counts.IGNORED}
-          accent="amber"
-          icon={<StopOutlined />}
-          active={statusFilter === 'IGNORED'}
-          onClick={() => setStatusFilter('IGNORED')}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats !grid-cols-1 sm:!grid-cols-3">
+          <EvaluationStat
+            label={t('pages.hr.attendance.identities.statAll')}
+            value={counts.ALL}
+            accent="slate"
+            icon={<Fingerprint size={18} strokeWidth={2} />}
+            active={statusFilter === 'ALL'}
+            onClick={() => setStatusFilter('ALL')}
+          />
+          <EvaluationStat
+            label={t('pages.hr.attendance.identities.statMapped')}
+            value={counts.MAPPED}
+            accent="green"
+            icon={<LinkOutlined />}
+            active={statusFilter === 'MAPPED'}
+            onClick={() => setStatusFilter('MAPPED')}
+          />
+          <EvaluationStat
+            label={t('pages.hr.attendance.identities.statIgnored')}
+            value={counts.IGNORED}
+            accent="amber"
+            icon={<StopOutlined />}
+            active={statusFilter === 'IGNORED'}
+            onClick={() => setStatusFilter('IGNORED')}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2.5">

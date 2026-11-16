@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/modules/users/employees-v2.css';
 import './evaluation-v2.css';
 
 import { useMemo, useRef, useState } from 'react';
@@ -220,7 +221,7 @@ export default function EvaluationTemplatesPageContent(): React.ReactNode {
 
   if (templatesQuery.isLoading && !templatesQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
         <div className="erp-evaluation-loading">
           <Spin />
         </div>
@@ -229,43 +230,45 @@ export default function EvaluationTemplatesPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-evaluation-page erp-evaluation-v2">
       {contextHolder}
 
-      <div className="erp-users-stat-bar">
-        <EvaluationStat
-          label="Templates"
-          value={stats.total}
-          accent="slate"
-          icon={<FileTextOutlined />}
-          active={statusFilter === 'all'}
-          onClick={() => setStatusFilter('all')}
-        />
-        <EvaluationStat
-          label="Active"
-          value={stats.active}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statusFilter === 'active'}
-          onClick={() => setStatusFilter('active')}
-        />
-        <EvaluationStat
-          label="Inactive"
-          value={stats.inactive}
-          accent="amber"
-          icon={<StopOutlined />}
-          active={statusFilter === 'inactive'}
-          onClick={() => setStatusFilter('inactive')}
-        />
-        <EvaluationStat
-          label="Criteria"
-          value={stats.criteria}
-          accent="teal"
-          icon={<CheckCircleOutlined />}
-        />
-      </div>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <EvaluationStat
+            label="Templates"
+            value={stats.total}
+            accent="slate"
+            icon={<FileTextOutlined />}
+            active={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+          />
+          <EvaluationStat
+            label="Active"
+            value={stats.active}
+            accent="green"
+            icon={<CheckCircleOutlined />}
+            active={statusFilter === 'active'}
+            onClick={() => setStatusFilter('active')}
+          />
+          <EvaluationStat
+            label="Inactive"
+            value={stats.inactive}
+            accent="amber"
+            icon={<StopOutlined />}
+            active={statusFilter === 'inactive'}
+            onClick={() => setStatusFilter('inactive')}
+          />
+          <EvaluationStat
+            label="Criteria"
+            value={stats.criteria}
+            accent="teal"
+            icon={<CheckCircleOutlined />}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">Evaluation Templates</h3>

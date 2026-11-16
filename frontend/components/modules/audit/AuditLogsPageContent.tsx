@@ -1,4 +1,5 @@
 'use client';
+import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -42,7 +43,6 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: accent.light, fg: accent.primary },
   blue: { bg: '#E6F1FB', fg: '#378ADD' },
@@ -190,7 +190,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
 
   if (auditLogsQuery.isLoading && !auditLogsQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-audit-logs-page`}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
           <Spin />
         </div>
@@ -205,7 +205,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         : 0;
 
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
+      <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-audit-logs-page`}>
         <ErpNotice
           tone="error"
           title={
@@ -232,35 +232,37 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
-      <div className="erp-users-stat-bar">
-        <AuditStat
-          label={t('auditLogs.stats.total')}
-          value={auditStats.totalCount}
-          accent="teal"
-          icon={<ScrollText size={14} />}
-        />
-        <AuditStat
-          label={t('auditLogs.stats.userActions')}
-          value={auditStats.userActionCount}
-          accent="blue"
-          icon={<UserOutlined />}
-        />
-        <AuditStat
-          label={t('auditLogs.stats.systemJobs')}
-          value={auditStats.systemJobCount}
-          accent="amber"
-          icon={<ReloadOutlined />}
-        />
-        <AuditStat
-          label={t('auditLogs.stats.integrations')}
-          value={auditStats.integrationCount}
-          accent="green"
-          icon={<ApiOutlined />}
-        />
-      </div>
+    <div className={`erp-pro-list-page erp-users-page erp-employees-v2 erp-audit-logs-page`}>
+      <section className="erp-employees-hero erp-employees-hero--stats">
+        <div className="erp-users-stat-bar erp-employees-hero-stats">
+          <AuditStat
+            label={t('auditLogs.stats.total')}
+            value={auditStats.totalCount}
+            accent="teal"
+            icon={<ScrollText size={14} />}
+          />
+          <AuditStat
+            label={t('auditLogs.stats.userActions')}
+            value={auditStats.userActionCount}
+            accent="blue"
+            icon={<UserOutlined />}
+          />
+          <AuditStat
+            label={t('auditLogs.stats.systemJobs')}
+            value={auditStats.systemJobCount}
+            accent="amber"
+            icon={<ReloadOutlined />}
+          />
+          <AuditStat
+            label={t('auditLogs.stats.integrations')}
+            value={auditStats.integrationCount}
+            accent="green"
+            icon={<ApiOutlined />}
+          />
+        </div>
+      </section>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">

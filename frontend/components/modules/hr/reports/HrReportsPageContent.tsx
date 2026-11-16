@@ -35,7 +35,6 @@ import ContractsAttendanceTab from '@/components/modules/hr/reports/tabs/Contrac
 import LeaveOtTab from '@/components/modules/hr/reports/tabs/LeaveOtTab';
 import OverviewTab from '@/components/modules/hr/reports/tabs/OverviewTab';
 import PayrollSpendTab from '@/components/modules/hr/reports/tabs/PayrollSpendTab';
-import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useCanViewHr, useIsHrManager } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -68,7 +67,7 @@ function panelDomId(id: HrReportTabId): string {
   return `hr-report-panel-${id}`;
 }
 
-const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employees-v2 erp-dashboard-v2 erp-hr-reports-page w-full max-w-none ${LIST_PAGE_V2}`;
+const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-hr-travel-v2 erp-employees-v2 erp-dashboard-v2 erp-hr-reports-page w-full max-w-none`;
 
 function TabPanelContent({
   tab,
@@ -222,7 +221,7 @@ function HrReportsPageInner(): React.ReactNode {
 
   return (
     <div className={PAGE_ROOT}>
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 flex-col">
             <h3 className="erp-pro-card-toolbar-title m-0">
