@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Head, HttpCode } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from './shared/decorators/public.decorator';
@@ -48,5 +48,17 @@ export class AppController {
         this.configService.get<boolean>('EMAIL_DISABLED') === true,
       autoApproveAll: getAutoApproveModeFromEnv().active,
     };
+  }
+
+  /**
+   * HEAD variant for free-tier uptime monitors (e.g. UptimeRobot defaults to HEAD).
+   * Same DB probe as GET; response body is omitted by the HTTP method.
+   */
+  @Public()
+  @Head('health')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'API and database health check (HEAD)' })
+  async healthHead(): Promise<void> {
+    await this.prisma.$queryRaw`SELECT 1`;
   }
 }

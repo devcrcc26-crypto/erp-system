@@ -76,3 +76,6 @@ playwright/.cache/
 frontend/tests/attendance/TEST-REPORT.md
 frontend/components/sidebar/SIDEBAR.md
 backend/src/modules/hr-shared/application/import-export/IMPORT_EXPORT.md
+
+# HR master-data migration exports (employee PII — never commit)
+backend/prisma/data/export/

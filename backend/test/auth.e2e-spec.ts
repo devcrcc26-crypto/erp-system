@@ -61,6 +61,10 @@ describe('Auth (e2e)', () => {
     expect(response.body.success).toBe(true);
   });
 
+  it('HEAD /api/health is public (UptimeRobot free-tier monitors)', async () => {
+    await request(app.getHttpServer()).head('/api/health').expect(200);
+  });
+
   it('POST /api/auth/login returns tokens for valid credentials', async () => {
     const session = await loginAs(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     expect(session.accessToken).toBeDefined();
