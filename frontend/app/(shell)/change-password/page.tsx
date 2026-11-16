@@ -15,7 +15,6 @@ import { useChangePassword } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface FormValues {
-  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -23,8 +22,6 @@ interface FormValues {
 function useChangePasswordLabels(): {
   heading: string;
   subheading: string;
-  currentPassword: string;
-  currentPasswordHelp: string;
   newPassword: string;
   confirmPassword: string;
   submit: string;
@@ -32,6 +29,7 @@ function useChangePasswordLabels(): {
   minLength: string;
   mismatch: string;
   loginNameConflict: string;
+  missingOtp: string;
 } {
   return useMemo(() => {
     const lang =
@@ -43,8 +41,6 @@ function useChangePasswordLabels(): {
       ? {
           heading: '设置密码',
           subheading: '继续使用前，必须设置新密码。',
-          currentPassword: '当前密码',
-          currentPasswordHelp: 'HR 提供的一次性密码，或您刚才登录时使用的密码。',
           newPassword: '新密码',
           confirmPassword: '确认新密码',
           submit: '设置密码',
@@ -52,13 +48,11 @@ function useChangePasswordLabels(): {
           minLength: '至少 8 个字符',
           mismatch: '两次输入的新密码不一致',
           loginNameConflict: '密码不能与登录名相同',
+          missingOtp: '登录会话已过期。请使用一次性密码重新登录。',
         }
       : {
           heading: 'Set your password',
           subheading: 'You must set a new password before continuing.',
-          currentPassword: 'Current password',
-          currentPasswordHelp:
-            'Your one-time password or the password you just used to sign in.',
           newPassword: 'New password',
           confirmPassword: 'Confirm new password',
           submit: 'Set Password',
@@ -66,10 +60,16 @@ function useChangePasswordLabels(): {
           minLength: 'At least 8 characters',
           mismatch: 'New passwords do not match',
           loginNameConflict: 'Password must not equal the login name',
+          missingOtp:
+            'Your sign-in session expired. Please sign in again with your one-time password.',
         };
   }, []);
 }
 
+/**
+ * Forced first-login password change. Never asks for the current password —
+ * the OTP/temporary password from login is sent as currentPassword to the API.
+ */
 export default function ForceChangePasswordPage(): React.ReactNode {
   const router = useRouter();
   const changePassword = useChangePassword();
@@ -77,8 +77,8 @@ export default function ForceChangePasswordPage(): React.ReactNode {
   const loginName = useAuthStore((s) => s.user?.loginName);
   const labels = useChangePasswordLabels();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // The temporary / OTP password just used to sign in (memory only).
-  const [signInPassword, setSignInPassword] = useState<string | null>(() =>
+  // Captured once from the login hand-off; never shown as a form field.
+  const [signInPassword] = useState<string | null>(() =>
     peekPendingTemporaryPassword(),
   );
 
@@ -96,9 +96,16 @@ export default function ForceChangePasswordPage(): React.ReactNode {
       return;
     }
 
+    const currentPassword =
+      signInPassword ?? peekPendingTemporaryPassword() ?? '';
+    if (!currentPassword) {
+      setErrorMessage(labels.missingOtp);
+      return;
+    }
+
     try {
       await changePassword.mutateAsync({
-        currentPassword: signInPassword ?? values.currentPassword ?? '',
+        currentPassword,
         newPassword: values.newPassword,
       });
       clearPendingTemporaryPassword();
@@ -107,10 +114,6 @@ export default function ForceChangePasswordPage(): React.ReactNode {
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
-        if (signInPassword && /current password/i.test(error.message)) {
-          clearPendingTemporaryPassword();
-          setSignInPassword(null);
-        }
       } else {
         setErrorMessage('Could not change password. Please try again.');
       }
@@ -148,20 +151,6 @@ export default function ForceChangePasswordPage(): React.ReactNode {
                 className="erp-login-form"
                 onFinish={(values) => void handleSubmit(values)}
               >
-                {signInPassword ? null : (
-                  <Form.Item
-                    label={labels.currentPassword}
-                    name="currentPassword"
-                    extra={labels.currentPasswordHelp}
-                    rules={[{ required: true, message: labels.required }]}
-                  >
-                    <Input.Password
-                      prefix={<LockOutlined aria-hidden />}
-                      autoComplete="off"
-                      size="large"
-                    />
-                  </Form.Item>
-                )}
                 <Form.Item
                   label={labels.newPassword}
                   name="newPassword"
