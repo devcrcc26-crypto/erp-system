@@ -797,17 +797,23 @@
   line-height: 1.3;
 }
 
-/* Refresh: quiet square icon button. */
+/* Refresh: quiet square icon button. Text and primary buttons keep their own width/fill. */
 .erp-approvals-page .erp-approvals-table-card .erp-users-toolbar-actions .ant-btn {
-  width: 36px;
   height: 36px;
+}
+
+.erp-approvals-page .erp-approvals-table-card .erp-users-toolbar-actions .ant-btn-icon-only {
+  width: 36px;
+}
+
+.erp-approvals-page .erp-approvals-table-card .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary) {
   border: 1px solid var(--ap2-divider);
   border-radius: var(--radius-control, 10px);
   background: #ffffff;
   color: var(--ap2-muted);
 }
 
-.erp-approvals-page .erp-approvals-table-card .erp-users-toolbar-actions .ant-btn:hover {
+.erp-approvals-page .erp-approvals-table-card .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary):not(:disabled):hover {
   border-color: var(--erp-accent) !important;
   background: rgba(var(--erp-accent-rgb), 0.06) !important;
   color: var(--erp-accent-hover) !important;

@@ -619,16 +619,27 @@
   font-weight: 650;
 }
 
+/*
+ * Toolbar buttons: one height for all. Only icon-only buttons (refresh, overflow
+ * menu) are fixed 36px squares — text buttons such as "Export report" keep
+ * their natural width, and primary buttons keep antd's fill.
+ */
 .erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn {
-  width: 36px;
   height: 36px;
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn-icon-only {
+  width: 36px;
+}
+
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary) {
   border: 1px solid var(--ev2-divider);
   border-radius: var(--radius-control, 10px);
   background: #ffffff;
   color: var(--ev2-muted);
 }
 
-.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn:hover {
+.erp-employees-v2 .erp-employees-list-card .erp-users-toolbar-actions .ant-btn:not(.ant-btn-primary):not(:disabled):hover {
   border-color: var(--erp-accent) !important;
   background: rgba(var(--erp-accent-rgb), 0.06) !important;
   color: var(--erp-accent-hover) !important;
