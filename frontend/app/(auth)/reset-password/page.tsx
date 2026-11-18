@@ -1,25 +1,101 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Button, Form, Input, Spin } from 'antd';
+import { LockOutlined } from '@ant-design/icons';
+import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { PriorSessionNotice } from '@/components/auth/PriorSessionNotice';
-import AuthCenteredShell from '@/components/auth/AuthCenteredShell';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
 import { useResetPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
+
+interface ResetFormValues {
+  newPassword: string;
+  confirmPassword: string;
+}
+
+function useResetPasswordLabels(): {
+  heading: string;
+  subtitle: (email: string) => string;
+  brandLine: string;
+  newPassword: string;
+  confirmPassword: string;
+  required: string;
+  minLength: string;
+  mismatch: string;
+  submit: string;
+  submitting: string;
+  invalidLink: string;
+  expiredHint: string;
+  forgotLink: string;
+  backToSignIn: string;
+  genericError: string;
+  priorSession: string;
+} {
+  return useMemo(() => {
+    const lang =
+      typeof document !== 'undefined'
+        ? document.documentElement.lang || navigator.language
+        : 'en';
+    const isZh = lang.toLowerCase().startsWith('zh');
+    return isZh
+      ? {
+          heading: '重置密码',
+          subtitle: (email: string) =>
+            `为 ${email || '您的账户'} 设置新密码。`,
+          brandLine: '项目管理、人力与财务，统一在一个工作区',
+          newPassword: '新密码',
+          confirmPassword: '确认新密码',
+          required: '必填',
+          minLength: '至少 8 个字符',
+          mismatch: '两次输入的密码不一致。',
+          submit: '重置密码',
+          submitting: '重置中…',
+          invalidLink: '重置链接无效或缺少必要参数。',
+          expiredHint:
+            '重置链接 2 小时后失效，且只能使用一次。请重新申请链接：',
+          forgotLink: '忘记密码',
+          backToSignIn: '返回登录',
+          genericError: '密码重置失败。请重新申请链接。',
+          priorSession: '已退出登录，以便继续完成密码重置。',
+        }
+      : {
+          heading: 'Reset password',
+          subtitle: (email: string) =>
+            `Choose a new password for ${email || 'your account'}.`,
+          brandLine: 'Projects, workforce and finance in one workspace',
+          newPassword: 'New password',
+          confirmPassword: 'Confirm password',
+          required: 'Required',
+          minLength: 'At least 8 characters',
+          mismatch: 'Passwords do not match.',
+          submit: 'Reset password',
+          submitting: 'Resetting…',
+          invalidLink: 'Reset link is invalid or missing required parameters.',
+          expiredHint:
+            'Reset links expire after 2 hours and can only be used once. Request a new link from',
+          forgotLink: 'forgot password',
+          backToSignIn: 'Back to sign in',
+          genericError: 'Password reset failed. Please request a new link.',
+          priorSession:
+            'You have been signed out so this password reset can continue.',
+        };
+  }, []);
+}
 
 function ResetPasswordForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetPassword = useResetPassword();
   const { priorUserEmail } = usePrepareIdentityAuthFlow();
+  const labels = useResetPasswordLabels();
 
   const emailFromUrl = (searchParams.get('email') ?? '').trim().toLowerCase();
   const tokenFromUrl = (searchParams.get('token') ?? '').trim();
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,17 +104,16 @@ function ResetPasswordForm(): React.ReactNode {
     }
   }, [tokenFromUrl, emailFromUrl, router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function handleSubmit(values: ResetFormValues): Promise<void> {
     setErrorMessage(null);
 
     if (!emailFromUrl || !tokenFromUrl) {
-      setErrorMessage('Reset link is invalid or missing required parameters.');
+      setErrorMessage(labels.invalidLink);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+    if (values.newPassword !== values.confirmPassword) {
+      setErrorMessage(labels.mismatch);
       return;
     }
 
@@ -46,121 +121,164 @@ function ResetPasswordForm(): React.ReactNode {
       await resetPassword.mutateAsync({
         email: emailFromUrl,
         token: tokenFromUrl,
-        newPassword: password,
+        newPassword: values.newPassword,
       });
       router.replace('/login?reset=1');
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage('Password reset failed. Please request a new link.');
+        setErrorMessage(labels.genericError);
       }
     }
   }
 
+  const linkExpired = Boolean(
+    errorMessage?.toLowerCase().includes('invalid or expired'),
+  );
+
   return (
-    <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-      <div className="mb-6 text-center sm:mb-8">
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-          Reset password
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Choose a new password for {emailFromUrl || 'your account'}.
-        </p>
+    <div className="erp-login-page">
+      <div className="erp-login-stage">
+        <header className="erp-login-topbar">
+          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
+          <span className="erp-login-topbar-divider" aria-hidden />
+          <span className="erp-login-topbar-product">Construction ERP</span>
+        </header>
+
+        <main className="erp-login-main">
+          <div className="erp-login-layout">
+            <section
+              className="erp-login-panel"
+              aria-labelledby="erp-reset-password-heading"
+            >
+              <header className="erp-login-panel-head">
+                <h1
+                  id="erp-reset-password-heading"
+                  className="erp-login-heading"
+                >
+                  {labels.heading}
+                </h1>
+                <p className="erp-login-subtitle">
+                  {labels.subtitle(emailFromUrl)}
+                </p>
+              </header>
+
+              <Form<ResetFormValues>
+                layout="vertical"
+                requiredMark={false}
+                className="erp-login-form"
+                onFinish={(values) => void handleSubmit(values)}
+              >
+                <PriorSessionNotice
+                  priorUserEmail={priorUserEmail}
+                  message={labels.priorSession}
+                />
+
+                <Form.Item
+                  label={labels.newPassword}
+                  name="newPassword"
+                  rules={[
+                    { required: true, message: labels.required },
+                    { min: 8, message: labels.minLength },
+                  ]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined aria-hidden />}
+                    autoComplete="new-password"
+                    size="large"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={labels.confirmPassword}
+                  name="confirmPassword"
+                  rules={[{ required: true, message: labels.required }]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined aria-hidden />}
+                    autoComplete="new-password"
+                    size="large"
+                  />
+                </Form.Item>
+
+                {errorMessage ? (
+                  <ErpNotice
+                    tone="error"
+                    className="mb-4"
+                    title={errorMessage}
+                  />
+                ) : null}
+
+                {linkExpired ? (
+                  <p className="erp-login-help mb-4">
+                    {labels.expiredHint}{' '}
+                    <Link
+                      href="/forgot-password"
+                      className="erp-login-forgot-link"
+                    >
+                      {labels.forgotLink}
+                    </Link>
+                    .
+                  </p>
+                ) : null}
+
+                <Form.Item className="!mb-0 !mt-1">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    size="large"
+                    loading={resetPassword.isPending}
+                    disabled={Boolean(tokenFromUrl) && !emailFromUrl}
+                    className="erp-login-submit"
+                  >
+                    {resetPassword.isPending
+                      ? labels.submitting
+                      : labels.submit}
+                  </Button>
+                </Form.Item>
+              </Form>
+
+              <p className="erp-login-forgot">
+                <Link href="/login" className="erp-login-forgot-link">
+                  {labels.backToSignIn}
+                </Link>
+              </p>
+            </section>
+          </div>
+        </main>
+
+        <footer className="erp-login-footer">
+          © {new Date().getFullYear()} CRCC · Construction ERP
+        </footer>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <PriorSessionNotice
-          priorUserEmail={priorUserEmail}
-          message="You have been signed out so this password reset can continue."
-        />
-
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            New password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-          />
+      <aside className="erp-login-brand" aria-label="CRCC">
+        <div className="erp-login-brand-atmosphere" aria-hidden>
+          <span className="erp-login-brand-grid" />
+          <span className="erp-login-brand-glow" />
+          <span className="erp-login-brand-globe" />
         </div>
-
-        <div>
-          <label
-            htmlFor="confirmPassword"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Confirm password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-          />
+        <div className="erp-login-brand-inner">
+          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
+          <p className="erp-login-brand-title">{labels.brandLine}</p>
         </div>
-
-        {errorMessage && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            {errorMessage}
-          </p>
-        )}
-
-        {errorMessage?.toLowerCase().includes('invalid or expired') && (
-          <p className="text-sm text-slate-500">
-            Reset links expire after 1 hour and can only be used once. Request a
-            new link from{' '}
-            <Link href="/forgot-password" className="font-medium text-orange-600 hover:underline">
-              forgot password
-            </Link>
-            .
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={resetPassword.isPending || (Boolean(tokenFromUrl) && !emailFromUrl)}
-          className="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-          style={{ backgroundColor: '#f97316' }}
-        >
-          {resetPassword.isPending ? 'Resetting...' : 'Reset password'}
-        </button>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-slate-500">
-        <Link href="/login" className="font-medium text-orange-600 hover:underline">
-          Back to sign in
-        </Link>
-      </p>
+      </aside>
     </div>
   );
 }
 
 export default function ResetPasswordPage(): React.ReactNode {
   return (
-    <AuthCenteredShell>
-      <Suspense
-        fallback={
-          <div className="w-full min-w-0 rounded-none border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
-            Loading...
-          </div>
-        }
-      >
-        <ResetPasswordForm />
-      </Suspense>
-    </AuthCenteredShell>
+    <Suspense
+      fallback={
+        <div className="erp-login-fallback">
+          <Spin />
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
