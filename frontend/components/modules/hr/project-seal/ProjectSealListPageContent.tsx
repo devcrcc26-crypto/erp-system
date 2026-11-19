@@ -141,17 +141,23 @@ export default function ProjectSealListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const scoped = filterProjectSeals(allRows, {
+      search: appliedSearch,
+      employeeId: canViewHr ? employeeId : undefined,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    });
     return {
-      all: allRows.length,
-      draft: allRows.filter((row) => DRAFT_STATUSES.includes(row.status)).length,
-      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
+      all: scoped.length,
+      draft: scoped.filter((row) => DRAFT_STATUSES.includes(row.status)).length,
+      pending: scoped.filter((row) => PENDING_STATUSES.includes(row.status))
         .length,
-      approved: allRows.filter((row) => APPROVED_STATUSES.includes(row.status))
+      approved: scoped.filter((row) => APPROVED_STATUSES.includes(row.status))
         .length,
-      rejected: allRows.filter((row) => REJECTED_STATUSES.includes(row.status))
+      rejected: scoped.filter((row) => REJECTED_STATUSES.includes(row.status))
         .length,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, employeeId, dateRange, canViewHr]);
 
   const filtered = useMemo(
     () =>

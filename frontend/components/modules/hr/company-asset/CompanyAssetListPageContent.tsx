@@ -121,13 +121,17 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const scoped = filterCompanyAssets(allRows, {
+      search: appliedSearch,
+      type: typeFilter,
+    });
     return {
-      all: allRows.length,
-      available: allRows.filter((row) => row.status === 'AVAILABLE').length,
-      inUse: allRows.filter((row) => row.status === 'IN_USE').length,
-      repairing: allRows.filter((row) => row.status === 'REPAIRING').length,
+      all: scoped.length,
+      available: scoped.filter((row) => row.status === 'AVAILABLE').length,
+      inUse: scoped.filter((row) => row.status === 'IN_USE').length,
+      repairing: scoped.filter((row) => row.status === 'REPAIRING').length,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, typeFilter]);
 
   const typeOptions = useMemo(() => {
     const types = new Set<string>();

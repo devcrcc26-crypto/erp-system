@@ -186,26 +186,40 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   );
 
   const statusCounts = useMemo(() => {
-    const pending = allRows.filter((row) =>
+    const scoped = filterBusinessTrips(allRows, {
+      search: appliedSearch,
+      destinationCountry: destinationCountry.trim() || undefined,
+      submittedById: canViewTeam ? submittedById : undefined,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    });
+    const pending = scoped.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
-    const approved = allRows.filter((row) =>
+    const approved = scoped.filter((row) =>
       APPROVED_STATUSES.includes(row.status),
     ).length;
-    const rejected = allRows.filter((row) =>
+    const rejected = scoped.filter((row) =>
       REJECTED_STATUSES.includes(row.status),
     ).length;
-    const needsTicket = allRows.filter(
+    const needsTicket = scoped.filter(
       (row) => row.needsTicketAttachment === true,
     ).length;
     return {
-      all: allRows.length,
+      all: scoped.length,
       pending,
       approved,
       rejected,
       needsTicket,
     };
-  }, [allRows]);
+  }, [
+    allRows,
+    appliedSearch,
+    destinationCountry,
+    submittedById,
+    dateRange,
+    canViewTeam,
+  ]);
 
   const filtered = useMemo(
     () =>

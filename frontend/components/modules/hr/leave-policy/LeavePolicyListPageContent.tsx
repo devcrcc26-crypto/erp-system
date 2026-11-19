@@ -78,17 +78,20 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const scoped = filterLeavePolicies(allRows, {
+      search: appliedSearch,
+    });
     return {
-      all: allRows.length,
-      active: allRows.filter((policy) => policy.isActive).length,
-      inactive: allRows.filter((policy) => !policy.isActive).length,
-      progressive: allRows.filter((policy) =>
+      all: scoped.length,
+      active: scoped.filter((policy) => policy.isActive).length,
+      inactive: scoped.filter((policy) => !policy.isActive).length,
+      progressive: scoped.filter((policy) =>
         policy.rules.some(
           (rule) => rule.leaveType === 'ANNUAL' && rule.isProgressive,
         ),
       ).length,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch]);
 
   const filtered = useMemo(
     () =>

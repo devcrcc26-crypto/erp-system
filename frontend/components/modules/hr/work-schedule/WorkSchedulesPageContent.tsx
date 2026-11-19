@@ -161,15 +161,24 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
   const defaultMutation = useSetDefaultWorkSchedule();
   const schedules = listQuery.data ?? [];
 
-  const statusCounts = useMemo(
-    () => ({
-      all: schedules.length,
-      active: schedules.filter((row) => row.isActive).length,
-      inactive: schedules.filter((row) => !row.isActive).length,
-      default: schedules.filter((row) => row.isDefault).length,
-    }),
-    [schedules],
-  );
+  const statusCounts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const scoped = schedules.filter((row) => {
+      if (!query) {
+        return true;
+      }
+      return (
+        row.name.toLowerCase().includes(query) ||
+        (row.description ?? '').toLowerCase().includes(query)
+      );
+    });
+    return {
+      all: scoped.length,
+      active: scoped.filter((row) => row.isActive).length,
+      inactive: scoped.filter((row) => !row.isActive).length,
+      default: scoped.filter((row) => row.isDefault).length,
+    };
+  }, [schedules, search]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

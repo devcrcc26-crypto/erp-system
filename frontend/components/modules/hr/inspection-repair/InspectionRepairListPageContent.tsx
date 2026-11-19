@@ -131,15 +131,21 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
   const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const scoped = filterInspectionRepairs(allRows, {
+      search: appliedSearch,
+      employeeId: canViewHr ? employeeId : undefined,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    });
     return {
-      all: allRows.length,
-      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
+      all: scoped.length,
+      pending: scoped.filter((row) => PENDING_STATUSES.includes(row.status))
         .length,
-      active: allRows.filter((row) => ACTIVE_STATUSES.includes(row.status))
+      active: scoped.filter((row) => ACTIVE_STATUSES.includes(row.status))
         .length,
-      done: allRows.filter((row) => DONE_STATUSES.includes(row.status)).length,
+      done: scoped.filter((row) => DONE_STATUSES.includes(row.status)).length,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, employeeId, dateRange, canViewHr]);
 
   const filtered = useMemo(
     () =>

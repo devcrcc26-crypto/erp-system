@@ -158,7 +158,18 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   const currentYear = now.getFullYear();
 
   const statusCounts = useMemo(() => {
-    const active = allRows.filter((row) => row.status !== 'CANCELLED');
+    const query = search.trim().toLowerCase();
+    const scoped = allRows.filter((row) => {
+      if (!query) {
+        return true;
+      }
+      const periodLabel = formatPayrollPeriod(row.month, row.year).toLowerCase();
+      return (
+        row.runNumber.toLowerCase().includes(query) ||
+        periodLabel.includes(query)
+      );
+    });
+    const active = scoped.filter((row) => row.status !== 'CANCELLED');
     return {
       all: active.length,
       inProgress: active.filter((row) =>
@@ -167,7 +178,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
       paid: active.filter((row) => row.status === 'PAID').length,
       flagged: active.filter((row) => row.flaggedCount > 0).length,
     };
-  }, [allRows]);
+  }, [allRows, search]);
 
   const summary = useMemo(() => {
     const currentRun = allRows.find(

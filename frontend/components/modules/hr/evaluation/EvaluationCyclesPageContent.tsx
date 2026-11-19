@@ -71,15 +71,23 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
   const bulkCreate = useBulkCreateEvaluations();
 
   const cycles = cyclesQuery.data ?? [];
-  const stats = useMemo(
-    () => ({
-      total: cycles.length,
-      active: cycles.filter((c) => c.status === 'ACTIVE').length,
-      draft: cycles.filter((c) => c.status === 'DRAFT').length,
-      closed: cycles.filter((c) => c.status === 'CLOSED').length,
-    }),
-    [cycles],
-  );
+  const stats = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const scoped = cycles.filter((cycle) => {
+      if (!q) {
+        return true;
+      }
+      const label = getQuarterLabel(cycle.quarter, cycle.year).toLowerCase();
+      const template = (cycle.template?.name ?? '').toLowerCase();
+      return label.includes(q) || template.includes(q);
+    });
+    return {
+      total: scoped.length,
+      active: scoped.filter((c) => c.status === 'ACTIVE').length,
+      draft: scoped.filter((c) => c.status === 'DRAFT').length,
+      closed: scoped.filter((c) => c.status === 'CLOSED').length,
+    };
+  }, [cycles, search]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

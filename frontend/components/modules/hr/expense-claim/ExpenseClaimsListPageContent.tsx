@@ -179,26 +179,30 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   );
 
   const statusCounts = useMemo(() => {
-    const draft = allRows.filter((row) =>
+    const scoped = filterExpenseClaims(allRows, {
+      search: appliedSearch,
+      employeeId: canViewTeam ? employeeId : undefined,
+    });
+    const draft = scoped.filter((row) =>
       DRAFT_STATUSES.includes(row.status),
     ).length;
-    const pending = allRows.filter((row) =>
+    const pending = scoped.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
-    const approved = allRows.filter((row) =>
+    const approved = scoped.filter((row) =>
       APPROVED_STATUSES.includes(row.status),
     ).length;
-    const rejected = allRows.filter((row) =>
+    const rejected = scoped.filter((row) =>
       REJECTED_STATUSES.includes(row.status),
     ).length;
     return {
-      all: allRows.length,
+      all: scoped.length,
       draft,
       pending,
       approved,
       rejected,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, employeeId, canViewTeam]);
 
   const filtered = useMemo(
     () =>

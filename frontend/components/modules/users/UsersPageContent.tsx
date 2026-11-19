@@ -363,10 +363,36 @@ export default function UsersPageContent(): React.ReactNode {
   const allUsers = usersQuery.data ?? [];
 
   const userStats = useMemo(() => {
+    const scoped = filterAndSortUsers({
+      users: allUsers,
+      search: appliedSearch,
+      disciplineId: disciplineFilter,
+      departmentId: departmentFilter,
+      positionId: positionFilter,
+      sortBy,
+      sortOrder,
+    }).filter((user) => {
+      if (employeeTypeFilter && user.employeeType !== employeeTypeFilter) {
+        return false;
+      }
+      if (nationalityFilter && user.nationality !== nationalityFilter) {
+        return false;
+      }
+      if (filterNoRole && (user.userRoles?.length ?? 0) > 0) {
+        return false;
+      }
+      if (
+        employmentStatusFilter &&
+        (user.employmentStatus ?? 'ACTIVE') !== employmentStatusFilter
+      ) {
+        return false;
+      }
+      return true;
+    });
     let activeCount = 0;
     let pendingCount = 0;
     let inactiveCount = 0;
-    for (const user of allUsers) {
+    for (const user of scoped) {
       if (!user.isActive) {
         inactiveCount += 1;
       } else if (isPendingActivation(user)) {
@@ -376,12 +402,24 @@ export default function UsersPageContent(): React.ReactNode {
       }
     }
     return {
-      totalCount: allUsers.length,
+      totalCount: scoped.length,
       activeCount,
       pendingCount,
       inactiveCount,
     };
-  }, [allUsers]);
+  }, [
+    allUsers,
+    appliedSearch,
+    disciplineFilter,
+    departmentFilter,
+    positionFilter,
+    employeeTypeFilter,
+    nationalityFilter,
+    filterNoRole,
+    employmentStatusFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const filteredUsers = useMemo(() => {
     const base = filterAndSortUsers({

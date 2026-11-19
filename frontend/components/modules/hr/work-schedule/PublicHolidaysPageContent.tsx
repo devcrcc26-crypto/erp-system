@@ -108,13 +108,23 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
   const rows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const scoped = rows.filter((row) => {
+      if (!query) {
+        return true;
+      }
+      return (
+        row.name.toLowerCase().includes(query) ||
+        (row.nameZh ?? '').toLowerCase().includes(query)
+      );
+    });
     return {
-      all: rows.length,
-      active: rows.filter((row) => row.isActive).length,
-      inactive: rows.filter((row) => !row.isActive).length,
-      upcoming: rows.filter((row) => row.isActive && !row.isPast).length,
+      all: scoped.length,
+      active: scoped.filter((row) => row.isActive).length,
+      inactive: scoped.filter((row) => !row.isActive).length,
+      upcoming: scoped.filter((row) => row.isActive && !row.isPast).length,
     };
-  }, [rows]);
+  }, [rows, search]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

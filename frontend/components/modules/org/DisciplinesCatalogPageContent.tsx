@@ -108,14 +108,14 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
   const deleteDiscipline = useDeleteEngineeringDiscipline();
   const allRows = disciplinesQuery.data?.data ?? [];
 
-  const stats = useMemo(
-    () => ({
-      total: allRows.length,
-      active: allRows.filter((row) => row.isActive).length,
-      inactive: allRows.filter((row) => !row.isActive).length,
-    }),
-    [allRows],
-  );
+  const stats = useMemo(() => {
+    const scoped = filterDisciplines(allRows, appliedSearch, 'all');
+    return {
+      total: scoped.length,
+      active: scoped.filter((row) => row.isActive).length,
+      inactive: scoped.filter((row) => !row.isActive).length,
+    };
+  }, [allRows, appliedSearch]);
 
   const filtered = useMemo(
     () => filterDisciplines(allRows, appliedSearch, statusMode),

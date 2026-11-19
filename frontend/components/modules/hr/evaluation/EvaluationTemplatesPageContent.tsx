@@ -60,19 +60,28 @@ export default function EvaluationTemplatesPageContent(): React.ReactNode {
   const templates = templatesQuery.data ?? [];
 
   const stats = useMemo(() => {
-    const active = templates.filter((t) => t.isActive).length;
-    const criteria = templates.reduce(
+    const q = search.trim().toLowerCase();
+    const scoped = templates.filter((template) => {
+      if (!q) {
+        return true;
+      }
+      const name = template.name.toLowerCase();
+      const description = (template.description ?? '').toLowerCase();
+      return name.includes(q) || description.includes(q);
+    });
+    const active = scoped.filter((t) => t.isActive).length;
+    const criteria = scoped.reduce(
       (sum, t) => sum + t.sections.reduce((s, sec) => s + sec.criteria.length, 0),
       0,
     );
     return {
-      total: templates.length,
+      total: scoped.length,
       active,
-      inactive: templates.length - active,
-      sections: templates.reduce((sum, t) => sum + t.sections.length, 0),
+      inactive: scoped.length - active,
+      sections: scoped.reduce((sum, t) => sum + t.sections.length, 0),
       criteria,
     };
-  }, [templates]);
+  }, [templates, search]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

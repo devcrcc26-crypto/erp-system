@@ -305,14 +305,14 @@ export default function DepartmentsPageContent(): React.ReactNode {
     return allRows.filter((row) => row.leaderUserId === currentUserId);
   }, [allRows, canViewAll, currentUserId]);
 
-  const stats = useMemo(
-    () => ({
-      total: visibleSourceRows.length,
-      active: visibleSourceRows.filter((row) => row.isActive).length,
-      inactive: visibleSourceRows.filter((row) => !row.isActive).length,
-    }),
-    [visibleSourceRows],
-  );
+  const stats = useMemo(() => {
+    const scoped = filterDepartments(visibleSourceRows, appliedSearch, 'all');
+    return {
+      total: scoped.length,
+      active: scoped.filter((row) => row.isActive).length,
+      inactive: scoped.filter((row) => !row.isActive).length,
+    };
+  }, [visibleSourceRows, appliedSearch]);
 
   const filtered = useMemo(
     () => filterDepartments(visibleSourceRows, appliedSearch, statusMode),

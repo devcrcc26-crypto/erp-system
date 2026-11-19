@@ -149,18 +149,22 @@ export default function PositionsPageContent(): React.ReactNode {
     return map;
   }, [usersDirectoryQuery.data]);
 
-  const stats = useMemo(
-    () => ({
-      total: allRows.length,
-      active: allRows.filter((row) => row.isActive).length,
-      inactive: allRows.filter((row) => !row.isActive).length,
-      assigned: [...assigneeCountByPositionId.values()].reduce(
-        (sum, count) => sum + count,
-        0,
-      ),
-    }),
-    [allRows, assigneeCountByPositionId],
-  );
+  const stats = useMemo(() => {
+    const scoped = filterPositions(allRows, appliedSearch, 'all');
+    const scopedIds = new Set(scoped.map((row) => row.id));
+    let assigned = 0;
+    for (const [positionId, count] of assigneeCountByPositionId) {
+      if (scopedIds.has(positionId)) {
+        assigned += count;
+      }
+    }
+    return {
+      total: scoped.length,
+      active: scoped.filter((row) => row.isActive).length,
+      inactive: scoped.filter((row) => !row.isActive).length,
+      assigned,
+    };
+  }, [allRows, appliedSearch, assigneeCountByPositionId]);
 
   const filtered = useMemo(
     () => filterPositions(allRows, appliedSearch, statusMode),

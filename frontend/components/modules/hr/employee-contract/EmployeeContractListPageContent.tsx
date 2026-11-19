@@ -182,20 +182,25 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   );
 
   const statusCounts = useMemo(() => {
-    const active = allRows.filter((row) => row.status === 'ACTIVE').length;
-    const expiringSoon = allRows.filter((row) =>
+    const scoped = filterEmployeeContracts(allRows, {
+      search: appliedSearch,
+      contractType,
+      employeeId: canViewTeam ? employeeId : undefined,
+    });
+    const active = scoped.filter((row) => row.status === 'ACTIVE').length;
+    const expiringSoon = scoped.filter((row) =>
       isEmployeeContractExpiringSoon(row),
     ).length;
-    const ended = allRows.filter((row) =>
+    const ended = scoped.filter((row) =>
       ['TERMINATED', 'EXPIRED', 'SUPERSEDED'].includes(row.status),
     ).length;
     return {
-      all: allRows.length,
+      all: scoped.length,
       active,
       expiringSoon,
       ended,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, contractType, employeeId, canViewTeam]);
 
   const filtered = useMemo(
     () =>

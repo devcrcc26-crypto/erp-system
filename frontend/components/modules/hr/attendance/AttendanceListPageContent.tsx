@@ -254,8 +254,8 @@ export default function AttendanceListPageContent(): React.ReactNode {
         </div>
         <AttendanceStatBar
           className="erp-employees-hero-stats"
-          records={allRows}
-          totalEmployees={allRows.length}
+          records={filtered}
+          totalEmployees={filtered.length}
           loading={listQuery.isFetching && !listQuery.data}
         />
       </section>

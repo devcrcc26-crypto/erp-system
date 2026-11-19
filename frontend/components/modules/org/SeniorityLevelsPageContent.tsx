@@ -80,14 +80,24 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
   const rows = useMemo(() => levelsQuery.data ?? [], [levelsQuery.data]);
 
   const stats = useMemo(() => {
-    const active = rows.filter((row) => row.isActive).length;
+    const query = search.trim().toLowerCase();
+    const scoped = rows.filter((row) => {
+      if (!query) {
+        return true;
+      }
+      return (
+        row.name.toLowerCase().includes(query) ||
+        (row.nameZh?.toLowerCase().includes(query) ?? false)
+      );
+    });
+    const active = scoped.filter((row) => row.isActive).length;
     return {
-      total: rows.length,
+      total: scoped.length,
       active,
-      inactive: rows.length - active,
-      people: rows.reduce((sum, row) => sum + (row._count?.users ?? 0), 0),
+      inactive: scoped.length - active,
+      people: scoped.reduce((sum, row) => sum + (row._count?.users ?? 0), 0),
     };
-  }, [rows]);
+  }, [rows, search]);
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();

@@ -219,22 +219,28 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   );
 
   const statusCounts = useMemo(() => {
-    const pending = allRows.filter((row) =>
+    const scoped = filterOvertimeSheets(allRows, {
+      search: appliedSearch,
+      employeeId: canViewTeam ? employeeId : undefined,
+      month,
+      year,
+    });
+    const pending = scoped.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
-    const approved = allRows.filter((row) =>
+    const approved = scoped.filter((row) =>
       APPROVED_STATUSES.includes(row.status),
     ).length;
-    const rejected = allRows.filter((row) =>
+    const rejected = scoped.filter((row) =>
       REJECTED_STATUSES.includes(row.status),
     ).length;
     return {
-      all: allRows.length,
+      all: scoped.length,
       pending,
       approved,
       rejected,
     };
-  }, [allRows]);
+  }, [allRows, appliedSearch, employeeId, month, year, canViewTeam]);
 
   const filtered = useMemo(
     () =>
