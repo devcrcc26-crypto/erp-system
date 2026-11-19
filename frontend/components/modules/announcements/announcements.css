@@ -961,33 +961,8 @@
 }
 
 .erp-ann-page .erp-ann-card > .erp-ann-toolbar::before,
-.erp-ann-page .erp-ann-detail-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
-  background-size: 2.5rem 2.5rem;
-  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
-}
 
 .erp-ann-page .erp-ann-card > .erp-ann-toolbar::after,
-.erp-ann-page .erp-ann-detail-hero::after {
-  content: '';
-  position: absolute;
-  top: -120%;
-  right: -6%;
-  z-index: -1;
-  width: 24rem;
-  height: 24rem;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
-}
 
 /* ── List toolbar band ── */
 

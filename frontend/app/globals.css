@@ -19,7 +19,10 @@
    * radii and shadows are in @theme below so they also generate utilities
    * (bg-primary, text-text-heading, rounded-card, shadow-card, ...).
    */
-  --gradient-brand-panel: linear-gradient(150deg, var(--color-primary-deep) 0%, #0d2b4d 55%, var(--color-primary-dark) 100%);
+  /* Page hero banners: medium logo-family blue; white text stays >= 4.8:1. */
+  --gradient-brand-panel: linear-gradient(135deg, #1660b3 0%, #1e72ca 100%);
+  /* Login brand panel keeps its deep navy. */
+  --gradient-login-panel: linear-gradient(150deg, #0a1a30 0%, #0d2b4d 55%, var(--color-primary-dark) 100%);
   --gradient-primary: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   --gradient-primary-hover: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
   --gradient-surface: linear-gradient(180deg, #ffffff 0%, #fbfcfe 55%, #f5f8fc 100%);
@@ -70,7 +73,7 @@
   --color-primary: var(--erp-accent);              /* #1667c2 - buttons, links, focus */
   --color-primary-dark: var(--erp-accent-hover);   /* #0f4c8f - headings, hover, sidebar active */
   --color-primary-light: #2b7fd9;                  /* gradient end (button, card accent) */
-  --color-primary-deep: #0a1a30;                   /* brand panel gradient start */
+  --color-primary-deep: #0a1a30;                   /* deep navy (login panel start) */
   --color-primary-soft: var(--erp-accent-light);   /* #e7f0fb - tinted fills */
   --color-background: #eceff3;                     /* auth page background */
   --color-surface: #ffffff;                        /* cards */
@@ -169,8 +172,6 @@
   --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Noto Sans CJK SC', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
-
-
 
 *,
 *::before,
@@ -5114,7 +5115,7 @@ main::-webkit-scrollbar,
   padding: 3rem;
   border-radius: 1.5rem;
   color: var(--color-surface);
-  background: var(--gradient-brand-panel);
+  background: var(--gradient-login-panel);
   overflow: hidden;
 }
 
@@ -5195,7 +5196,6 @@ main::-webkit-scrollbar,
   animation: erp-login-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
-
 /* CRCC logo red, same accent as the employee ID card stripe. */
 .erp-login-brand-accent {
   display: block;
@@ -5210,8 +5210,6 @@ main::-webkit-scrollbar,
   display: flex;
   justify-content: flex-end;
 }
-
-
 
 .erp-login-brand-clock {
   display: flex;
@@ -5313,9 +5311,6 @@ main::-webkit-scrollbar,
   background: #d7000f;
 }
 
-
-
-
 /* Short laptop screens: drop the feature descriptions so nothing is clipped. */
 @media (max-height: 760px) {
   .erp-login-brand-feature-detail {
@@ -5331,10 +5326,6 @@ main::-webkit-scrollbar,
     margin-bottom: 1.25rem;
   }
 }
-
-
-
-
 
 @keyframes erp-login-fade-in {
   from {
@@ -7558,38 +7549,9 @@ main::-webkit-scrollbar,
   background: var(--gradient-brand-panel);
   color: #ffffff;
   box-shadow:
-    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.18),
     0 2px 6px rgba(10, 36, 32, 0.12);
   overflow: hidden;
-}
-
-/* Drawing-sheet grid, fading in towards the right (dashboard header). */
-.erp-request-picker-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
-  background-size: 2.5rem 2.5rem;
-  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
-}
-
-/* Soft accent glow, top right. */
-.erp-request-picker-hero::after {
-  content: '';
-  position: absolute;
-  top: -70%;
-  right: -6%;
-  z-index: -1;
-  width: 24rem;
-  height: 24rem;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 .erp-request-picker-heading {
@@ -8055,36 +8017,9 @@ main::-webkit-scrollbar,
   background: var(--gradient-brand-panel);
   color: #ffffff;
   box-shadow:
-    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.18),
     0 2px 6px rgba(10, 36, 32, 0.12);
   overflow: hidden;
-}
-
-.erp-form-banner--brand::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
-  background-size: 2.5rem 2.5rem;
-  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
-}
-
-.erp-form-banner--brand::after {
-  content: '';
-  position: absolute;
-  top: -80%;
-  right: -6%;
-  z-index: -1;
-  width: 24rem;
-  height: 24rem;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 .erp-form-banner--brand .erp-form-banner-back {
@@ -8446,35 +8381,8 @@ main::-webkit-scrollbar,
   background: var(--gradient-brand-panel) !important;
   color: #ffffff;
   box-shadow:
-    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.22),
+    0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.18),
     0 2px 6px rgba(10, 36, 32, 0.12) !important;
-}
-
-:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
-  background-size: 2.5rem 2.5rem;
-  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
-}
-
-:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::after {
-  content: '';
-  position: absolute;
-  top: -60%;
-  right: -6%;
-  z-index: -1;
-  width: 26rem;
-  height: 26rem;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 /* Title, back link, meta lines. */
