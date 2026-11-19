@@ -11,9 +11,12 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { AUTH_AUDIT_MODULE } from '../../../auth/application/constants/login-security.constants';
 import { resolveHrProcessExclusionUpdate } from '../utils/hr-process-exclusion.util';
 import {
-  currentYearsOfExperience,
+  deriveEducationLevel,
+  deriveFieldOfStudy,
+} from '../../domain/derived-education';
+import {
+  calculateYearsOfExperienceFromDates,
   todayDateOnly,
-  yearsOfExperienceUpdate,
 } from '../../domain/years-of-experience';
 
 const USERS_AUDIT_MODULE = 'users';
@@ -213,28 +216,6 @@ export class UserManagementService {
             dataScopes: { where: activeOnly({}) },
           },
           orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
-        },
-        educationRecords: {
-          where: { deletedAt: null },
-          orderBy: [{ graduationYear: 'desc' }, { createdAt: 'desc' }],
-          select: {
-            id: true,
-            instituteName: true,
-            graduationYear: true,
-            subjectMajor: true,
-            certificateType: true,
-          },
-        },
-        priorEmployments: {
-          where: { deletedAt: null },
-          orderBy: [{ dateFrom: 'desc' }, { createdAt: 'desc' }],
-          select: {
-            id: true,
-            employerName: true,
-            dateFrom: true,
-            dateTo: true,
-            lastPosition: true,
-          },
         },
       },
     });
@@ -543,8 +524,6 @@ export class UserManagementService {
         excludedReason: true,
         employmentStatus: true,
         isActive: true,
-        yearsOfExperience: true,
-        yearsOfExperienceAsOf: true,
       },
     });
     if (!existing) {
@@ -590,7 +569,6 @@ export class UserManagementService {
     const data: Prisma.UserUncheckedUpdateInput = {
       ...this.buildBasicUpdateData(rest),
       ...profileData,
-      ...yearsOfExperienceUpdate(rest.yearsOfExperience, existing),
       updatedBy: ctx.userId,
     };
 
@@ -1499,6 +1477,29 @@ export class UserManagementService {
       employmentStatus: true,
       yearsOfExperience: true,
       yearsOfExperienceAsOf: true,
+      educationRecords: {
+        where: { deletedAt: null },
+        orderBy: [{ graduationYear: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          instituteName: true,
+          graduationYear: true,
+          subjectMajor: true,
+          certificateType: true,
+          createdAt: true,
+        },
+      },
+      priorEmployments: {
+        where: { deletedAt: null },
+        orderBy: [{ dateFrom: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          employerName: true,
+          dateFrom: true,
+          dateTo: true,
+          lastPosition: true,
+        },
+      },
       emergencyContacts: true,
       excludedFromHrProcesses: true,
       excludedReason: true,
@@ -1597,12 +1598,9 @@ export class UserManagementService {
     tin?: string;
     nationality?: CreateUserDto['nationality'];
     employeeType?: CreateUserDto['employeeType'];
-    educationLevel?: CreateUserDto['educationLevel'];
-    fieldOfStudy?: string;
     employmentDate?: string;
     secondaryPhone?: string;
     seniorityLevelId?: string;
-    yearsOfExperience?: number | null;
     emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
     workScheduleId?: string;
@@ -1633,12 +1631,9 @@ export class UserManagementService {
       tin: dto.tin,
       nationality: dto.nationality,
       employeeType: dto.employeeType,
-      educationLevel: dto.educationLevel,
-      fieldOfStudy: dto.fieldOfStudy,
       employmentDate: dto.employmentDate,
       secondaryPhone: dto.secondaryPhone,
       seniorityLevelId: dto.seniorityLevelId,
-      yearsOfExperience: dto.yearsOfExperience,
       emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
       workScheduleId: dto.workScheduleId,
@@ -1670,18 +1665,16 @@ export class UserManagementService {
       placeOfBirth?: string;
       kebele?: string;
       maritalStatus?: CreateUserDto['maritalStatus'];
+      bloodType?: string;
       idIssueDate?: string;
       idExpiryDate?: string;
       pensionNumber?: string;
       tin?: string;
       nationality?: CreateUserDto['nationality'];
       employeeType?: CreateUserDto['employeeType'];
-      educationLevel?: CreateUserDto['educationLevel'];
-      fieldOfStudy?: string;
       employmentDate?: string;
       secondaryPhone?: string;
       seniorityLevelId?: string;
-      yearsOfExperience?: number | null;
       emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
       workScheduleId?: string;
@@ -1752,17 +1745,11 @@ export class UserManagementService {
         tin: profileInput.tin?.trim() || null,
         nationality: profileInput.nationality as Prisma.UserUpdateInput['nationality'],
         employeeType: profileInput.employeeType as Prisma.UserUpdateInput['employeeType'],
-        educationLevel:
-          profileInput.educationLevel as Prisma.UserUpdateInput['educationLevel'],
-        fieldOfStudy: profileInput.fieldOfStudy?.trim() || null,
         employmentDate: profileInput.employmentDate
           ? this.parseDateOnly(profileInput.employmentDate)
           : null,
         secondaryPhone: profileInput.secondaryPhone?.trim() || null,
         seniorityLevelId: profileInput.seniorityLevelId ?? null,
-        yearsOfExperience: profileInput.yearsOfExperience ?? null,
-        yearsOfExperienceAsOf:
-          profileInput.yearsOfExperience != null ? todayDateOnly() : null,
         emergencyContacts: this.normalizeEmergencyContacts(profileInput.emergencyContacts),
         leavePolicyId: profileInput.leavePolicyId ?? null,
         bankName: profileInput.bankName?.trim() || null,
@@ -1812,10 +1799,7 @@ export class UserManagementService {
       | 'tin'
       | 'nationality'
       | 'employeeType'
-      | 'educationLevel'
-      | 'fieldOfStudy'
       | 'employmentDate'
-      | 'yearsOfExperience'
       | 'emergencyContacts'
       | 'leavePolicyId'
       | 'workScheduleId'
@@ -1869,8 +1853,6 @@ export class UserManagementService {
         | 'tin'
         | 'nationality'
         | 'employeeType'
-        | 'educationLevel'
-        | 'fieldOfStudy'
         | 'employmentDate'
         | 'emergencyContacts'
         | 'leavePolicyId'
@@ -1949,12 +1931,6 @@ export class UserManagementService {
     }
     if (rest.employeeType !== undefined) {
       data.employeeType = rest.employeeType;
-    }
-    if (rest.educationLevel !== undefined) {
-      data.educationLevel = rest.educationLevel;
-    }
-    if (rest.fieldOfStudy !== undefined) {
-      data.fieldOfStudy = rest.fieldOfStudy?.trim() || null;
     }
     if (rest.employmentDate !== undefined) {
       data.employmentDate = rest.employmentDate
@@ -2311,22 +2287,78 @@ export class UserManagementService {
     return new EmployeeProfileRecordsService(this.prisma, this.auditService);
   }
 
-  /** Replaces the stored years of experience with today's value. */
-  private mapUserResponse<
-    T extends {
-      yearsOfExperience?: number | null;
-      yearsOfExperienceAsOf?: Date | null;
-    },
-  >(user: T | null): (T & { yearsOfExperience: number | null }) | null {
+  /**
+   * Career years from the earliest PriorEmployment.dateFrom and employmentDate.
+   */
+  async calculateYearsOfExperience(userId: string): Promise<number | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        employmentDate: true,
+        priorEmployments: {
+          where: { deletedAt: null },
+          select: { dateFrom: true },
+        },
+      },
+    });
     if (!user) {
       return null;
     }
+    return calculateYearsOfExperienceFromDates(
+      user.employmentDate,
+      user.priorEmployments.map((row) => row.dateFrom),
+    );
+  }
+
+  /**
+   * Overlays computed years of experience, education level, and field of study.
+   * Falls back to stored education columns only when no EducationRecord rows exist.
+   */
+  private mapUserResponse<
+    T extends {
+      employmentDate?: Date | null;
+      educationLevel?: string | null;
+      fieldOfStudy?: string | null;
+      yearsOfExperience?: number | null;
+      yearsOfExperienceAsOf?: Date | null;
+      educationRecords?: ReadonlyArray<{
+        certificateType?: string | null;
+        subjectMajor?: string | null;
+        graduationYear?: number | null;
+        createdAt?: Date | null;
+      }>;
+      priorEmployments?: ReadonlyArray<{ dateFrom?: Date | null }>;
+    },
+  >(
+    user: T | null,
+  ): (T & {
+    yearsOfExperience: number | null;
+    yearsOfExperienceAsOf: null;
+    educationLevel: string | null;
+    fieldOfStudy: string | null;
+  }) | null {
+    if (!user) {
+      return null;
+    }
+    const educationRecords = user.educationRecords ?? [];
+    const derivedLevel = deriveEducationLevel(
+      educationRecords.map((row) => row.certificateType),
+    );
+    const derivedField = deriveFieldOfStudy(educationRecords);
     return {
       ...user,
-      yearsOfExperience: currentYearsOfExperience(
-        user.yearsOfExperience,
-        user.yearsOfExperienceAsOf,
+      yearsOfExperience: calculateYearsOfExperienceFromDates(
+        user.employmentDate,
+        (user.priorEmployments ?? []).map((row) => row.dateFrom),
       ),
+      yearsOfExperienceAsOf: null,
+      educationLevel:
+        derivedLevel ?? (user.educationLevel as string | null) ?? null,
+      fieldOfStudy:
+        derivedField ??
+        (typeof user.fieldOfStudy === 'string'
+          ? user.fieldOfStudy.trim() || null
+          : null),
     };
   }
 

@@ -284,16 +284,6 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           ],
         },
         {
-          id: 'people-structure',
-          labelKey: 'nav.sections.structure',
-          items: [
-            { kind: 'link', id: 'departments', labelKey: 'nav.departments', icon: 'departments', href: '/departments', requires: ['org.departments'] },
-            // Seniority levels open from the Positions page (panels stay ≤ 12 links).
-            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], activePaths: ['/seniority-levels'], keywords: ['job titles', 'seniority', 'junior', 'senior', 'grade', 'level'] },
-            { kind: 'link', id: 'disciplines', labelKey: 'nav.disciplinesCatalog', icon: 'disciplines-catalog', href: '/disciplines', requires: ['org.disciplines'] },
-          ],
-        },
-        {
           id: 'people-reports',
           labelKey: 'nav.sections.reports',
           items: [
@@ -306,6 +296,26 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'policy-settings', labelKey: 'nav.hr.policySettings', icon: 'hr-policy-settings', href: '/hr/policy-settings', requires: HR, keywords: ['policy', 'rules', 'tax', 'pension', 'overtime rate', 'grace', 'late'] },
             { kind: 'link', id: 'org-gaps', labelKey: 'nav.hr.orgGaps', icon: 'hr-org-gaps', href: '/hr/org-gaps', requires: HR, keywords: ['org', 'supervisor', 'department', 'discipline', 'gaps'] },
+          ],
+        },
+      ],
+    },
+    {
+      // Split from People so the People panel stays ≤ 12 links (ID Cards, etc.).
+      kind: 'folder',
+      id: 'organization',
+      labelKey: 'nav.groups.organization',
+      shortLabelKey: 'nav.short.organization',
+      icon: 'domain-organization',
+      groups: [
+        {
+          id: 'org-structure',
+          labelKey: 'nav.sections.structure',
+          items: [
+            { kind: 'link', id: 'departments', labelKey: 'nav.departments', icon: 'departments', href: '/departments', requires: ['org.departments'] },
+            // Seniority levels open from the Positions page (panels stay ≤ 12 links).
+            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], activePaths: ['/seniority-levels'], keywords: ['job titles', 'seniority', 'junior', 'senior', 'grade', 'level'] },
+            { kind: 'link', id: 'disciplines', labelKey: 'nav.disciplinesCatalog', icon: 'disciplines-catalog', href: '/disciplines', requires: ['org.disciplines'] },
           ],
         },
       ],

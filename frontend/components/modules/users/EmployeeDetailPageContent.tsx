@@ -82,6 +82,7 @@ import {
 } from '@/lib/constants/protected-accounts';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
+  downloadEmployeeRecordPdf,
   downloadUserIdCard,
   useDeleteUser,
   useIssueIdCard,
@@ -292,6 +293,7 @@ export default function EmployeeDetailPageContent({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmRevokeIdCard, setConfirmRevokeIdCard] = useState(false);
   const [printingIdCard, setPrintingIdCard] = useState(false);
+  const [exportingRecordPdf, setExportingRecordPdf] = useState(false);
   const canEditUsers = useCanEditUsers();
   const canEditHr = useCanEditHr();
   // HR, or a supervisor opening someone in their reporting chain.
@@ -563,32 +565,63 @@ export default function EmployeeDetailPageContent({
           </Button>
           <div className="erp-employee-toolbar-actions">
             {!isTeamViewOnly ? (
-              <Button
-                icon={<PrinterOutlined />}
-                loading={printingIdCard}
-                onClick={() => {
-                  void (async () => {
-                    setPrintingIdCard(true);
-                    try {
-                      const code =
-                        user.employeeId?.trim() || user.id.slice(0, 8);
-                      await downloadUserIdCard(user.id, `${code}-id-card.pdf`);
-                      messageApi.success(t('users.idCard.printSuccess'));
-                    } catch (error: unknown) {
-                      notifyApiError(
-                        error,
-                        t('users.idCard.generating'),
-                        messageApi,
-                        t,
-                      );
-                    } finally {
-                      setPrintingIdCard(false);
-                    }
-                  })();
-                }}
-              >
-                {isCompact ? undefined : t('users.idCard.print')}
-              </Button>
+              <>
+                <Button
+                  icon={<FileTextOutlined />}
+                  loading={exportingRecordPdf}
+                  onClick={() => {
+                    void (async () => {
+                      setExportingRecordPdf(true);
+                      try {
+                        const code =
+                          user.employeeId?.trim() || user.id.slice(0, 8);
+                        await downloadEmployeeRecordPdf(
+                          user.id,
+                          `${code}-employee-record.pdf`,
+                        );
+                        messageApi.success(t('users.exportEmployeePdfSuccess'));
+                      } catch (error: unknown) {
+                        notifyApiError(
+                          error,
+                          t('users.exportEmployeePdfError'),
+                          messageApi,
+                          t,
+                        );
+                      } finally {
+                        setExportingRecordPdf(false);
+                      }
+                    })();
+                  }}
+                >
+                  {isCompact ? undefined : t('users.exportEmployeePdf')}
+                </Button>
+                <Button
+                  icon={<PrinterOutlined />}
+                  loading={printingIdCard}
+                  onClick={() => {
+                    void (async () => {
+                      setPrintingIdCard(true);
+                      try {
+                        const code =
+                          user.employeeId?.trim() || user.id.slice(0, 8);
+                        await downloadUserIdCard(user.id, `${code}-id-card.pdf`);
+                        messageApi.success(t('users.idCard.printSuccess'));
+                      } catch (error: unknown) {
+                        notifyApiError(
+                          error,
+                          t('users.idCard.generating'),
+                          messageApi,
+                          t,
+                        );
+                      } finally {
+                        setPrintingIdCard(false);
+                      }
+                    })();
+                  }}
+                >
+                  {isCompact ? undefined : t('users.idCard.print')}
+                </Button>
+              </>
             ) : null}
             {isTeamViewOnly ? null : (
               <Button
@@ -977,26 +1010,11 @@ export default function EmployeeDetailPageContent({
                         {displayValue(user.fieldOfStudy)}
                       </MetaItem>
                       <MetaItem label={t('users.form.yearsOfExperience')}>
-                        {user.yearsOfExperience != null ? (
-                          <div>
-                            <div>
-                              {t('users.yearsValue', {
-                                years: user.yearsOfExperience,
-                              })}
-                            </div>
-                            {user.yearsOfExperienceAsOf ? (
-                              <div className="erp-users-cell-sub mt-0.5">
-                                {t('users.yearsOfExperienceRecorded', {
-                                  date: formatProjectDate(
-                                    user.yearsOfExperienceAsOf,
-                                  ),
-                                })}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : (
-                          '-'
-                        )}
+                        {user.yearsOfExperience != null
+                          ? t('users.yearsValue', {
+                              years: user.yearsOfExperience,
+                            })
+                          : '-'}
                       </MetaItem>
                     </div>
                     <EmployeeEducationEmploymentLists userId={user.id} />

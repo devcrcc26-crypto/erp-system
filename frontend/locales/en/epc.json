@@ -3688,6 +3688,9 @@
     "sectionEmploymentDetails": "Employment Details",
     "sectionEducationExperience": "Education & Experience",
     "sectionPositionHistory": "Position History",
+    "exportEmployeePdf": "Export PDF",
+    "exportEmployeePdfSuccess": "Employee record PDF downloaded",
+    "exportEmployeePdfError": "Could not export the employee record PDF",
     "idCard": {
       "sectionTitle": "ID Card",
       "notIssued": "Not Issued",

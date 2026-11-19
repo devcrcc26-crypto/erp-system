@@ -3688,6 +3688,9 @@
     "sectionEmploymentDetails": "雇佣信息",
     "sectionEducationExperience": "教育与经验",
     "sectionPositionHistory": "职位记录",
+    "exportEmployeePdf": "导出 PDF",
+    "exportEmployeePdfSuccess": "员工档案 PDF 已下载",
+    "exportEmployeePdfError": "无法导出员工档案 PDF",
     "idCard": {
       "sectionTitle": "工牌",
       "notIssued": "未签发",

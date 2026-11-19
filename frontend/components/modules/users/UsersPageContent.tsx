@@ -34,8 +34,10 @@ import {
   ClockCircleOutlined,
   EditOutlined,
   FilterOutlined,
+  IdcardOutlined,
   KeyOutlined,
   MoreOutlined,
+  PrinterOutlined,
   ReloadOutlined,
   SearchOutlined,
   UserDeleteOutlined,
@@ -68,13 +70,16 @@ import {
   SYSTEM_ADMINISTRATOR_ROLE,
 } from '@/lib/constants/protected-accounts';
 import { useBulkGenerateOtp } from '@/lib/query/auth';
+import { useAppMessage } from '@/hooks/use-app-message';
 import {
+  downloadBulkIdCards,
   useAdminResetPassword,
   useAllUsers,
   useDeleteUser,
   useResendInvitation,
   useUserPhotoUrl,
 } from '@/lib/query/users';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import type {
   BulkGenerateOtpResponse,
   EmployeeType,
@@ -251,6 +256,7 @@ function UserStatusIndicator({
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
@@ -264,6 +270,8 @@ export default function UsersPageContent(): React.ReactNode {
   const [bulkOtpConfirmOpen, setBulkOtpConfirmOpen] = useState(false);
   const [bulkOtpResult, setBulkOtpResult] =
     useState<BulkGenerateOtpResponse | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [printingIdCards, setPrintingIdCards] = useState(false);
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -871,6 +879,46 @@ export default function UsersPageContent(): React.ReactNode {
             </h2>
           </div>
           <div className="erp-employees-hero-actions">
+            {canEditUsers ? (
+              <>
+                <Button
+                  icon={<IdcardOutlined />}
+                  onClick={() => router.push('/hr/id-cards')}
+                >
+                  {isCompact ? undefined : t('nav.hr.idCards')}
+                </Button>
+                <Button
+                  icon={<PrinterOutlined />}
+                  disabled={selectedUserIds.length === 0 || printingIdCards}
+                  loading={printingIdCards}
+                  onClick={() => {
+                    void (async () => {
+                      setPrintingIdCards(true);
+                      try {
+                        await downloadBulkIdCards(
+                          selectedUserIds,
+                          `id-cards-${selectedUserIds.length}.pdf`,
+                        );
+                        messageApi.success(t('users.idCard.printSuccess'));
+                      } catch (error: unknown) {
+                        notifyApiError(
+                          error,
+                          t('users.idCard.generating'),
+                          messageApi,
+                          t,
+                        );
+                      } finally {
+                        setPrintingIdCards(false);
+                      }
+                    })();
+                  }}
+                >
+                  {isCompact
+                    ? undefined
+                    : t('users.idCard.printSelected')}
+                </Button>
+              </>
+            ) : null}
             {canBulkGenerateOtp ? (
               <Button
                 icon={<KeyOutlined />}
@@ -1147,6 +1195,16 @@ export default function UsersPageContent(): React.ReactNode {
             size={isCompact ? 'small' : 'middle'}
             dataSource={users}
             scroll={{ x: isCompact ? 720 : 966 }}
+            rowSelection={
+              canEditUsers
+                ? {
+                    selectedRowKeys: selectedUserIds,
+                    onChange: (keys) =>
+                      setSelectedUserIds(keys.map(String)),
+                    preserveSelectedRowKeys: true,
+                  }
+                : undefined
+            }
             pagination={
               pagination
                 ? {

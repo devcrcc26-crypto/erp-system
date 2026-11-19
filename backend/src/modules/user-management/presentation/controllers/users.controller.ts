@@ -49,6 +49,7 @@ import {
   UsersQueryDto,
 } from '../../application/dtos/user-management.dtos';
 import { EmployeeIdCardPdfService } from '../../application/services/employee-id-card-pdf.service';
+import { EmployeeRecordPdfService } from '../../application/services/employee-record-pdf.service';
 import { UserManagementService } from '../../application/services/user-management.service';
 import {
   ReactivateDto,
@@ -79,6 +80,7 @@ export class UsersController {
     private readonly lifecycle: EmploymentLifecycleService,
     private readonly profileRecords: EmployeeProfileRecordsService,
     private readonly idCardPdfService: EmployeeIdCardPdfService,
+    private readonly employeeRecordPdfService: EmployeeRecordPdfService,
     private readonly permissionService: PermissionService,
     private readonly prisma: PrismaService,
   ) {}
@@ -546,6 +548,26 @@ export class UsersController {
   ): Promise<{ message: string }> {
     await this.userManagementService.deleteUserPhoto(this.ctx(user), id);
     return { message: 'Profile photo removed' };
+  }
+
+  @Get(':id/record-pdf')
+  @RequireAnyPermission(
+    { module: 'users', action: 'view' },
+    { module: 'hr', action: 'view' },
+  )
+  @ApiOperation({
+    summary: 'Download full employee record PDF (HR and above)',
+  })
+  @ApiProduces('application/pdf')
+  async downloadEmployeeRecordPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const file = await this.employeeRecordPdfService.getPdf(this.ctx(user), id);
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('attachment', file.filename),
+    });
   }
 
   @Get(':id/id-card')

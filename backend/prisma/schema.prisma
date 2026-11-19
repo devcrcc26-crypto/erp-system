@@ -723,14 +723,16 @@ model User {
   tin                   String?         @map("tin")
   nationality           Nationality?
   employeeType          EmployeeType?   @map("employee_type")
+  /// @deprecated Unused for API responses. Derived from EducationRecord.certificateType.
   educationLevel        EducationLevel? @map("education_level")
+  /// @deprecated Unused for API responses. Derived from EducationRecord.subjectMajor.
   fieldOfStudy          String?         @map("field_of_study")
   /// Company hire / employment start date (payroll & attendance joiner window).
   employmentDate        DateTime?       @map("employment_date") @db.Date
-  /// Career experience in years as entered by HR (never imported). The shown
-  /// value is this plus the time elapsed since yearsOfExperienceAsOf.
+  /// @deprecated Unused. Years of experience are computed from PriorEmployment.dateFrom
+  /// and employmentDate; this column is no longer written by create/update user APIs.
   yearsOfExperience     Float?          @map("years_of_experience")
-  /// Set by the server whenever yearsOfExperience is saved.
+  /// @deprecated Unused with computed years of experience.
   yearsOfExperienceAsOf DateTime?       @map("years_of_experience_as_of") @db.Date
   emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")

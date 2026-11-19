@@ -27,7 +27,11 @@ import { assertPasswordPolicy } from '../utils/password-policy.util';
 import { AuthMailService } from './auth-mail.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-import { currentYearsOfExperience } from '../../../user-management/domain/years-of-experience';
+import {
+  deriveEducationLevel,
+  deriveFieldOfStudy,
+} from '../../../user-management/domain/derived-education';
+import { calculateYearsOfExperienceFromDates } from '../../../user-management/domain/years-of-experience';
 
 type SessionContext = {
   userId: string;
@@ -47,6 +51,20 @@ const PROFILE_INCLUDE = {
   seniorityLevel: { select: { name: true, nameZh: true } },
   branch: { select: { name: true } },
   reportsTo: { select: { firstName: true, lastName: true, chineseName: true } },
+  educationRecords: {
+    where: { deletedAt: null },
+    orderBy: [{ graduationYear: 'desc' as const }, { createdAt: 'desc' as const }],
+    select: {
+      certificateType: true,
+      subjectMajor: true,
+      graduationYear: true,
+      createdAt: true,
+    },
+  },
+  priorEmployments: {
+    where: { deletedAt: null },
+    select: { dateFrom: true },
+  },
 } satisfies Prisma.UserInclude;
 
 type ProfileUser = Prisma.UserGetPayload<{ include: typeof PROFILE_INCLUDE }>;
@@ -594,14 +612,18 @@ export class ProfileService {
       idIssueDate: toDateOnly(user.idIssueDate),
       idExpiryDate: toDateOnly(user.idExpiryDate),
       gender: user.gender,
-      educationLevel: user.educationLevel,
-      fieldOfStudy: user.fieldOfStudy,
+      educationLevel:
+        deriveEducationLevel(
+          user.educationRecords.map((row) => row.certificateType),
+        ) ?? user.educationLevel,
+      fieldOfStudy:
+        deriveFieldOfStudy(user.educationRecords) ?? user.fieldOfStudy,
       employmentDate: toDateOnly(user.employmentDate),
-      yearsOfExperience: currentYearsOfExperience(
-        user.yearsOfExperience,
-        user.yearsOfExperienceAsOf,
+      yearsOfExperience: calculateYearsOfExperienceFromDates(
+        user.employmentDate,
+        user.priorEmployments.map((row) => row.dateFrom),
       ),
-      yearsOfExperienceAsOf: toDateOnly(user.yearsOfExperienceAsOf),
+      yearsOfExperienceAsOf: null,
       secondaryPhone: user.secondaryPhone,
       seniorityLevelName: user.seniorityLevel?.name ?? null,
       seniorityLevelNameZh: user.seniorityLevel?.nameZh ?? null,

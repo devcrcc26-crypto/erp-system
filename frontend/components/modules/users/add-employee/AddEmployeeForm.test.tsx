@@ -104,11 +104,16 @@ const USER = {
   nationalId: 'NID-1',
   nationality: 'CHINESE',
   employeeType: 'PERMANENT',
-  educationLevel: 'BSC',
-  fieldOfStudy: 'Civil Engineering',
-  yearsOfExperience: 6.5,
-  yearsOfExperienceAsOf: '2026-01-15',
   employmentDate: '2020-03-01',
+  educationRecords: [
+    {
+      instituteName: 'AAU',
+      graduationYear: 2012,
+      subjectMajor: 'Civil Engineering',
+      certificateType: 'BSc',
+    },
+  ],
+  priorEmployments: [],
   addressCountry: 'Ethiopia',
   addressCity: 'Addis Ababa',
   emergencyContacts: [{ firstName: 'Wei', lastName: 'Chen', phone: '+251900000000' }],
@@ -164,7 +169,7 @@ describe('AddEmployeeForm (edit mode)', () => {
     expect(screen.getByDisplayValue('董锦霞')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Addis Ababa')).toBeInTheDocument();
     expect(screen.getByDisplayValue('NID-1')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Civil Engineering')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('AAU')).toBeInTheDocument();
     expect(screen.getByTestId('reports-to')).toHaveTextContent('boss-1');
   });
 
@@ -202,15 +207,20 @@ describe('AddEmployeeForm (edit mode)', () => {
       nationalId: 'NID-1',
       nationality: 'CHINESE',
       employeeType: 'PERMANENT',
-      educationLevel: 'BSC',
-      fieldOfStudy: 'Civil Engineering',
-      yearsOfExperience: 6.5,
       secondaryPhone: '',
       seniorityLevelId: null,
       employmentDate: '2020-03-01',
       addressCountry: 'Ethiopia',
       addressCity: 'Addis Ababa',
     });
+    expect(body.educationRecords).toEqual([
+      {
+        instituteName: 'AAU',
+        graduationYear: 2012,
+        subjectMajor: 'Civil Engineering',
+        certificateType: 'BSc',
+      },
+    ]);
     expect(body.emergencyContacts).toHaveLength(1);
     // Role unchanged, so no role API calls.
     expect(mockAssignRole).not.toHaveBeenCalled();
@@ -386,7 +396,6 @@ describe('AddEmployeeForm (create mode)', () => {
     await user.type(inputFor('users.form.phone'), '+251911111111');
     await user.type(inputFor('users.form.nationalId'), 'NID-9');
     await user.type(inputFor('users.form.addressCity'), 'Addis Ababa');
-    await user.type(inputFor('users.form.fieldOfStudy'), 'Surveying');
     // Roles are required: the first added role becomes primary.
     await user.click(screen.getByRole('button', { name: /users\.addAnotherRole/ }));
     await clickThroughAndSubmit(user, 'users.sendInvitation');
@@ -402,8 +411,10 @@ describe('AddEmployeeForm (create mode)', () => {
       phone: '+251911111111',
       nationalId: 'NID-9',
       addressCity: 'Addis Ababa',
-      fieldOfStudy: 'Surveying',
     });
+    expect(body).not.toHaveProperty('fieldOfStudy');
+    expect(body).not.toHaveProperty('educationLevel');
+    expect(body).not.toHaveProperty('yearsOfExperience');
     await waitFor(() =>
       expect(mockAssignRole).toHaveBeenCalledWith({
         userId: 'new-user',

@@ -668,31 +668,16 @@ export default function AddEmployeeReviewStep({
         <ReviewSection title={t('users.sectionEducationExperience')}>
           <div className="erp-review-fields">
             <ReviewField
-              label={t('users.form.educationLevel')}
-              value={
-                values.educationLevel
-                  ? t(`hr.educationLevel.${values.educationLevel}`)
-                  : '-'
-              }
-            />
-            <ReviewField
-              label={t('users.form.fieldOfStudy')}
-              value={values.fieldOfStudy?.trim() || '-'}
-            />
-            <ReviewField
-              label={t('users.form.yearsOfExperience')}
-              value={
-                values.yearsOfExperience != null
-                  ? t('users.yearsValue', { years: values.yearsOfExperience })
-                  : '-'
-              }
-            />
-            <ReviewField
               label={t('users.form.higherEducation')}
               wide
               value={
                 (values.educationRecords ?? [])
-                  .map((row) => row.instituteName?.trim())
+                  .map((row) => {
+                    const institute = row.instituteName?.trim();
+                    if (!institute) return '';
+                    const cert = row.certificateType?.trim();
+                    return cert ? `${institute} (${cert})` : institute;
+                  })
                   .filter(Boolean)
                   .join('; ') || '-'
               }

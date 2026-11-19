@@ -485,10 +485,7 @@ export interface CreateUserRequest {
   tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
-  educationLevel?: EducationLevel;
-  fieldOfStudy?: string;
   employmentDate?: string;
-  yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
   educationRecords?: EducationRecordInput[];
   priorEmployments?: PriorEmploymentInput[];
@@ -546,10 +543,7 @@ export interface UpdateUserRequest {
   tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
-  educationLevel?: EducationLevel;
-  fieldOfStudy?: string;
   employmentDate?: string;
-  yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
   educationRecords?: EducationRecordInput[];
   priorEmployments?: PriorEmploymentInput[];

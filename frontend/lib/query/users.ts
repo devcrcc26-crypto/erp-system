@@ -532,6 +532,17 @@ export async function downloadUserIdCard(
   );
 }
 
+/** Download the full employee record PDF (HR and above). */
+export async function downloadEmployeeRecordPdf(
+  userId: string,
+  filename?: string,
+): Promise<void> {
+  await downloadApiFile(
+    `/users/${userId}/record-pdf`,
+    filename ?? `${userId}-employee-record.pdf`,
+  );
+}
+
 /** Download a bulk CR80 ID card PDF (front + back per employee). */
 export async function downloadBulkIdCards(
   userIds: string[],

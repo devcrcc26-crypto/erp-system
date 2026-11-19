@@ -98,6 +98,7 @@ describe('sidebar permissions and filtering', () => {
       'approvals',
       'announcements',
       'people',
+      'organization',
       'time',
       'finance',
       'operations',
@@ -108,6 +109,9 @@ describe('sidebar permissions and filtering', () => {
     expect(folder(model, 'people')?.groups.map((group) => group.id)).toEqual(
       expect.arrayContaining(['people-employees', 'people-performance', 'people-reports']),
     );
+    expect(folder(model, 'organization')?.groups.map((group) => group.id)).toEqual([
+      'org-structure',
+    ]);
     expect(folder(model, 'time')?.groups.map((group) => group.id)).toEqual([
       'time-leave',
       'time-attendance',

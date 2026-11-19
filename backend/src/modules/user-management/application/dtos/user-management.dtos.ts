@@ -12,7 +12,6 @@ import {
   IsOptional,
   IsString,
   Matches,
-  Max,
   MaxLength,
   Min,
   MinLength,
@@ -22,7 +21,6 @@ import {
 import { Transform, Type } from 'class-transformer';
 import {
   AttendanceMode,
-  EducationLevel,
   EmployeeType,
   EmploymentStatus,
   Gender,
@@ -50,7 +48,6 @@ import {
   CHINESE_NAME_PATTERN,
   EMAIL_MAX,
   EMPLOYEE_ID_PATTERN,
-  FIELD_OF_STUDY_MAX,
   HOUSE_NUMBER_MAX,
   MAX_EMERGENCY_CONTACTS,
   MAX_EMPLOYEE_AGE,
@@ -60,7 +57,6 @@ import {
   TIN_PATTERN,
   USER_NAME_MAX,
   USER_NAME_PATTERN,
-  YEARS_OF_EXPERIENCE_MAX,
   trimString,
 } from './user-field.rules';
 
@@ -435,19 +431,6 @@ export class CreateUserDto {
   @IsEnum(EmployeeType)
   employeeType?: EmployeeType;
 
-  @ApiPropertyOptional({ enum: EducationLevel })
-  @IsOptional()
-  @IsEnum(EducationLevel)
-  educationLevel?: EducationLevel;
-
-  @ApiPropertyOptional({ maxLength: FIELD_OF_STUDY_MAX })
-  @IsOptional()
-  @IsOptionalText()
-  @Transform(trimString)
-  @IsString()
-  @MaxLength(FIELD_OF_STUDY_MAX)
-  fieldOfStudy?: string;
-
   @ApiPropertyOptional({
     example: '2024-03-01',
     description: 'Company hire / employment start date',
@@ -458,19 +441,6 @@ export class CreateUserDto {
   @IsNotFutureDate()
   @IsNotBeforeProperty('dateOfBirth')
   employmentDate?: string;
-
-  @ApiPropertyOptional({
-    example: 6.5,
-    nullable: true,
-    description:
-      'Career experience in years, as of today. The server records the as-of ' +
-      'date when the value changes; null clears it.',
-  })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 1, allowNaN: false, allowInfinity: false })
-  @Min(0)
-  @Max(YEARS_OF_EXPERIENCE_MAX)
-  yearsOfExperience?: number | null;
 
   @ApiPropertyOptional({ type: [EmergencyContactDto], maxItems: MAX_EMERGENCY_CONTACTS })
   @IsOptional()

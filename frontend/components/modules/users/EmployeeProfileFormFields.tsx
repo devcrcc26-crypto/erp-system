@@ -1,6 +1,6 @@
 'use client';
 
-import { Checkbox, DatePicker, Form, Input, InputNumber, Select } from 'antd';
+import { Checkbox, DatePicker, Form, Input, Select } from 'antd';
 import { useCanEditHr } from '@/hooks/use-auth-capabilities';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useMemo } from 'react';
@@ -15,7 +15,6 @@ import { useWorkScheduleList } from '@/lib/query/work-schedule';
 import type {
   BloodType,
   CreateUserRequest,
-  EducationLevel,
   EducationRecordInput,
   EmergencyContact,
   EmployeeType,
@@ -37,7 +36,6 @@ import {
   disableFutureDates,
   employeeIdRules,
   employmentDateRules,
-  fieldOfStudyRules,
   nationalIdRules,
 } from '@/lib/validation/user-fields';
 
@@ -70,13 +68,7 @@ export interface EmployeeProfileFormValues {
   >;
   nationality?: Nationality;
   employeeType?: EmployeeType;
-  educationLevel?: EducationLevel;
-  fieldOfStudy?: string;
   employmentDate?: Dayjs;
-  /** Years of experience as of today (shown value; grows automatically). */
-  yearsOfExperience?: number | null;
-  /** Display only: when the stored value was recorded. Never sent. */
-  yearsOfExperienceAsOf?: string;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
   workScheduleId?: string;
@@ -100,21 +92,6 @@ export const MARITAL_STATUS_OPTIONS: MaritalStatus[] = [
   'MARRIED',
   'DIVORCED',
 ];
-
-export const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
-  'PHD',
-  'MSC',
-  'BSC',
-  'DIPLOMA',
-  'TECHNICIAN',
-  'CERTIFICATE',
-  'SECONDARY',
-  'PRIMARY',
-  'OTHER',
-];
-
-/** Upper bound for years of experience (matches the API). */
-export const YEARS_OF_EXPERIENCE_MAX = 70;
 
 export type EmployeeProfileSection =
   | 'personal'
@@ -171,10 +148,6 @@ export function EmployeeProfileFormFields({
   const canEditHr = useCanEditHr();
   const leavePoliciesQuery = useLeavePolicies();
   const workSchedulesQuery = useWorkScheduleList();
-  // Display-only value with no Form.Item, so watch it from the store.
-  const yearsOfExperienceAsOf = Form.useWatch('yearsOfExperienceAsOf', {
-    preserve: true,
-  }) as string | undefined;
   const dateOfBirth = Form.useWatch('dateOfBirth') as Dayjs | undefined;
   const selectedWorkScheduleId = Form.useWatch('workScheduleId') as string | undefined;
 
@@ -413,56 +386,6 @@ export function EmployeeProfileFormFields({
           showSectionTitles={showSectionTitles}
           t={t}
         >
-          <div className="erp-form-grid-3">
-            <Form.Item label={t('users.form.educationLevel')} name="educationLevel">
-              <Select
-                allowClear
-                className="!w-full"
-                placeholder={t('common.select')}
-                options={EDUCATION_LEVEL_OPTIONS.map((value) => ({
-                  value,
-                  label: t(`hr.educationLevel.${value}`),
-                }))}
-              />
-            </Form.Item>
-            <Form.Item
-              label={t('users.form.fieldOfStudy')}
-              name="fieldOfStudy"
-              rules={fieldOfStudyRules(t)}
-            >
-              <Input placeholder={t('users.form.fieldOfStudyPlaceholder')} />
-            </Form.Item>
-            <Form.Item
-              label={t('users.form.yearsOfExperience')}
-              name="yearsOfExperience"
-              extra={
-                yearsOfExperienceAsOf
-                  ? t('users.form.yearsOfExperienceRecordedHint', {
-                      date: dayjs(yearsOfExperienceAsOf).format('YYYY-MM-DD'),
-                    })
-                  : t('users.form.yearsOfExperienceHint')
-              }
-              rules={[
-                {
-                  type: 'number',
-                  min: 0,
-                  max: YEARS_OF_EXPERIENCE_MAX,
-                  message: t('users.form.yearsOfExperienceInvalid', {
-                    max: YEARS_OF_EXPERIENCE_MAX,
-                  }),
-                },
-              ]}
-            >
-              <InputNumber
-                min={0}
-                max={YEARS_OF_EXPERIENCE_MAX}
-                step={0.5}
-                precision={1}
-                className="!w-full"
-                placeholder={t('users.form.yearsOfExperiencePlaceholder')}
-              />
-            </Form.Item>
-          </div>
           <EducationRecordsField />
           <PriorEmploymentField />
         </SectionShell>
@@ -683,10 +606,7 @@ export function buildEmployeeProfilePayload(
   | 'tin'
   | 'nationality'
   | 'employeeType'
-  | 'educationLevel'
-  | 'fieldOfStudy'
   | 'employmentDate'
-  | 'yearsOfExperience'
   | 'emergencyContacts'
   | 'leavePolicyId'
   | 'workScheduleId'
@@ -720,11 +640,7 @@ export function buildEmployeeProfilePayload(
     priorEmployments: normalizePriorEmployments(values.priorEmployments),
     nationality: values.nationality,
     employeeType: values.employeeType,
-    educationLevel: values.educationLevel,
-    fieldOfStudy: values.fieldOfStudy?.trim() || undefined,
     employmentDate: formatFormDate(values.employmentDate),
-    // null clears; the API keeps the as-of date when the shown value is unchanged.
-    yearsOfExperience: values.yearsOfExperience ?? null,
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
     workScheduleId: values.workScheduleId,
@@ -786,11 +702,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     })),
     nationality: user.nationality ?? undefined,
     employeeType: user.employeeType ?? undefined,
-    educationLevel: user.educationLevel ?? undefined,
-    fieldOfStudy: user.fieldOfStudy ?? undefined,
     employmentDate: user.employmentDate ? dayjs(user.employmentDate) : undefined,
-    yearsOfExperience: user.yearsOfExperience ?? undefined,
-    yearsOfExperienceAsOf: user.yearsOfExperienceAsOf ?? undefined,
     emergencyContacts: parseEmergencyContacts(user.emergencyContacts),
     leavePolicyId: user.leavePolicyId ?? undefined,
     workScheduleId: user.workScheduleId ?? undefined,
