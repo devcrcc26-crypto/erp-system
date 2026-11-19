@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Select, Space, Tabs } from 'antd';
+import { Alert, Button, Space, Tabs } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -14,7 +14,8 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { MyMeeting } from '@/lib/api/project-management.types';
-import { useAllMeetings, useMyMeetings } from '@/lib/query/meetings';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useAllMeetingsAll, useMyMeetingsAll } from '@/lib/query/meetings';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -76,17 +77,16 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
 
   const filterParams = { search: search.trim() || undefined };
 
-  const listParams = { ...params, ...filterParams };
-
-  const myQuery = useMyMeetings(
-    listParams,
+  const myQuery = useMyMeetingsAll(
+    filterParams,
     capabilitiesReady && canAccessPage && !portfolioMode,
   );
-  const allQuery = useAllMeetings(
-    listParams,
+  const allQuery = useAllMeetingsAll(
+    filterParams,
     capabilitiesReady && canAccessPage && portfolioMode,
   );
   const meetingsQuery = portfolioMode ? allQuery : myQuery;
+  const allMeetings = meetingsQuery.data ?? [];
 
   const startOfToday = useMemo(() => {
     const d = new Date();
@@ -107,22 +107,11 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
     return new Date(meeting.meetingDate).getTime() >= startOfToday;
   }
 
-  const rows = (meetingsQuery.data?.data ?? []).filter((meeting) => {
-    if (activeTab === 'cancelled') {
-      return meeting.status === 'CANCELLED';
-    }
-    if (activeTab === 'upcoming') {
-      return isUpcoming(meeting);
-    }
-    return meeting.status !== 'CANCELLED' && !isUpcoming(meeting);
-  });
-
   const counts = useMemo(() => {
-    const all = meetingsQuery.data?.data ?? [];
     let upcoming = 0;
     let past = 0;
     let cancelled = 0;
-    for (const meeting of all) {
+    for (const meeting of allMeetings) {
       if (meeting.status === 'CANCELLED') {
         cancelled += 1;
       } else if (isUpcoming(meeting)) {
@@ -132,7 +121,36 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
       }
     }
     return { upcoming, past, cancelled };
-  }, [meetingsQuery.data?.data, startOfToday]);
+  }, [allMeetings, startOfToday]);
+
+  const filteredByTab = useMemo(() => {
+    return allMeetings.filter((meeting) => {
+      if (activeTab === 'cancelled') {
+        return meeting.status === 'CANCELLED';
+      }
+      if (activeTab === 'upcoming') {
+        return isUpcoming(meeting);
+      }
+      return meeting.status !== 'CANCELLED' && !isUpcoming(meeting);
+    });
+  }, [allMeetings, activeTab, startOfToday]);
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filteredByTab.length;
+    const limit = params.limit ?? 20;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filteredByTab.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filteredByTab.slice(start, start + meta.limit);
+  }, [filteredByTab, meta.page, meta.limit]);
 
   const columns: ColumnsType<MyMeeting> = useMemo(
     () => [
@@ -221,8 +239,6 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
     meetingsQuery.isError &&
     meetingsQuery.error instanceof ApiRequestError &&
     (meetingsQuery.error.status === 404 || meetingsQuery.error.status === 0);
-
-  const meta = meetingsQuery.data?.meta;
 
   return (
     <>

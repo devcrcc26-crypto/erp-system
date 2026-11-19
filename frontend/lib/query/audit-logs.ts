@@ -10,7 +10,8 @@ export const auditLogKeys = {
   list: (params: AuditLogQueryParams) => [...auditLogKeys.lists(), params] as const,
   details: () => [...auditLogKeys.all, 'detail'] as const,
   detail: (id: string) => [...auditLogKeys.details(), id] as const,
-  stats: () => [...auditLogKeys.all, 'stats'] as const,
+  stats: (params: Omit<AuditLogQueryParams, 'page' | 'limit' | 'sortBy' | 'sortOrder'> = {}) =>
+    [...auditLogKeys.all, 'stats', params] as const,
 };
 
 function toQueryString(params: AuditLogQueryParams): string {
@@ -59,10 +60,14 @@ export function useAuditLog(id: string, enabled = true) {
   });
 }
 
-export function useAuditLogStats(enabled = true) {
+export function useAuditLogStats(
+  params: Omit<AuditLogQueryParams, 'page' | 'limit' | 'sortBy' | 'sortOrder'> = {},
+  enabled = true,
+) {
   return useQuery({
-    queryKey: auditLogKeys.stats(),
-    queryFn: () => apiGet<AuditLogStats>('/audit-logs/stats/summary'),
+    queryKey: auditLogKeys.stats(params),
+    queryFn: () =>
+      apiGet<AuditLogStats>(`/audit-logs/stats/summary${toQueryString(params)}`),
     enabled,
     retry: false,
     staleTime: 60 * 1000,

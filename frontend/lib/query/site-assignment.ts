@@ -79,6 +79,54 @@ export function useSiteAssignments(params: ListSiteAssignmentsParams) {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the site-assignment list endpoint (filter locally).
+ */
+async function fetchAllSiteAssignmentPages(
+  params: Omit<ListSiteAssignmentsParams, 'page' | 'limit' | 'status' | 'siteName'> = {},
+): Promise<SiteAssignmentListItem[]> {
+  const first = await apiGetPaginated<SiteAssignmentListItem>(
+    `${PATH}${toQueryString({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<SiteAssignmentListItem>(
+        `${PATH}${toQueryString({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All site assignments (all pages) for client-side filter/search. */
+export function useSiteAssignmentsAll(
+  params: Omit<ListSiteAssignmentsParams, 'page' | 'limit' | 'status' | 'siteName'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...siteAssignmentKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllSiteAssignmentPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useSiteAssignment(id: string, enabled = true) {
   return useQuery({
     queryKey: siteAssignmentKeys.detail(id),

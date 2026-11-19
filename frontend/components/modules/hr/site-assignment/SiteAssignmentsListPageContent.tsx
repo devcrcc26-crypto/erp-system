@@ -38,37 +38,22 @@ import type {
   SiteAssignmentListItem,
   SiteAssignmentStatus,
 } from '@/lib/api/site-assignment.types';
-import { useSiteAssignments } from '@/lib/query/site-assignment';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useSiteAssignmentsAll } from '@/lib/query/site-assignment';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSiteAssignmentProject,
   siteAssignmentStatusVariant,
 } from '@/lib/utils/site-assignment-display';
+import {
+  SITE_ASSIGNMENT_APPROVED_STATUSES,
+  SITE_ASSIGNMENT_PENDING_STATUSES,
+  SITE_ASSIGNMENT_REJECTED_STATUSES,
+  filterSiteAssignments,
+  type SiteAssignmentStatusMode,
+} from '@/lib/utils/site-assignment-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
-
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
-
-const PENDING_STATUSES: SiteAssignmentStatus[] = [
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-];
-const APPROVED_STATUSES: SiteAssignmentStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: SiteAssignmentStatus[] = ['REJECTED', 'CANCELLED'];
-
-function statusesForMode(mode: StatusMode): SiteAssignmentStatus[] | undefined {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return undefined;
-  }
-}
 
 /**
  * Site assignments list - Employees / leave v2 chrome.
@@ -81,68 +66,67 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const { params, resetPage, bindMeta } = useTablePagination(20);
 
-  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [statusMode, setStatusMode] =
+    useState<SiteAssignmentStatusMode>('all');
   const [siteFilter, setSiteFilter] = useState('');
   const [search, setSearch] = useState('');
   const [monthFilter, setMonthFilter] = useState<Dayjs | null>(null);
 
-  const statusList = statusesForMode(statusMode);
-  // API accepts a single status; when mode has multiple, fetch all and filter client-side.
-  const apiStatus =
-    statusList && statusList.length === 1 ? statusList[0] : undefined;
+  const listQuery = useSiteAssignmentsAll({}, true);
+  const allRows = listQuery.data ?? [];
 
-  const listParams = useMemo(
-    () => ({
-      page: params.page,
-      limit: params.limit,
-      status: apiStatus,
-      siteName: siteFilter.trim() || undefined,
-      month: monthFilter?.month() != null ? monthFilter.month() + 1 : undefined,
-      year: monthFilter?.year(),
-    }),
-    [params.page, params.limit, apiStatus, siteFilter, monthFilter],
-  );
-
-  const listQuery = useSiteAssignments(listParams);
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return rows.filter((row) => {
-      if (statusList && statusList.length > 1 && !statusList.includes(row.status)) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      const employee = formatUserName(row.employee).toLowerCase();
-      const site = row.siteName.toLowerCase();
-      const request = row.requestNumber.toLowerCase();
-      const project =
-        formatSiteAssignmentProject(row)?.toLowerCase() ?? '';
-      return (
-        employee.includes(query) ||
-        site.includes(query) ||
-        request.includes(query) ||
-        project.includes(query)
-      );
-    });
-  }, [rows, search, statusList]);
+  const month = monthFilter?.month() != null ? monthFilter.month() + 1 : undefined;
+  const year = monthFilter?.year();
 
   const statusCounts = useMemo(() => {
-    // Approximate from current page when server-filtered; prefer full counts when mode is all.
-    const source = rows;
+    const scoped = filterSiteAssignments(allRows, {
+      search,
+      siteName: siteFilter,
+      month,
+      year,
+    });
     return {
-      all: meta?.total ?? source.length,
-      pending: source.filter((row) => PENDING_STATUSES.includes(row.status))
-        .length,
-      approved: source.filter((row) => APPROVED_STATUSES.includes(row.status))
-        .length,
-      rejected: source.filter((row) => REJECTED_STATUSES.includes(row.status))
-        .length,
+      all: scoped.length,
+      pending: scoped.filter((row) =>
+        SITE_ASSIGNMENT_PENDING_STATUSES.includes(row.status),
+      ).length,
+      approved: scoped.filter((row) =>
+        SITE_ASSIGNMENT_APPROVED_STATUSES.includes(row.status),
+      ).length,
+      rejected: scoped.filter((row) =>
+        SITE_ASSIGNMENT_REJECTED_STATUSES.includes(row.status),
+      ).length,
     };
-  }, [rows, meta?.total]);
+  }, [allRows, search, siteFilter, month, year]);
+
+  const filtered = useMemo(
+    () =>
+      filterSiteAssignments(allRows, {
+        search,
+        statusMode,
+        siteName: siteFilter,
+        month,
+        year,
+      }),
+    [allRows, search, statusMode, siteFilter, month, year],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 20;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const filteredRows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const hasFilters =
     Boolean(search.trim()) ||
@@ -150,7 +134,7 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
     statusMode !== 'all' ||
     monthFilter != null;
 
-  function handleStatusMode(mode: StatusMode): void {
+  function handleStatusMode(mode: SiteAssignmentStatusMode): void {
     setStatusMode(mode);
     resetPage();
   }
@@ -286,7 +270,7 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
           <h2 id="erp-sa-hero-title" className="erp-employees-hero-title">
             {t('pages.hr.listHeroTitle', {
               title: t('pages.hr.siteAssignments.title'),
-              count: (meta?.total ?? filteredRows.length).toLocaleString(),
+              count: meta.total.toLocaleString(),
             })}
           </h2>
           <div className="erp-employees-hero-actions">

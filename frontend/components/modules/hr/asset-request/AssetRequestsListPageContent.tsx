@@ -3,7 +3,7 @@ import '@/components/modules/hr/shared/hr-travel-v2.css';
 import '@/components/modules/users/employees-v2.css';
 import { accent } from '@/lib/theme/accent';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, DatePicker, Grid, Input, Select, Spin } from 'antd';
 import {
   CheckCircleOutlined,
@@ -24,9 +24,12 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import type { AssetRequestListItem, AssetRequestStatus } from '@/lib/api/asset-request.types';
+import type {
+  AssetRequestListItem,
+  AssetRequestStatus,
+} from '@/lib/api/asset-request.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useAssetRequests } from '@/lib/query/asset-request';
+import { useAssetRequestsAll } from '@/lib/query/asset-request';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
   ASSET_REQUEST_STATUS_OPTIONS,
@@ -34,6 +37,13 @@ import {
   formatAssetRequestEmployeeName,
   formatAssetRequestStatus,
 } from '@/lib/utils/asset-request-display';
+import {
+  ASSET_REQUEST_APPROVED_STATUSES,
+  ASSET_REQUEST_PENDING_STATUSES,
+  ASSET_REQUEST_REJECTED_STATUSES,
+  filterAssetRequests,
+  type AssetRequestStatusMode,
+} from '@/lib/utils/asset-request-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -49,7 +59,7 @@ const STAT_ACCENT = {
 function AssetRequestStat({
   label,
   value,
-  accent,
+  accent: tintKey,
   icon,
   active,
   onClick,
@@ -61,7 +71,7 @@ function AssetRequestStat({
   active: boolean;
   onClick: () => void;
 }): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
+  const tint = STAT_ACCENT[tintKey];
   return (
     <button
       type="button"
@@ -79,19 +89,6 @@ function AssetRequestStat({
   );
 }
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
-
-const PENDING_STATUSES: AssetRequestStatus[] = ['SUBMITTED', 'IN_REVIEW'];
-const APPROVED_STATUSES: AssetRequestStatus[] = ['APPROVED', 'FULFILLED'];
-const REJECTED_STATUSES: AssetRequestStatus[] = ['REJECTED', 'CANCELLED'];
-
-function statusesForMode(mode: StatusFilter): AssetRequestStatus[] | undefined {
-  if (mode === 'pending') return PENDING_STATUSES;
-  if (mode === 'approved') return APPROVED_STATUSES;
-  if (mode === 'rejected') return REJECTED_STATUSES;
-  return undefined;
-}
-
 export default function AssetRequestsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
@@ -102,25 +99,23 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [statusMode, setStatusMode] = useState<StatusFilter>('all');
+  const [statusMode, setStatusMode] = useState<AssetRequestStatusMode>('all');
+  const [exactStatus, setExactStatus] = useState<AssetRequestStatus | undefined>();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState<string | undefined>();
   const [dateTo, setDateTo] = useState<string | undefined>();
 
-  const filterStatuses = statusesForMode(statusMode);
+  const listQuery = useAssetRequestsAll(
+    { employeeId: canViewHr ? employeeId : undefined },
+    true,
+  );
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useAssetRequests({
-    status: filterStatuses,
-    search: appliedSearch || undefined,
-    employeeId: canViewHr ? employeeId : undefined,
-    dateFrom,
-    dateTo,
-    page: params.page,
-    limit: params.limit,
-  });
-
-  const rows: AssetRequestListItem[] = data?.data ?? [];
-  const meta: PaginationMeta | undefined = data?.meta;
+  const allRows = listQuery.data ?? [];
+  const isLoading = listQuery.isLoading;
+  const isError = listQuery.isError;
+  const error = listQuery.error;
+  const isFetching = listQuery.isFetching;
+  const refetch = listQuery.refetch;
 
   const usersQuery = useUsersDirectory({ page: 1, limit: 100 }, { enabled: canViewHr });
   const userOptions = (usersQuery.data?.data ?? []).map((u) => ({
@@ -128,11 +123,65 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
     label: formatUserName(u),
   }));
 
-  const allRows = rows;
-  const total = allRows.length;
-  const pendingCount = allRows.filter((r) => PENDING_STATUSES.includes(r.status as AssetRequestStatus)).length;
-  const approvedCount = allRows.filter((r) => APPROVED_STATUSES.includes(r.status as AssetRequestStatus)).length;
-  const rejectedCount = allRows.filter((r) => REJECTED_STATUSES.includes(r.status as AssetRequestStatus)).length;
+  const statusCounts = useMemo(() => {
+    const scoped = filterAssetRequests(allRows, {
+      search: appliedSearch,
+      employeeId: canViewHr ? employeeId : undefined,
+      dateFrom,
+      dateTo,
+    });
+    return {
+      all: scoped.length,
+      pending: scoped.filter((r) =>
+        ASSET_REQUEST_PENDING_STATUSES.includes(r.status),
+      ).length,
+      approved: scoped.filter((r) =>
+        ASSET_REQUEST_APPROVED_STATUSES.includes(r.status),
+      ).length,
+      rejected: scoped.filter((r) =>
+        ASSET_REQUEST_REJECTED_STATUSES.includes(r.status),
+      ).length,
+    };
+  }, [allRows, appliedSearch, canViewHr, employeeId, dateFrom, dateTo]);
+
+  const filtered = useMemo(
+    () =>
+      filterAssetRequests(allRows, {
+        search: appliedSearch,
+        statusMode: exactStatus ? undefined : statusMode,
+        exactStatus,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom,
+        dateTo,
+      }),
+    [
+      allRows,
+      appliedSearch,
+      statusMode,
+      exactStatus,
+      canViewHr,
+      employeeId,
+      dateFrom,
+      dateTo,
+    ],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   function handleSearch(): void {
     setAppliedSearch(search);
@@ -145,6 +194,12 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
     fmt: string,
   ): void {
     setter(value ? value.format(fmt) : undefined);
+    resetPage();
+  }
+
+  function handleStatusMode(mode: AssetRequestStatusMode): void {
+    setExactStatus(undefined);
+    setStatusMode(mode);
     resetPage();
   }
 
@@ -229,35 +284,35 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
         <div className="erp-users-stat-bar erp-employees-hero-stats">
           <AssetRequestStat
             label="All Requests"
-            value={meta?.total ?? total}
+            value={statusCounts.all}
             accent="blue"
             icon={<InboxOutlined />}
-            active={statusMode === 'all'}
-            onClick={() => { setStatusMode('all'); resetPage(); }}
+            active={statusMode === 'all' && !exactStatus}
+            onClick={() => handleStatusMode('all')}
           />
           <AssetRequestStat
             label="Pending"
-            value={pendingCount}
+            value={statusCounts.pending}
             accent="amber"
             icon={<ClockCircleOutlined />}
-            active={statusMode === 'pending'}
-            onClick={() => { setStatusMode('pending'); resetPage(); }}
+            active={statusMode === 'pending' && !exactStatus}
+            onClick={() => handleStatusMode('pending')}
           />
           <AssetRequestStat
             label="Approved"
-            value={approvedCount}
+            value={statusCounts.approved}
             accent="teal"
             icon={<CheckCircleOutlined />}
-            active={statusMode === 'approved'}
-            onClick={() => { setStatusMode('approved'); resetPage(); }}
+            active={statusMode === 'approved' && !exactStatus}
+            onClick={() => handleStatusMode('approved')}
           />
           <AssetRequestStat
             label="Rejected"
-            value={rejectedCount}
+            value={statusCounts.rejected}
             accent="red"
             icon={<CloseCircleOutlined />}
-            active={statusMode === 'rejected'}
-            onClick={() => { setStatusMode('rejected'); resetPage(); }}
+            active={statusMode === 'rejected' && !exactStatus}
+            onClick={() => handleStatusMode('rejected')}
           />
         </div>
       </section>
@@ -272,7 +327,7 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
           </div>
           <Button
             icon={<ReloadOutlined spin={isFetching} />}
-            onClick={() => refetch()}
+            onClick={() => void refetch()}
             title="Refresh"
           />
         </div>
@@ -307,14 +362,10 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
             placeholder="All statuses"
             allowClear
             options={ASSET_REQUEST_STATUS_OPTIONS}
-            value={filterStatuses?.[0] ?? undefined}
-            onChange={(v) => {
-              setStatusMode(
-                PENDING_STATUSES.includes(v as AssetRequestStatus) ? 'pending'
-                : APPROVED_STATUSES.includes(v as AssetRequestStatus) ? 'approved'
-                : REJECTED_STATUSES.includes(v as AssetRequestStatus) ? 'rejected'
-                : 'all',
-              );
+            value={exactStatus}
+            onChange={(v: AssetRequestStatus | undefined) => {
+              setExactStatus(v);
+              setStatusMode('all');
               resetPage();
             }}
           />
@@ -341,8 +392,8 @@ export default function AssetRequestsListPageContent(): React.ReactNode {
             rowKey="id"
             columns={columns}
             dataSource={rows}
-            size="small"
-            pagination={meta ? { ...bindMeta(meta), showSizeChanger: false } : false}
+            size={isCompact ? 'small' : 'middle'}
+            pagination={bindMeta(meta)}
             locale={{
               emptyText: (
                 <TableEmptyState

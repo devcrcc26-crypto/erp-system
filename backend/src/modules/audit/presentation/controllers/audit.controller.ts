@@ -27,8 +27,11 @@ export class AuditController {
   @Get('stats/summary')
   @RequirePermission('audit', 'view')
   @ApiOperation({ summary: 'Audit log aggregate stats for stat cards' })
-  getStats(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
-    return this.auditService.getStats(user.companyId);
+  getStats(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: AuditLogQueryDto,
+  ): Promise<unknown> {
+    return this.auditService.getStats(user.companyId, query);
   }
 
   @Get(':id')

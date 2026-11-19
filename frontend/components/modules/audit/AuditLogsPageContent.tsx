@@ -21,13 +21,17 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { ScrollText } from 'lucide-react';
+import type { TableProps } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { useAuditLogs, useAuditLogStats } from '@/lib/query/audit-logs';
@@ -87,7 +91,18 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const { params, resetPage, bindMeta } = useTablePagination(10);
+  const {
+    params,
+    sortBy,
+    sortOrder,
+    resetPage,
+    bindMeta,
+    handleTableChange,
+  } = useTablePagination({
+    initialPageSize: 10,
+    initialSortBy: 'createdAt',
+    initialSortOrder: 'desc',
+  });
 
   const [moduleFilter, setModuleFilter] = useState('');
   const [appliedModuleFilter, setAppliedModuleFilter] = useState('');
@@ -119,11 +134,8 @@ export default function AuditLogsPageContent(): React.ReactNode {
     return () => clearTimeout(handle);
   }, [moduleFilter, actionFilter, resetPage]);
 
-  const queryParams = useMemo(
+  const filterParams = useMemo(
     () => ({
-      ...params,
-      sortBy: 'createdAt' as const,
-      sortOrder: 'desc' as const,
       module: appliedModuleFilter || undefined,
       action: appliedActionFilter || undefined,
       userId: userIdFilter,
@@ -131,7 +143,6 @@ export default function AuditLogsPageContent(): React.ReactNode {
       dateTo: dateTo?.endOf('day').toISOString(),
     }),
     [
-      params,
       appliedModuleFilter,
       appliedActionFilter,
       userIdFilter,
@@ -140,8 +151,16 @@ export default function AuditLogsPageContent(): React.ReactNode {
     ],
   );
 
+  const queryParams = useMemo(
+    () => ({
+      ...params,
+      ...filterParams,
+    }),
+    [params, filterParams],
+  );
+
   const auditLogsQuery = useAuditLogs(queryParams);
-  const statsQuery = useAuditLogStats();
+  const statsQuery = useAuditLogStats(filterParams);
   const usersDirectoryQuery = useUsersDirectory(
     { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
     { enabled: auditLogsQuery.isSuccess },
@@ -165,6 +184,117 @@ export default function AuditLogsPageContent(): React.ReactNode {
       integrationCount: stats?.integrations ?? 0,
     };
   }, [statsQuery.data]);
+
+  const columns = useMemo(
+    () =>
+      withControlledSort<AuditLog>(
+        [
+          {
+            title: t('auditLogs.columns.timestamp'),
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            width: 170,
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-users-cell-sub">
+                {formatDisplayDateTime(value)}
+              </span>
+            ),
+          },
+          {
+            title: t('auditLogs.columns.user'),
+            key: 'user',
+            ellipsis: true,
+            responsive: ['md'] as const,
+            render: (_value: unknown, record: AuditLog) => {
+              const onBehalf = formatAuditLogOnBehalfSummary(record, t);
+              return (
+                <div className="min-w-0">
+                  <span className="erp-users-cell-strong">
+                    {formatAuditLogUserName(record)}
+                  </span>
+                  {onBehalf ? (
+                    <p className="erp-users-cell-sub m-0">{onBehalf}</p>
+                  ) : null}
+                </div>
+              );
+            },
+          },
+          {
+            title: t('auditLogs.columns.module'),
+            dataIndex: 'module',
+            key: 'module',
+            width: 130,
+            render: (value: string) => (
+              <span className="erp-users-id-chip">{value}</span>
+            ),
+          },
+          {
+            title: t('auditLogs.columns.action'),
+            dataIndex: 'action',
+            key: 'action',
+            width: 110,
+            render: (value: string) => (
+              <StatusBadge
+                label={value}
+                variant={auditLogActionVariant(value)}
+              />
+            ),
+          },
+          {
+            title: t('auditLogs.columns.recordType'),
+            dataIndex: 'recordType',
+            key: 'recordType',
+            ellipsis: true,
+            responsive: ['lg'] as const,
+            render: (value: string) => (
+              <span className="erp-users-cell-sub">{value}</span>
+            ),
+          },
+          {
+            title: t('auditLogs.columns.recordReference'),
+            dataIndex: 'recordReference',
+            key: 'recordReference',
+            ellipsis: true,
+            responsive: ['lg'] as const,
+            render: (value: string | null) => (
+              <span className="erp-users-cell-sub">{value ?? '-'}</span>
+            ),
+          },
+          {
+            title: t('auditLogs.columns.source'),
+            dataIndex: 'source',
+            key: 'source',
+            width: 130,
+            responsive: ['md'] as const,
+            render: (source: AuditLogSource) => (
+              <StatusBadge
+                label={formatAuditLogSourceLabel(source, t)}
+                variant={auditLogSourceVariant(source)}
+              />
+            ),
+          },
+          {
+            title: t('auditLogs.columns.ipAddress'),
+            dataIndex: 'ipAddress',
+            key: 'ipAddress',
+            width: 120,
+            responsive: ['xl'] as const,
+            render: (value: string | null) =>
+              value ? (
+                <span className="erp-users-cell-sub font-[family-name:var(--font-mono)] text-xs">
+                  {value}
+                </span>
+              ) : (
+                <span className="erp-users-cell-sub">-</span>
+              ),
+          },
+        ],
+        sortBy,
+        sortOrder,
+      ),
+    [sortBy, sortOrder, t],
+  );
 
   const hasFilters =
     Boolean(appliedModuleFilter) ||
@@ -348,6 +478,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
             dataSource={rows}
             scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1100 }}
             loading={auditLogsQuery.isFetching && rows.length === 0}
+            onChange={handleTableChange as TableProps<AuditLog>['onChange']}
             pagination={
               pagination
                 ? {
@@ -387,107 +518,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
                 />
               ),
             }}
-            columns={[
-              {
-                title: t('auditLogs.columns.timestamp'),
-                dataIndex: 'createdAt',
-                key: 'createdAt',
-                width: 170,
-                render: (value: string) => (
-                  <span className="erp-users-cell-sub">
-                    {formatDisplayDateTime(value)}
-                  </span>
-                ),
-              },
-              {
-                title: t('auditLogs.columns.user'),
-                key: 'user',
-                ellipsis: true,
-                responsive: ['md'],
-                render: (_value, record) => {
-                  const onBehalf = formatAuditLogOnBehalfSummary(record, t);
-                  return (
-                    <div className="min-w-0">
-                      <span className="erp-users-cell-strong">
-                        {formatAuditLogUserName(record)}
-                      </span>
-                      {onBehalf ? (
-                        <p className="erp-users-cell-sub m-0">{onBehalf}</p>
-                      ) : null}
-                    </div>
-                  );
-                },
-              },
-              {
-                title: t('auditLogs.columns.module'),
-                dataIndex: 'module',
-                key: 'module',
-                width: 130,
-                render: (value: string) => (
-                  <span className="erp-users-id-chip">{value}</span>
-                ),
-              },
-              {
-                title: t('auditLogs.columns.action'),
-                dataIndex: 'action',
-                key: 'action',
-                width: 110,
-                render: (value: string) => (
-                  <StatusBadge
-                    label={value}
-                    variant={auditLogActionVariant(value)}
-                  />
-                ),
-              },
-              {
-                title: t('auditLogs.columns.recordType'),
-                dataIndex: 'recordType',
-                key: 'recordType',
-                ellipsis: true,
-                responsive: ['lg'],
-                render: (value: string) => (
-                  <span className="erp-users-cell-sub">{value}</span>
-                ),
-              },
-              {
-                title: t('auditLogs.columns.recordReference'),
-                dataIndex: 'recordReference',
-                key: 'recordReference',
-                ellipsis: true,
-                responsive: ['lg'],
-                render: (value: string | null) => (
-                  <span className="erp-users-cell-sub">{value ?? '-'}</span>
-                ),
-              },
-              {
-                title: t('auditLogs.columns.source'),
-                dataIndex: 'source',
-                key: 'source',
-                width: 130,
-                responsive: ['md'],
-                render: (source: AuditLogSource) => (
-                  <StatusBadge
-                    label={formatAuditLogSourceLabel(source, t)}
-                    variant={auditLogSourceVariant(source)}
-                  />
-                ),
-              },
-              {
-                title: t('auditLogs.columns.ipAddress'),
-                dataIndex: 'ipAddress',
-                key: 'ipAddress',
-                width: 120,
-                responsive: ['xl'],
-                render: (value: string | null) =>
-                  value ? (
-                    <span className="erp-users-cell-sub font-[family-name:var(--font-mono)] text-xs">
-                      {value}
-                    </span>
-                  ) : (
-                    <span className="erp-users-cell-sub">-</span>
-                  ),
-              },
-            ]}
+            columns={columns}
           />
         </div>
       </div>

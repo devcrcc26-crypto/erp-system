@@ -370,15 +370,31 @@ export default function DailyLogsPageContent({
     logDateTo: dateTo?.format('YYYY-MM-DD'),
   });
 
+  const countFilterParams = {
+    search: search.trim() || undefined,
+    logDateFrom: dateFrom?.format('YYYY-MM-DD'),
+    logDateTo: dateTo?.format('YYYY-MM-DD'),
+  };
+
   const activeCountQuery = useDailyLogs(
     projectId,
-    { page: 1, limit: 1, status: DAILY_LOG_ACTIVE_STATUSES },
+    {
+      page: 1,
+      limit: 1,
+      status: DAILY_LOG_ACTIVE_STATUSES,
+      ...countFilterParams,
+    },
     true,
     { select: (d) => d },
   );
   const approvedCountQuery = useDailyLogs(
     projectId,
-    { page: 1, limit: 1, status: DAILY_LOG_APPROVED_STATUSES },
+    {
+      page: 1,
+      limit: 1,
+      status: DAILY_LOG_APPROVED_STATUSES,
+      ...countFilterParams,
+    },
     true,
     { select: (d) => d },
   );

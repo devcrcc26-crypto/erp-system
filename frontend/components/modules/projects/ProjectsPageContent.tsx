@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import { EditOutlined, FileExcelOutlined, FilePdfOutlined, PlusOutlined } from '@ant-design/icons';
 import { Network } from 'lucide-react';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TableProps } from 'antd/es/table';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
@@ -23,7 +23,10 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectResponsibleDepartment, ProjectDesignProperties, ProjectDesignStage, ProjectStatus } from '@/lib/api/project-management.types';
 import { fetchAllProjects, useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { tokens } from '@/lib/theme/tokens';
@@ -63,7 +66,17 @@ import { downloadProjectListExcel } from '@/lib/query/project-exports';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
 export default function ProjectsPageContent(): React.ReactNode {
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const {
+    params,
+    sortBy,
+    sortOrder,
+    resetPage,
+    bindMeta,
+    handleTableChange,
+  } = useTablePagination({
+    initialSortBy: 'createdAt',
+    initialSortOrder: 'desc',
+  });
   const messageApi = useAppMessage();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -91,8 +104,6 @@ export default function ProjectsPageContent(): React.ReactNode {
     responsibleDepartment: departmentFilter,
     designProperties: designPropertiesFilter,
     designStage: designStageFilter,
-    sortBy: 'createdAt' as const,
-    sortOrder: 'desc' as const,
   };
 
   const activeProjectsQuery = useProjects(
@@ -143,12 +154,15 @@ export default function ProjectsPageContent(): React.ReactNode {
     }
   }, [activeTab, departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search]);
 
-  const columns: ColumnsType<Project> = useMemo(
-    () => [
+  const columns = useMemo(
+    (): ColumnsType<Project> =>
+      withControlledSort<Project>(
+        [
       {
         title: 'Code',
         dataIndex: 'projectCode',
         key: 'projectCode',
+        sorter: true,
         render: (code: string, record) => (
           <Link
             href={`/projects/${record.id}`}
@@ -162,6 +176,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       {
         title: 'Name',
         key: 'name',
+        sorter: true,
         render: (_value, record) => (
           <StackedName name={record.name} nameZh={record.nameZh} />
         ),
@@ -176,6 +191,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
+        sorter: true,
         render: (status: ProjectStatus) => (
           <StatusBadge
             label={formatProjectStatus(status)}
@@ -220,6 +236,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         title: 'Planned finish',
         dataIndex: 'plannedFinishDate',
         key: 'plannedFinishDate',
+        sorter: true,
         render: (value: string | null) => (
           <span
             className="text-[13px]"
@@ -258,7 +275,10 @@ export default function ProjectsPageContent(): React.ReactNode {
         ),
       },
     ],
-    [],
+        sortBy,
+        sortOrder,
+      ) ?? [],
+    [sortBy, sortOrder],
   );
 
   if (!authHydrated) {
@@ -428,6 +448,7 @@ export default function ProjectsPageContent(): React.ReactNode {
             columns={columns}
             dataSource={projects}
             pagination={bindMeta(meta)}
+            onChange={handleTableChange as TableProps<Project>['onChange']}
           />
         )}
       </FormLayout>

@@ -157,6 +157,65 @@ export function useAllMeetings(
   });
 }
 
+const MEETINGS_FETCH_PAGE_SIZE = 100;
+
+async function fetchAllMeetingPages(
+  path: '/meetings/my' | '/meetings/all',
+  params: PmListFilters = {},
+): Promise<MyMeeting[]> {
+  const first = await apiGetPaginated<MyMeeting>(
+    `${path}${toQueryString({ ...params, page: 1, limit: MEETINGS_FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<MyMeeting>(
+        `${path}${toQueryString({
+          ...params,
+          page: index + 2,
+          limit: MEETINGS_FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All personal meetings (all pages) for client-side tab/search filtering. */
+export function useMyMeetingsAll(
+  params: PmListFilters = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...meetingKeys.all, 'my', 'all', params] as const,
+    queryFn: () => fetchAllMeetingPages('/meetings/my', params),
+    enabled,
+    retry: false,
+  });
+}
+
+/** All portfolio meetings (all pages) for client-side tab/search filtering. */
+export function useAllMeetingsAll(
+  params: PmListFilters = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...meetingKeys.all, 'all', 'all-pages', params] as const,
+    queryFn: () => fetchAllMeetingPages('/meetings/all', params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useCreateMeeting() {
   const queryClient = useQueryClient();
 

@@ -37,14 +37,15 @@ export default function NotificationsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const allowed = useAuthStore((state) => state.isAuthenticated());
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const { params, resetPage, bindMeta } = useTablePagination({
+    initialSortBy: 'createdAt',
+    initialSortOrder: 'desc',
+  });
   const [filter, setFilter] = useState<InboxFilter>('all');
 
   const listParams = useMemo(
     () => ({
       ...params,
-      sortBy: 'createdAt',
-      sortOrder: 'desc' as const,
       unreadOnly: filter === 'unread' ? true : undefined,
     }),
     [params, filter],

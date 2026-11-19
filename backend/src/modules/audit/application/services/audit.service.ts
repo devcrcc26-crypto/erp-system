@@ -68,11 +68,17 @@ export class AuditService {
   /**
    * Returns paginated audit logs for a company with optional filters.
    */
-  async list(
+  /**
+   * Shared list/stats where clause from query filters.
+   */
+  private buildListWhere(
     companyId: string,
-    query: AuditLogQueryDto,
-  ): Promise<PaginatedResult<unknown>> {
-    const where: Prisma.AuditLogWhereInput = {
+    query: Pick<
+      AuditLogQueryDto,
+      'module' | 'action' | 'userId' | 'recordType' | 'recordId' | 'dateFrom' | 'dateTo'
+    >,
+  ): Prisma.AuditLogWhereInput {
+    return {
       companyId,
       ...(query.module ? { module: query.module } : {}),
       ...(query.action ? { action: query.action } : {}),
@@ -88,6 +94,13 @@ export class AuditService {
           }
         : {}),
     };
+  }
+
+  async list(
+    companyId: string,
+    query: AuditLogQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = this.buildListWhere(companyId, query);
 
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const [data, total] = await Promise.all([
@@ -142,18 +155,27 @@ export class AuditService {
 
   /**
    * Returns aggregate audit log counts for dashboard stat cards.
+   * Applies the same filters as the list endpoint when provided.
    */
-  async getStats(companyId: string): Promise<{
+  async getStats(
+    companyId: string,
+    query: Pick<
+      AuditLogQueryDto,
+      'module' | 'action' | 'userId' | 'recordType' | 'recordId' | 'dateFrom' | 'dateTo'
+    > = {},
+  ): Promise<{
     total: number;
     userActions: number;
     systemJobs: number;
     integrations: number;
   }> {
+    const where = this.buildListWhere(companyId, query);
+
     const [total, bySource] = await Promise.all([
-      this.prisma.auditLog.count({ where: { companyId } }),
+      this.prisma.auditLog.count({ where }),
       this.prisma.auditLog.groupBy({
         by: ['source'],
-        where: { companyId },
+        where,
         _count: { _all: true },
       }),
     ]);

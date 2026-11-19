@@ -115,7 +115,12 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   const [importOpen, setImportOpen] = useState(false);
   const listQuery = useCompanyVehicles(listParams);
-  const statsQuery = useCompanyVehicles({ page: 1, limit: 500 });
+  // Stats respect search (Approvals pattern) but not status chip, so tiles stay meaningful.
+  const statsQuery = useCompanyVehicles({
+    page: 1,
+    limit: 500,
+    search: appliedSearch || undefined,
+  });
   const deleteMutation = useDeleteCompanyVehicle();
   const statusMutation = useUpdateCompanyVehicleStatus(
     statusModalVehicle?.id ?? '',

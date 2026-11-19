@@ -58,7 +58,10 @@ import {
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
   PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID,
@@ -316,7 +319,11 @@ export default function UsersPageContent(): React.ReactNode {
     ) => {
       const resolved = Array.isArray(sorter) ? sorter[0] : sorter;
       const columnKey =
-        typeof resolved?.columnKey === 'string' ? resolved.columnKey : undefined;
+        typeof resolved?.columnKey === 'string' && resolved.columnKey.length > 0
+          ? resolved.columnKey
+          : typeof resolved?.field === 'string' && resolved.field.length > 0
+            ? resolved.field
+            : undefined;
       const field = columnKey ? COLUMN_SORT_FIELD[columnKey] : undefined;
       if (!field || !resolved?.order) {
         setSortBy(undefined);
@@ -1172,7 +1179,8 @@ export default function UsersPageContent(): React.ReactNode {
                 />
               ),
             }}
-            columns={[
+            columns={withControlledSort(
+              [
               {
                 title: t('common.name'),
                 key: 'name',
@@ -1386,7 +1394,10 @@ export default function UsersPageContent(): React.ReactNode {
                   </div>
                 ),
               }] satisfies ColumnsType<User>) : []),
-            ]}
+            ],
+              sortBy,
+              sortOrder,
+            )}
           />
         </div>
       </div>
