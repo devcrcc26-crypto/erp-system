@@ -45,37 +45,43 @@ export function isEmployeeContractExpiringSoon(
 }
 
 /**
- * End-date windows for the contract list, relative to today:
- * `next1`-`next3` = active contracts ending from today up to 1-3 months ahead
- * (cumulative, so `next2` includes `next1`); `last1` = any contract whose end
- * date fell in the past month.
+ * Calendar-month end-date windows for the contract list, relative to today:
+ * last / this / next / second-next calendar month (inclusive of the whole month).
  */
-export type EmployeeContractEndWindow = 'next1' | 'next2' | 'next3' | 'last1';
+export type EmployeeContractEndWindow =
+  | 'lastMonth'
+  | 'thisMonth'
+  | 'nextMonth'
+  | 'secondNextMonth';
 
 export const EMPLOYEE_CONTRACT_END_WINDOWS: readonly EmployeeContractEndWindow[] = [
-  'next1',
-  'next2',
-  'next3',
-  'last1',
+  'lastMonth',
+  'thisMonth',
+  'nextMonth',
+  'secondNextMonth',
 ];
 
-/** Today's calendar date (local) as a UTC midnight, to compare with date-only values. */
-function todayUtc(referenceDate: Date): Date {
-  return new Date(
-    Date.UTC(
-      referenceDate.getFullYear(),
-      referenceDate.getMonth(),
-      referenceDate.getDate(),
-    ),
-  );
-}
+const END_WINDOW_MONTH_OFFSET: Record<EmployeeContractEndWindow, number> = {
+  lastMonth: -1,
+  thisMonth: 0,
+  nextMonth: 1,
+  secondNextMonth: 2,
+};
 
-/** Adds calendar months, clamping the day (31 Jan + 1 month = 28/29 Feb). */
-function addMonthsUtc(date: Date, months: number): Date {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + months;
-  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), lastDay)));
+/**
+ * First and last day (UTC midnight) of the calendar month at `monthOffset`
+ * from the reference date's local year/month.
+ */
+export function employeeContractEndWindowBounds(
+  window: EmployeeContractEndWindow,
+  referenceDate: Date = new Date(),
+): { start: Date; end: Date } {
+  const offset = END_WINDOW_MONTH_OFFSET[window];
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth() + offset;
+  const start = new Date(Date.UTC(year, month, 1));
+  const end = new Date(Date.UTC(year, month + 1, 0));
+  return { start, end };
 }
 
 export function matchesEmployeeContractEndWindow(
@@ -86,19 +92,9 @@ export function matchesEmployeeContractEndWindow(
   if (!row.endDate) {
     return false;
   }
-  const today = todayUtc(referenceDate);
   const endDate = parseDateOnlyUtc(row.endDate.slice(0, 10));
-
-  if (window === 'last1') {
-    return endDate < today && endDate >= addMonthsUtc(today, -1);
-  }
-
-  const months = window === 'next1' ? 1 : window === 'next2' ? 2 : 3;
-  return (
-    row.status === 'ACTIVE' &&
-    endDate >= today &&
-    endDate <= addMonthsUtc(today, months)
-  );
+  const { start, end } = employeeContractEndWindowBounds(window, referenceDate);
+  return endDate >= start && endDate <= end;
 }
 
 export function statusesForEmployeeContractMode(

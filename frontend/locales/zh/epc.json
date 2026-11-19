@@ -2252,11 +2252,11 @@
           "ended": "已结束"
         },
         "endWindow": {
-          "placeholder": "结束日期",
-          "next1": "1 个月内到期",
-          "next2": "2 个月内到期",
-          "next3": "3 个月内到期",
-          "last1": "过去 1 个月内已结束"
+          "placeholder": "合同到期",
+          "lastMonth": "上个月",
+          "thisMonth": "本月",
+          "nextMonth": "下个月",
+          "secondNextMonth": "下下个月"
         }
       },
       "officialSeal": {

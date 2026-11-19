@@ -240,8 +240,8 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
       return rows;
     }
     // In an end-date window, list the soonest ending first (most recent first
-    // for "ended in the last month").
-    const direction = endWindow === 'last1' ? -1 : 1;
+    // for last month).
+    const direction = endWindow === 'lastMonth' ? -1 : 1;
     return [...rows].sort(
       (a, b) => direction * (a.endDate ?? '').localeCompare(b.endDate ?? ''),
     );

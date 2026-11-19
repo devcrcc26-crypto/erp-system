@@ -47,11 +47,12 @@ describe('EmployeeContractCronService', () => {
 
   let prisma: {
     employeeContract: {
-      findMany: jest.Mock;
+      findMany: jest.Mock<() => Promise<(typeof expiringContract)[]>>;
       update: jest.Mock;
     };
     user: {
-      findFirst: jest.Mock;
+      findFirst: jest.Mock<() => Promise<{ id: string } | null>>;
+      findMany: jest.Mock<() => Promise<{ id: string }[]>>;
     };
   };
   let notificationService: { send: jest.Mock };
@@ -73,6 +74,9 @@ describe('EmployeeContractCronService', () => {
         findFirst: jest
           .fn<() => Promise<{ id: string } | null>>()
           .mockResolvedValue({ id: hrOfficerId }),
+        findMany: jest
+          .fn<() => Promise<{ id: string }[]>>()
+          .mockResolvedValue([]),
       },
     };
     notificationService = {
@@ -91,7 +95,7 @@ describe('EmployeeContractCronService', () => {
     jest.useRealTimers();
   });
 
-  it('notifies the HR Officer and updates lastWarnedAt for a contract expiring within 90 days', async () => {
+  it('notifies the HR Officer and updates lastWarnedAt for a contract ending within 3 months', async () => {
     await service.checkExpiringContracts();
 
     expect(notificationService.send).toHaveBeenCalledWith(
@@ -110,6 +114,87 @@ describe('EmployeeContractCronService', () => {
       where: { id: contractId },
       data: { lastWarnedAt: new Date('2026-08-22T00:00:00.000Z') },
     });
+  });
+
+  it('queries active contracts ending between today and 3 calendar months ahead', async () => {
+    await service.checkExpiringContracts();
+
+    expect(prisma.employeeContract.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: EmployeeContractStatus.ACTIVE,
+          endDate: {
+            gte: new Date('2026-08-22T00:00:00.000Z'),
+            lte: new Date('2026-11-22T00:00:00.000Z'),
+          },
+        }),
+      }),
+    );
+  });
+
+  it('also notifies every Local HR Manager, once each', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'local-hr-1' },
+      { id: hrOfficerId },
+      { id: 'local-hr-2' },
+    ]);
+
+    await service.checkExpiringContracts();
+
+    const recipients = notificationService.send.mock.calls.map(
+      (call) => (call[1] as { recipientId: string }).recipientId,
+    );
+    expect(recipients).toEqual([hrOfficerId, 'local-hr-1', 'local-hr-2']);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userRoles: {
+            some: expect.objectContaining({
+              role: expect.objectContaining({ name: 'Local HR Manager' }),
+            }),
+          },
+        }),
+      }),
+    );
+    expect(prisma.employeeContract.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('still notifies Local HR Managers when the company has no HR Officer', async () => {
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.user.findMany.mockResolvedValue([{ id: 'local-hr-1' }]);
+
+    await service.checkExpiringContracts();
+
+    expect(notificationService.send).toHaveBeenCalledTimes(1);
+    expect(notificationService.send).toHaveBeenCalledWith(
+      { companyId, userId: 'local-hr-1' },
+      expect.objectContaining({ recipientId: 'local-hr-1' }),
+    );
+    expect(prisma.employeeContract.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the contract when there is nobody to notify', async () => {
+    prisma.user.findFirst.mockResolvedValue(null);
+
+    await service.checkExpiringContracts();
+
+    expect(notificationService.send).not.toHaveBeenCalled();
+    expect(prisma.employeeContract.update).not.toHaveBeenCalled();
+  });
+
+  it('says "today" when the contract ends today', async () => {
+    prisma.employeeContract.findMany.mockResolvedValue([
+      { ...expiringContract, endDate: new Date('2026-08-22T00:00:00.000Z') },
+    ]);
+
+    await service.checkExpiringContracts();
+
+    expect(notificationService.send).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        body: expect.stringContaining('expires today on 2026-08-22'),
+      }),
+    );
   });
 
   it('skips duplicate notifications when warned within the last 7 days', async () => {
