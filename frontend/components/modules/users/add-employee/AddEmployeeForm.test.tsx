@@ -398,7 +398,8 @@ describe('AddEmployeeForm (create mode)', () => {
     await user.type(inputFor('users.form.addressCity'), 'Addis Ababa');
     // Roles are required: the first added role becomes primary.
     await user.click(screen.getByRole('button', { name: /users\.addAnotherRole/ }));
-    await clickThroughAndSubmit(user, 'users.sendInvitation');
+    // Default access method is temporary password (works with or without email).
+    await clickThroughAndSubmit(user, 'users.form.createWithTemporaryPassword');
 
     await waitFor(() => expect(mockCreateUser).toHaveBeenCalledTimes(1));
     const body = mockCreateUser.mock.calls[0][0] as Record<string, unknown>;
@@ -407,10 +408,11 @@ describe('AddEmployeeForm (create mode)', () => {
       lastName: 'Kebede',
       middleName: 'Tesfaye',
       chineseName: '阿贝贝',
-      email: 'abebe@CRCC.com',
+      email: 'abebe@crcc.com',
       phone: '+251911111111',
       nationalId: 'NID-9',
       addressCity: 'Addis Ababa',
+      issueTemporaryPassword: true,
     });
     expect(body).not.toHaveProperty('fieldOfStudy');
     expect(body).not.toHaveProperty('educationLevel');
@@ -438,11 +440,13 @@ describe('AddEmployeeForm (create mode)', () => {
     await user.click(picker);
     await user.type(picker, '2023-07-10{Enter}');
     await waitFor(() => expect(picker).toHaveValue('2023-07-10'));
-    // No email → record-only account ("Create user" instead of "Send invitation").
-    await clickThroughAndSubmit(user, 'users.createUser');
+    // No email → temporary password by default (login via loginName).
+    await clickThroughAndSubmit(user, 'users.form.createWithTemporaryPassword');
 
     await waitFor(() => expect(mockCreateUser).toHaveBeenCalledTimes(1));
     const body = mockCreateUser.mock.calls[0][0] as Record<string, unknown>;
     expect(body.employmentDate).toBe('2023-07-10');
+    expect(body.issueTemporaryPassword).toBe(true);
+    expect(body).not.toHaveProperty('email');
   }, 20_000);
 });

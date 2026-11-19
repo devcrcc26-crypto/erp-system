@@ -128,8 +128,8 @@ export class EmergencyContactDto {
 export class CreateUserDto {
   @ApiPropertyOptional({
     description:
-      'Optional. Leave blank for record-only users (e.g. Chinese site workers) who will never log in. ' +
-      'Such users have no authentication or password reset access.',
+      'Optional. When omitted, the employee signs in with loginName (and a temporary password if issued). ' +
+      'Without issueTemporaryPassword and without email, the user is record-only (no login).',
   })
   @Transform(({ value }) => {
     if (typeof value !== 'string') {
@@ -195,8 +195,9 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'When true (and email is set), create a login-ready account with mustChangePassword and return ' +
-      'temporaryPassword once. Mutually exclusive with the activation-invite path.',
+      'When true, create a login-ready account with mustChangePassword and return temporaryPassword once. ' +
+      'Works with or without email (no-email users sign in with loginName). ' +
+      'Mutually exclusive with the activation-invite path.',
   })
   @IsOptional()
   @IsBoolean()

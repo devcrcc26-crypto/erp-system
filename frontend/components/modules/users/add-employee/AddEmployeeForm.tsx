@@ -168,7 +168,21 @@ export default function AddEmployeeForm({
   const emailValue = Form.useWatch('email', form);
   const hasEmail = Boolean(emailValue?.trim());
   const accountAccessMethod = Form.useWatch('accountAccessMethod', form);
+  const resolvedAccessMethod =
+    accountAccessMethod === 'invite' || accountAccessMethod === 'temporaryPassword'
+      ? accountAccessMethod
+      : 'temporaryPassword';
   const formValues = Form.useWatch([], form) as AddEmployeeFormValues | undefined;
+
+  // Activation invite needs an email; without one, default to temporary password.
+  useEffect(() => {
+    if (isEdit || hasEmail) {
+      return;
+    }
+    if (resolvedAccessMethod === 'invite') {
+      form.setFieldsValue({ accountAccessMethod: 'temporaryPassword' });
+    }
+  }, [form, hasEmail, isEdit, resolvedAccessMethod]);
 
   const userQuery = useUser(userId ?? '', isEdit);
   const createUser = useCreateUser();
@@ -383,9 +397,11 @@ export default function AddEmployeeForm({
       }
 
       const invitedAddress = values.email?.trim().toLowerCase() || undefined;
+      // Temporary password works with or without email (loginName sign-in).
+      // Default when unset: temporary password (matches form initialValues).
       const issueTemporaryPassword =
-        Boolean(invitedAddress) &&
-        values.accountAccessMethod === 'temporaryPassword';
+        (values.accountAccessMethod ?? 'temporaryPassword') ===
+        'temporaryPassword';
       const body: CreateUserRequest = {
         firstName: values.firstName.trim(),
         lastName: (values.lastName ?? '').trim(),
@@ -587,7 +603,7 @@ export default function AddEmployeeForm({
                   <span className="min-w-0">
                     {hasEmail
                       ? t('users.form.accountInviteHelp')
-                      : t('users.form.accountRecordOnlyHelp')}
+                      : t('users.form.accountNoEmailLoginHelp')}
                   </span>
                 </div>
               ) : null}
@@ -911,7 +927,8 @@ export default function AddEmployeeForm({
       initialValues={{
         isActive: true,
         emergencyContacts: [],
-        accountAccessMethod: 'invite',
+        // Default to temporary password so no-email creates can still sign in.
+        accountAccessMethod: 'temporaryPassword',
       }}
     >
       {error ? (
@@ -934,11 +951,11 @@ export default function AddEmployeeForm({
         submitLabel={
           isEdit
             ? t('common.saveChanges')
-            : !hasEmail
-              ? t('users.createUser')
-              : accountAccessMethod === 'temporaryPassword'
-                ? t('users.form.createWithTemporaryPassword')
-                : t('users.sendInvitation')
+            : resolvedAccessMethod === 'temporaryPassword'
+              ? t('users.form.createWithTemporaryPassword')
+              : hasEmail
+                ? t('users.sendInvitation')
+                : t('users.createUser')
         }
       />
     </Form>

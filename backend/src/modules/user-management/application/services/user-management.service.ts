@@ -304,18 +304,7 @@ export class UserManagementService {
     let temporaryPasswordPlain: string | null = null;
     let invitationSent = false;
 
-    if (issueTemporaryPassword === true && !email) {
-      throw new BadRequestException(
-        'issueTemporaryPassword requires an email address',
-      );
-    }
-
-    if (!email) {
-      provisionedUser = await this.userProvisioningService.provisionRecordOnlyUser(
-        ctx,
-        sharedInput,
-      );
-    } else if (issueTemporaryPassword === true) {
+    if (issueTemporaryPassword === true) {
       let plainPassword = password?.trim() || generateTemporaryPassword(12);
       while (normalizeLoginName(plainPassword) === loginNameNormalized) {
         plainPassword = generateTemporaryPassword(12);
@@ -325,11 +314,16 @@ export class UserManagementService {
       provisionedUser = await this.userProvisioningService.provisionWithPassword(
         ctx,
         {
-          email,
+          email: email ?? null,
           password: plainPassword,
           mustChangePassword: true,
           ...sharedInput,
         },
+      );
+    } else if (!email) {
+      provisionedUser = await this.userProvisioningService.provisionRecordOnlyUser(
+        ctx,
+        sharedInput,
       );
     } else if (password?.trim()) {
       assertPasswordPolicy(password.trim(), resolvedLoginName);

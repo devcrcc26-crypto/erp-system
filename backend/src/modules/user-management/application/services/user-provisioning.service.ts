@@ -189,18 +189,24 @@ export class UserProvisioningService {
   }
 
   /**
-   * Creates a verified user with an admin-supplied (or generated) password.
+   * Creates a login-ready user with an admin-supplied (or generated) password.
+   * Email is optional — users without email sign in with loginName.
    * When mustChangePassword is true, first login forces a password change.
    */
   async provisionWithPassword(
     ctx: AuditContext,
-    input: ProvisionInvitedUserInput & {
+    input: Omit<ProvisionInvitedUserInput, 'email'> & {
+      email?: string | null;
       password: string;
       mustChangePassword?: boolean;
     },
   ): Promise<ProvisionedUser> {
-    const email = normalizeEmail(input.email);
-    await this.assertEmailAvailable(ctx.companyId, email);
+    const email = input.email?.trim()
+      ? normalizeEmail(input.email)
+      : null;
+    if (email) {
+      await this.assertEmailAvailable(ctx.companyId, email);
+    }
 
     const passwordHash = await this.passwordService.hash(input.password);
 
@@ -226,7 +232,8 @@ export class UserProvisioningService {
         isActive: input.isActive ?? true,
         passwordHash,
         mustChangePassword: input.mustChangePassword === true,
-        emailVerifiedAt: new Date(),
+        // No email to verify when email is null; loginName sign-in is allowed.
+        emailVerifiedAt: email ? new Date() : null,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
         ...this.buildProfileWriteData(input),
