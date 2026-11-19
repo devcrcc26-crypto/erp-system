@@ -696,7 +696,7 @@ export default function AttendanceReviewPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employees-v2 erp-attendance-page erp-attendance-review-page erp-attendance-v2">
-      <section className="erp-att-review-hero">
+      <section className="erp-att-review-hero erp-brand-hero">
         <div className="erp-att-review-hero-top">
           <div className="min-w-0">
             <Link href="/hr/attendance" className="erp-att-review-back">

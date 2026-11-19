@@ -1321,7 +1321,7 @@
 .erp-payslip-hero {
   padding: 18px;
   border-radius: var(--pr-radius);
-  background: var(--pr-primary-strong);
+  background: var(--gradient-brand-panel);
   color: #ffffff;
 }
 

@@ -42,7 +42,7 @@
 
 /* ── Page header: dark brand hero banner (echoing login brand panel) ── */
 
-/* Hero A: compact light header — lower visual weight than the brand panel. */
+/* Hero B: same brand panel, ~40% shorter vertical weight. */
 .erp-dashboard-v2 .dv2-header.erp-pro-card {
   position: relative;
   isolation: isolate;
@@ -52,12 +52,42 @@
   justify-content: space-between;
   gap: 12px 20px;
   padding: 14px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--dv2-radius);
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--dv2-shadow);
+  background: var(--gradient-brand-panel);
+  color: #ffffff;
+  box-shadow:
+    0 8px 20px rgba(var(--erp-accent-hover-rgb), 0.14),
+    0 1px 4px rgba(10, 36, 32, 0.1);
   overflow: hidden;
+}
+
+/* Architectural drawing-sheet grid + soft radial glow from login brand panel */
+.erp-dashboard-v2 .dv2-header.erp-pro-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-dashboard-v2 .dv2-header.erp-pro-card::after {
+  content: '';
+  position: absolute;
+  top: -65%;
+  right: -8%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 .erp-dashboard-v2 .dv2-greeting {
@@ -71,10 +101,10 @@
   gap: 7px;
   margin: 0 0 4px;
   padding: 2px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  background: #ffffff;
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -86,13 +116,13 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--action);
-  box-shadow: 0 0 0 3px var(--action-soft);
+  background: var(--color-primary-soft, #e7f0fb);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
 }
 
 .erp-dashboard-v2 .dv2-greeting-title {
   margin: 0;
-  color: var(--text);
+  color: #ffffff;
   font-size: clamp(17px, 1.7vw, 20px);
   font-weight: 650;
   letter-spacing: -0.025em;
@@ -102,7 +132,7 @@
 
 .erp-dashboard-v2 .dv2-greeting-date {
   margin: 3px 0 0;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 12px;
   font-weight: 450;
 }
@@ -128,10 +158,10 @@
   gap: 8px;
   min-height: 34px;
   padding: 0 12px 0 10px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--radius-control, 10px);
-  background: #ffffff;
-  color: var(--text);
+  background: transparent;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 550;
   text-decoration: none;
@@ -145,39 +175,39 @@
 }
 
 .erp-dashboard-v2 .dv2-action:hover {
-  border-color: #d1d5db;
-  background: var(--surface);
-  color: var(--text);
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(20, 29, 25, 0.06);
+  box-shadow: 0 4px 12px rgba(10, 36, 32, 0.18);
 }
 
 /* Single primary CTA on the hero (Approvals inbox). */
 .erp-dashboard-v2 .dv2-action--primary {
   border-color: transparent;
-  background: var(--action);
-  color: #ffffff;
+  background: #ffffff;
+  color: var(--action);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(var(--erp-accent-rgb), 0.28);
+  box-shadow: 0 2px 8px rgba(10, 36, 32, 0.16);
 }
 
 .erp-dashboard-v2 .dv2-action--primary:hover {
   border-color: transparent;
-  background: var(--erp-accent-hover);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(var(--erp-accent-rgb), 0.34);
+  background: #ffffff;
+  color: var(--erp-accent-hover);
+  box-shadow: 0 6px 16px rgba(10, 36, 32, 0.22);
 }
 
 .erp-dashboard-v2 .dv2-action--primary .dv2-action-icon {
-  color: #ffffff;
+  color: var(--action);
 }
 
 .erp-dashboard-v2 .dv2-action--primary:hover .dv2-action-icon {
-  color: #ffffff;
+  color: var(--erp-accent-hover);
 }
 
 .erp-dashboard-v2 .dv2-action:focus-visible {
-  outline: 2px solid var(--action);
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -189,12 +219,12 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  color: var(--text-muted);
+  color: var(--color-primary-soft, #e7f0fb);
   transition: color 150ms ease;
 }
 
 .erp-dashboard-v2 .dv2-action:hover .dv2-action-icon {
-  color: var(--text);
+  color: var(--dv2-primary-strong);
 }
 
 .erp-dashboard-v2 .dv2-action-label {
