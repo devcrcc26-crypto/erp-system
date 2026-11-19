@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -241,50 +242,62 @@ export class EmployeeContractService {
         const contractNumber = await this.nextContractNumber();
         const id = randomUUID();
 
-        await this.prisma.$transaction(async (tx) => {
-            if (activeExisting) {
-                await tx.employeeContract.update({
-                    where: { id: activeExisting.id },
+        try {
+            await this.prisma.$transaction(async (tx) => {
+                if (activeExisting) {
+                    await tx.employeeContract.update({
+                        where: { id: activeExisting.id },
+                        data: {
+                            status: EmployeeContractStatus.SUPERSEDED,
+                            endDate: dayBefore(startDate),
+                            updatedBy: userId,
+                        },
+                    });
+                }
+
+                await tx.employeeContract.create({
                     data: {
-                        status: EmployeeContractStatus.SUPERSEDED,
-                        endDate: dayBefore(startDate),
+                        id,
+                        companyId,
+                        contractNumber,
+                        employeeId: dto.employeeId,
+                        contractType: dto.contractType,
+                        status: EmployeeContractStatus.ACTIVE,
+                        signedAt,
+                        startDate,
+                        endDate,
+                        notes: dto.notes?.trim() || null,
+                        currency: SupportedCurrency.ETB,
+                        pensionApplicable: salary.pensionApplicable,
+                        taxApplicable: salary.taxApplicable,
+                        basicSalary: this.toDecimal(salary.basicSalary),
+                        transportationAllowance: this.toDecimal(
+                            salary.transportationAllowance,
+                        ),
+                        monthlyBonus: this.toDecimal(salary.monthlyBonus),
+                        monthlyNetBonus:
+                            this.toDecimal(salary.monthlyNetBonus) ??
+                            new Prisma.Decimal(0),
+                        probationEndDate: dto.probationEndDate
+                            ? this.parseDateOnly(dto.probationEndDate)
+                            : null,
+                        governedBy: dto.governedBy?.trim() || null,
+                        createdBy: userId,
                         updatedBy: userId,
                     },
                 });
-            }
-
-            await tx.employeeContract.create({
-                data: {
-                    id,
-                    companyId,
-                    contractNumber,
-                    employeeId: dto.employeeId,
-                    contractType: dto.contractType,
-                    status: EmployeeContractStatus.ACTIVE,
-                    signedAt,
-                    startDate,
-                    endDate,
-                    notes: dto.notes?.trim() || null,
-                    currency: SupportedCurrency.ETB,
-                    pensionApplicable: salary.pensionApplicable,
-                    taxApplicable: salary.taxApplicable,
-                    basicSalary: this.toDecimal(salary.basicSalary),
-                    transportationAllowance: this.toDecimal(
-                        salary.transportationAllowance,
-                    ),
-                    monthlyBonus: this.toDecimal(salary.monthlyBonus),
-                    monthlyNetBonus:
-                        this.toDecimal(salary.monthlyNetBonus) ??
-                        new Prisma.Decimal(0),
-                    probationEndDate: dto.probationEndDate
-                        ? this.parseDateOnly(dto.probationEndDate)
-                        : null,
-                    governedBy: dto.governedBy?.trim() || null,
-                    createdBy: userId,
-                    updatedBy: userId,
-                },
             });
-        });
+        } catch (error: unknown) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                throw new ConflictException(
+                    'Contract number already in use. Please try again.',
+                );
+            }
+            throw error;
+        }
 
         if (files.length > 0) {
             await this.attachFiles(id, companyId, userId, files);
@@ -876,11 +889,39 @@ export class EmployeeContractService {
         }
     }
 
-    private async nextContractNumber(): Promise<string>{
-        const result =  await this.prisma.$queryRaw<Array<{nextval: bigint}>>`
-            SELECT nextval('employee_contract_number_seq')
-        `;
-        const seq = Number(result[0].nextval);
+    /**
+     * Next contract number: EC-NNNN, continuing from the highest EC number in
+     * use. Seeds/imports can leave `employee_contract_number_seq` behind the
+     * table, which used to collide on `(company_id, contract_number)`. Under a
+     * transaction-scoped advisory lock the sequence is lifted to at least
+     * MAX(EC number) - never lowered - then `nextval` issues the value.
+     */
+    private async nextContractNumber(): Promise<string> {
+        const seq = await this.prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('employee_contract_number_seq'))`;
+
+            const [{ max_ec: maxEc }] = await tx.$queryRaw<Array<{ max_ec: bigint }>>`
+                SELECT COALESCE(
+                    MAX(substring(contract_number FROM '^EC-([0-9]+)$')::bigint),
+                    0
+                ) AS max_ec
+                FROM employee_contract
+            `;
+            const [state] = await tx.$queryRaw<
+                Array<{ last_value: bigint; is_called: boolean }>
+            >`SELECT last_value, is_called FROM employee_contract_number_seq`;
+            const issued = state.is_called
+                ? Number(state.last_value)
+                : Number(state.last_value) - 1;
+            if (Number(maxEc) > issued) {
+                await tx.$queryRaw`SELECT setval('employee_contract_number_seq', ${Number(maxEc)}::bigint, true)`;
+            }
+
+            const [{ nextval }] = await tx.$queryRaw<Array<{ nextval: bigint }>>`
+                SELECT nextval('employee_contract_number_seq') AS nextval
+            `;
+            return Number(nextval);
+        });
         return `EC-${String(seq).padStart(4, '0')}`;
     }
 

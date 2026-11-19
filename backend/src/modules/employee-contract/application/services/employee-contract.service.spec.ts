@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import {
   EmployeeContractStatus,
   EmployeeContractType,
@@ -247,5 +248,94 @@ describe('EmployeeContractService convert to freelancer', () => {
 
     expect(superseded[0]).toMatchObject({ status: EmployeeContractStatus.SUPERSEDED });
     expect(created[0]).toMatchObject({ pensionApplicable: true, status: EmployeeContractStatus.ACTIVE });
+  });
+
+  it('maps duplicate contract_number (P2002) to ConflictException', async () => {
+    const prisma = {
+      user: { findFirst: jest.fn(async () => ({ id: 'emp-1', employeeType: 'CONTRACT' })) },
+      employeeContract: { findFirst: jest.fn(async () => null) },
+      $transaction: jest.fn(async () => {
+        throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        });
+      }),
+    };
+    const service = new EmployeeContractService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { onContractActivated: jest.fn(), recomputeContractEntries: jest.fn() } as never,
+    );
+    const internals = service as unknown as Record<string, unknown>;
+    internals.assertCanManage = jest.fn(async () => undefined);
+    internals.nextContractNumber = jest.fn(async () => 'EC-0001');
+
+    await expect(
+      service.createContract(
+        {
+          employeeId: 'emp-1',
+          contractType: EmployeeContractType.FIXED_TERM,
+          signedAt: '2026-10-01',
+          startDate: '2026-10-01',
+          endDate: '2027-09-30',
+          basicSalary: 20000,
+        } as never,
+        'co-1',
+        'hr-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('EmployeeContractService.nextContractNumber', () => {
+  it('lifts the sequence to MAX(EC-n) before nextval when the seq is behind', async () => {
+    const calls: string[] = [];
+    const prisma = {
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<number>) => {
+        const tx = {
+          $executeRaw: jest.fn(async () => {
+            calls.push('lock');
+            return 1;
+          }),
+          $queryRaw: jest.fn(async (strings: TemplateStringsArray) => {
+            const sql = strings.join('?');
+            if (sql.includes('MAX(substring')) {
+              calls.push('max');
+              return [{ max_ec: BigInt(42) }];
+            }
+            if (sql.includes('FROM employee_contract_number_seq')) {
+              calls.push('state');
+              return [{ last_value: BigInt(10), is_called: true }];
+            }
+            if (sql.includes('setval')) {
+              calls.push('setval');
+              return [{ setval: BigInt(42) }];
+            }
+            if (sql.includes('nextval')) {
+              calls.push('nextval');
+              return [{ nextval: BigInt(43) }];
+            }
+            throw new Error(`unexpected SQL: ${sql}`);
+          }),
+        };
+        return fn(tx);
+      }),
+    };
+    const service = new EmployeeContractService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { onContractActivated: jest.fn(), recomputeContractEntries: jest.fn() } as never,
+    );
+
+    const number = await (
+      service as unknown as { nextContractNumber: () => Promise<string> }
+    ).nextContractNumber();
+
+    expect(number).toBe('EC-0043');
+    expect(calls).toEqual(['lock', 'max', 'state', 'setval', 'nextval']);
   });
 });
