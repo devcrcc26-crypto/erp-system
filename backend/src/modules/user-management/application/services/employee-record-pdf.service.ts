@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -16,6 +17,15 @@ import {
 } from '../../../../shared/pdf/document-pdf';
 
 type AuditContext = { companyId: string; userId: string };
+
+function isContactRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function contactText(record: Prisma.JsonObject, key: string): string {
+  const raw = record[key];
+  return typeof raw === 'string' ? raw.trim() : '';
+}
 
 /**
  * Full employee profile PDF for HR export from the employee detail page.
@@ -91,25 +101,24 @@ export class EmployeeRecordPdfService {
       .join(', ');
 
     const emergency = Array.isArray(user.emergencyContacts)
-      ? user.emergencyContacts
-          .filter(
-            (entry): entry is Record<string, unknown> =>
-              !!entry && typeof entry === 'object' && !Array.isArray(entry),
-          )
-          .map((entry) => {
-            const name = [entry.firstName, entry.middleName, entry.lastName]
-              .map((part) => (typeof part === 'string' ? part.trim() : ''))
-              .filter(Boolean)
-              .join(' ');
-            const relationship =
-              typeof entry.relationship === 'string'
-                ? entry.relationship.trim()
-                : '';
-            const phone =
-              typeof entry.phone === 'string' ? entry.phone.trim() : '';
-            return [name, relationship, phone].filter(Boolean).join(' · ');
-          })
-          .filter(Boolean)
+      ? user.emergencyContacts.flatMap((entry) => {
+          if (!isContactRecord(entry)) return [];
+          const name = [
+            contactText(entry, 'firstName'),
+            contactText(entry, 'middleName'),
+            contactText(entry, 'lastName'),
+          ]
+            .filter(Boolean)
+            .join(' ');
+          const line = [
+            name,
+            contactText(entry, 'relationship'),
+            contactText(entry, 'phone'),
+          ]
+            .filter(Boolean)
+            .join(' · ');
+          return line ? [line] : [];
+        })
       : [];
 
     const code = user.employeeId?.trim() || user.id.slice(0, 8);

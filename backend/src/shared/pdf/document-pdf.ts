@@ -7,6 +7,8 @@ import {
   renderPayslipPdf,
 } from './payslip-style-pdf';
 
+export { dash };
+
 /**
  * One layout for every exported record and report: header (number, status,
  * printed date), optional boxed headline, employee block with the company
