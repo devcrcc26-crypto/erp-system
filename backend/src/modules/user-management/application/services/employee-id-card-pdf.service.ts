@@ -16,15 +16,20 @@ import {
 import { safeFilePart } from '../../../../shared/pdf/document-pdf';
 type AuditContext = { companyId: string; userId: string };
 
-/** CR80 credit-card size in PDF points (1 in = 72 pt). */
-const CARD_WIDTH_PT = 3.37 * 72; // 242.64
-const CARD_HEIGHT_PT = 2.125 * 72; // 153
+/** Exact CR80: 85.6mm × 54mm (ISO/IEC 7810 ID-1). */
+const MM_TO_PT = 72 / 25.4;
+const CARD_WIDTH_PT = 85.6 * MM_TO_PT;
+const CARD_HEIGHT_PT = 54 * MM_TO_PT;
+/** Minimum inset from card edges. */
+const PAD_PT = 3 * MM_TO_PT;
 /** App primary green (CRCC teal). */
 const BRAND_GREEN = '#1D9E75';
 const INK = '#1A1A1A';
 const MUTED = '#6B7280';
-const PHOTO_W_PT = (25 / 25.4) * 72; // ~70.87
-const PHOTO_H_PT = (32 / 25.4) * 72; // ~90.71
+/** Passport photo aspect (25mm × 32mm). */
+const PHOTO_ASPECT = 25 / 32;
+const WATERMARK_OPACITY = 0.1;
+const WATERMARK_WIDTH_RATIO = 0.65;
 const DEFAULT_OFFICE_PHONE = '+251-11-000-0000';
 const BLOOD_TYPES = [
   'A+',
@@ -360,10 +365,47 @@ export class EmployeeIdCardPdfService {
 
       for (const card of cards) {
         this.drawFront(doc, card.employee, card.photo, logo, company);
-        this.drawBack(doc, card.employee, company);
+        this.drawBack(doc, card.employee, logo, company);
       }
       doc.end();
     });
+  }
+
+  private beginCardPage(doc: PDFKit.PDFDocument): void {
+    doc.addPage({ size: [CARD_WIDTH_PT, CARD_HEIGHT_PT], margin: 0 });
+    doc.rect(0, 0, CARD_WIDTH_PT, CARD_HEIGHT_PT).fill('#FFFFFF');
+  }
+
+  private drawCardBorder(doc: PDFKit.PDFDocument): void {
+    doc
+      .save()
+      .lineWidth(0.8)
+      .strokeColor(BRAND_GREEN)
+      .rect(1.2, 1.2, CARD_WIDTH_PT - 2.4, CARD_HEIGHT_PT - 2.4)
+      .stroke()
+      .restore();
+  }
+
+  /**
+   * Centered company logo watermark behind card content (≈65% width, 10% opacity).
+   */
+  private drawWatermark(doc: PDFKit.PDFDocument, logo: Buffer | null): void {
+    if (!logo) return;
+    const box = CARD_WIDTH_PT * WATERMARK_WIDTH_RATIO;
+    const x = (CARD_WIDTH_PT - box) / 2;
+    const y = (CARD_HEIGHT_PT - box) / 2;
+    doc.save();
+    doc.opacity(WATERMARK_OPACITY);
+    try {
+      doc.image(logo, x, y, {
+        fit: [box, box],
+        align: 'center',
+        valign: 'center',
+      });
+    } catch {
+      // Ignore invalid logo bytes.
+    }
+    doc.restore();
   }
 
   private drawFront(
@@ -373,175 +415,256 @@ export class EmployeeIdCardPdfService {
     logo: Buffer | null,
     company: IdCardCompanyContext,
   ): void {
-    doc.addPage({ size: [CARD_WIDTH_PT, CARD_HEIGHT_PT], margin: 0 });
-    const headerH = 22;
+    this.beginCardPage(doc);
+    this.drawWatermark(doc, logo);
+
+    const headerH = 30;
     doc.rect(0, 0, CARD_WIDTH_PT, headerH).fill(BRAND_GREEN);
 
+    const logoBox = 18;
+    const logoX = PAD_PT;
+    const logoY = (headerH - logoBox) / 2;
     if (logo) {
       try {
-        doc.image(logo, 6, 3, { height: 16, fit: [36, 16] });
+        doc.image(logo, logoX, logoY, {
+          fit: [logoBox * 1.6, logoBox],
+          valign: 'center',
+        });
       } catch {
         // Ignore invalid logo bytes.
       }
     }
 
-    doc
-      .fillColor('#FFFFFF')
-      .font(PAYSLIP_FONT)
-      .fontSize(8)
-      .text(company.legalName || PAYSLIP_COMPANY, 46, 7, {
-        width: CARD_WIDTH_PT - 52,
-        align: 'right',
-        lineBreak: false,
-      });
+    const nameX = logoX + logoBox * 1.6 + 4;
+    const nameW = CARD_WIDTH_PT - nameX - PAD_PT;
+    this.drawHeaderCompanyName(
+      doc,
+      company.legalName || PAYSLIP_COMPANY,
+      nameX,
+      5,
+      nameW,
+      headerH - 8,
+    );
 
-    const photoX = 8;
-    const photoY = headerH + 8;
+    const bodyTop = headerH + PAD_PT * 0.7;
+    const bodyBottom = CARD_HEIGHT_PT - PAD_PT;
+    const bodyH = bodyBottom - bodyTop;
+    const photoH = bodyH;
+    const photoW = Math.min(photoH * PHOTO_ASPECT, CARD_WIDTH_PT * 0.36);
+    const photoX = PAD_PT;
+    const photoY = bodyTop;
+
     doc
       .save()
       .lineWidth(0.6)
       .strokeColor('#D1D5DB')
-      .rect(photoX, photoY, PHOTO_W_PT, PHOTO_H_PT)
+      .rect(photoX, photoY, photoW, photoH)
       .stroke()
       .restore();
 
     if (photo) {
       try {
         doc.image(photo, photoX, photoY, {
-          fit: [PHOTO_W_PT, PHOTO_H_PT],
+          fit: [photoW, photoH],
           align: 'center',
           valign: 'center',
         });
       } catch {
-        this.drawPhotoPlaceholder(doc, photoX, photoY);
+        this.drawPhotoPlaceholder(doc, photoX, photoY, photoW, photoH);
       }
     } else {
-      this.drawPhotoPlaceholder(doc, photoX, photoY);
+      this.drawPhotoPlaceholder(doc, photoX, photoY, photoW, photoH);
     }
 
-    const textX = photoX + PHOTO_W_PT + 10;
-    const textW = CARD_WIDTH_PT - textX - 8;
-    let y = photoY + 2;
-    const name = formatFullName(employee);
-
-    doc.fillColor(INK).font(PAYSLIP_FONT).fontSize(11);
-    doc.text(name, textX, y, { width: textW, lineBreak: false });
-    y += 16;
-
-    doc.fillColor(MUTED).fontSize(7).text('Employee ID', textX, y, {
-      width: textW,
-      lineBreak: false,
-    });
-    y += 10;
-    doc
-      .fillColor(INK)
-      .fontSize(8)
-      .text(employee.employeeId?.trim() || '—', textX, y, {
-        width: textW,
-        lineBreak: false,
+    const textX = photoX + photoW + 8;
+    const textW = CARD_WIDTH_PT - textX - PAD_PT;
+    const fields: Array<{ label: string; value: string; valueSize: number }> = [
+      { label: '', value: formatFullName(employee), valueSize: 10.5 },
+      {
+        label: 'Employee ID',
+        value: employee.employeeId?.trim() || '—',
+        valueSize: 8,
+      },
+      {
+        label: 'Position',
+        value: employee.position?.title?.trim() || '—',
+        valueSize: 8,
+      },
+      {
+        label: 'Department',
+        value: employee.department?.name?.trim() || '—',
+        valueSize: 8,
+      },
+    ];
+    const slotH = bodyH / fields.length;
+    fields.forEach((field, index) => {
+      const slotTop = bodyTop + index * slotH;
+      if (!field.label) {
+        const nameY = slotTop + (slotH - 12) / 2;
+        this.drawAbsoluteText(doc, field.value, textX, nameY, textW, {
+          size: field.valueSize,
+          color: INK,
+        });
+        return;
+      }
+      const labelY = slotTop + 2;
+      const valueY = labelY + 10;
+      this.drawAbsoluteText(doc, field.label, textX, labelY, textW, {
+        size: 6.5,
+        color: MUTED,
       });
-    y += 14;
-
-    doc.fillColor(MUTED).fontSize(7).text('Position', textX, y, {
-      width: textW,
-      lineBreak: false,
-    });
-    y += 10;
-    doc
-      .fillColor(INK)
-      .fontSize(8)
-      .text(employee.position?.title?.trim() || '—', textX, y, {
-        width: textW,
-        lineBreak: false,
+      this.drawAbsoluteText(doc, field.value, textX, valueY, textW, {
+        size: field.valueSize,
+        color: INK,
       });
-    y += 14;
-
-    doc.fillColor(MUTED).fontSize(7).text('Department', textX, y, {
-      width: textW,
-      lineBreak: false,
     });
-    y += 10;
-    doc
-      .fillColor(INK)
-      .fontSize(8)
-      .text(employee.department?.name?.trim() || '—', textX, y, {
-        width: textW,
-        lineBreak: false,
-      });
+
+    this.drawCardBorder(doc);
   }
 
   private drawBack(
     doc: PDFKit.PDFDocument,
     employee: IdCardEmployee,
+    logo: Buffer | null,
     company: IdCardCompanyContext,
   ): void {
-    doc.addPage({ size: [CARD_WIDTH_PT, CARD_HEIGHT_PT], margin: 0 });
-    const headerH = 22;
+    this.beginCardPage(doc);
+    this.drawWatermark(doc, logo);
+
+    const headerH = 26;
     doc.rect(0, 0, CARD_WIDTH_PT, headerH).fill(BRAND_GREEN);
-    doc
-      .fillColor('#FFFFFF')
-      .font(PAYSLIP_FONT)
-      .fontSize(9)
-      .text('Employee ID Card', 8, 7, {
-        width: CARD_WIDTH_PT - 16,
-        align: 'center',
-        lineBreak: false,
-      });
-
-    // Thin border around the card back.
-    doc
-      .save()
-      .lineWidth(0.8)
-      .strokeColor(BRAND_GREEN)
-      .rect(1.5, 1.5, CARD_WIDTH_PT - 3, CARD_HEIGHT_PT - 3)
-      .stroke()
-      .restore();
-
-    const padX = 12;
-    let y = headerH + 14;
-    const valueW = CARD_WIDTH_PT - padX * 2;
-
-    const employed = employee.employmentDate
-      ? formatDate(employee.employmentDate)
-      : '—';
-    this.drawLabeledRow(doc, padX, y, valueW, 'Employed', employed);
-    y += 22;
-
-    const blood = employee.bloodType?.trim() || '—';
-    this.drawLabeledRow(doc, padX, y, valueW, 'Blood Type', blood);
-    y += 22;
-
-    const emergency = firstEmergencyContact(employee.emergencyContacts);
-    this.drawLabeledRow(
+    this.drawAbsoluteText(
       doc,
-      padX,
-      y,
-      valueW,
-      'Emergency Contact',
-      emergency
-        ? `${emergency.name}${emergency.phone ? ` · ${emergency.phone}` : ''}`
-        : '—',
+      'Employee ID Card',
+      PAD_PT,
+      (headerH - 10) / 2,
+      CARD_WIDTH_PT - PAD_PT * 2,
+      { size: 9, color: '#FFFFFF', align: 'center' },
     );
 
-    const footerY = CARD_HEIGHT_PT - 28;
-    doc
-      .fillColor(MUTED)
-      .font(PAYSLIP_FONT)
-      .fontSize(6.5)
-      .text(
-        `If found, please return to ${company.legalName || PAYSLIP_COMPANY}`,
-        padX,
-        footerY,
-        { width: valueW, align: 'center' },
-      );
-    doc
-      .fillColor(INK)
-      .fontSize(7)
-      .text(company.officePhone, padX, footerY + 10, {
-        width: valueW,
-        align: 'center',
-        lineBreak: false,
+    const contentTop = headerH + PAD_PT;
+    const padX = PAD_PT;
+    const valueW = CARD_WIDTH_PT - padX * 2;
+
+    const returnText = `If found, please return to ${company.legalName || PAYSLIP_COMPANY}`;
+    doc.font(PAYSLIP_FONT).fontSize(6);
+    const returnH = Math.max(
+      8,
+      doc.heightOfString(returnText, { width: valueW, align: 'center' }),
+    );
+    const phoneH = 9;
+    const footerGap = 3;
+    const footerBlockH = returnH + footerGap + phoneH;
+    const footerTop = CARD_HEIGHT_PT - PAD_PT - footerBlockH;
+
+    const rowsTop = contentTop;
+    const rowsBottom = footerTop - 6;
+    const rows: Array<{ label: string; value: string }> = [
+      {
+        label: 'Employed',
+        value: employee.employmentDate
+          ? formatDate(employee.employmentDate)
+          : '—',
+      },
+      {
+        label: 'Blood Type',
+        value: employee.bloodType?.trim() || '—',
+      },
+      {
+        label: 'Emergency Contact',
+        value: (() => {
+          const emergency = firstEmergencyContact(employee.emergencyContacts);
+          if (!emergency) return '—';
+          return emergency.phone
+            ? `${emergency.name} · ${emergency.phone}`
+            : emergency.name;
+        })(),
+      },
+    ];
+    const slotH = (rowsBottom - rowsTop) / rows.length;
+    rows.forEach((row, index) => {
+      const slotTop = rowsTop + index * slotH;
+      const labelY = slotTop + Math.max(0, (slotH - 20) / 2);
+      this.drawLabeledRow(doc, padX, labelY, valueW, row.label, row.value);
+    });
+
+    this.drawAbsoluteText(doc, returnText, padX, footerTop, valueW, {
+      size: 6,
+      color: MUTED,
+      align: 'center',
+      lineBreak: true,
+    });
+    this.drawAbsoluteText(
+      doc,
+      company.officePhone,
+      padX,
+      footerTop + returnH + footerGap,
+      valueW,
+      { size: 7, color: INK, align: 'center' },
+    );
+
+    this.drawCardBorder(doc);
+  }
+
+  /**
+   * Fits the company legal name into the green header (one or two lines).
+   */
+  private drawHeaderCompanyName(
+    doc: PDFKit.PDFDocument,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const trimmed = name.trim() || '—';
+    doc.font(PAYSLIP_FONT).fillColor('#FFFFFF');
+
+    for (const candidate of [8, 7.5, 7, 6.5, 6, 5.5]) {
+      doc.fontSize(candidate);
+      if (doc.widthOfString(trimmed) <= width) {
+        this.drawAbsoluteText(
+          doc,
+          trimmed,
+          x,
+          y + (height - candidate) / 2,
+          width,
+          { size: candidate, color: '#FFFFFF', align: 'right' },
+        );
+        return;
+      }
+    }
+
+    const lines = splitCompanyName(trimmed);
+    let size = 7;
+    for (const candidate of [7, 6.5, 6, 5.5, 5]) {
+      size = candidate;
+      doc.fontSize(candidate);
+      if (lines.every((line) => doc.widthOfString(line) <= width)) break;
+    }
+
+    if (lines.length === 1) {
+      this.drawAbsoluteText(doc, lines[0]!, x, y + (height - size) / 2, width, {
+        size,
+        color: '#FFFFFF',
+        align: 'right',
       });
+      return;
+    }
+
+    const lineGap = 1.5;
+    const blockH = size * 2 + lineGap;
+    const top = y + Math.max(0, (height - blockH) / 2);
+    this.drawAbsoluteText(doc, lines[0]!, x, top, width, {
+      size,
+      color: '#FFFFFF',
+      align: 'right',
+    });
+    this.drawAbsoluteText(doc, lines[1]!, x, top + size + lineGap, width, {
+      size,
+      color: '#FFFFFF',
+      align: 'right',
+    });
   }
 
   private drawLabeledRow(
@@ -552,35 +675,54 @@ export class EmployeeIdCardPdfService {
     label: string,
     value: string,
   ): void {
-    doc.fillColor(MUTED).font(PAYSLIP_FONT).fontSize(7).text(label, x, y, {
-      width,
-      lineBreak: false,
+    this.drawAbsoluteText(doc, label, x, y, width, { size: 6.5, color: MUTED });
+    this.drawAbsoluteText(doc, value, x, y + 10, width, {
+      size: 8,
+      color: INK,
     });
+  }
+
+  private drawAbsoluteText(
+    doc: PDFKit.PDFDocument,
+    value: string,
+    x: number,
+    y: number,
+    width: number,
+    options: {
+      size: number;
+      color: string;
+      align?: 'left' | 'center' | 'right';
+      lineBreak?: boolean;
+    },
+  ): void {
     doc
-      .fillColor(INK)
-      .fontSize(8)
-      .text(value, x, y + 10, { width, lineBreak: false });
+      .fillColor(options.color)
+      .font(PAYSLIP_FONT)
+      .fontSize(options.size)
+      .text(value, x, y, {
+        width,
+        align: options.align ?? 'left',
+        lineBreak: options.lineBreak ?? false,
+        ellipsis: !(options.lineBreak ?? false),
+      });
   }
 
   private drawPhotoPlaceholder(
     doc: PDFKit.PDFDocument,
     x: number,
     y: number,
+    width: number,
+    height: number,
   ): void {
-    doc
-      .save()
-      .rect(x, y, PHOTO_W_PT, PHOTO_H_PT)
-      .fill('#F3F4F6')
-      .restore();
-    doc
-      .fillColor(MUTED)
-      .font(PAYSLIP_FONT)
-      .fontSize(7)
-      .text('No photo', x, y + PHOTO_H_PT / 2 - 4, {
-        width: PHOTO_W_PT,
-        align: 'center',
-        lineBreak: false,
-      });
+    doc.save().rect(x, y, width, height).fill('#F3F4F6').restore();
+    this.drawAbsoluteText(
+      doc,
+      'No photo',
+      x,
+      y + height / 2 - 4,
+      width,
+      { size: 7, color: MUTED, align: 'center' },
+    );
   }
 }
 
@@ -605,6 +747,41 @@ function formatFullName(
 
 function formatDate(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+/**
+ * Prefer a natural two-line company header when the legal name is long
+ * (e.g. "CRCC International" / "Engineering Consulting Co. Ltd").
+ */
+function splitCompanyName(name: string): [string] | [string, string] {
+  const trimmed = name.trim();
+  if (!trimmed) return ['—'];
+
+  const preferred =
+    trimmed.match(/^(.*? International)\s+(.+)$/i) ??
+    trimmed.match(/^(.*? Engineering)\s+(.+)$/i) ??
+    trimmed.match(/^(.*? Consulting)\s+(.+)$/i) ??
+    trimmed.match(/^(.*? Branch)\s+(.+)$/i);
+  if (preferred?.[1] && preferred[2]) {
+    return [preferred[1].trim(), preferred[2].trim()];
+  }
+
+  if (trimmed.length <= 28) {
+    return [trimmed];
+  }
+
+  const mid = Math.floor(trimmed.length / 2);
+  let best = -1;
+  for (let i = 0; i < trimmed.length; i += 1) {
+    if (trimmed[i] !== ' ') continue;
+    if (best < 0 || Math.abs(i - mid) < Math.abs(best - mid)) {
+      best = i;
+    }
+  }
+  if (best > 0) {
+    return [trimmed.slice(0, best).trim(), trimmed.slice(best + 1).trim()];
+  }
+  return [trimmed];
 }
 
 function firstEmergencyContact(
