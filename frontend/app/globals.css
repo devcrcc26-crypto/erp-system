@@ -5185,7 +5185,7 @@ main::-webkit-scrollbar,
   right: 38%;
 }
 
-/* Panel copy: company at the top, features + HR help pinned to the bottom. */
+/* Panel copy: heading, features and HR help pinned to the bottom. */
 .erp-login-brand-content {
   position: relative;
   z-index: 1;
@@ -5196,22 +5196,44 @@ main::-webkit-scrollbar,
   animation: erp-login-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
-.erp-login-brand-company-name {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-}
 
 /* CRCC logo red, same accent as the employee ID card stripe. */
 .erp-login-brand-accent {
   display: block;
   width: 2.5rem;
   height: 3px;
-  margin-top: 0.625rem;
+  margin-bottom: 1rem;
   border-radius: 999px;
   background: #d7000f;
+}
+
+.erp-login-brand-top {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+
+.erp-login-brand-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: end;
+  color: #ffffff;
+}
+
+.erp-login-brand-clock-time {
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-login-brand-clock-date {
+  margin-top: 0.5rem;
+  font-size: var(--font-size-body);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .erp-login-brand-body {
