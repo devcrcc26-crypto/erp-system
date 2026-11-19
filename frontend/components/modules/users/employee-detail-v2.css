@@ -280,7 +280,7 @@
 
 .erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
 }
 

@@ -1,7 +1,7 @@
 /**
  * Site accent switch.
  *
- * - `'blue'` → CRCC logo blue, same as the employee ID card (default)
+ * - `'blue'` → CRCC azure blue (default)
  * - `'teal'` → previous teal primary
  *
  * Change {@link ACCENT_MODE} only. Tokens, Ant Design, and CSS variables
@@ -34,15 +34,15 @@ const ACCENTS: Record<AccentMode, AccentColors> = {
     hoverRgb: '15, 110, 86',
   },
   blue: {
-    /** CRCC globe blue (ID card header). White text 6.4:1. */
-    primary: '#1F5FAE',
-    /** ID card dark blue. On white 10.4:1. */
-    hover: '#163F78',
-    light: '#E8F0FA',
-    softHover: '#D6E4F5',
-    wash: '#F2F6FC',
-    primaryRgb: '31, 95, 174',
-    hoverRgb: '22, 63, 120',
+    /** Clean azure (CRCC blue family, less violet than ink). White text 5.6:1. */
+    primary: '#1667C2',
+    /** Deep azure for hover, headings, sidebar active. On white 8.6:1. */
+    hover: '#0F4C8F',
+    light: '#E7F0FB',
+    softHover: '#D3E4F7',
+    wash: '#F3F7FD',
+    primaryRgb: '22, 103, 194',
+    hoverRgb: '15, 76, 143',
   },
 };
 

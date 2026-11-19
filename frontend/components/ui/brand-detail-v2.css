@@ -125,7 +125,7 @@
 
 .erp-brand-detail-v2 .erp-brand-detail-hero .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
 }
 

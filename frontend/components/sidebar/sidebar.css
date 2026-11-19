@@ -937,8 +937,8 @@
  * rules above remain the base and nothing leaks outside the sidebar.
  *
  * Contrast on white: text 14.7:1, muted 7.6:1, icon 4.8:1. Selected text and
- * icon (#163F78, the app's primary-hover token) on the 10% primary tint:
- * 9.0:1. Focus ring (#1F5FAE) on white: 6.4:1.
+ * icon (#0F4C8F, the app's primary-hover token) on the 10% primary tint:
+ * 7.4:1. Focus ring (#1667C2) on white: 5.6:1.
  * ══════════════════════════════════════════════════════════════════════ */
 
 .erp-sidebar-v2 {

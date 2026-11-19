@@ -307,7 +307,7 @@
 }
 
 .erp-approvals-page .erp-approvals-hero-cta.ant-btn:hover {
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(10, 36, 32, 0.28);
@@ -1225,7 +1225,7 @@
 
 .erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(10, 36, 32, 0.28);

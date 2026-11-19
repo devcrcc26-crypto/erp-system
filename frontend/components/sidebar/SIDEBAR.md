@@ -210,8 +210,8 @@ Hiding a link is not security. Every page and API must still enforce its own per
 There is exactly one "you are here" treatment, defined once in `sidebar.css`:
 
 - a soft pill tinted with the primary colour at 10% (`--sb-active-bg`),
-- primary-coloured text and icon (`--sb-active-text`, the primary-hover shade #163F78,
-  9.0:1 on the tint), medium weight (500).
+- primary-coloured text and icon (`--sb-active-text`, the primary-hover shade #0F4C8F,
+  7.4:1 on the tint), medium weight (500).
 
 The base rules earlier in `sidebar.css` (left accent bar) are overridden by the
 `.erp-sidebar-v2` block at the end of the file; v2 has no accent bar. Every destination icon

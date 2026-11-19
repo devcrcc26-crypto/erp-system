@@ -523,7 +523,7 @@
 
 .erp-employees-v2 .erp-employees-hero-actions .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
 }
 

@@ -5,7 +5,7 @@
  * `.erp-ann-*` class or `.erp-markdown`, so other pages are unaffected.
  *
  * Contrast: muted #4B5563 on white 7.6:1; red #B42318 on #FEF3F2 5.6:1;
- * white on #B42318 6.5:1; primary-strong #163F78 on the 10% tint 9.0:1.
+ * white on #B42318 6.5:1; primary-strong #0F4C8F on the 10% tint 7.4:1.
  */
 .erp-ann-page,
 .erp-ann-modal,
@@ -1032,7 +1032,7 @@
 }
 
 .erp-ann-page :is(.erp-ann-card > .erp-ann-toolbar, .erp-ann-detail-hero) .ant-btn-primary:not(:disabled):hover {
-  background: var(--color-primary-soft, #e8f0fa) !important;
+  background: var(--color-primary-soft, #e7f0fb) !important;
   color: var(--erp-accent-hover) !important;
 }
 

@@ -4,8 +4,8 @@
  * Scoped under `.erp-evaluation-v2` on every evaluation page root.
  * Overrides `.erp-evaluation-page` square corners for this module.
  *
- * Contrast on white: muted #4B5563 7.6:1; primary-strong #163F78 on the
- * 10% primary tint 9.0:1.
+ * Contrast on white: muted #4B5563 7.6:1; primary-strong #0F4C8F on the
+ * 10% primary tint 7.4:1.
  */
 .erp-evaluation-v2 {
   --ev2-radius: 16px;
