@@ -17,6 +17,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import { EmployeeContractService } from '../../../employee-contract/application/services/employee-contract.service';
+import { seedHirePositionHistory } from './employee-profile-records.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { DocumentService } from '../../../documents/application/services/document.service';
 import { generateTemporaryPassword } from '../../../auth/application/utils/password-policy.util';
@@ -513,6 +514,20 @@ export class EmploymentLifecycleService {
           updatedBy: ctx.userId,
         },
       });
+    });
+    const hired = await this.prisma.user.findFirst({
+      where: { id: userId, companyId: ctx.companyId },
+      select: { positionId: true },
+    });
+    await seedHirePositionHistory(this.prisma, {
+      companyId: ctx.companyId,
+      userId,
+      positionId: hired?.positionId,
+      salary: input.basicSalary,
+      effectiveFrom: startDate,
+      createdBy: ctx.userId,
+      note: 'Hired',
+      closePrevious: true,
     });
     await this.audit.create(
       this.audit.buildFromRequestContext({

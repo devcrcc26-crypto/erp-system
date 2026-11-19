@@ -13,14 +13,21 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLeavePolicies } from '@/lib/query/leave-policy';
 import { useWorkScheduleList } from '@/lib/query/work-schedule';
 import type {
+  BloodType,
   CreateUserRequest,
   EducationLevel,
+  EducationRecordInput,
   EmergencyContact,
   EmployeeType,
   Gender,
+  MaritalStatus,
   Nationality,
+  PriorEmploymentInput,
   User,
 } from '@/lib/api/types';
+import { BLOOD_TYPE_OPTIONS } from '@/lib/api/types';
+import EducationRecordsField from '@/components/modules/users/EducationRecordsField';
+import PriorEmploymentField from '@/components/modules/users/PriorEmploymentField';
 import {
   ADDRESS_MAX,
   HOUSE_NUMBER_MAX,
@@ -45,8 +52,22 @@ export interface EmployeeProfileFormValues {
   addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: Dayjs;
+  placeOfBirth?: string;
+  maritalStatus?: MaritalStatus;
+  bloodType?: BloodType;
+  idIssueDate?: Dayjs;
+  idExpiryDate?: Dayjs;
   nationalId?: string;
+  kebele?: string;
   tin?: string;
+  pensionNumber?: string;
+  educationRecords?: EducationRecordInput[];
+  priorEmployments?: Array<
+    Omit<PriorEmploymentInput, 'dateFrom' | 'dateTo'> & {
+      dateFrom?: Dayjs;
+      dateTo?: Dayjs;
+    }
+  >;
   nationality?: Nationality;
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
@@ -74,6 +95,12 @@ const EMPLOYEE_TYPE_OPTIONS: EmployeeType[] = [
   'TEMPORARY',
   'FREELANCER',
 ];
+export const MARITAL_STATUS_OPTIONS: MaritalStatus[] = [
+  'SINGLE',
+  'MARRIED',
+  'DIVORCED',
+];
+
 export const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
   'PHD',
   'MSC',
@@ -221,6 +248,37 @@ export function EmployeeProfileFormFields({
             >
               <Input />
             </Form.Item>
+            <Form.Item label={t('users.form.placeOfBirth')} name="placeOfBirth">
+              <Input maxLength={120} />
+            </Form.Item>
+            <Form.Item label={t('users.form.maritalStatus')} name="maritalStatus">
+              <Select
+                allowClear
+                className="!w-full"
+                placeholder={t('common.select')}
+                options={MARITAL_STATUS_OPTIONS.map((value) => ({
+                  value,
+                  label: t(`users.maritalStatus.${value}`),
+                }))}
+              />
+            </Form.Item>
+            <Form.Item label={t('users.form.bloodType')} name="bloodType">
+              <Select
+                allowClear
+                className="!w-full"
+                placeholder={t('common.select')}
+                options={BLOOD_TYPE_OPTIONS.map((value) => ({
+                  value,
+                  label: value,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item label={t('users.form.idIssueDate')} name="idIssueDate">
+              <DatePicker className="!w-full" disabledDate={disableFutureDates} />
+            </Form.Item>
+            <Form.Item label={t('users.form.idExpiryDate')} name="idExpiryDate">
+              <DatePicker className="!w-full" />
+            </Form.Item>
           </div>
         </SectionShell>
       ) : null}
@@ -266,6 +324,13 @@ export function EmployeeProfileFormFields({
             <Form.Item
               label={t('users.form.addressWoreda')}
               name="addressWoreda"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.kebele')}
+              name="kebele"
               rules={addressFieldRules(t, ADDRESS_MAX)}
             >
               <Input />
@@ -398,6 +463,8 @@ export function EmployeeProfileFormFields({
               />
             </Form.Item>
           </div>
+          <EducationRecordsField />
+          <PriorEmploymentField />
         </SectionShell>
       ) : null}
 
@@ -504,6 +571,9 @@ export function EmployeeProfileFormFields({
             >
               <Input maxLength={64} autoComplete="off" />
             </Form.Item>
+            <Form.Item label={t('users.form.pensionNumber')} name="pensionNumber">
+              <Input maxLength={64} autoComplete="off" />
+            </Form.Item>
             <Form.Item
               label={t('users.form.tin')}
               name="tin"
@@ -556,6 +626,36 @@ function formatFormDate(value: Dayjs | string | undefined | null): string | unde
   return undefined;
 }
 
+function normalizeEducationRecords(
+  rows: EmployeeProfileFormValues['educationRecords'],
+): EducationRecordInput[] | undefined {
+  const normalized = (rows ?? [])
+    .map((row) => ({
+      id: row.id,
+      instituteName: row.instituteName?.trim() ?? '',
+      graduationYear:
+        typeof row.graduationYear === 'number' ? row.graduationYear : undefined,
+      subjectMajor: row.subjectMajor?.trim() || null,
+      certificateType: row.certificateType?.trim() || null,
+    }))
+    .filter((row) => row.instituteName);
+  return normalized;
+}
+
+function normalizePriorEmployments(
+  rows: EmployeeProfileFormValues['priorEmployments'],
+): PriorEmploymentInput[] | undefined {
+  return (rows ?? [])
+    .map((row) => ({
+      id: row.id,
+      employerName: row.employerName?.trim() ?? '',
+      dateFrom: formatFormDate(row.dateFrom) ?? null,
+      dateTo: formatFormDate(row.dateTo) ?? null,
+      lastPosition: row.lastPosition?.trim() || null,
+    }))
+    .filter((row) => row.employerName);
+}
+
 export function buildEmployeeProfilePayload(
   values: EmployeeProfileFormValues,
 ): Pick<
@@ -571,6 +671,15 @@ export function buildEmployeeProfilePayload(
   | 'gender'
   | 'dateOfBirth'
   | 'nationalId'
+  | 'placeOfBirth'
+  | 'kebele'
+  | 'maritalStatus'
+  | 'bloodType'
+  | 'idIssueDate'
+  | 'idExpiryDate'
+  | 'pensionNumber'
+  | 'educationRecords'
+  | 'priorEmployments'
   | 'tin'
   | 'nationality'
   | 'employeeType'
@@ -599,7 +708,16 @@ export function buildEmployeeProfilePayload(
     gender: values.gender,
     dateOfBirth: formatFormDate(values.dateOfBirth),
     nationalId: values.nationalId?.trim() || undefined,
+    placeOfBirth: values.placeOfBirth?.trim() || null,
+    kebele: values.kebele?.trim() || null,
+    maritalStatus: values.maritalStatus ?? null,
+    bloodType: values.bloodType ?? null,
+    idIssueDate: formatFormDate(values.idIssueDate) ?? null,
+    idExpiryDate: formatFormDate(values.idExpiryDate) ?? null,
+    pensionNumber: values.pensionNumber?.trim() || null,
     tin: values.tin?.trim() || undefined,
+    educationRecords: normalizeEducationRecords(values.educationRecords),
+    priorEmployments: normalizePriorEmployments(values.priorEmployments),
     nationality: values.nationality,
     employeeType: values.employeeType,
     educationLevel: values.educationLevel,
@@ -652,7 +770,20 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     gender: user.gender ?? undefined,
     dateOfBirth: user.dateOfBirth ? dayjs(user.dateOfBirth) : undefined,
     nationalId: user.nationalId ?? undefined,
+    placeOfBirth: user.placeOfBirth ?? undefined,
+    kebele: user.kebele ?? undefined,
+    maritalStatus: user.maritalStatus ?? undefined,
+    bloodType: (user.bloodType as BloodType | null | undefined) ?? undefined,
+    idIssueDate: user.idIssueDate ? dayjs(user.idIssueDate) : undefined,
+    idExpiryDate: user.idExpiryDate ? dayjs(user.idExpiryDate) : undefined,
+    pensionNumber: user.pensionNumber ?? undefined,
     tin: user.tin ?? undefined,
+    educationRecords: user.educationRecords ?? [],
+    priorEmployments: (user.priorEmployments ?? []).map((row) => ({
+      ...row,
+      dateFrom: row.dateFrom ? dayjs(row.dateFrom) : undefined,
+      dateTo: row.dateTo ? dayjs(row.dateTo) : undefined,
+    })),
     nationality: user.nationality ?? undefined,
     employeeType: user.employeeType ?? undefined,
     educationLevel: user.educationLevel ?? undefined,
@@ -678,6 +809,7 @@ export function formatEmployeeAddress(values: Pick<
   | 'addressCity'
   | 'addressSubcity'
   | 'addressWoreda'
+  | 'kebele'
   | 'addressHouseNumber'
 >): string {
   return [
@@ -686,6 +818,7 @@ export function formatEmployeeAddress(values: Pick<
     values.addressCity,
     values.addressSubcity,
     values.addressWoreda,
+    values.kebele,
     values.addressHouseNumber,
   ]
     .map((part) => part?.trim())

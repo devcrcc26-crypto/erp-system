@@ -80,6 +80,7 @@ function setup(existing: Record<string, unknown>, snapshot?: Record<string, unkn
     {} as never,
     {} as never,
     {} as never,
+    { findSalaryOverride: jest.fn(async () => null), getEffectiveSalary: jest.fn(async () => null) } as never,
   );
   const internals = service as unknown as Record<string, unknown>;
   internals.buildEntryDrafts = jest.fn(async () => [{ entry: {}, salaryPeriods: [] }]);

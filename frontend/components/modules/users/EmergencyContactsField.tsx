@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Form, Input } from 'antd';
+import { Button, Form, Input, Select } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { EmergencyContact } from '@/lib/api/types';
@@ -10,6 +10,8 @@ import {
   optionalEmailRule,
   phoneRules,
 } from '@/lib/validation/user-fields';
+
+const RELATIONSHIPS = ['SPOUSE', 'PARENT', 'SIBLING', 'CHILD', 'OTHER'] as const;
 
 export default function EmergencyContactsField(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -120,6 +122,21 @@ export default function EmergencyContactsField(): React.ReactNode {
                     >
                       <Input type="email" />
                     </Form.Item>
+                    <Form.Item
+                      name={[field.name, 'relationship']}
+                      label={t('users.form.relationship')}
+                      className="mb-0"
+                    >
+                      <Select
+                        allowClear
+                        className="!w-full"
+                        placeholder={t('common.select')}
+                        options={RELATIONSHIPS.map((value) => ({
+                          value,
+                          label: t(`users.relationship.${value}`),
+                        }))}
+                      />
+                    </Form.Item>
                   </div>
                 </div>
               ))}
@@ -154,6 +171,7 @@ export function normalizeEmergencyContacts(
       lastName: contact.lastName?.trim() ?? '',
       phone: contact.phone?.trim() || undefined,
       email: contact.email?.trim() || undefined,
+      relationship: contact.relationship?.trim() || undefined,
     }))
     .filter(
       (contact) =>

@@ -20,6 +20,7 @@ import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
+import { EffectiveSalaryService } from './effective-salary.service';
 import {
   PayrollCalculationService,
   type OvertimeHours,
@@ -282,6 +283,7 @@ export class PayrollRunService {
     private readonly leaveLedger: LeaveLedgerService,
     private readonly audit: AuditService,
     private readonly permissions: PermissionService,
+    private readonly effectiveSalary: EffectiveSalaryService,
   ) {}
 
   /**
@@ -2543,6 +2545,7 @@ export class PayrollRunService {
       days: number;
       window: DateWindow | null;
       periodEarned: number;
+      basicSalary: number;
     }> = [];
 
     let totalEmployedDays = 0;
@@ -2628,13 +2631,19 @@ export class PayrollRunService {
         ),
         windowEnd: new Date(Date.UTC(run.year, run.month - 1, calendarEndDay)),
       };
-      const basic = this.toNumber(contract.basicSalary);
+      const basic = await this.resolveBasicSalary(
+        ctx.companyId,
+        employee.id,
+        resolvedWindow.windowEnd,
+        this.toNumber(contract.basicSalary),
+      );
       const periodEarned = this.round((basic / 30) * allocation.days);
       periodDetails.push({
         contract,
         days: allocation.days,
         window: resolvedWindow,
         periodEarned,
+        basicSalary: basic,
       });
       windows.push(resolvedWindow);
     }
@@ -2767,7 +2776,12 @@ export class PayrollRunService {
 
     const monthEndContract =
       sorted.length > 0 ? sorted[sorted.length - 1] : undefined;
-    const monthEndBasic = this.toNumber(monthEndContract?.basicSalary);
+    const monthEndBasic = await this.resolveBasicSalary(
+      ctx.companyId,
+      employee.id,
+      monthEnd,
+      this.toNumber(monthEndContract?.basicSalary),
+    );
     // Fully absent / zero paid days: no transport, bonuses, net bonuses, or pension.
     // OT is also zeroed when payrollDays === 0 (full unpaid month).
 
@@ -2888,7 +2902,7 @@ export class PayrollRunService {
         contractId: p.contract.id,
         periodStart: p.window!.windowStart,
         periodEnd: p.window!.windowEnd,
-        basicSalary: this.toNumber(p.contract.basicSalary),
+        basicSalary: p.basicSalary,
       }));
 
     const assignedOt = assignOvertimeToSalaryPeriods({
@@ -2971,7 +2985,7 @@ export class PayrollRunService {
           periodStart: window.windowStart,
           periodEnd: window.windowEnd,
           days: this.round(period.days * earnedScale),
-          basicSalary: this.toNumber(period.contract.basicSalary),
+          basicSalary: period.basicSalary,
           earnedSalary: this.round(period.periodEarned * earnedScale),
           normalOtHours: ot?.normalHours ?? 0,
           eveningOtHours: ot?.eveningHours ?? 0,
@@ -3403,6 +3417,25 @@ export class PayrollRunService {
   private generateRunNumber(month: number, year: number): string {
     const m = String(month).padStart(2, '0');
     return `PR-${year}-${m}`;
+  }
+
+  /**
+   * Position-history salaryOverride covering the pay date wins. Otherwise
+   * the contract basic already chosen for that period is kept, which is the
+   * same fallback as EffectiveSalaryService.getEffectiveSalary.
+   */
+  private async resolveBasicSalary(
+    companyId: string,
+    userId: string,
+    payrollDate: Date,
+    contractBasic: number,
+  ): Promise<number> {
+    const override = await this.effectiveSalary.findSalaryOverride(
+      companyId,
+      userId,
+      payrollDate,
+    );
+    return override ?? contractBasic;
   }
 
   private toNumber(

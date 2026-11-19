@@ -43,6 +43,7 @@ function makeService(status: 'REVIEWED' | 'SUBMITTED' | 'APPROVED', rows = entry
     {} as never,
     audit as never,
     permissions as never,
+    { findSalaryOverride: jest.fn(async () => null), getEffectiveSalary: jest.fn(async () => null) } as never,
   );
   return { service, run, audit };
 }

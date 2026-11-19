@@ -207,8 +207,26 @@ export async function downloadApiFile(
   filename: string,
 ): Promise<{ headers: Record<string, string> }> {
   const response = await apiClient.get(url, { responseType: 'blob' });
-  const contentType = response.headers['content-type'];
-  const blob = new Blob([response.data as BlobPart], {
+  return triggerBlobDownload(response.data as BlobPart, response.headers, filename);
+}
+
+/** POST download for bulk PDF exports (e.g. ID cards). */
+export async function downloadApiFilePost(
+  url: string,
+  filename: string,
+  body?: unknown,
+): Promise<{ headers: Record<string, string> }> {
+  const response = await apiClient.post(url, body, { responseType: 'blob' });
+  return triggerBlobDownload(response.data as BlobPart, response.headers, filename);
+}
+
+function triggerBlobDownload(
+  data: BlobPart,
+  responseHeaders: Record<string, unknown>,
+  filename: string,
+): { headers: Record<string, string> } {
+  const contentType = responseHeaders['content-type'];
+  const blob = new Blob([data], {
     type: typeof contentType === 'string' ? contentType : 'application/octet-stream',
   });
   const objectUrl = URL.createObjectURL(blob);
@@ -218,7 +236,7 @@ export async function downloadApiFile(
   anchor.click();
   URL.revokeObjectURL(objectUrl);
   const headers: Record<string, string> = {};
-  for (const [key, value] of Object.entries(response.headers)) {
+  for (const [key, value] of Object.entries(responseHeaders)) {
     if (typeof value === 'string') {
       headers[key.toLowerCase()] = value;
     }

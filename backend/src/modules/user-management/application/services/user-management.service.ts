@@ -70,6 +70,10 @@ import {
   UsersQueryDto,
 } from '../dtos/user-management.dtos';
 import { UserProvisioningService } from './user-provisioning.service';
+import {
+  EmployeeProfileRecordsService,
+  seedHirePositionHistory,
+} from './employee-profile-records.service';
 
 type AuditContext = { companyId: string; userId: string };
 
@@ -141,6 +145,9 @@ export class UserManagementService {
     if (query.employmentStatus) {
       where.employmentStatus = query.employmentStatus;
     }
+    if (query.idCardIssued !== undefined) {
+      where.idCardIssued = query.idCardIssued;
+    }
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -155,14 +162,13 @@ export class UserManagementService {
     const canViewBank = await this.canViewFullBankDetails(ctx, null);
     // listUsers requires users.view (HR/admin) - loginName is allowed for the optional column.
     const canViewLoginName = await this.canViewLoginName(ctx, null);
+    const withIssuers = await this.attachIdCardIssuerNames(
+      data.map((row) => this.mapUserResponse(row)),
+    );
     return buildPaginatedResult(
-      data.map((row) =>
+      withIssuers.map((row) =>
         this.applyLoginNameVisibility(
-          this.applyBankVisibility(
-            this.mapUserResponse(row),
-            canViewBank,
-            false,
-          ),
+          this.applyBankVisibility(row, canViewBank, false),
           canViewLoginName,
         ),
       ),
@@ -208,15 +214,38 @@ export class UserManagementService {
           },
           orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         },
+        educationRecords: {
+          where: { deletedAt: null },
+          orderBy: [{ graduationYear: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            id: true,
+            instituteName: true,
+            graduationYear: true,
+            subjectMajor: true,
+            certificateType: true,
+          },
+        },
+        priorEmployments: {
+          where: { deletedAt: null },
+          orderBy: [{ dateFrom: 'desc' }, { createdAt: 'desc' }],
+          select: {
+            id: true,
+            employerName: true,
+            dateFrom: true,
+            dateTo: true,
+            lastPosition: true,
+          },
+        },
       },
     });
     if (!user) {
       throw new NotFoundException('User not found');
     }
     const mapped = this.mapUserResponse(user);
+    const [withIssuer] = await this.attachIdCardIssuerNames([mapped]);
     const canViewBank = await this.canViewFullBankDetails(ctx, id);
     const withBank = this.applyBankVisibility(
-      mapped,
+      withIssuer,
       canViewBank,
       id === ctx.userId,
     );
@@ -342,6 +371,32 @@ export class UserManagementService {
       requestedEmployeeId,
       profileInput,
     );
+
+    await seedHirePositionHistory(this.prisma, {
+      companyId: ctx.companyId,
+      userId: provisionedUser.id,
+      positionId: rest.positionId,
+      salary: dto.startingSalary,
+      effectiveFrom: profileInput.employmentDate
+        ? this.parseDateOnly(profileInput.employmentDate)
+        : todayDateOnly(),
+      createdBy: ctx.userId,
+      note: 'Hired',
+    });
+    if (dto.educationRecords !== undefined) {
+      await this.profileRecords().syncEducation(
+        ctx,
+        provisionedUser.id,
+        dto.educationRecords,
+      );
+    }
+    if (dto.priorEmployments !== undefined) {
+      await this.profileRecords().syncPriorEmployment(
+        ctx,
+        provisionedUser.id,
+        dto.priorEmployments,
+      );
+    }
 
     if (email && !password?.trim() && issueTemporaryPassword !== true) {
       const userForInvite = await this.prisma.user.findFirst({
@@ -627,6 +682,13 @@ export class UserManagementService {
         ctx.companyId,
         ctx.userId,
       );
+    }
+
+    if (dto.educationRecords !== undefined) {
+      await this.profileRecords().syncEducation(ctx, id, dto.educationRecords);
+    }
+    if (dto.priorEmployments !== undefined) {
+      await this.profileRecords().syncPriorEmployment(ctx, id, dto.priorEmployments);
     }
 
     const withSchedule =
@@ -1418,6 +1480,16 @@ export class UserManagementService {
       gender: true,
       dateOfBirth: true,
       nationalId: true,
+      placeOfBirth: true,
+      kebele: true,
+      maritalStatus: true,
+      bloodType: true,
+      idIssueDate: true,
+      idExpiryDate: true,
+      pensionNumber: true,
+      idCardIssued: true,
+      idCardIssuedAt: true,
+      idCardIssuedBy: true,
       tin: true,
       nationality: true,
       employeeType: true,
@@ -1515,6 +1587,13 @@ export class UserManagementService {
     gender?: CreateUserDto['gender'];
     dateOfBirth?: string;
     nationalId?: string;
+    placeOfBirth?: string;
+    kebele?: string;
+    maritalStatus?: CreateUserDto['maritalStatus'];
+    bloodType?: string;
+    idIssueDate?: string;
+    idExpiryDate?: string;
+    pensionNumber?: string;
     tin?: string;
     nationality?: CreateUserDto['nationality'];
     employeeType?: CreateUserDto['employeeType'];
@@ -1544,6 +1623,13 @@ export class UserManagementService {
       gender: dto.gender,
       dateOfBirth: dto.dateOfBirth,
       nationalId: dto.nationalId,
+      placeOfBirth: dto.placeOfBirth,
+      kebele: dto.kebele,
+      maritalStatus: dto.maritalStatus,
+      bloodType: dto.bloodType,
+      idIssueDate: dto.idIssueDate,
+      idExpiryDate: dto.idExpiryDate,
+      pensionNumber: dto.pensionNumber,
       tin: dto.tin,
       nationality: dto.nationality,
       employeeType: dto.employeeType,
@@ -1581,6 +1667,12 @@ export class UserManagementService {
       gender?: CreateUserDto['gender'];
       dateOfBirth?: string;
       nationalId?: string;
+      placeOfBirth?: string;
+      kebele?: string;
+      maritalStatus?: CreateUserDto['maritalStatus'];
+      idIssueDate?: string;
+      idExpiryDate?: string;
+      pensionNumber?: string;
       tin?: string;
       nationality?: CreateUserDto['nationality'];
       employeeType?: CreateUserDto['employeeType'];
@@ -1645,6 +1737,18 @@ export class UserManagementService {
           ? this.parseDateOnly(profileInput.dateOfBirth)
           : null,
         nationalId: profileInput.nationalId?.trim() || null,
+        placeOfBirth: profileInput.placeOfBirth?.trim() || null,
+        kebele: profileInput.kebele?.trim() || null,
+        maritalStatus:
+          profileInput.maritalStatus as Prisma.UserUpdateInput['maritalStatus'],
+        bloodType: profileInput.bloodType?.trim() || null,
+        idIssueDate: profileInput.idIssueDate
+          ? this.parseDateOnly(profileInput.idIssueDate)
+          : null,
+        idExpiryDate: profileInput.idExpiryDate
+          ? this.parseDateOnly(profileInput.idExpiryDate)
+          : null,
+        pensionNumber: profileInput.pensionNumber?.trim() || null,
         tin: profileInput.tin?.trim() || null,
         nationality: profileInput.nationality as Prisma.UserUpdateInput['nationality'],
         employeeType: profileInput.employeeType as Prisma.UserUpdateInput['employeeType'],
@@ -1755,6 +1859,13 @@ export class UserManagementService {
         | 'gender'
         | 'dateOfBirth'
         | 'nationalId'
+        | 'placeOfBirth'
+        | 'kebele'
+        | 'maritalStatus'
+        | 'bloodType'
+        | 'idIssueDate'
+        | 'idExpiryDate'
+        | 'pensionNumber'
         | 'tin'
         | 'nationality'
         | 'employeeType'
@@ -1804,6 +1915,31 @@ export class UserManagementService {
     }
     if (rest.nationalId !== undefined) {
       data.nationalId = rest.nationalId?.trim() || null;
+    }
+    if (rest.placeOfBirth !== undefined) {
+      data.placeOfBirth = rest.placeOfBirth?.trim() || null;
+    }
+    if (rest.kebele !== undefined) {
+      data.kebele = rest.kebele?.trim() || null;
+    }
+    if (rest.maritalStatus !== undefined) {
+      data.maritalStatus = rest.maritalStatus;
+    }
+    if (rest.bloodType !== undefined) {
+      data.bloodType = rest.bloodType?.trim() || null;
+    }
+    if (rest.idIssueDate !== undefined) {
+      data.idIssueDate = rest.idIssueDate
+        ? this.parseDateOnly(rest.idIssueDate)
+        : null;
+    }
+    if (rest.idExpiryDate !== undefined) {
+      data.idExpiryDate = rest.idExpiryDate
+        ? this.parseDateOnly(rest.idExpiryDate)
+        : null;
+    }
+    if (rest.pensionNumber !== undefined) {
+      data.pensionNumber = rest.pensionNumber?.trim() || null;
     }
     if (rest.tin !== undefined) {
       data.tin = rest.tin?.trim() || null;
@@ -2009,6 +2145,7 @@ export class UserManagementService {
         lastName: contact.lastName?.trim() ?? '',
         phone: contact.phone?.trim() || null,
         email: contact.email?.trim() || null,
+        relationship: contact.relationship?.trim() || null,
       }))
       .filter(
         (contact) =>
@@ -2170,6 +2307,10 @@ export class UserManagementService {
     });
   }
 
+  private profileRecords(): EmployeeProfileRecordsService {
+    return new EmployeeProfileRecordsService(this.prisma, this.auditService);
+  }
+
   /** Replaces the stored years of experience with today's value. */
   private mapUserResponse<
     T extends {
@@ -2187,6 +2328,51 @@ export class UserManagementService {
         user.yearsOfExperienceAsOf,
       ),
     };
+  }
+
+  /**
+   * Resolves `idCardIssuedBy` to a display name for HR ID-card UI.
+   */
+  private async attachIdCardIssuerNames<
+    T extends { idCardIssuedBy?: string | null } | null,
+  >(
+    users: T[],
+  ): Promise<Array<T & { idCardIssuedByName: string | null }>> {
+    const issuerIds = [
+      ...new Set(
+        users
+          .map((user) => user?.idCardIssuedBy?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const issuerMap = new Map<string, string>();
+    if (issuerIds.length > 0) {
+      const issuers = await this.prisma.user.findMany({
+        where: { id: { in: issuerIds } },
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+        },
+      });
+      for (const issuer of issuers) {
+        const name = [issuer.firstName, issuer.middleName, issuer.lastName]
+          .map((part) => part?.trim())
+          .filter(Boolean)
+          .join(' ');
+        issuerMap.set(issuer.id, name || issuer.id);
+      }
+    }
+    return users.map((user) => {
+      const issuerId = user?.idCardIssuedBy ?? null;
+      return {
+        ...(user as T),
+        idCardIssuedByName: issuerId
+          ? (issuerMap.get(issuerId) ?? null)
+          : null,
+      };
+    });
   }
 
   /**

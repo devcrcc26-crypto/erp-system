@@ -7,6 +7,7 @@ import {
   useCanAccessPayroll,
   useCanCreatePurchaseRequest,
   useCanManageAnnouncements,
+  useCanManageUsers,
   useCanViewHr,
   useCanViewPurchaseRequest,
   useCanViewTeam,
@@ -31,6 +32,7 @@ export default function HrSectionLayout({
   const { t } = useEpcTranslation();
   const permLoading = usePermissionsLoading();
   const canViewHr = useCanViewHr();
+  const canManageUsers = useCanManageUsers();
   const canAccessPayroll = useCanAccessPayroll();
   const canManageAnnouncements = useCanManageAnnouncements();
   const canViewPurchaseRequest = useCanViewPurchaseRequest();
@@ -62,6 +64,7 @@ export default function HrSectionLayout({
   const isPayrollRoute = pathname.startsWith('/hr/payroll');
   const isAnnouncementsRoute = pathname.startsWith('/hr/announcements');
   const isPurchaseRequestRoute = pathname.startsWith('/hr/purchase-requests');
+  const isIdCardsRoute = pathname.startsWith('/hr/id-cards');
   const allowed =
     canViewHr ||
     isEmployeeSelfServiceRoute ||
@@ -70,7 +73,8 @@ export default function HrSectionLayout({
     (isPayrollRoute && canAccessPayroll) ||
     (isAnnouncementsRoute && canManageAnnouncements) ||
     (isPurchaseRequestRoute &&
-      (canViewPurchaseRequest || canCreatePurchaseRequest));
+      (canViewPurchaseRequest || canCreatePurchaseRequest)) ||
+    (isIdCardsRoute && canManageUsers);
 
   useEffect(() => {
     if (!permLoading && !allowed) {

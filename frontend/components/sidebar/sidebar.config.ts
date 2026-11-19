@@ -270,6 +270,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             // Supervisors: everyone below them in the reporting chain (HR uses Users).
             { kind: 'link', id: 'my-team', labelKey: 'nav.hr.myTeam', icon: 'hr-my-team', href: '/hr/my-team', requires: ['team.members'], activePaths: ['/users'], keywords: ['team', 'reports', 'subordinates', 'employees'] },
             { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: TEAM },
+            { kind: 'link', id: 'id-cards', labelKey: 'nav.hr.idCards', icon: 'hr-id-cards', href: '/hr/id-cards', requires: ['users.manage'], keywords: ['id card', 'badge', 'print'] },
           ],
         },
         {

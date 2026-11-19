@@ -11,6 +11,8 @@ import { EmploymentSeparationCron } from './application/services/employment-sepa
 import { EmploymentSeparationService } from './application/services/employment-separation.service';
 import { UserImportService } from './application/services/user-import.service';
 import { UserInvitationDispatchService } from './application/services/user-invitation-dispatch.service';
+import { EmployeeIdCardPdfService } from './application/services/employee-id-card-pdf.service';
+import { EmployeeProfileRecordsService } from './application/services/employee-profile-records.service';
 import { UserManagementService } from './application/services/user-management.service';
 import { UserProvisioningService } from './application/services/user-provisioning.service';
 import { RolesController } from './presentation/controllers/roles.controller';
@@ -30,6 +32,8 @@ import { UsersController } from './presentation/controllers/users.controller';
   controllers: [UsersImportController, UsersController, RolesController],
   providers: [
     UserManagementService,
+    EmployeeProfileRecordsService,
+    EmployeeIdCardPdfService,
     UserProvisioningService,
     UserImportService,
     UserInvitationDispatchService,

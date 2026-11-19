@@ -14,6 +14,9 @@ import {
   ProfileSection,
   displayText,
 } from '@/components/modules/profile/profile-display';
+import EmployeePositionHistorySection, {
+  EmployeeEducationEmploymentLists,
+} from '@/components/modules/users/EmployeePositionHistorySection';
 
 /** Picks the Chinese name when the UI is in Chinese and one exists. */
 export function localizedName(
@@ -41,6 +44,7 @@ export default function ProfileAccountDetails({
 
   const addressParts = [
     profile.addressHouseNumber,
+    profile.kebele,
     profile.addressWoreda,
     profile.addressSubcity,
     profile.addressCity,
@@ -86,6 +90,20 @@ export default function ProfileAccountDetails({
             </ProfileField>
             <ProfileField label={t('users.form.dateOfBirth')}>
               {formatDateWithPattern(profile.dateOfBirth, dateFormat)}
+            </ProfileField>
+            <ProfileField label={t('users.form.placeOfBirth')}>
+              {displayText(profile.placeOfBirth)}
+            </ProfileField>
+            <ProfileField label={t('users.form.maritalStatus')}>
+              {profile.maritalStatus
+                ? t(`users.maritalStatus.${profile.maritalStatus}`)
+                : '-'}
+            </ProfileField>
+            <ProfileField label={t('users.form.idIssueDate')}>
+              {formatDateWithPattern(profile.idIssueDate, dateFormat)}
+            </ProfileField>
+            <ProfileField label={t('users.form.idExpiryDate')}>
+              {formatDateWithPattern(profile.idExpiryDate, dateFormat)}
             </ProfileField>
             <ProfileField label={t('users.form.gender')}>
               {profile.gender ? t(`hr.gender.${profile.gender}`) : '-'}
@@ -156,6 +174,9 @@ export default function ProfileAccountDetails({
             <ProfileField label={t('users.form.addressWoreda')}>
               {displayText(profile.addressWoreda)}
             </ProfileField>
+            <ProfileField label={t('users.form.kebele')}>
+              {displayText(profile.kebele)}
+            </ProfileField>
             <ProfileField label={t('users.form.addressHouseNumber')}>
               {displayText(profile.addressHouseNumber)}
             </ProfileField>
@@ -180,7 +201,15 @@ export default function ProfileAccountDetails({
                 ? t('users.yearsValue', { years: profile.yearsOfExperience })
                 : '-'}
             </ProfileField>
+            <ProfileField label={t('users.form.pensionNumber')}>
+              {displayText(profile.pensionNumber)}
+            </ProfileField>
           </div>
+          <EmployeeEducationEmploymentLists userId={profile.id} />
+        </ProfileSection>
+
+        <ProfileSection title={t('users.sectionPositionHistory')}>
+          <EmployeePositionHistorySection userId={profile.id} canManage={false} />
         </ProfileSection>
       </div>
 
@@ -237,7 +266,11 @@ export default function ProfileAccountDetails({
                     </ProfileField>
                     {contact.relationship ? (
                       <ProfileField label={t('profile.emergencyRelationship')}>
-                        {contact.relationship}
+                        {['SPOUSE', 'PARENT', 'SIBLING', 'CHILD', 'OTHER'].includes(
+                          contact.relationship,
+                        )
+                          ? t(`users.relationship.${contact.relationship}`)
+                          : contact.relationship}
                       </ProfileField>
                     ) : null}
                     <ProfileField label={t('profile.emergencyPhone')}>

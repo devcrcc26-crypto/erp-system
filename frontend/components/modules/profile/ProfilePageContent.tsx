@@ -14,7 +14,9 @@ import {
   DollarOutlined,
   FileProtectOutlined,
   FolderOpenOutlined,
+  IdcardOutlined,
   MailOutlined,
+  PrinterOutlined,
   ScheduleOutlined,
   StarOutlined,
   UserOutlined,
@@ -60,8 +62,11 @@ import {
   useSetEmail,
   useUpdateProfile,
 } from '@/lib/query/profile';
+import { downloadUserIdCard } from '@/lib/query/users';
 import type { UserProfile } from '@/lib/api/types';
 import { formatUserName } from '@/lib/utils/user-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 interface PreferencesFormValues {
   preferredLanguage: string;
@@ -133,11 +138,13 @@ function MetaStat({
 export default function ProfilePageContent(): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const isMdUp = useIsMdUp();
+  const messageApi = useAppMessage();
   const searchParams = useSearchParams();
   const [prefsForm] = Form.useForm<PreferencesFormValues>();
   const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [emailForm] = Form.useForm<{ newEmail: string }>();
   const watchedNewEmail = Form.useWatch('newEmail', emailForm) ?? '';
+  const [printingIdCard, setPrintingIdCard] = useState(false);
 
   const profileQuery = useCurrentUser();
   const updateAuthUser = useAuthStore((state) => state.updateUser);
@@ -400,6 +407,50 @@ export default function ProfilePageContent(): React.ReactNode {
   const accountTab = (
     <div className="flex flex-col gap-4">
       <ProfileAccountDetails profile={profile} />
+
+      {profile?.idCardIssued ? (
+        <ProfileSection title={t('users.idCard.myIdCard')}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <IdcardOutlined className="mt-0.5 text-[var(--color-primary)]" />
+              <p className="erp-users-cell-sub m-0">
+                {t('users.idCard.download')}
+              </p>
+            </div>
+            <Button
+              type="primary"
+              icon={<PrinterOutlined />}
+              loading={printingIdCard}
+              onClick={() => {
+                if (!profile) return;
+                void (async () => {
+                  setPrintingIdCard(true);
+                  try {
+                    const code =
+                      profile.employeeId?.trim() || profile.id.slice(0, 8);
+                    await downloadUserIdCard(
+                      profile.id,
+                      `${code}-id-card.pdf`,
+                    );
+                    messageApi.success(t('users.idCard.printSuccess'));
+                  } catch (error: unknown) {
+                    notifyApiError(
+                      error,
+                      t('users.idCard.generating'),
+                      messageApi,
+                      t,
+                    );
+                  } finally {
+                    setPrintingIdCard(false);
+                  }
+                })();
+              }}
+            >
+              {t('users.idCard.download')}
+            </Button>
+          </div>
+        </ProfileSection>
+      ) : null}
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <ProfileSection title={t('profile.regionalPreferences')}>

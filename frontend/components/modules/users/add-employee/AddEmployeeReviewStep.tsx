@@ -43,6 +43,7 @@ interface EmergencyContactRow {
   lastName: string;
   phone: string;
   email: string;
+  relationship: string;
 }
 
 function ReviewValue({ value }: { value: string }): React.ReactNode {
@@ -219,6 +220,9 @@ export default function AddEmployeeReviewStep({
       lastName: contact.lastName?.trim() || '-',
       phone: contact.phone?.trim() || '-',
       email: contact.email?.trim() || '-',
+      relationship: contact.relationship
+        ? t(`users.relationship.${contact.relationship}`)
+        : '-',
     }),
   );
 
@@ -242,6 +246,14 @@ export default function AddEmployeeReviewStep({
           </div>
         );
       },
+    },
+    {
+      title: t('users.form.relationship'),
+      dataIndex: 'relationship',
+      key: 'relationship',
+      width: 140,
+      render: (value: string) =>
+        value === '-' ? <span className="erp-users-dash">-</span> : value,
     },
     {
       title: t('users.form.emergencyContactPhone'),
@@ -488,6 +500,38 @@ export default function AddEmployeeReviewStep({
                 label={t('users.form.nationalId')}
                 value={values.nationalId?.trim() || '-'}
               />
+              <ReviewField
+                label={t('users.form.placeOfBirth')}
+                value={values.placeOfBirth?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.maritalStatus')}
+                value={
+                  values.maritalStatus
+                    ? t(`users.maritalStatus.${values.maritalStatus}`)
+                    : '-'
+                }
+              />
+              <ReviewField
+                label={t('users.form.bloodType')}
+                value={values.bloodType?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.idIssueDate')}
+                value={
+                  values.idIssueDate
+                    ? dayjs(values.idIssueDate).format('YYYY-MM-DD')
+                    : '-'
+                }
+              />
+              <ReviewField
+                label={t('users.form.idExpiryDate')}
+                value={
+                  values.idExpiryDate
+                    ? dayjs(values.idExpiryDate).format('YYYY-MM-DD')
+                    : '-'
+                }
+              />
             </div>
           </ReviewSubsection>
           <ReviewSubsection title={t('users.sectionAddress')}>
@@ -511,6 +555,10 @@ export default function AddEmployeeReviewStep({
               <ReviewField
                 label={t('users.form.addressWoreda')}
                 value={values.addressWoreda?.trim() || '-'}
+              />
+              <ReviewField
+                label={t('users.form.kebele')}
+                value={values.kebele?.trim() || '-'}
               />
               <ReviewField
                 label={t('users.form.addressHouseNumber')}
@@ -609,6 +657,10 @@ export default function AddEmployeeReviewStep({
                 label={t('users.form.tin')}
                 value={values.tin?.trim() || '-'}
               />
+              <ReviewField
+                label={t('users.form.pensionNumber')}
+                value={values.pensionNumber?.trim() || '-'}
+              />
             </div>
           </ReviewSubsection>
         </ReviewSection>
@@ -633,6 +685,26 @@ export default function AddEmployeeReviewStep({
                 values.yearsOfExperience != null
                   ? t('users.yearsValue', { years: values.yearsOfExperience })
                   : '-'
+              }
+            />
+            <ReviewField
+              label={t('users.form.higherEducation')}
+              wide
+              value={
+                (values.educationRecords ?? [])
+                  .map((row) => row.instituteName?.trim())
+                  .filter(Boolean)
+                  .join('; ') || '-'
+              }
+            />
+            <ReviewField
+              label={t('users.form.priorEmployment')}
+              wide
+              value={
+                (values.priorEmployments ?? [])
+                  .map((row) => row.employerName?.trim())
+                  .filter(Boolean)
+                  .join('; ') || '-'
               }
             />
           </div>

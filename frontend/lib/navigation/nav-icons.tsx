@@ -181,6 +181,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   users: lucideNavIcon(Users),
   'hr-my-team': lucideNavIcon(UserCheck),
   'hr-employee-contract': lucideNavIcon(FileSignature),
+  'hr-id-cards': lucideNavIcon(IdCard),
   'hr-evaluation-inbox': lucideNavIcon(MailCheck),
   'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),
   'hr-evaluation-cycles': lucideNavIcon(Repeat),

@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -25,10 +26,15 @@ import {
   EmployeeType,
   EmploymentStatus,
   Gender,
+  MaritalStatus,
   Nationality,
   UserDiscipline,
 } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import {
+  EducationRecordInputDto,
+  PriorEmploymentInputDto,
+} from './employee-profile-records.dtos';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { normalisePhoneInput } from '../../../../shared/utils/ethiopian-phone.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
@@ -110,6 +116,17 @@ export class EmergencyContactDto {
     return normalizeEmail(trimmed);
   })
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Spouse, Parent, Sibling, Child, Other, or another short relationship',
+    maxLength: 40,
+  })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(40)
+  relationship?: string;
 }
 
 export class CreateUserDto {
@@ -463,6 +480,88 @@ export class CreateUserDto {
   @Type(() => EmergencyContactDto)
   emergencyContacts?: EmergencyContactDto[];
 
+  @ApiPropertyOptional({ maxLength: ADDRESS_MAX })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(ADDRESS_MAX)
+  placeOfBirth?: string;
+
+  @ApiPropertyOptional({ description: 'Kebele, in addition to woreda', maxLength: ADDRESS_MAX })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(ADDRESS_MAX)
+  kebele?: string;
+
+  @ApiPropertyOptional({ enum: MaritalStatus })
+  @IsOptional()
+  @IsEnum(MaritalStatus)
+  maritalStatus?: MaritalStatus;
+
+  @ApiPropertyOptional({
+    description: 'ABO blood group for ID card',
+    enum: ['A+', 'A−', 'B+', 'B−', 'AB+', 'AB−', 'O+', 'O−'],
+  })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @IsIn(['A+', 'A−', 'B+', 'B−', 'AB+', 'AB−', 'O+', 'O−'], {
+    message: '$property must be a valid blood type',
+  })
+  bloodType?: string;
+
+  @ApiPropertyOptional({ example: '2020-01-15' })
+  @IsOptional()
+  @IsOptionalText()
+  @IsDateString()
+  @IsNotFutureDate()
+  idIssueDate?: string;
+
+  @ApiPropertyOptional({ example: '2030-01-15' })
+  @IsOptional()
+  @IsOptionalText()
+  @IsDateString()
+  @IsNotBeforeProperty('idIssueDate')
+  idExpiryDate?: string;
+
+  @ApiPropertyOptional({ maxLength: 64 })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(64)
+  pensionNumber?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Hire baseline salary stored on the first position-history row. Payroll uses it until a later override or, when omitted, the contract basic salary.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  startingSalary?: number;
+
+  @ApiPropertyOptional({ type: [EducationRecordInputDto], maxItems: 20 })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => EducationRecordInputDto)
+  educationRecords?: EducationRecordInputDto[];
+
+  @ApiPropertyOptional({ type: [PriorEmploymentInputDto], maxItems: 20 })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => PriorEmploymentInputDto)
+  priorEmployments?: PriorEmploymentInputDto[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
@@ -600,6 +699,34 @@ export class UsersQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(EmploymentStatus)
   employmentStatus?: EmploymentStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter by company ID card issuance. Pass "true" or "false".',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  idCardIssued?: boolean;
+}
+
+export class BulkIdCardPdfDto {
+  @ApiProperty({ type: [String], description: 'Employee user IDs to include' })
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsEntityUuid({ each: true })
+  userIds!: string[];
+}
+
+export class BulkIssueIdCardsDto {
+  @ApiProperty({ type: [String], description: 'Employee user IDs to issue' })
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsEntityUuid({ each: true })
+  userIds!: string[];
 }
 
 export class CreateRoleDto {

@@ -241,6 +241,7 @@ describe('sidebar permissions and filtering', () => {
     // Team lists only - never HR admin pages, payroll or the full Users list.
     for (const hrOnly of [
       'users',
+      'id-cards',
       'leave-policy',
       'attendance-identities',
       'payroll',
@@ -259,6 +260,7 @@ describe('sidebar permissions and filtering', () => {
     expect(linkIds({ hasDirectReports: true })).toContain('my-team');
     const hrManager = linkIds({ canViewHr: true, canManageUsers: true, hasDirectReports: true });
     expect(hrManager).toContain('users');
+    expect(hrManager).toContain('id-cards');
     expect(hrManager).not.toContain('my-team');
   });
 

@@ -14,6 +14,7 @@ import {
   apiPost,
   apiPostForm,
   downloadApiFile,
+  downloadApiFilePost,
 } from '@/lib/api/client';
 import type {
   AssignUserRoleRequest,
@@ -66,6 +67,9 @@ function toUsersQueryString(params: UsersQueryParams): string {
   if (params.departmentId) search.set('departmentId', params.departmentId);
   if (params.positionId) search.set('positionId', params.positionId);
   if (params.isActive !== undefined) search.set('isActive', String(params.isActive));
+  if (params.idCardIssued !== undefined) {
+    search.set('idCardIssued', String(params.idCardIssued));
+  }
   const query = search.toString();
   return query ? `?${query}` : '';
 }
@@ -513,6 +517,72 @@ export function useRevokeRole() {
       void queryClient.invalidateQueries({
         queryKey: userKeys.detail(variables.userId),
       });
+    },
+  });
+}
+
+/** Download a single employee CR80 ID card PDF. */
+export async function downloadUserIdCard(
+  userId: string,
+  filename?: string,
+): Promise<void> {
+  await downloadApiFile(
+    `/users/${userId}/id-card`,
+    filename ?? `${userId}-id-card.pdf`,
+  );
+}
+
+/** Download a bulk CR80 ID card PDF (front + back per employee). */
+export async function downloadBulkIdCards(
+  userIds: string[],
+  filename = 'id-cards.pdf',
+): Promise<void> {
+  await downloadApiFilePost('/users/id-cards/pdf', filename, { userIds });
+}
+
+export function useIssueIdCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiPost<{
+        idCardIssued: true;
+        idCardIssuedAt: string;
+        idCardIssuedBy: string;
+        idCardIssuedByName: string;
+      }>(`/users/${userId}/issue-id-card`),
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.detail(userId) });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
+export function useRevokeIdCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiPost<{
+        idCardIssued: false;
+        idCardIssuedAt: null;
+        idCardIssuedBy: null;
+      }>(`/users/${userId}/revoke-id-card`),
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.detail(userId) });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
+export function useIssueIdCardsBulk() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userIds: string[]) =>
+      apiPost<{ issued: number }>('/users/id-cards/issue', { userIds }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 }

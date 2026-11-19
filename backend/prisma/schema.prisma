@@ -135,6 +135,12 @@ enum Gender {
   FEMALE
 }
 
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+}
+
 enum EducationLevel {
   PHD
   MSC
@@ -292,6 +298,9 @@ model Company {
   financialPeriods FinancialPeriod[]
   numberSeries     NumberSeries[]
   users            User[]
+  educationRecords EducationRecord[]
+  priorEmployments PriorEmployment[]
+  positionHistories PositionHistory[]
   roles            Role[]
   auditLogs        AuditLog[]
   notificationTemplates NotificationTemplate[]
@@ -560,6 +569,7 @@ model Position {
 
   company Company @relation(fields: [companyId], references: [id])
   users   User[]
+  positionHistory PositionHistory[]
 
   @@index([companyId], map: "idx_position_company_id")
   @@index([companyId, deletedAt], map: "idx_position_company_deleted")
@@ -698,6 +708,18 @@ model User {
   gender                Gender?
   dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
   nationalId            String?         @map("national_id")
+  placeOfBirth          String?         @map("place_of_birth")
+  kebele                String?         @map("kebele")
+  maritalStatus         MaritalStatus?  @map("marital_status")
+  /// ABO blood group for ID card (e.g. A+, O−). Null when unknown.
+  bloodType             String?         @map("blood_type")
+  idIssueDate           DateTime?       @map("id_issue_date") @db.Date
+  idExpiryDate          DateTime?       @map("id_expiry_date") @db.Date
+  pensionNumber         String?         @map("pension_number")
+  /// Company employee ID card issuance (not national ID).
+  idCardIssued          Boolean         @default(false) @map("id_card_issued")
+  idCardIssuedAt        DateTime?       @map("id_card_issued_at")
+  idCardIssuedBy        String?         @map("id_card_issued_by")
   tin                   String?         @map("tin")
   nationality           Nationality?
   employeeType          EmployeeType?   @map("employee_type")
@@ -992,6 +1014,9 @@ model User {
   payrollPayslipsReleased            PayrollPayslip[]            @relation("PayrollPayslipReleaser")
   payrollPayslipsCreated             PayrollPayslip[]            @relation("PayrollPayslipCreator")
   payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
+  educationRecords                   EducationRecord[]
+  priorEmployments                   PriorEmployment[]
+  positionHistory                    PositionHistory[]
   employmentPeriods                  EmploymentPeriod[]          @relation("EmploymentPeriodEmployee")
   employmentPeriodsSeparated         EmploymentPeriod[]          @relation("EmploymentPeriodSeparatedBy")
   inactivePeriods                    InactivePeriod[]            @relation("InactivePeriodEmployee")
@@ -1011,6 +1036,92 @@ model User {
   @@index([seniorityLevelId], map: "idx_user_seniority_level_id")
   @@index([discipline], map: "idx_user_discipline")
   @@map("user")
+}
+
+/// Repeating higher-education rows for an employee. The single educationLevel
+/// and fieldOfStudy columns on User stay for the summary still used elsewhere.
+model EducationRecord {
+  id              String    @id @default(uuid())
+  companyId       String    @map("company_id")
+  userId          String    @map("user_id")
+  instituteName   String    @map("institute_name")
+  graduationYear  Int?      @map("graduation_year")
+  subjectMajor    String?   @map("subject_major")
+  /// Diploma, BSc, BA, MSc, MA, PhD, or another certificate name.
+  certificateType String?   @map("certificate_type")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String?   @map("created_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  updatedBy       String?   @map("updated_by")
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       String?   @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId], map: "idx_education_record_company_id")
+  @@index([companyId, deletedAt], map: "idx_education_record_company_deleted")
+  @@index([userId], map: "idx_education_record_user_id")
+  @@map("education_record")
+}
+
+/// Jobs the employee held before joining the company.
+model PriorEmployment {
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
+  userId       String    @map("user_id")
+  employerName String    @map("employer_name")
+  dateFrom     DateTime? @map("date_from") @db.Date
+  dateTo       DateTime? @map("date_to") @db.Date
+  lastPosition String?   @map("last_position")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdBy    String?   @map("created_by")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String?   @map("updated_by")
+  deletedAt    DateTime? @map("deleted_at")
+  deletedBy    String?   @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId], map: "idx_prior_employment_company_id")
+  @@index([companyId, deletedAt], map: "idx_prior_employment_company_deleted")
+  @@index([userId], map: "idx_prior_employment_user_id")
+  @@map("prior_employment")
+}
+
+/// Effective-dated position and salary. salaryOverride, when set, is the
+/// payroll basic salary for dates it covers; otherwise payroll uses the
+/// employee contract basic salary. effectiveTo null means currently active.
+/// effectiveTo is exclusive: a row covers date when
+/// effectiveFrom <= date AND (effectiveTo is null OR effectiveTo > date).
+model PositionHistory {
+  id             String    @id @default(uuid())
+  companyId      String    @map("company_id")
+  userId         String    @map("user_id")
+  positionId     String?   @map("position_id")
+  salaryOverride Decimal?  @map("salary_override") @db.Decimal(14, 2)
+  effectiveFrom  DateTime  @map("effective_from") @db.Date
+  effectiveTo    DateTime? @map("effective_to") @db.Date
+  /// Hired, Promoted, Salary adjustment, and similar.
+  note           String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  createdBy      String?   @map("created_by")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  updatedBy      String?   @map("updated_by")
+  deletedAt      DateTime? @map("deleted_at")
+  deletedBy      String?   @map("deleted_by")
+
+  company  Company   @relation(fields: [companyId], references: [id])
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position Position? @relation(fields: [positionId], references: [id])
+
+  @@index([companyId], map: "idx_position_history_company_id")
+  @@index([companyId, deletedAt], map: "idx_position_history_company_deleted")
+  @@index([userId], map: "idx_position_history_user_id")
+  @@index([userId, effectiveFrom], map: "idx_position_history_user_from")
+  @@index([positionId], map: "idx_position_history_position_id")
+  @@map("position_history")
 }
 
 /// Effective-dated HR policy value. Versions are append-only; the version in force for a

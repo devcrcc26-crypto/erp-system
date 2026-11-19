@@ -108,6 +108,11 @@ function makeService(state: State) {
     documentFolder: { create: jest.fn(async ({ data }: any) => data) },
     userSession: { deleteMany: jest.fn(async () => { state.sessions = 0; }) },
     payrollRun: { findMany: jest.fn(async () => []), updateMany: jest.fn() },
+    positionHistory: {
+      findFirst: jest.fn(async () => null),
+      update: jest.fn(async ({ data }: any) => data),
+      create: jest.fn(async ({ data }: any) => data),
+    },
     policySetting: { findMany: jest.fn(async () => []) },
   };
   prisma.$transaction = jest.fn(async (fn: any) => fn(prisma));

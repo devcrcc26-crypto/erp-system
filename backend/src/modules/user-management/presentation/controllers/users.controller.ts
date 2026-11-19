@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -16,7 +17,14 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
@@ -33,11 +41,14 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { UpdateLoginNameDto } from '../../application/dtos/update-login-name.dto';
 import {
   AssignUserRoleDto,
+  BulkIdCardPdfDto,
+  BulkIssueIdCardsDto,
   CreateUserDto,
   SetPrimaryRoleDto,
   UpdateUserDto,
   UsersQueryDto,
 } from '../../application/dtos/user-management.dtos';
+import { EmployeeIdCardPdfService } from '../../application/services/employee-id-card-pdf.service';
 import { UserManagementService } from '../../application/services/user-management.service';
 import {
   ReactivateDto,
@@ -49,6 +60,13 @@ import {
 } from '../../application/dtos/employment-separation.dtos';
 import { EmploymentLifecycleService } from '../../application/services/employment-lifecycle.service';
 import { EmploymentSeparationService } from '../../application/services/employment-separation.service';
+import { EmployeeProfileRecordsService } from '../../application/services/employee-profile-records.service';
+import {
+  CreatePositionHistoryDto,
+  EducationRecordInputDto,
+  PriorEmploymentInputDto,
+  UpdatePositionHistoryDto,
+} from '../../application/dtos/employee-profile-records.dtos';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -59,6 +77,8 @@ export class UsersController {
     private readonly userManagementService: UserManagementService,
     private readonly separationService: EmploymentSeparationService,
     private readonly lifecycle: EmploymentLifecycleService,
+    private readonly profileRecords: EmployeeProfileRecordsService,
+    private readonly idCardPdfService: EmployeeIdCardPdfService,
     private readonly permissionService: PermissionService,
     private readonly prisma: PrismaService,
   ) {}
@@ -270,6 +290,19 @@ export class UsersController {
     );
   }
 
+  /** HR/admin may print or issue ID cards regardless of issuance status. */
+  private async canManageIdCards(user: AuthenticatedUser): Promise<boolean> {
+    if (await this.canViewAllUsers(user)) {
+      return true;
+    }
+    return this.permissionService.hasPermission(
+      user.userId,
+      user.companyId,
+      'hr',
+      'view',
+    );
+  }
+
   /**
    * users.view sees everyone. A supervisor without it may read the profile of
    * anyone below them in the reporting chain (not their own - that is
@@ -312,6 +345,43 @@ export class UsersController {
       throw new ForbiddenException('Missing permission: users.view');
     }
     return this.userManagementService.listUsers(this.ctx(user), query, teamIds);
+  }
+
+  @Post('id-cards/pdf')
+  @RequireAnyPermission(
+    { module: 'users', action: 'view' },
+    { module: 'hr', action: 'view' },
+  )
+  @ApiOperation({
+    summary:
+      'Download a bulk CR80 ID-card PDF (front + back per employee, HR/admin)',
+  })
+  @ApiProduces('application/pdf')
+  async downloadBulkIdCards(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkIdCardPdfDto,
+  ): Promise<StreamableFile> {
+    const file = await this.idCardPdfService.getBulkPdf(
+      this.ctx(user),
+      dto.userIds,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('attachment', file.filename),
+    });
+  }
+
+  @Post('id-cards/issue')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Issue ID cards for multiple employees (HR/admin)' })
+  issueIdCardsBulk(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkIssueIdCardsDto,
+  ): Promise<{ issued: number }> {
+    return this.idCardPdfService.issueIdCardsBulk(this.ctx(user), dto.userIds);
   }
 
   @Get('org-gaps')
@@ -478,6 +548,252 @@ export class UsersController {
     return { message: 'Profile photo removed' };
   }
 
+  @Get(':id/id-card')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Download CR80 employee ID card PDF (HR/admin always; employee only when issued)',
+  })
+  @ApiProduces('application/pdf')
+  async downloadIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const isSelf = user.userId === id;
+    const isHr = await this.canManageIdCards(user);
+    if (!isSelf && !isHr) {
+      throw new ForbiddenException('You do not have access to this ID card');
+    }
+    const file = await this.idCardPdfService.getPdfForUser(this.ctx(user), id, {
+      requireIssued: isSelf && !isHr,
+    });
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('attachment', file.filename),
+    });
+  }
+
+  @Post(':id/issue-id-card')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Issue the company ID card for an employee (HR/admin)' })
+  issueIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.idCardPdfService.issueIdCard(this.ctx(user), id);
+  }
+
+  @Post(':id/revoke-id-card')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Revoke the company ID card for an employee (HR/admin)' })
+  revokeIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.idCardPdfService.revokeIdCard(this.ctx(user), id);
+  }
+
+  @Get(':id/education')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List higher-education rows for an employee' })
+  async listEducation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    await this.assertCanReadProfileRecords(user, id);
+    return this.profileRecords.listEducation(this.ctx(user), id);
+  }
+
+  @Post(':id/education')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Add a higher-education row' })
+  createEducation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: EducationRecordInputDto,
+  ): Promise<unknown> {
+    return this.profileRecords.createEducation(this.ctx(user), id, dto);
+  }
+
+  @Patch(':id/education/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Update a higher-education row' })
+  updateEducation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+    @Body() dto: EducationRecordInputDto,
+  ): Promise<unknown> {
+    return this.profileRecords.updateEducation(this.ctx(user), id, recordId, dto);
+  }
+
+  @Delete(':id/education/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Remove a higher-education row' })
+  async deleteEducation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+  ): Promise<{ message: string }> {
+    await this.profileRecords.deleteEducation(this.ctx(user), id, recordId);
+    return { message: 'Education record removed' };
+  }
+
+  @Get(':id/prior-employment')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List prior employment rows for an employee' })
+  async listPriorEmployment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    await this.assertCanReadProfileRecords(user, id);
+    return this.profileRecords.listPriorEmployment(this.ctx(user), id);
+  }
+
+  @Post(':id/prior-employment')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Add a prior-employment row' })
+  createPriorEmployment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: PriorEmploymentInputDto,
+  ): Promise<unknown> {
+    return this.profileRecords.createPriorEmployment(this.ctx(user), id, dto);
+  }
+
+  @Patch(':id/prior-employment/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Update a prior-employment row' })
+  updatePriorEmployment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+    @Body() dto: PriorEmploymentInputDto,
+  ): Promise<unknown> {
+    return this.profileRecords.updatePriorEmployment(this.ctx(user), id, recordId, dto);
+  }
+
+  @Delete(':id/prior-employment/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Remove a prior-employment row' })
+  async deletePriorEmployment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+  ): Promise<{ message: string }> {
+    await this.profileRecords.deletePriorEmployment(this.ctx(user), id, recordId);
+    return { message: 'Prior employment record removed' };
+  }
+
+  @Get(':id/position-history')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Position and salary history (HR, or the employee read-only)',
+  })
+  async listPositionHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    await this.assertCanReadProfileRecords(user, id);
+    return this.profileRecords.listPositionHistory(this.ctx(user), id);
+  }
+
+  @Post(':id/position-history')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({
+    summary: 'Add a position-history row and close the previously active one',
+  })
+  createPositionHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: CreatePositionHistoryDto,
+  ): Promise<unknown> {
+    return this.profileRecords.createPositionHistory(this.ctx(user), id, dto);
+  }
+
+  @Patch(':id/position-history/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Update a position-history row' })
+  updatePositionHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+    @Body() dto: UpdatePositionHistoryDto,
+  ): Promise<unknown> {
+    return this.profileRecords.updatePositionHistory(this.ctx(user), id, recordId, dto);
+  }
+
+  @Delete(':id/position-history/:recordId')
+  @RequireAnyPermission(
+    { module: 'users', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Remove a position-history row' })
+  async deletePositionHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('recordId') recordId: string,
+  ): Promise<{ message: string }> {
+    await this.profileRecords.deletePositionHistory(this.ctx(user), id, recordId);
+    return { message: 'Position history record removed' };
+  }
+
+  /**
+   * HR (users.view or hr.view), the employee themself, or a supervisor of
+   * this employee. Writes stay on users.edit / hr.edit.
+   */
+  private async assertCanReadProfileRecords(
+    user: AuthenticatedUser,
+    employeeId: string,
+  ): Promise<void> {
+    if (user.userId === employeeId) {
+      return;
+    }
+    if (await this.canViewAllUsers(user)) {
+      return;
+    }
+    const canViewHr = await this.permissionService.hasPermission(
+      user.userId,
+      user.companyId,
+      'hr',
+      'view',
+    );
+    if (canViewHr) {
+      return;
+    }
+    await this.assertCanViewUser(user, employeeId);
+  }
+
   @Get(':id')
   @DelegatePermissionCheck()
   async get(
@@ -619,4 +935,12 @@ export class UsersController {
       return Array.from({ length: fileCount }, () => '');
     }
   }
+}
+
+function contentDisposition(
+  kind: 'inline' | 'attachment',
+  filename: string,
+): string {
+  const safe = filename.replace(/[^\w.\-]+/g, '_');
+  return `${kind}; filename="${safe}"`;
 }

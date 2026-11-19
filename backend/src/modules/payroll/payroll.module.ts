@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/audit.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { LeavePolicyModule } from '../leave-policy/leave-policy.module';
 import { PayrollController } from './presentation/controllers/payroll.controller';
+import { EffectiveSalaryService } from './application/services/effective-salary.service';
 import { PayrollCalculationService } from './application/services/payroll-calculation.service';
 import { PayrollBankLetterService } from './application/services/payroll-bank-letter.service';
 import { PayrollCompanySettingsService } from './application/services/payroll-company-settings.service';
@@ -26,6 +27,7 @@ import { PayrollRunService } from './application/services/payroll-run.service';
   ],
   controllers: [PayrollController],
   providers: [
+    EffectiveSalaryService,
     PayrollCalculationService,
     PayrollCompanySettingsService,
     PayrollBankLetterService,

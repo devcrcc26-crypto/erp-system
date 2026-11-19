@@ -139,6 +139,27 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true, example: '1990-05-21' })
   dateOfBirth!: string | null;
 
+  @ApiProperty({ nullable: true })
+  placeOfBirth!: string | null;
+
+  @ApiProperty({ nullable: true, enum: ['SINGLE', 'MARRIED', 'DIVORCED'] })
+  maritalStatus!: string | null;
+
+  @ApiProperty({ nullable: true, description: 'ABO blood group' })
+  bloodType!: string | null;
+
+  @ApiProperty({ description: 'Whether HR has issued the company ID card' })
+  idCardIssued!: boolean;
+
+  @ApiProperty({ nullable: true })
+  idCardIssuedAt!: Date | null;
+
+  @ApiProperty({ nullable: true, example: '2020-01-15' })
+  idIssueDate!: string | null;
+
+  @ApiProperty({ nullable: true, example: '2030-01-15' })
+  idExpiryDate!: string | null;
+
   @ApiProperty({ nullable: true, enum: ['MALE', 'FEMALE'] })
   gender!: string | null;
 
@@ -188,8 +209,14 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true })
   addressHouseNumber!: string | null;
 
+  @ApiProperty({ nullable: true })
+  kebele!: string | null;
+
   @ApiProperty({ type: [ProfileEmergencyContactDto] })
   emergencyContacts!: ProfileEmergencyContactDto[];
+
+  @ApiProperty({ nullable: true, description: 'Pension number' })
+  pensionNumber!: string | null;
 
   @ApiProperty({ nullable: true, description: 'Payroll bank name' })
   bankName!: string | null;

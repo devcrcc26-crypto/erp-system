@@ -93,6 +93,7 @@ function setup(entry: Record<string, unknown> | null, policy: object = POLICY_DE
     {} as never,
     audit as never,
     {} as never,
+    { findSalaryOverride: jest.fn(async () => null), getEffectiveSalary: jest.fn(async () => null) } as never,
   );
   return { service, prisma, tx, audit };
 }

@@ -146,6 +146,13 @@ export interface UserProfile {
   employeeType?: 'PERMANENT' | 'CONTRACT' | 'TEMPORARY' | 'FREELANCER' | null;
   nationality?: 'ETHIOPIAN' | 'CHINESE' | null;
   dateOfBirth?: string | null;
+  placeOfBirth?: string | null;
+  maritalStatus?: MaritalStatus | null;
+  bloodType?: string | null;
+  idCardIssued?: boolean;
+  idCardIssuedAt?: string | null;
+  idIssueDate?: string | null;
+  idExpiryDate?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
   educationLevel?: EducationLevel | null;
   fieldOfStudy?: string | null;
@@ -162,7 +169,9 @@ export interface UserProfile {
   addressSubcity?: string | null;
   addressWoreda?: string | null;
   addressHouseNumber?: string | null;
+  kebele?: string | null;
   emergencyContacts?: ProfileEmergencyContact[];
+  pensionNumber?: string | null;
   bankName?: string | null;
   bankBranch?: string | null;
   bankAccountNumber?: string | null;
@@ -174,7 +183,6 @@ export interface ProfileEmergencyContact {
   lastName: string;
   phone: string | null;
   email: string | null;
-  /** Only present when recorded - the HR form does not capture it today. */
   relationship: string | null;
 }
 
@@ -222,6 +230,8 @@ export type EmployeeType =
   | 'CONTRACT'
   | 'TEMPORARY'
   | 'FREELANCER';
+export type MaritalStatus = 'SINGLE' | 'MARRIED' | 'DIVORCED';
+
 export type EducationLevel =
   | 'PHD'
   | 'MSC'
@@ -239,6 +249,38 @@ export interface EmergencyContact {
   lastName: string;
   phone?: string;
   email?: string;
+  relationship?: string;
+}
+
+export interface EducationRecordInput {
+  id?: string;
+  instituteName: string;
+  graduationYear?: number | null;
+  subjectMajor?: string | null;
+  certificateType?: string | null;
+}
+
+export interface PriorEmploymentInput {
+  id?: string;
+  employerName: string;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  lastPosition?: string | null;
+}
+
+export interface PositionHistoryEntry {
+  id: string;
+  userId: string;
+  positionId: string | null;
+  positionTitle: string | null;
+  positionTitleZh: string | null;
+  salaryOverride: number | null;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LeavePolicySummary {
@@ -289,6 +331,13 @@ export interface User {
   gender?: Gender | null;
   dateOfBirth?: string | null;
   nationalId?: string | null;
+  placeOfBirth?: string | null;
+  kebele?: string | null;
+  maritalStatus?: MaritalStatus | null;
+  bloodType?: string | null;
+  idIssueDate?: string | null;
+  idExpiryDate?: string | null;
+  pensionNumber?: string | null;
   tin?: string | null;
   nationality?: Nationality | null;
   employeeType?: EmployeeType | null;
@@ -301,12 +350,19 @@ export interface User {
   yearsOfExperience?: number | null;
   yearsOfExperienceAsOf?: string | null;
   emergencyContacts?: EmergencyContact[] | null;
+  educationRecords?: EducationRecordInput[] | null;
+  priorEmployments?: PriorEmploymentInput[] | null;
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
   workScheduleId?: string | null;
   workSchedule?: { id: string; name: string; isDefault: boolean } | null;
   profileFolderId?: string | null;
   photoDocumentId?: string | null;
+  /** Company ID card issuance (HR-controlled). */
+  idCardIssued?: boolean;
+  idCardIssuedAt?: string | null;
+  idCardIssuedBy?: string | null;
+  idCardIssuedByName?: string | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
@@ -361,7 +417,29 @@ export interface UsersQueryParams extends PaginationParams {
   departmentId?: string;
   positionId?: string;
   isActive?: boolean;
+  idCardIssued?: boolean;
 }
+
+export type BloodType =
+  | 'A+'
+  | 'A−'
+  | 'B+'
+  | 'B−'
+  | 'AB+'
+  | 'AB−'
+  | 'O+'
+  | 'O−';
+
+export const BLOOD_TYPE_OPTIONS: readonly BloodType[] = [
+  'A+',
+  'A−',
+  'B+',
+  'B−',
+  'AB+',
+  'AB−',
+  'O+',
+  'O−',
+] as const;
 
 export interface CreateUserRequest {
   email?: string;
@@ -397,6 +475,13 @@ export interface CreateUserRequest {
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;
+  placeOfBirth?: string | null;
+  kebele?: string | null;
+  maritalStatus?: MaritalStatus | null;
+  bloodType?: BloodType | null;
+  idIssueDate?: string | null;
+  idExpiryDate?: string | null;
+  pensionNumber?: string | null;
   tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
@@ -405,6 +490,8 @@ export interface CreateUserRequest {
   employmentDate?: string;
   yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
+  educationRecords?: EducationRecordInput[];
+  priorEmployments?: PriorEmploymentInput[];
   leavePolicyId?: string;
   workScheduleId?: string;
   bankName?: string;
@@ -449,6 +536,13 @@ export interface UpdateUserRequest {
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;
+  placeOfBirth?: string | null;
+  kebele?: string | null;
+  maritalStatus?: MaritalStatus | null;
+  bloodType?: BloodType | null;
+  idIssueDate?: string | null;
+  idExpiryDate?: string | null;
+  pensionNumber?: string | null;
   tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
@@ -457,6 +551,8 @@ export interface UpdateUserRequest {
   employmentDate?: string;
   yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
+  educationRecords?: EducationRecordInput[];
+  priorEmployments?: PriorEmploymentInput[];
   bankName?: string;
   bankBranch?: string;
   bankAccountNumber?: string;

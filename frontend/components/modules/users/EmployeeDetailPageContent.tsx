@@ -14,8 +14,10 @@ import {
   DollarOutlined,
   EditOutlined,
   FileTextOutlined,
+  IdcardOutlined,
   MailOutlined,
   MoreOutlined,
+  PrinterOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   RedoOutlined,
@@ -52,6 +54,9 @@ import {
 } from '@/components/modules/users/EmployeeInactiveDialogs';
 import EmployeeRehireDialog from '@/components/modules/users/EmployeeRehireDialog';
 import EmploymentHistorySection from '@/components/modules/users/EmploymentHistorySection';
+import EmployeePositionHistorySection, {
+  EmployeeEducationEmploymentLists,
+} from '@/components/modules/users/EmployeePositionHistorySection';
 import EmploymentStatusTag from '@/components/modules/users/EmploymentStatusTag';
 import { useEmployment } from '@/lib/query/employment';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -77,12 +82,16 @@ import {
 } from '@/lib/constants/protected-accounts';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
+  downloadUserIdCard,
   useDeleteUser,
+  useIssueIdCard,
   useResendInvitation,
+  useRevokeIdCard,
   useUser,
 } from '@/lib/query/users';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
   userStatusLabel,
   userStatusVariant,
@@ -107,6 +116,20 @@ function displayValue(value: string | number | null | undefined): string {
   return String(value);
 }
 
+const RELATIONSHIP_CODES = ['SPOUSE', 'PARENT', 'SIBLING', 'CHILD', 'OTHER'];
+
+function relationshipLabel(
+  value: string | undefined,
+  t: (key: string) => string,
+): string {
+  if (!value) {
+    return '-';
+  }
+  return RELATIONSHIP_CODES.includes(value)
+    ? t(`users.relationship.${value}`)
+    : value;
+}
+
 function formatEmergencyContactName(contact: EmergencyContact): string {
   return [contact.firstName, contact.middleName, contact.lastName]
     .filter(Boolean)
@@ -116,6 +139,7 @@ function formatEmergencyContactName(contact: EmergencyContact): string {
 function formatAddress(user: UserDetail): string {
   const parts = [
     user.addressHouseNumber,
+    user.kebele,
     user.addressWoreda,
     user.addressSubcity,
     user.addressCity,
@@ -263,7 +287,11 @@ export default function EmployeeDetailPageContent({
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
+  const issueIdCard = useIssueIdCard();
+  const revokeIdCard = useRevokeIdCard();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmRevokeIdCard, setConfirmRevokeIdCard] = useState(false);
+  const [printingIdCard, setPrintingIdCard] = useState(false);
   const canEditUsers = useCanEditUsers();
   const canEditHr = useCanEditHr();
   // HR, or a supervisor opening someone in their reporting chain.
@@ -534,6 +562,34 @@ export default function EmployeeDetailPageContent({
             {isNarrow ? undefined : t('users.backToList')}
           </Button>
           <div className="erp-employee-toolbar-actions">
+            {!isTeamViewOnly ? (
+              <Button
+                icon={<PrinterOutlined />}
+                loading={printingIdCard}
+                onClick={() => {
+                  void (async () => {
+                    setPrintingIdCard(true);
+                    try {
+                      const code =
+                        user.employeeId?.trim() || user.id.slice(0, 8);
+                      await downloadUserIdCard(user.id, `${code}-id-card.pdf`);
+                      messageApi.success(t('users.idCard.printSuccess'));
+                    } catch (error: unknown) {
+                      notifyApiError(
+                        error,
+                        t('users.idCard.generating'),
+                        messageApi,
+                        t,
+                      );
+                    } finally {
+                      setPrintingIdCard(false);
+                    }
+                  })();
+                }}
+              >
+                {isCompact ? undefined : t('users.idCard.print')}
+              </Button>
+            ) : null}
             {isTeamViewOnly ? null : (
               <Button
                 type="primary"
@@ -792,8 +848,29 @@ export default function EmployeeDetailPageContent({
                           ? formatProjectDate(user.dateOfBirth)
                           : '-'}
                       </MetaItem>
+                      <MetaItem label={t('users.form.placeOfBirth')}>
+                        {displayValue(user.placeOfBirth)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.maritalStatus')}>
+                        {user.maritalStatus
+                          ? t(`users.maritalStatus.${user.maritalStatus}`)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.bloodType')}>
+                        {displayValue(user.bloodType)}
+                      </MetaItem>
                       <MetaItem label={t('users.form.nationalId')}>
                         {displayValue(user.nationalId)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.idIssueDate')}>
+                        {user.idIssueDate
+                          ? formatProjectDate(user.idIssueDate)
+                          : '-'}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.idExpiryDate')}>
+                        {user.idExpiryDate
+                          ? formatProjectDate(user.idExpiryDate)
+                          : '-'}
                       </MetaItem>
                       <MetaItem label={t('users.form.nationality')}>
                         {user.nationality
@@ -809,6 +886,66 @@ export default function EmployeeDetailPageContent({
                     </div>
                   </DetailSection>
 
+                  {!isTeamViewOnly ? (
+                    <DetailSection title={t('users.idCard.sectionTitle')}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-2">
+                          <IdcardOutlined className="mt-0.5 text-[var(--color-primary)]" />
+                          <div>
+                            <div className="font-medium text-[var(--color-text)]">
+                              {user.idCardIssued
+                                ? `${t('users.idCard.sectionTitle')} — ${t('users.idCard.issued')}`
+                                : `${t('users.idCard.sectionTitle')} — ${t('users.idCard.notIssued')}`}
+                            </div>
+                            {user.idCardIssued ? (
+                              <div className="text-sm text-[var(--color-text-secondary)]">
+                                {t('users.idCard.issuedOnBy', {
+                                  date: user.idCardIssuedAt
+                                    ? formatProjectDate(user.idCardIssuedAt)
+                                    : '—',
+                                  name: user.idCardIssuedByName ?? '—',
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        {user.idCardIssued ? (
+                          <Button
+                            danger
+                            loading={revokeIdCard.isPending}
+                            onClick={() => setConfirmRevokeIdCard(true)}
+                          >
+                            {t('users.idCard.revoke')}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="primary"
+                            loading={issueIdCard.isPending}
+                            onClick={() => {
+                              void issueIdCard
+                                .mutateAsync(user.id)
+                                .then(() =>
+                                  messageApi.success(
+                                    t('users.idCard.issueSuccess'),
+                                  ),
+                                )
+                                .catch((error: unknown) =>
+                                  notifyApiError(
+                                    error,
+                                    t('users.idCard.issue'),
+                                    messageApi,
+                                    t,
+                                  ),
+                                );
+                            }}
+                          >
+                            {t('users.idCard.issue')}
+                          </Button>
+                        )}
+                      </div>
+                    </DetailSection>
+                  ) : null}
+
                   <DetailSection title={t('users.sectionPayrollDetails')}>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <MetaItem label={t('users.form.bankName')}>
@@ -822,6 +959,9 @@ export default function EmployeeDetailPageContent({
                       </MetaItem>
                       <MetaItem label={t('users.form.tin')}>
                         {displayValue(user.tin)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.pensionNumber')}>
+                        {displayValue(user.pensionNumber)}
                       </MetaItem>
                     </div>
                   </DetailSection>
@@ -859,6 +999,14 @@ export default function EmployeeDetailPageContent({
                         )}
                       </MetaItem>
                     </div>
+                    <EmployeeEducationEmploymentLists userId={user.id} />
+                  </DetailSection>
+
+                  <DetailSection title={t('users.sectionPositionHistory')}>
+                    <EmployeePositionHistorySection
+                      userId={user.id}
+                      canManage={Boolean(canEditUsers || canEditHr)}
+                    />
                   </DetailSection>
 
                   <DetailSection title={t('users.sectionEmergencyContact')}>
@@ -886,6 +1034,9 @@ export default function EmployeeDetailPageContent({
                                 label={t('users.form.emergencyContactEmail')}
                               >
                                 {displayValue(contact.email)}
+                              </MetaItem>
+                              <MetaItem label={t('users.form.relationship')}>
+                                {relationshipLabel(contact.relationship, t)}
                               </MetaItem>
                             </div>
                           </div>
@@ -924,6 +1075,9 @@ export default function EmployeeDetailPageContent({
                       </MetaItem>
                       <MetaItem label={t('users.form.addressWoreda')}>
                         {displayValue(user.addressWoreda)}
+                      </MetaItem>
+                      <MetaItem label={t('users.form.kebele')}>
+                        {displayValue(user.kebele)}
                       </MetaItem>
                       <MetaItem label={t('users.form.addressHouseNumber')}>
                         {displayValue(user.addressHouseNumber)}
@@ -1049,6 +1203,27 @@ export default function EmployeeDetailPageContent({
         </div>
       </div>
 
+      <ConfirmDialog
+        className="erp-hr-travel-modal"
+        open={confirmRevokeIdCard}
+        title={t('users.idCard.revokeConfirmTitle')}
+        description={t('users.idCard.revokeConfirm')}
+        confirmLabel={t('users.idCard.revoke')}
+        danger
+        confirmLoading={revokeIdCard.isPending}
+        onConfirm={() => {
+          void revokeIdCard
+            .mutateAsync(user.id)
+            .then(() => {
+              messageApi.success(t('users.idCard.revokeSuccess'));
+              setConfirmRevokeIdCard(false);
+            })
+            .catch((error: unknown) =>
+              notifyApiError(error, t('users.idCard.revoke'), messageApi, t),
+            );
+        }}
+        onCancel={() => setConfirmRevokeIdCard(false)}
+      />
       <ConfirmDialog
         className="erp-hr-travel-modal"
         open={confirmDelete}
