@@ -1051,7 +1051,7 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             aria-label={t('common.department')}
           />
-          <Select
+          {/* <Select
             placeholder={t('users.filterStatus')}
             className="erp-users-filter-select"
             allowClear
@@ -1065,7 +1065,7 @@ export default function UsersPageContent(): React.ReactNode {
               resetPage();
             }}
             aria-label={t('common.status')}
-          />
+          /> */}
           <Select
             placeholder={t('users.employment.filterEmploymentStatus')}
             className="erp-users-filter-select"
@@ -1082,7 +1082,7 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             aria-label={t('users.employment.filterEmploymentStatus')}
           />
-          <Checkbox
+          {/* <Checkbox
             checked={filterNoRole}
             onChange={(event) => {
               setFilterNoRole(event.target.checked);
@@ -1090,7 +1090,7 @@ export default function UsersPageContent(): React.ReactNode {
             }}
           >
             {t('users.filterNoRole')}
-          </Checkbox>
+          </Checkbox> */}
           <Popover
             trigger="click"
             placement={isCompact ? 'bottom' : 'bottomLeft'}
