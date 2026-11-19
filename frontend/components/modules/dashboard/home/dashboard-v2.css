@@ -115,7 +115,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-primary-soft, #e1f5ee);
+  background: var(--color-primary-soft, #e8f0fa);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
 }
 
@@ -195,7 +195,7 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  color: var(--color-primary-soft, #e1f5ee);
+  color: var(--color-primary-soft, #e8f0fa);
   transition: color 150ms ease;
 }
 

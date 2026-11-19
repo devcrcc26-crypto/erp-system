@@ -14,6 +14,7 @@ export default function ThemeAccentSync(): null {
     root.style.setProperty('--erp-accent-hover', accent.hover);
     root.style.setProperty('--erp-accent-light', accent.light);
     root.style.setProperty('--erp-accent-soft', accent.softHover);
+    root.style.setProperty('--erp-accent-wash', accent.wash);
     root.style.setProperty('--erp-accent-rgb', accent.primaryRgb);
     root.style.setProperty('--erp-accent-hover-rgb', accent.hoverRgb);
   }, []);

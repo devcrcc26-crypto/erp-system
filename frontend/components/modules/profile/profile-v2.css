@@ -77,8 +77,8 @@
 
 .erp-profile-page.erp-profile-v2 .erp-profile-hero .erp-users-role-tag {
   border: 0;
-  background: rgba(29, 158, 117, 0.1);
-  color: #0f6e56;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
   font-weight: 600;
 }
 

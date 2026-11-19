@@ -1,3 +1,5 @@
+import { accent } from '@/lib/theme/accent';
+
 /**
  * Design tokens for the Overview tab. Tailwind utilities carry the UI; the hex
  * values exist only for SVG fills (Recharts cannot read utility classes).
@@ -61,12 +63,12 @@ export const CONTRACT_LEVEL_COLORS = {
 
 /** Donut palette for leave types (ordered by prominence). */
 export const LEAVE_PALETTE: readonly string[] = [
-  '#1d9e75', // brand teal
-  '#0ea5e9', // sky-500
+  accent.primary, // brand blue
+  '#14b8a6', // teal-500 (sky is too close to brand blue)
   '#8b5cf6', // violet-500
   '#f59e0b', // amber-500
   '#f43f5e', // rose-500
-  '#0f6e56', // brand teal dark
+  accent.hover, // brand blue dark
   '#5f6b66', // --erp-n-500
 ];
 
@@ -75,10 +77,10 @@ export const CHART_GRID = '#eff4f1'; // --erp-n-100
 
 /** Stacked overtime series (normal / evening / sunday / holiday). */
 export const OT_SERIES_COLORS = {
-  normal: '#1d9e75', // brand teal
-  evening: '#0ea5e9', // sky-500
+  normal: accent.primary, // brand blue
+  evening: '#14b8a6', // teal-500
   sunday: '#8b5cf6', // violet-500
   holiday: '#f59e0b', // amber-500
 } as const;
 
-export const BAR_FILL = '#1d9e75'; // brand teal — default single-series bar
+export const BAR_FILL = accent.primary; // brand — default single-series bar

@@ -5,7 +5,8 @@ import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
-import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import { LoginBrandPanel } from '@/components/auth/LoginBrandPanel';
+import { LoginFooter, LoginTopbar } from '@/components/auth/LoginChrome';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import { useForgotPassword } from '@/lib/query/auth';
@@ -18,7 +19,6 @@ interface ForgotFormValues {
 function useForgotPasswordLabels(): {
   heading: string;
   subtitle: string;
-  brandLine: string;
   email: string;
   emailRequired: string;
   emailInvalid: string;
@@ -40,7 +40,6 @@ function useForgotPasswordLabels(): {
           heading: '忘记密码',
           subtitle:
             '输入账户绑定的邮箱。若匹配，我们将发送重置链接。账户没有邮箱时，请联系 HR 重置密码。',
-          brandLine: '项目管理、人力与财务，统一在一个工作区',
           email: '邮箱',
           emailRequired: '请输入邮箱',
           emailInvalid: '请输入有效的邮箱地址',
@@ -56,7 +55,6 @@ function useForgotPasswordLabels(): {
           heading: 'Forgot password',
           subtitle:
             'Enter the email address on your account. We will send a reset link if it matches. If your account has no email, ask HR to reset your password.',
-          brandLine: 'Projects, workforce and finance in one workspace',
           email: 'Email',
           emailRequired: 'Email is required',
           emailInvalid: 'Enter a valid email address',
@@ -103,11 +101,7 @@ function ForgotPasswordForm(): React.ReactNode {
   return (
     <div className="erp-login-page">
       <div className="erp-login-stage">
-        <header className="erp-login-topbar">
-          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
-          <span className="erp-login-topbar-divider" aria-hidden />
-          <span className="erp-login-topbar-product">Construction ERP</span>
-        </header>
+        <LoginTopbar />
 
         <main className="erp-login-main">
           <div className="erp-login-layout">
@@ -194,22 +188,10 @@ function ForgotPasswordForm(): React.ReactNode {
           </div>
         </main>
 
-        <footer className="erp-login-footer">
-          © {new Date().getFullYear()} CRCC · Construction ERP
-        </footer>
+        <LoginFooter />
       </div>
 
-      <aside className="erp-login-brand" aria-label="CRCC">
-        <div className="erp-login-brand-atmosphere" aria-hidden>
-          <span className="erp-login-brand-grid" />
-          <span className="erp-login-brand-glow" />
-          <span className="erp-login-brand-globe" />
-        </div>
-        <div className="erp-login-brand-inner">
-          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
-          <p className="erp-login-brand-title">{labels.brandLine}</p>
-        </div>
-      </aside>
+      <LoginBrandPanel />
     </div>
   );
 }

@@ -566,7 +566,7 @@ export default function ExitPermitDetailPageContent({
           <div
             key={tile.key}
             className={`min-w-0 rounded-2xl px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] ${
-              tile.total ? 'bg-[#f0faf6]' : 'bg-white'
+              tile.total ? 'bg-[color:var(--erp-accent-wash)]' : 'bg-white'
             }`}
           >
             <p className="m-0 text-xs font-semibold tracking-[0.06em] text-gray-600 uppercase">

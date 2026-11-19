@@ -7,7 +7,8 @@ import { Button, Form, Input, Spin } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { DemoLoginPanel } from '@/components/auth/DemoLoginPanel';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
-import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import { LoginBrandPanel } from '@/components/auth/LoginBrandPanel';
+import { LoginFooter, LoginTopbar } from '@/components/auth/LoginChrome';
 import { isDemoLoginEnabled } from '@/lib/auth/demo-login-enabled';
 import { setPendingTemporaryPassword } from '@/lib/auth/pending-temporary-password';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
@@ -24,7 +25,6 @@ function useLoginLabels(): {
   fullName: string;
   welcome: string;
   subtitle: string;
-  brandLine: string;
   signIn: string;
 } {
   return useMemo(() => {
@@ -39,9 +39,6 @@ function useLoginLabels(): {
       subtitle: isZh
         ? '请输入姓名和密码以继续'
         : 'Enter your full name and password to continue',
-      brandLine: isZh
-        ? '项目管理、人力与财务，统一在一个工作区'
-        : 'Projects, workforce and finance in one workspace',
       signIn: isZh ? '登录' : 'Sign in',
     };
   }, []);
@@ -146,11 +143,7 @@ function LoginForm(): React.ReactNode {
   return (
     <div className="erp-login-page">
       <div className="erp-login-stage">
-        <header className="erp-login-topbar">
-          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
-          <span className="erp-login-topbar-divider" aria-hidden />
-          <span className="erp-login-topbar-product">Construction ERP</span>
-        </header>
+        <LoginTopbar />
 
         <main className="erp-login-main">
           <div className="erp-login-layout">
@@ -279,23 +272,10 @@ function LoginForm(): React.ReactNode {
           </div>
         </main>
 
-        <footer className="erp-login-footer">
-          © {new Date().getFullYear()} CRCC · Construction ERP
-        </footer>
+        <LoginFooter />
       </div>
 
-      <aside className="erp-login-brand" aria-label="CRCC">
-        <div className="erp-login-brand-atmosphere" aria-hidden>
-          <span className="erp-login-brand-grid" />
-          <span className="erp-login-brand-glow" />
-          <span className="erp-login-brand-globe" />
-        </div>
-
-        <div className="erp-login-brand-inner">
-          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
-          <p className="erp-login-brand-title">{labels.brandLine}</p>
-        </div>
-      </aside>
+      <LoginBrandPanel />
     </div>
   );
 }

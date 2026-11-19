@@ -6,7 +6,7 @@
  * --fm-* tokens (the roots also carry `.fm-page`).
  *
  * Contrast on white: muted #4B5563 7.6:1; strong #0F172A; primary-strong
- * #0F6E56 on the 10% primary tint 5.3:1.
+ * #163F78 on the 10% primary tint 9.0:1.
  */
 .erp-fml-v2 {
   --fml-radius: 16px;
@@ -18,9 +18,9 @@
   --fml-body: var(--erp-n-800);
   --fml-divider: var(--erp-n-150);
   --fml-subtle: var(--erp-n-50);
-  --fml-tint: rgba(29, 158, 117, 0.1);
-  --fml-primary: #1d9e75;
-  --fml-primary-strong: #0f6e56;
+  --fml-tint: rgba(var(--erp-accent-rgb), 0.1);
+  --fml-primary: var(--erp-accent);
+  --fml-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }
@@ -69,7 +69,7 @@
 }
 
 .erp-fml-v2 .erp-users-stat.erp-contract-stat--active {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
   box-shadow:
     inset 0 0 0 2px var(--fml-primary),
     var(--fml-shadow);

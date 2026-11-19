@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 /*
- * Accent trial: defaults match ACCENT_MODE in lib/theme/accent.ts.
- * ThemeAccentSync overwrites these on the client. Flip ACCENT_MODE to
- * 'teal' and restore the teal hex defaults below to reverse.
+ * Accent defaults match ACCENT_MODE in lib/theme/accent.ts (CRCC blue, same as
+ * the employee ID card). ThemeAccentSync overwrites these on the client; to
+ * go back to teal, flip ACCENT_MODE and restore the teal hex values here.
  */
 :root {
-  --erp-accent: #1d9e75;
-  --erp-accent-hover: #0f6e56;
-  --erp-accent-light: #e1f5ee;
-  --erp-accent-soft: #d9f0e7;
-  --erp-accent-rgb: 29, 158, 117;
-  --erp-accent-hover-rgb: 15, 110, 86;
+  --erp-accent: #1f5fae;
+  --erp-accent-hover: #163f78;
+  --erp-accent-light: #e8f0fa;
+  --erp-accent-soft: #d6e4f5;
+  --erp-accent-wash: #f2f6fc;
+  --erp-accent-rgb: 31, 95, 174;
+  --erp-accent-hover-rgb: 22, 63, 120;
 
   /*
    * Brand tokens extracted from the login page (Nov 2026). Values that are not
@@ -22,11 +23,11 @@
   --gradient-brand-panel: linear-gradient(145deg, var(--color-primary-deep) 0%, var(--color-primary-dark) 52%, var(--color-primary) 100%);
   --gradient-primary: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   --gradient-primary-hover: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
-  --gradient-surface: linear-gradient(180deg, #ffffff 0%, #fbfdfc 55%, #f6faf8 100%);
+  --gradient-surface: linear-gradient(180deg, #ffffff 0%, #fbfcfe 55%, #f5f8fc 100%);
   --gradient-stage:
     radial-gradient(ellipse 70% 50% at 80% 0%, rgba(var(--erp-accent-rgb), 0.12), transparent 55%),
     radial-gradient(ellipse 50% 40% at 10% 100%, rgba(var(--erp-accent-rgb), 0.06), transparent 50%),
-    linear-gradient(180deg, #f3f8f6 0%, #e7efeb 100%);
+    linear-gradient(180deg, #f3f6fb 0%, #e6edf6 100%);
   --font-size-heading: 1.5rem;     /* 24px, weight 650, tracking -0.03em */
   --font-size-display: clamp(1.35rem, 1.8vw, 1.65rem); /* brand title, weight 600 */
   --font-size-body: 0.875rem;      /* 14px subtitle / links */
@@ -67,14 +68,14 @@
 /* `static`: always emit these, since most consumers read them via var(). */
 @theme static {
   /* Brand palette (login page). Primary follows the ACCENT_MODE switch. */
-  --color-primary: var(--erp-accent);              /* #1d9e75 - buttons, links, focus */
-  --color-primary-dark: var(--erp-accent-hover);   /* #0f6e56 - headings, hover, sidebar active */
-  --color-primary-light: #26ab80;                  /* gradient end (button, card accent) */
-  --color-primary-deep: #0a2420;                   /* brand panel gradient start */
-  --color-primary-soft: var(--erp-accent-light);   /* #e1f5ee - tinted fills */
+  --color-primary: var(--erp-accent);              /* #1f5fae - buttons, links, focus */
+  --color-primary-dark: var(--erp-accent-hover);   /* #163f78 - headings, hover, sidebar active */
+  --color-primary-light: #2b6cc4;                  /* gradient end (button, card accent) */
+  --color-primary-deep: #0b1f3f;                   /* brand panel gradient start */
+  --color-primary-soft: var(--erp-accent-light);   /* #e8f0fa - tinted fills */
   --color-background: #eceff3;                     /* auth page background */
   --color-surface: #ffffff;                        /* cards */
-  --color-text-heading: var(--erp-accent-hover);   /* #0f6e56 */
+  --color-text-heading: var(--erp-accent-hover);   /* #163f78 */
   --color-text-body: #33403c;                      /* form labels */
   --color-text-muted: #5f6b66;                     /* subtitles */
   --color-text-subtle: #7a8782;                    /* help text */
@@ -1854,7 +1855,7 @@ main::-webkit-scrollbar,
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid var(--erp-accent-light);
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
 }
 
 .erp-leave-balance-panel-title {
@@ -4861,11 +4862,24 @@ main::-webkit-scrollbar,
   background: var(--color-input-border);
 }
 
+.erp-login-topbar-lockup {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
 .erp-login-topbar-product {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 650;
   letter-spacing: -0.01em;
-  color: var(--color-text-body);
+  color: var(--color-text-heading);
+}
+
+.erp-login-topbar-branch {
+  margin-top: 0.125rem;
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  color: var(--color-text-muted);
 }
 
 .erp-login-main {
@@ -5057,10 +5071,32 @@ main::-webkit-scrollbar,
 }
 
 .erp-login-footer {
-  padding: 0 1rem 1.25rem;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 1rem;
+  padding: 1rem 0 1.25rem;
+  border-top: 1px solid var(--color-card-border);
   font-size: var(--font-size-caption);
   color: var(--color-text-muted);
+}
+
+.erp-login-footer-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.erp-login-footer-notice .anticon {
+  color: var(--color-primary);
+}
+
+@media (min-width: 640px) {
+  .erp-login-footer {
+    flex-direction: row;
+    justify-content: space-between;
+  }
 }
 
 /* Brand panel: lg and up only (see the media query below). */
@@ -5149,45 +5185,135 @@ main::-webkit-scrollbar,
   right: 38%;
 }
 
-.erp-login-brand-inner {
+/* Panel copy: company at the top, features + HR help pinned to the bottom. */
+.erp-login-brand-content {
   position: relative;
   z-index: 1;
-  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   animation: erp-login-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
-.erp-login-brand-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 1.25rem;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: var(--font-size-caption);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.erp-login-brand-eyebrow::before {
-  content: '';
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-}
-
-.erp-login-brand-title {
+.erp-login-brand-company-name {
   margin: 0;
-  font-size: clamp(2rem, 3.1vw, 2.875rem);
+  font-size: 1rem;
   font-weight: 600;
-  line-height: 1.12;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+/* CRCC logo red, same accent as the employee ID card stripe. */
+.erp-login-brand-accent {
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  margin-top: 0.625rem;
+  border-radius: 999px;
+  background: #d7000f;
+}
+
+.erp-login-brand-body {
+  margin-top: auto;
+  max-width: 30rem;
+}
+
+.erp-login-brand-heading {
+  margin: 0 0 1.75rem;
+  font-size: clamp(1.75rem, 2.6vw, 2.375rem);
+  font-weight: 600;
+  line-height: 1.15;
   letter-spacing: -0.03em;
+  color: #ffffff;
   text-wrap: balance;
 }
+
+.erp-login-brand-features {
+  display: grid;
+  gap: 1.125rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-login-brand-feature,
+.erp-login-brand-help {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.erp-login-brand-feature-icon,
+.erp-login-brand-help-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.625rem;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.erp-login-brand-feature-title,
+.erp-login-brand-help-title {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+/* 85% white on the panel blue: >= 4.9:1. */
+.erp-login-brand-feature-detail,
+.erp-login-brand-help-detail {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: var(--font-size-body);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.erp-login-brand-help {
+  align-items: center;
+  padding: 1rem 1.125rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.875rem;
+  background: rgba(11, 31, 63, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.erp-login-brand-help-icon {
+  border-color: transparent;
+  background: #d7000f;
+}
+
+
+
+
+/* Short laptop screens: drop the feature descriptions so nothing is clipped. */
+@media (max-height: 760px) {
+  .erp-login-brand-feature-detail {
+    display: none;
+  }
+
+  .erp-login-brand-heading {
+    margin-bottom: 1.25rem;
+  }
+
+  .erp-login-brand-features {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+}
+
+
+
+
 
 @keyframes erp-login-fade-in {
   from {
@@ -5272,14 +5398,14 @@ main::-webkit-scrollbar,
   }
 
   .erp-login-footer {
-    padding: 0 3rem 2rem;
-    text-align: start;
+    margin: 0 3rem;
+    padding: 1.25rem 0 2rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .erp-login-layout,
-  .erp-login-brand-inner,
+  .erp-login-brand-content,
   .erp-login-brand-globe {
     animation: none;
   }
@@ -5385,12 +5511,12 @@ main::-webkit-scrollbar,
 }
 
 .erp-contract-stat--active {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
   box-shadow: inset 0 -2px 0 var(--erp-accent);
 }
 
 .erp-contract-stat--active .erp-users-stat-value {
-  color: #0f766e;
+  color: var(--erp-accent-hover);
 }
 
 .erp-contract-stat--static {
@@ -5610,13 +5736,13 @@ main::-webkit-scrollbar,
 }
 
 .erp-evaluation-detail-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #0f766e !important;
+  color: var(--erp-accent-hover) !important;
   font-weight: 600;
 }
 
 .erp-evaluation-detail-tabs .ant-tabs-ink-bar {
   height: 2px !important;
-  background: #0f766e !important;
+  background: var(--erp-accent-hover) !important;
 }
 
 .erp-evaluation-detail-tabs .ant-tabs-content-holder {
@@ -7470,7 +7596,7 @@ main::-webkit-scrollbar,
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-primary-soft, #e1f5ee);
+  background: var(--color-primary-soft, #e8f0fa);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
 }
 
@@ -8406,7 +8532,7 @@ main::-webkit-scrollbar,
 }
 
 :is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero .ant-btn-primary:not(:disabled):hover {
-  background: var(--color-primary-soft, #e1f5ee) !important;
+  background: var(--color-primary-soft, #e8f0fa) !important;
   color: var(--erp-accent-hover) !important;
 }
 

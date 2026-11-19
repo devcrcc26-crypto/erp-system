@@ -5,7 +5,8 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Form, Input } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import { LoginBrandPanel } from '@/components/auth/LoginBrandPanel';
+import { LoginFooter, LoginTopbar } from '@/components/auth/LoginChrome';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -201,11 +202,7 @@ export default function ForceChangePasswordPage(): React.ReactNode {
   return (
     <div className="erp-login-page">
       <div className="erp-login-stage">
-        <header className="erp-login-topbar">
-          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
-          <span className="erp-login-topbar-divider" aria-hidden />
-          <span className="erp-login-topbar-product">Construction ERP</span>
-        </header>
+        <LoginTopbar />
 
         <main className="erp-login-main">
           <div className="erp-login-layout">
@@ -284,22 +281,10 @@ export default function ForceChangePasswordPage(): React.ReactNode {
           </div>
         </main>
 
-        <footer className="erp-login-footer">
-          © {new Date().getFullYear()} CRCC · Construction ERP
-        </footer>
+        <LoginFooter />
       </div>
 
-      <aside className="erp-login-brand" aria-label="CRCC">
-        <div className="erp-login-brand-atmosphere" aria-hidden>
-          <span className="erp-login-brand-grid" />
-          <span className="erp-login-brand-glow" />
-          <span className="erp-login-brand-globe" />
-        </div>
-        <div className="erp-login-brand-inner">
-          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
-          <p className="erp-login-brand-title">{labels.subheading}</p>
-        </div>
-      </aside>
+      <LoginBrandPanel />
     </div>
   );
 }

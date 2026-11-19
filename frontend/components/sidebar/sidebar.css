@@ -1,5 +1,5 @@
 /*
- * Main sidebar theme - light surface with teal selection, matching the app
+ * Main sidebar theme - light surface with brand-blue selection, matching the app
  * tokens (lib/theme/tokens.ts). Every colour the sidebar uses is a variable
  * here so the single selected state, focus ring and contrast ratios are
  * defined once. The drawer shares the variables because it renders outside
@@ -937,8 +937,8 @@
  * rules above remain the base and nothing leaks outside the sidebar.
  *
  * Contrast on white: text 14.7:1, muted 7.6:1, icon 4.8:1. Selected text and
- * icon (#0F6E56, the app's primary-hover token) on the 10% primary tint:
- * 5.3:1. Focus ring (#1D9E75) on white: 3.4:1.
+ * icon (#163F78, the app's primary-hover token) on the 10% primary tint:
+ * 9.0:1. Focus ring (#1F5FAE) on white: 6.4:1.
  * ══════════════════════════════════════════════════════════════════════ */
 
 .erp-sidebar-v2 {

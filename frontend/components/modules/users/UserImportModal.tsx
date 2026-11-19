@@ -1062,7 +1062,7 @@ export default function UserImportModal({
                         aria-selected={selected}
                         className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border-0 px-3.5 py-2.5 text-left transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                           selected
-                            ? 'bg-[#f0faf6] shadow-[inset_0_0_0_2px_#1d9e75]'
+                            ? 'bg-[color:var(--erp-accent-wash)] shadow-[inset_0_0_0_2px_var(--erp-accent)]'
                             : 'bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] hover:bg-slate-50'
                         }`}
                         onClick={() => setRowFilter(key)}
@@ -1232,7 +1232,7 @@ export default function UserImportModal({
                 <p className="m-0 text-lg font-semibold text-slate-900">{t('users.import.doneTitle')}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="flex flex-col gap-0.5 rounded-xl bg-[#f0faf6] px-4 py-3">
+                <div className="flex flex-col gap-0.5 rounded-xl bg-[color:var(--erp-accent-wash)] px-4 py-3">
                   <span className="text-2xl font-semibold text-slate-900 tabular-nums">
                     {result.created}
                   </span>
@@ -1263,7 +1263,7 @@ export default function UserImportModal({
                   </span>
                 </div>
                 {sendInvitations ? (
-                  <div className="flex flex-col gap-0.5 rounded-xl bg-[#f0faf6] px-4 py-3">
+                  <div className="flex flex-col gap-0.5 rounded-xl bg-[color:var(--erp-accent-wash)] px-4 py-3">
                     <span className="text-2xl font-semibold text-slate-900 tabular-nums">
                       {result.invitationsSent}
                     </span>

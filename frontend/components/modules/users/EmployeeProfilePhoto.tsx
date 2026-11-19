@@ -178,7 +178,7 @@ export default function EmployeeProfilePhoto({
             color: imageSrc ? undefined : accent.hover,
             fontWeight: 600,
             flexShrink: 0,
-            border: '1px solid rgba(29, 158, 117, 0.18)',
+            border: '1px solid rgba(var(--erp-accent-rgb), 0.18)',
             boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
           }}
         >

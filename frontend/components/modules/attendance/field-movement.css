@@ -26,11 +26,11 @@
   --fm-border-strong: var(--erp-n-300);
   --fm-surface: #ffffff;
   --fm-surface-2: var(--erp-n-50);
-  --fm-accent: #0f6e56;
-  --fm-accent-solid: #1d9e75;
+  --fm-accent: var(--erp-accent-hover);
+  --fm-accent-solid: var(--erp-accent);
   --fm-accent-bg: #e8f7f1;
   --fm-accent-border: #a7dcc8;
-  --fm-focus: #0f6e56;
+  --fm-focus: var(--erp-accent-hover);
   --fm-red: #b42318;
   --fm-red-bg: #fef1f1;
   --fm-red-border: #f3c4c4;

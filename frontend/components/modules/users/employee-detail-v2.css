@@ -25,7 +25,7 @@
 }
 
 .erp-employee-detail-v2 .erp-employee-toolbar-back.ant-btn:hover {
-  color: #0f6e56;
+  color: var(--erp-accent-hover);
 }
 
 .erp-employee-detail-v2 .erp-employee-toolbar-actions {
@@ -123,7 +123,7 @@
 }
 
 .erp-employee-detail-v2 .erp-employee-role-row[data-primary='true'] {
-  background: rgba(29, 158, 117, 0.08);
+  background: rgba(var(--erp-accent-rgb), 0.08);
 }
 
 .erp-employee-detail-v2 .erp-employee-role-dot {
@@ -137,8 +137,8 @@
 }
 
 .erp-employee-detail-v2 .erp-employee-role-dot[data-primary='true'] {
-  border-color: #1d9e75;
-  background: #1d9e75;
+  border-color: var(--erp-accent);
+  background: var(--erp-accent);
 }
 
 .erp-employee-detail-v2 .erp-employee-role-row .ant-tag {
@@ -280,7 +280,7 @@
 
 .erp-employee-detail-v2 .erp-employee-detail-hero .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e1f5ee) !important;
+  background: var(--color-primary-soft, #e8f0fa) !important;
   color: var(--erp-accent-hover) !important;
 }
 

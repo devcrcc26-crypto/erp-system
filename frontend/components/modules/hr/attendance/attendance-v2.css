@@ -418,7 +418,7 @@
   .erp-att-import-dropzone.ant-upload-wrapper
   .ant-upload-drag:hover {
   border-color: var(--erp-accent) !important;
-  background: #f0faf6 !important;
+  background: var(--erp-accent-wash) !important;
 }
 
 .erp-att-import-v2 .ant-btn {

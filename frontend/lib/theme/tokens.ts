@@ -82,7 +82,7 @@ export const tokens = {
   colorControlOutline: `rgba(${accent.primaryRgb}, 0.15)`,
   controlOutlineWidth: 3,
   /** Table header fill - the top of `--gradient-stage`. */
-  colorTableHeaderBg: '#F3F8F6',
+  colorTableHeaderBg: accent.wash,
   /** Primary button shadow - matches `--shadow-button-sm`. */
   shadowButton: `0 4px 12px rgba(${accent.primaryRgb}, 0.24)`,
 

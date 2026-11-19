@@ -21,8 +21,8 @@ export const LIST_PAGE_V2 = [
   '[&_.erp-users-stat]:!shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
   '[&_.erp-contract-stat:hover]:!bg-slate-25',
   '[&_.erp-contract-stat:focus-visible]:!outline-2 [&_.erp-contract-stat:focus-visible]:!outline-offset-2 [&_.erp-contract-stat:focus-visible]:!outline-emerald-600',
-  '[&_.erp-contract-stat--active]:!bg-[#f0faf6]',
-  '[&_.erp-contract-stat--active]:!shadow-[inset_0_0_0_2px_#1d9e75,0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
+  '[&_.erp-contract-stat--active]:!bg-[color:var(--erp-accent-wash)]',
+  '[&_.erp-contract-stat--active]:!shadow-[inset_0_0_0_2px_var(--erp-accent),0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
   '[&_.erp-users-stat-chip]:!size-10 [&_.erp-users-stat-chip]:!rounded-xl [&_.erp-users-stat-chip]:!text-[17px]',
   '[&_.erp-users-stat-label]:!text-xs [&_.erp-users-stat-label]:!tracking-[0.06em] [&_.erp-users-stat-label]:!text-gray-600',
   '[&_.erp-users-stat-value]:!mt-1 [&_.erp-users-stat-value]:!text-[26px] [&_.erp-users-stat-value]:!font-semibold',
@@ -33,7 +33,7 @@ export const LIST_PAGE_V2 = [
   '[&_.erp-pro-card]:!shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
   '[&_.erp-users-toolbar]:!border-b-0 [&_.erp-users-toolbar]:!px-5 [&_.erp-users-toolbar]:!pt-[18px] [&_.erp-users-toolbar]:!pb-3.5',
   '[&_.erp-pro-card-toolbar-title]:!text-base [&_.erp-pro-card-toolbar-title]:!font-semibold [&_.erp-pro-card-toolbar-title]:!text-slate-900',
-  '[&_.erp-users-count-pill]:!bg-emerald-600/10 [&_.erp-users-count-pill]:!px-2.5 [&_.erp-users-count-pill]:!text-[color:var(--erp-accent-hover)]',
+  '[&_.erp-users-count-pill]:!bg-[rgba(var(--erp-accent-rgb),0.1)] [&_.erp-users-count-pill]:!px-2.5 [&_.erp-users-count-pill]:!text-[color:var(--erp-accent-hover)]',
 
   // Filters: one quiet row on white, wrapping instead of squeezing.
   '[&_.erp-users-filter-bar]:!flex-wrap [&_.erp-users-filter-bar]:!gap-x-3 [&_.erp-users-filter-bar]:!gap-y-2.5 [&_.erp-users-filter-bar]:!overflow-visible',
@@ -95,5 +95,5 @@ export const DETAIL_PAGE_V2 = [
 
   // Chips and tags: soft fills instead of outlines.
   '[&_.erp-users-id-chip]:!rounded-lg [&_.erp-users-id-chip]:!border-0 [&_.erp-users-id-chip]:!bg-slate-100 [&_.erp-users-id-chip]:!text-slate-700',
-  '[&_.erp-users-role-tag]:!border-0 [&_.erp-users-role-tag]:!bg-emerald-600/10 [&_.erp-users-role-tag]:!font-semibold [&_.erp-users-role-tag]:!text-[color:var(--erp-accent-hover)]',
+  '[&_.erp-users-role-tag]:!border-0 [&_.erp-users-role-tag]:!bg-[rgba(var(--erp-accent-rgb),0.1)] [&_.erp-users-role-tag]:!font-semibold [&_.erp-users-role-tag]:!text-[color:var(--erp-accent-hover)]',
 ].join(' ');

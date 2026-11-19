@@ -5,7 +5,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import { LoginBrandPanel } from '@/components/auth/LoginBrandPanel';
+import { LoginFooter, LoginTopbar } from '@/components/auth/LoginChrome';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { PriorSessionNotice } from '@/components/auth/PriorSessionNotice';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
@@ -20,7 +21,6 @@ interface ResetFormValues {
 function useResetPasswordLabels(): {
   heading: string;
   subtitle: (email: string) => string;
-  brandLine: string;
   newPassword: string;
   confirmPassword: string;
   required: string;
@@ -46,7 +46,6 @@ function useResetPasswordLabels(): {
           heading: '重置密码',
           subtitle: (email: string) =>
             `为 ${email || '您的账户'} 设置新密码。`,
-          brandLine: '项目管理、人力与财务，统一在一个工作区',
           newPassword: '新密码',
           confirmPassword: '确认新密码',
           required: '必填',
@@ -66,7 +65,6 @@ function useResetPasswordLabels(): {
           heading: 'Reset password',
           subtitle: (email: string) =>
             `Choose a new password for ${email || 'your account'}.`,
-          brandLine: 'Projects, workforce and finance in one workspace',
           newPassword: 'New password',
           confirmPassword: 'Confirm password',
           required: 'Required',
@@ -140,11 +138,7 @@ function ResetPasswordForm(): React.ReactNode {
   return (
     <div className="erp-login-page">
       <div className="erp-login-stage">
-        <header className="erp-login-topbar">
-          <BrandLogo size={48} priority className="erp-login-topbar-logo" />
-          <span className="erp-login-topbar-divider" aria-hidden />
-          <span className="erp-login-topbar-product">Construction ERP</span>
-        </header>
+        <LoginTopbar />
 
         <main className="erp-login-main">
           <div className="erp-login-layout">
@@ -249,22 +243,10 @@ function ResetPasswordForm(): React.ReactNode {
           </div>
         </main>
 
-        <footer className="erp-login-footer">
-          © {new Date().getFullYear()} CRCC · Construction ERP
-        </footer>
+        <LoginFooter />
       </div>
 
-      <aside className="erp-login-brand" aria-label="CRCC">
-        <div className="erp-login-brand-atmosphere" aria-hidden>
-          <span className="erp-login-brand-grid" />
-          <span className="erp-login-brand-glow" />
-          <span className="erp-login-brand-globe" />
-        </div>
-        <div className="erp-login-brand-inner">
-          <p className="erp-login-brand-eyebrow">CRCC · Construction ERP</p>
-          <p className="erp-login-brand-title">{labels.brandLine}</p>
-        </div>
-      </aside>
+      <LoginBrandPanel />
     </div>
   );
 }

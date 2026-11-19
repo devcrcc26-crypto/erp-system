@@ -392,7 +392,7 @@ export function ImportPreviewSummary({
               aria-selected={selected}
               className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border-0 px-3.5 py-2.5 text-left transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                 selected
-                  ? 'bg-[#f0faf6] shadow-[inset_0_0_0_2px_#1d9e75]'
+                  ? 'bg-[color:var(--erp-accent-wash)] shadow-[inset_0_0_0_2px_var(--erp-accent)]'
                   : `bg-white ${CARD_SHADOW} hover:bg-slate-50`
               }`}
               onClick={() => onFilter(key)}
@@ -456,7 +456,7 @@ export function ImportResultStep({
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-0.5 rounded-xl bg-[#f0faf6] px-4 py-3">
+        <div className="flex flex-col gap-0.5 rounded-xl bg-[color:var(--erp-accent-wash)] px-4 py-3">
           <span className="text-2xl font-semibold text-slate-900 tabular-nums">
             {created}
           </span>

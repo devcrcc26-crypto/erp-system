@@ -121,7 +121,7 @@
 }
 
 .erp-hr-travel-v2 .erp-users-stat.erp-contract-stat--active {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
   box-shadow:
     inset 0 0 0 2px var(--htv2-primary),
     var(--htv2-shadow);

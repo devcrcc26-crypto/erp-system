@@ -70,7 +70,7 @@
 }
 
 .erp-approvals-v2 .erp-users-stat.erp-contract-stat--active {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
   box-shadow:
     inset 0 0 0 2px var(--ap2-primary),
     var(--ap2-shadow);
@@ -307,7 +307,7 @@
 }
 
 .erp-approvals-page .erp-approvals-hero-cta.ant-btn:hover {
-  background: var(--color-primary-soft, #e1f5ee) !important;
+  background: var(--color-primary-soft, #e8f0fa) !important;
   color: var(--erp-accent-hover) !important;
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(10, 36, 32, 0.28);
@@ -1008,7 +1008,7 @@
 }
 
 .erp-approval-tier-card[data-state='approved'] {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
 }
 
 .erp-approval-tier-card[data-state='rejected'] {
@@ -1225,7 +1225,7 @@
 
 .erp-approvals-detail-page .erp-ap-detail-hero-card .ant-btn-primary:not(:disabled):hover {
   border-color: #ffffff !important;
-  background: var(--color-primary-soft, #e1f5ee) !important;
+  background: var(--color-primary-soft, #e8f0fa) !important;
   color: var(--erp-accent-hover) !important;
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(10, 36, 32, 0.28);
@@ -1627,7 +1627,7 @@
 }
 
 .erp-approvals-v2 .erp-ot-summary-tile[data-total='true'] {
-  background: #f0faf6;
+  background: var(--erp-accent-wash);
 }
 
 .erp-approvals-v2 .erp-ot-summary-label {

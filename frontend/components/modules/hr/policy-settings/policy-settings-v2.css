@@ -13,9 +13,9 @@
   --psv2-body: var(--erp-n-800);
   --psv2-divider: var(--erp-n-150);
   --psv2-subtle: var(--erp-n-50);
-  --psv2-tint: rgba(29, 158, 117, 0.1);
-  --psv2-primary: #1d9e75;
-  --psv2-primary-strong: #0f6e56;
+  --psv2-tint: rgba(var(--erp-accent-rgb), 0.1);
+  --psv2-primary: var(--erp-accent);
+  --psv2-primary-strong: var(--erp-accent-hover);
 
   gap: 20px;
 }
@@ -92,7 +92,7 @@
   .erp-policy-tabbar
   button[role='tab'][aria-selected='true']
   .erp-policy-tab-count {
-  background: rgba(15, 110, 86, 0.12);
+  background: rgba(var(--erp-accent-hover-rgb), 0.12);
   color: var(--psv2-primary-strong);
 }
 
@@ -132,8 +132,8 @@
 }
 
 .erp-policy-settings-v2 .erp-policy-tag--set {
-  background: rgba(29, 158, 117, 0.1);
-  color: #0f6e56;
+  background: rgba(var(--erp-accent-rgb), 0.1);
+  color: var(--erp-accent-hover);
 }
 
 .erp-policy-settings-v2 .erp-policy-tag--default {
@@ -190,8 +190,8 @@
   --psv2-body: var(--erp-n-800);
   --psv2-divider: var(--erp-n-150);
   --psv2-subtle: var(--erp-n-50);
-  --psv2-primary: #1d9e75;
-  --psv2-primary-strong: #0f6e56;
+  --psv2-primary: var(--erp-accent);
+  --psv2-primary-strong: var(--erp-accent-hover);
 }
 
 .erp-policy-modal .ant-modal-content,
