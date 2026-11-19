@@ -44,6 +44,63 @@ export function isEmployeeContractExpiringSoon(
   return endDate <= cutoff;
 }
 
+/**
+ * End-date windows for the contract list, relative to today:
+ * `next1`-`next3` = active contracts ending from today up to 1-3 months ahead
+ * (cumulative, so `next2` includes `next1`); `last1` = any contract whose end
+ * date fell in the past month.
+ */
+export type EmployeeContractEndWindow = 'next1' | 'next2' | 'next3' | 'last1';
+
+export const EMPLOYEE_CONTRACT_END_WINDOWS: readonly EmployeeContractEndWindow[] = [
+  'next1',
+  'next2',
+  'next3',
+  'last1',
+];
+
+/** Today's calendar date (local) as a UTC midnight, to compare with date-only values. */
+function todayUtc(referenceDate: Date): Date {
+  return new Date(
+    Date.UTC(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      referenceDate.getDate(),
+    ),
+  );
+}
+
+/** Adds calendar months, clamping the day (31 Jan + 1 month = 28/29 Feb). */
+function addMonthsUtc(date: Date, months: number): Date {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + months;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), lastDay)));
+}
+
+export function matchesEmployeeContractEndWindow(
+  row: EmployeeContractListItem,
+  window: EmployeeContractEndWindow,
+  referenceDate: Date = new Date(),
+): boolean {
+  if (!row.endDate) {
+    return false;
+  }
+  const today = todayUtc(referenceDate);
+  const endDate = parseDateOnlyUtc(row.endDate.slice(0, 10));
+
+  if (window === 'last1') {
+    return endDate < today && endDate >= addMonthsUtc(today, -1);
+  }
+
+  const months = window === 'next1' ? 1 : window === 'next2' ? 2 : 3;
+  return (
+    row.status === 'ACTIVE' &&
+    endDate >= today &&
+    endDate <= addMonthsUtc(today, months)
+  );
+}
+
 export function statusesForEmployeeContractMode(
   mode: EmployeeContractStatusMode,
 ): EmployeeContractStatus[] {
@@ -90,10 +147,14 @@ export interface EmployeeContractListFilters {
   statusMode?: EmployeeContractStatusMode;
   contractType?: EmployeeContractType;
   employeeId?: string;
+  endWindow?: EmployeeContractEndWindow;
+  /** Reference "today" for end-date windows (tests). */
+  referenceDate?: Date;
 }
 
 /**
- * Filters employee contracts in memory (status mode, type, employee, search).
+ * Filters employee contracts in memory (status mode, end-date window, type,
+ * employee, search).
  */
 export function filterEmployeeContracts(
   rows: EmployeeContractListItem[],
@@ -111,6 +172,13 @@ export function filterEmployeeContracts(
       if (statuses.length > 0 && !statuses.includes(row.status)) {
         return false;
       }
+    }
+
+    if (
+      filters.endWindow &&
+      !matchesEmployeeContractEndWindow(row, filters.endWindow, filters.referenceDate)
+    ) {
+      return false;
     }
 
     if (filters.contractType && row.contractType !== filters.contractType) {

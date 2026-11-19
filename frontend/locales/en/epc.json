@@ -2369,6 +2369,13 @@
           "active": "Active",
           "expiringSoon": "Expiring soon",
           "ended": "Ended"
+        },
+        "endWindow": {
+          "placeholder": "End date",
+          "next1": "Ends within 1 month",
+          "next2": "Ends within 2 months",
+          "next3": "Ends within 3 months",
+          "last1": "Ended in the last month"
         }
       },
       "officialSeal": {

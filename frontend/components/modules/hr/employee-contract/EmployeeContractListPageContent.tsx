@@ -61,8 +61,11 @@ import {
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
 import {
+  EMPLOYEE_CONTRACT_END_WINDOWS,
   filterEmployeeContracts,
   isEmployeeContractExpiringSoon,
+  matchesEmployeeContractEndWindow,
+  type EmployeeContractEndWindow,
   type EmployeeContractStatusMode,
 } from '@/lib/utils/employee-contract-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -146,6 +149,9 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     EmployeeContractType | undefined
   >();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [endWindow, setEndWindow] = useState<
+    EmployeeContractEndWindow | undefined
+  >();
   const [deletingContract, setDeletingContract] =
     useState<EmployeeContractListItem | null>(null);
 
@@ -167,7 +173,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     { enabled: canViewHr },
   );
 
-  const allRows = listQuery.data ?? [];
+  const allRows = useMemo(() => listQuery.data ?? [], [listQuery.data]);
 
   // HR picks from the directory; supervisors from the people in their list.
   const employeeOptions = useMemo(
@@ -202,16 +208,44 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     };
   }, [allRows, appliedSearch, contractType, employeeId, canViewTeam]);
 
-  const filtered = useMemo(
-    () =>
-      filterEmployeeContracts(allRows, {
-        search: appliedSearch,
-        statusMode,
-        contractType,
-        employeeId: canViewTeam ? employeeId : undefined,
-      }),
-    [allRows, appliedSearch, statusMode, contractType, employeeId, canViewTeam],
-  );
+  // End-date options show how many contracts each window would list,
+  // given the other filters.
+  const endWindowOptions = useMemo(() => {
+    const scoped = filterEmployeeContracts(allRows, {
+      search: appliedSearch,
+      statusMode,
+      contractType,
+      employeeId: canViewTeam ? employeeId : undefined,
+    });
+    return EMPLOYEE_CONTRACT_END_WINDOWS.map((window) => {
+      const count = scoped.filter((row) =>
+        matchesEmployeeContractEndWindow(row, window),
+      ).length;
+      return {
+        value: window,
+        label: `${t(`pages.hr.employeeContract.endWindow.${window}`)} (${count.toLocaleString()})`,
+      };
+    });
+  }, [allRows, appliedSearch, statusMode, contractType, employeeId, canViewTeam, t]);
+
+  const filtered = useMemo(() => {
+    const rows = filterEmployeeContracts(allRows, {
+      search: appliedSearch,
+      statusMode,
+      contractType,
+      employeeId: canViewTeam ? employeeId : undefined,
+      endWindow,
+    });
+    if (!endWindow) {
+      return rows;
+    }
+    // In an end-date window, list the soonest ending first (most recent first
+    // for "ended in the last month").
+    const direction = endWindow === 'last1' ? -1 : 1;
+    return [...rows].sort(
+      (a, b) => direction * (a.endDate ?? '').localeCompare(b.endDate ?? ''),
+    );
+  }, [allRows, appliedSearch, statusMode, contractType, employeeId, canViewTeam, endWindow]);
 
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
@@ -245,6 +279,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     setStatusMode('all');
     setContractType(undefined);
     setEmployeeId(undefined);
+    setEndWindow(undefined);
     resetPage();
   }
 
@@ -423,7 +458,8 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
     Boolean(contractType) ||
-    Boolean(employeeId);
+    Boolean(employeeId) ||
+    Boolean(endWindow);
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
@@ -584,6 +620,19 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
             }}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
+          <Select
+            allowClear
+            placeholder={t('pages.hr.employeeContract.endWindow.placeholder')}
+            aria-label={t('pages.hr.employeeContract.endWindow.placeholder')}
+            className="erp-users-filter-select"
+            popupMatchSelectWidth={false}
+            options={endWindowOptions}
+            value={endWindow}
+            onChange={(value: EmployeeContractEndWindow | undefined) => {
+              setEndWindow(value);
+              resetPage();
+            }}
+          />
           <Select
             allowClear
             placeholder={t('hr.placeholder.contractType')}
