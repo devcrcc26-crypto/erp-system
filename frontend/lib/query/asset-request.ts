@@ -46,6 +46,54 @@ export function useAssetRequests(params: ListAssetRequestsParams = {}) {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the asset-request list endpoint (filter locally).
+ */
+async function fetchAllAssetRequestPages(
+  params: Omit<ListAssetRequestsParams, 'page' | 'limit' | 'search' | 'status'> = {},
+): Promise<AssetRequestListItem[]> {
+  const first = await apiGetPaginated<AssetRequestListItem>(
+    `${ASSET_REQUEST_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<AssetRequestListItem>(
+        `${ASSET_REQUEST_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All asset requests (all pages) for client-side filter/search. */
+export function useAssetRequestsAll(
+  params: Omit<ListAssetRequestsParams, 'page' | 'limit' | 'search' | 'status'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...assetRequestKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllAssetRequestPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useAssetRequest(id: string) {
   return useQuery<AssetRequestDetail>({
     queryKey: assetRequestKeys.detail(id),

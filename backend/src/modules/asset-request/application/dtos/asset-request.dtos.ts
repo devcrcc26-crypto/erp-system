@@ -93,9 +93,27 @@ export class ListAssetRequestsDto {
   @IsUUID()
   employeeId?: string;
 
-  @ApiPropertyOptional({ enum: ASSET_REQUEST_STATUSES, isArray: true })
+  @ApiPropertyOptional({
+    enum: ASSET_REQUEST_STATUSES,
+    isArray: true,
+    description: 'One or more statuses (repeat query param or comma-separated)',
+  })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : value ? [value] : undefined))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+    return undefined;
+  })
   @IsIn(ASSET_REQUEST_STATUSES, { each: true })
   status?: AssetRequestStatus[];
 
