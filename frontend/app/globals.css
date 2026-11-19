@@ -32,10 +32,10 @@
    * radii and shadows are in @theme below so they also generate utilities
    * (bg-primary, text-text-heading, rounded-card, shadow-card, ...).
    */
-  /* Page hero banners: medium logo-family blue; white text stays >= 4.8:1. */
-  --gradient-brand-panel: linear-gradient(135deg, #1660b3 0%, #1e72ca 100%);
-  /* Login brand panel keeps its deep navy. */
+  /* Login brand panel — deep navy (also used by all page hero banners). */
   --gradient-login-panel: linear-gradient(150deg, #0a1a30 0%, #0d2b4d 55%, var(--color-primary-dark) 100%);
+  /* Page heroes share the login navy so banners match the auth brand panel. */
+  --gradient-brand-panel: var(--gradient-login-panel);
   --gradient-primary: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   --gradient-primary-hover: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
   --gradient-surface: linear-gradient(180deg, #ffffff 0%, #fbfcfe 55%, #f5f8fc 100%);
@@ -7576,6 +7576,35 @@ main::-webkit-scrollbar,
   overflow: hidden;
 }
 
+/* Drawing-sheet grid, fading in towards the right (dashboard header). */
+.erp-request-picker-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+/* Soft accent glow, top right. */
+.erp-request-picker-hero::after {
+  content: '';
+  position: absolute;
+  top: -70%;
+  right: -6%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
 .erp-request-picker-heading {
   position: relative;
 }
@@ -8044,6 +8073,33 @@ main::-webkit-scrollbar,
   overflow: hidden;
 }
 
+.erp-form-banner--brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+.erp-form-banner--brand::after {
+  content: '';
+  position: absolute;
+  top: -80%;
+  right: -6%;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
+}
+
 .erp-form-banner--brand .erp-form-banner-back {
   display: inline-flex;
   align-self: flex-start;
@@ -8405,6 +8461,33 @@ main::-webkit-scrollbar,
   box-shadow:
     0 12px 30px rgba(var(--erp-accent-hover-rgb), 0.18),
     0 2px 6px rgba(10, 36, 32, 0.12) !important;
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(125deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 55%, #000 100%);
+}
+
+:is(.erp-users-page, .erp-pro-list-page) .erp-brand-hero.erp-brand-hero::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -6%;
+  z-index: -1;
+  width: 26rem;
+  height: 26rem;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--erp-accent-rgb), 0.42) 0%, transparent 68%);
 }
 
 /* Title, back link, meta lines. */
