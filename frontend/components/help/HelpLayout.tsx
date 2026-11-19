@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import './help.css';
 
 /**
  * Frame for user guide pages inside the normal ERP shell. Topics are listed in

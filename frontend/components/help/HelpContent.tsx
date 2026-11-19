@@ -3,7 +3,10 @@
 import { useMemo, type ReactNode } from 'react';
 import {
   AlertTriangle,
+  ArrowUp,
+  BookOpen,
   CheckCircle2,
+  Headset,
   Info,
   ListChecks,
   Users,
@@ -69,36 +72,31 @@ export default function HelpContent({
     parseBlocks(processed.replace(/\r\n/g, '\n').split('\n'), { next: 0 }),
   );
 
+  const isZh = locale === 'zh';
+
   return (
-    <article className="flex flex-col gap-4 text-[14px] leading-7 text-[rgba(0,0,0,0.75)]">
+    <article className="flex flex-col gap-4 text-[14px] leading-7 text-slate-700">
       {title || lead ? (
-        <header className="erp-pro-card px-6 py-5">
+        <header id="guide-top" className="erp-help-hero scroll-mt-4">
+          <p className="erp-help-eyebrow">
+            <BookOpen size={14} aria-hidden />
+            {isZh ? '使用手册' : 'User guide'}
+          </p>
           <div className="flex items-start gap-4">
             {iconKey ? (
-              <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--erp-accent-light)] text-[22px] text-[color:var(--erp-accent-hover)]"
-                aria-hidden
-              >
+              <span className="erp-help-hero-icon" aria-hidden>
                 {getNavIcon(iconKey)}
               </span>
             ) : null}
             <div className="min-w-0">
-              {title ? (
-                <h1 className="m-0 text-[20px] font-semibold leading-8 text-[rgba(0,0,0,0.88)]">
-                  {title}
-                </h1>
-              ) : null}
-              {lead ? (
-                <p className="mb-0 mt-1 text-[14px] leading-6 text-[rgba(0,0,0,0.65)]">
-                  {inline(lead)}
-                </p>
-              ) : null}
+              {title ? <h1 className="erp-help-title">{title}</h1> : null}
+              {lead ? <p className="erp-help-lead">{inline(lead)}</p> : null}
             </div>
           </div>
           {sections.length >= 3 ? (
             <SectionIndex
               sections={sections.map((section) => section.heading)}
-              title={locale === 'zh' ? '本页内容' : 'On this page'}
+              title={isZh ? '本页内容' : 'On this page'}
             />
           ) : null}
         </header>
@@ -129,19 +127,18 @@ export default function HelpContent({
         </div>
       ) : null}
 
-      {sections.map((section) => (
+      {sections.map((section, sectionIndex) => (
         <section
           key={section.heading.id}
           id={section.heading.id}
           aria-labelledby={`${section.heading.id}-title`}
-          className="erp-employee-section scroll-mt-4"
+          className="erp-employee-section erp-help-section scroll-mt-4"
         >
-          <div className="erp-employee-section-header !justify-start gap-2.5">
-            <span className="h-4 w-1 shrink-0 rounded-full bg-[var(--erp-accent)]" aria-hidden />
-            <h2
-              id={`${section.heading.id}-title`}
-              className="m-0 text-[15px] font-semibold leading-6 text-[rgba(0,0,0,0.88)]"
-            >
+          <div className="erp-employee-section-header">
+            <span className="erp-help-section-num" aria-hidden>
+              {sectionIndex + 1}
+            </span>
+            <h2 id={`${section.heading.id}-title`} className="erp-help-section-title">
               {inline(section.heading.text)}
             </h2>
           </div>
@@ -152,6 +149,30 @@ export default function HelpContent({
           </div>
         </section>
       ))}
+
+      {title ? (
+        <footer className="erp-help-footer">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="erp-help-footer-icon" aria-hidden>
+              <Headset size={20} />
+            </span>
+            <div className="min-w-0 leading-6">
+              <p className="m-0 font-semibold text-slate-900">
+                {isZh ? '仍需帮助？' : 'Still need help?'}
+              </p>
+              <p className="m-0 text-[13px] text-slate-500">
+                {isZh
+                  ? '请联系人力资源部，或在左侧菜单的“使用手册”中查看其他主题。'
+                  : 'Contact the HR office, or browse other topics under User Guide in the left menu.'}
+              </p>
+            </div>
+          </div>
+          <a href="#guide-top" className="erp-help-top-link">
+            <ArrowUp size={14} aria-hidden />
+            {isZh ? '返回顶部' : 'Back to top'}
+          </a>
+        </footer>
+      ) : null}
     </article>
   );
 }
@@ -475,23 +496,23 @@ function parseTable(lines: string[]): Block | null {
 
 const TONE_STYLES: Record<Tone, { box: string; icon: string; Icon: LucideIcon }> = {
   success: {
-    box: 'border-[var(--erp-accent)] bg-[#F1FAF6]',
-    icon: 'text-[color:var(--erp-accent-hover)]',
+    box: 'border-[#12B76A] bg-[#ECFDF3]',
+    icon: 'text-[#067647]',
     Icon: CheckCircle2,
   },
   info: {
-    box: 'border-[#378ADD] bg-[#F2F7FD]',
-    icon: 'text-[#1A4A7A]',
+    box: 'border-[var(--erp-accent)] bg-[var(--erp-accent-wash)]',
+    icon: 'text-[color:var(--erp-accent-hover)]',
     Icon: Info,
   },
   warning: {
-    box: 'border-[#BA7517] bg-[#FDF6EA]',
-    icon: 'text-[#BA7517]',
+    box: 'border-[#F79009] bg-[#FFFAEB]',
+    icon: 'text-[#B54708]',
     Icon: AlertTriangle,
   },
   neutral: {
-    box: 'border-[#D3D1C7] bg-[#F8F8F6]',
-    icon: 'text-[#5F5E5A]',
+    box: 'border-slate-300 bg-slate-50',
+    icon: 'text-slate-600',
     Icon: ListChecks,
   },
 };
@@ -504,20 +525,12 @@ function SectionIndex({
   title: string;
 }): ReactNode {
   return (
-    <nav
-      aria-label={title}
-      className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-150 pt-4"
-    >
-      <span className="mr-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-slate-400">
-        {title}
-      </span>
+    <nav aria-label={title} className="erp-help-toc">
+      <span className="erp-help-toc-title">{title}</span>
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {sections.map((section) => (
           <li key={section.id}>
-            <a
-              href={`#${section.id}`}
-              className="inline-flex rounded-full border border-slate-200 bg-white px-3 text-[12px] leading-6 !text-[rgba(0,0,0,0.65)] transition-colors hover:!border-[var(--erp-accent)] hover:!text-[color:var(--erp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--erp-accent)]"
-            >
+            <a href={`#${section.id}`} className="erp-help-toc-link">
               {plainText(section.text)}
             </a>
           </li>
@@ -531,7 +544,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
   switch (block.type) {
     case 'h1':
       return (
-        <h1 id={block.id} className="mb-4 text-xl font-semibold text-[rgba(0,0,0,0.88)]">
+        <h1 id={block.id} className="mb-4 text-xl font-semibold text-slate-900">
           {inline(block.text)}
         </h1>
       );
@@ -539,7 +552,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
       return (
         <h2
           id={block.id}
-          className="mb-3 mt-2 flex scroll-mt-4 items-center gap-2.5 text-[17px] font-semibold leading-7 text-[rgba(0,0,0,0.88)]"
+          className="mb-3 mt-2 flex scroll-mt-4 items-center gap-2.5 text-[17px] font-semibold leading-7 text-slate-900"
         >
           <span className="h-4 w-1 shrink-0 rounded-full bg-[var(--erp-accent)]" aria-hidden />
           <span>{inline(block.text)}</span>
@@ -549,14 +562,14 @@ function BlockView({ block }: { block: Block }): ReactNode {
       return (
         <h3
           id={block.id}
-          className="mb-2 mt-5 scroll-mt-4 text-[14px] font-semibold text-[rgba(0,0,0,0.88)]"
+          className="mb-2 mt-5 scroll-mt-4 text-[14px] font-semibold text-slate-900"
         >
           {inline(block.text)}
         </h3>
       );
     case 'lead':
       return (
-        <p className="mb-5 text-[15px] leading-7 text-[rgba(0,0,0,0.65)]">
+        <p className="mb-5 text-[15px] leading-7 text-slate-600">
           {inline(block.text)}
         </p>
       );
@@ -571,7 +584,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
     case 'audience':
       return (
         <p className="mb-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1EFE8] px-2.5 py-0.5 text-[12px] font-medium leading-5 text-[#5F5E5A]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--erp-accent-light)] px-2.5 py-0.5 text-[12px] font-medium leading-5 text-[color:var(--erp-accent-hover)]">
             <Users size={12} aria-hidden />
             {inline(block.text)}
           </span>
@@ -585,7 +598,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
           {block.items.map((item, index) => (
             <li key={index} className="flex gap-3">
               <span
-                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--erp-accent-light)] text-[12px] font-semibold text-[color:var(--erp-accent-hover)]"
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[rgba(var(--erp-accent-rgb),0.25)] bg-[var(--erp-accent-light)] text-[12px] font-semibold text-[color:var(--erp-accent-hover)]"
                 aria-hidden
               >
                 {index + 1}
@@ -598,7 +611,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
           ))}
         </ol>
       ) : (
-        <ul className="mb-4 list-disc space-y-1.5 pl-5 marker:text-[#B8B6AE]">
+        <ul className="mb-4 list-disc space-y-1.5 pl-5 marker:text-slate-400">
           {block.items.map((item, index) => (
             <li key={index} className="pl-1">
               {inline(item.text)}
@@ -609,14 +622,14 @@ function BlockView({ block }: { block: Block }): ReactNode {
       );
     case 'table':
       return (
-        <div className="my-4 overflow-x-auto rounded-lg border border-slate-200">
+        <div className="my-4 overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full border-collapse text-[13px] leading-6">
             <thead>
               <tr>
                 {block.headers.map((header, index) => (
                   <th
                     key={index}
-                    className="border-b border-slate-200 bg-slate-25 px-3 py-2 text-left font-semibold text-[rgba(0,0,0,0.65)]"
+                    className="border-b border-slate-200 bg-[var(--erp-accent-wash)] px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-[0.04em] text-[color:var(--erp-accent-hover)]"
                   >
                     {inline(header)}
                   </th>
@@ -631,7 +644,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
                       key={cellIndex}
                       className={`border-b border-slate-150 px-3 py-2.5 align-top ${
                         cellIndex === 0
-                          ? 'min-w-[140px] font-medium text-[rgba(0,0,0,0.88)]'
+                          ? 'min-w-[140px] font-medium text-slate-900'
                           : ''
                       }`}
                     >
@@ -647,7 +660,7 @@ function BlockView({ block }: { block: Block }): ReactNode {
     case 'callout': {
       const style = TONE_STYLES[block.tone];
       return (
-        <div className={`my-4 flex gap-3 rounded-lg border-l-4 px-4 py-3 ${style.box}`}>
+        <div className={`my-4 flex gap-3 rounded-xl border-l-4 px-4 py-3 ${style.box}`}>
           <style.Icon size={18} className={`mt-1 shrink-0 ${style.icon}`} aria-hidden />
           <div className="min-w-0 flex-1 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
             {block.blocks.map((inner, index) => (
@@ -698,14 +711,14 @@ function inline(text: string): ReactNode {
       nodes.push(
         <code
           key={key}
-          className="rounded bg-[#F1EFE8] px-1 py-0.5 text-[13px] text-[rgba(0,0,0,0.88)]"
+          className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[13px] text-slate-900"
         >
           {token.slice(1, -1)}
         </code>,
       );
     } else if (token.startsWith('**')) {
       nodes.push(
-        <strong key={key} className="font-semibold text-[rgba(0,0,0,0.88)]">
+        <strong key={key} className="font-semibold text-slate-900">
           {token.slice(2, -2)}
         </strong>,
       );
