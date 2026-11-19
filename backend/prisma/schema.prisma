@@ -87,6 +87,8 @@ enum FolderContextType {
   FIELD_MOVEMENT_LOG
   ANNOUNCEMENT
   ASSET_REQUEST
+  INACTIVE_PERIOD
+  EMPLOYMENT_SEPARATION
 }
 
 enum Nationality {
@@ -1045,11 +1047,14 @@ model InactivePeriod {
   endedAt                 DateTime?    @map("ended_at")
   /// True when this period (action or daily job) turned login off; reactivation turns it back on.
   loginDisabledByInactive Boolean      @default(false) @map("login_disabled_by_inactive")
+  attachmentFolderId      String?      @map("attachment_folder_id")
 
-  user User @relation("InactivePeriodEmployee", fields: [userId], references: [id])
+  user             User            @relation("InactivePeriodEmployee", fields: [userId], references: [id])
+  attachmentFolder DocumentFolder? @relation("InactivePeriodAttachmentFolder", fields: [attachmentFolderId], references: [id])
 
   @@index([userId], map: "idx_inactive_period_user")
   @@index([companyId, fromDate], map: "idx_inactive_period_company_from")
+  @@index([attachmentFolderId], map: "idx_inactive_period_attachment_folder")
   @@map("inactive_period")
 }
 
@@ -1070,15 +1075,18 @@ model EmploymentPeriod {
   separationContractPrevEndDate DateTime? @map("separation_contract_prev_end_date") @db.Date
   /// True once the separation (or daily job) turned login off; cancel turns it back on.
   loginDisabledBySeparation     Boolean   @default(false) @map("login_disabled_by_separation")
+  attachmentFolderId            String?   @map("attachment_folder_id")
   createdAt        DateTime        @default(now()) @map("created_at")
   createdBy        String?         @map("created_by")
   updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at")
 
-  user        User  @relation("EmploymentPeriodEmployee", fields: [userId], references: [id])
-  separatedBy User? @relation("EmploymentPeriodSeparatedBy", fields: [separatedById], references: [id])
+  user             User            @relation("EmploymentPeriodEmployee", fields: [userId], references: [id])
+  separatedBy      User?           @relation("EmploymentPeriodSeparatedBy", fields: [separatedById], references: [id])
+  attachmentFolder DocumentFolder? @relation("EmploymentPeriodAttachmentFolder", fields: [attachmentFolderId], references: [id])
 
   @@index([userId], map: "idx_employment_period_user")
   @@index([companyId, endDate], map: "idx_employment_period_company_end")
+  @@index([attachmentFolderId], map: "idx_employment_period_attachment_folder")
   @@map("employment_period")
 }
 
@@ -1400,6 +1408,8 @@ model DocumentFolder {
   exitPermits                ExitPermit[]
   announcements              Announcement[]
   assetRequests              AssetRequest[]
+  inactivePeriods            InactivePeriod[]       @relation("InactivePeriodAttachmentFolder")
+  employmentPeriods          EmploymentPeriod[]     @relation("EmploymentPeriodAttachmentFolder")
 
 
   @@index([companyId], map: "idx_document_folder_company_id")

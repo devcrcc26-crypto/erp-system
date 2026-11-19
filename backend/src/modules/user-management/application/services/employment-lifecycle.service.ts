@@ -7,6 +7,7 @@ import {
 import {
   AuditLogSource,
   EmployeeContractStatus,
+  FolderContextType,
   type EmployeeContractType,
   type InactiveType,
 } from '@prisma/client';
@@ -17,10 +18,17 @@ import { NotificationService } from '../../../notifications/application/services
 import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import { EmployeeContractService } from '../../../employee-contract/application/services/employee-contract.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
+import { DocumentService } from '../../../documents/application/services/document.service';
 import { generateTemporaryPassword } from '../../../auth/application/utils/password-policy.util';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import { loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
 import { inactiveSpanOn } from '../../../../shared/employment/inactive-period.util';
+import {
+  attachEmploymentFiles,
+  employmentDocumentBelongsToUser,
+  listEmploymentAttachments,
+  type UploadedEmploymentFile,
+} from '../../../../shared/employment/employment-attachments.util';
 import {
   formatDateOnlyUtc,
   parseDateOnlyUtc,
@@ -73,6 +81,7 @@ export class EmploymentLifecycleService {
     private readonly attendance: AttendanceService,
     private readonly contracts: EmployeeContractService,
     private readonly passwords: PasswordService,
+    private readonly documents: DocumentService,
   ) {}
 
   // ── inactive ────────────────────────────────────────────────────────────
@@ -83,18 +92,30 @@ export class EmploymentLifecycleService {
       where: { userId, companyId: ctx.companyId },
       orderBy: { fromDate: 'desc' },
     });
-    return rows.map((r) => ({
-      id: r.id,
-      type: r.type,
-      fromDate: formatDateOnlyUtc(r.fromDate),
-      toDate: r.toDate ? formatDateOnlyUtc(r.toDate) : null,
-      reason: r.reason,
-      createdAt: r.createdAt.toISOString(),
-      endedAt: r.endedAt?.toISOString() ?? null,
-    }));
+    return Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        type: r.type,
+        fromDate: formatDateOnlyUtc(r.fromDate),
+        toDate: r.toDate ? formatDateOnlyUtc(r.toDate) : null,
+        reason: r.reason,
+        createdAt: r.createdAt.toISOString(),
+        endedAt: r.endedAt?.toISOString() ?? null,
+        attachments: await listEmploymentAttachments(
+          this.prisma,
+          ctx.companyId,
+          r.attachmentFolderId,
+        ),
+      })),
+    );
   }
 
-  async setInactive(ctx: Ctx, userId: string, input: SetInactiveInput) {
+  async setInactive(
+    ctx: Ctx,
+    userId: string,
+    input: SetInactiveInput,
+    files: UploadedEmploymentFile[] = [],
+  ) {
     const user = await this.requireUser(ctx, userId);
     if (user.employmentStatus === 'SEPARATED') {
       throw new BadRequestException('Separated employees cannot be set inactive');
@@ -139,6 +160,26 @@ export class EmploymentLifecycleService {
         createdById: ctx.userId,
       },
     });
+    const uploadedFiles = files.filter((f) => f?.buffer?.length);
+    await attachEmploymentFiles({
+      prisma: this.prisma,
+      documents: this.documents,
+      companyId: ctx.companyId,
+      actorUserId: ctx.userId,
+      recordId: created.id,
+      contextType: FolderContextType.INACTIVE_PERIOD,
+      folderName: `Inactive ${input.type} ${formatDateOnlyUtc(fromDate)}`,
+      folderPath: `/hr/employment/${userId}/inactive/${created.id}`,
+      existingFolderId: null,
+      linkFolder: async (folderId) => {
+        await this.prisma.inactivePeriod.update({
+          where: { id: created.id },
+          data: { attachmentFolderId: folderId },
+        });
+      },
+      files: uploadedFiles,
+    });
+    const attachmentCount = uploadedFiles.length;
     await this.applyInactiveStatus(userId, todayInAddisUtc());
     await this.afterAttendanceAffectingChange(ctx, userId, fromDate);
     await this.audit.create(
@@ -155,10 +196,33 @@ export class EmploymentLifecycleService {
           fromDate: formatDateOnlyUtc(fromDate),
           toDate: toDate ? formatDateOnlyUtc(toDate) : null,
           reason,
+          attachmentCount,
         },
       }),
     );
     return this.listInactive(ctx, userId);
+  }
+
+  /**
+   * Presigned download for a document attached to this employee's inactive or
+   * separation record (HR / supervisor who can view the profile).
+   */
+  async getEmploymentDocumentDownloadUrl(
+    ctx: Ctx,
+    userId: string,
+    documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    await this.requireUser(ctx, userId);
+    const allowed = await employmentDocumentBelongsToUser(
+      this.prisma,
+      ctx.companyId,
+      userId,
+      documentId,
+    );
+    if (!allowed) {
+      throw new NotFoundException('Document not found');
+    }
+    return this.documents.getDownloadUrl(ctx, documentId);
   }
 
   async reactivate(ctx: Ctx, userId: string, lastInactiveRaw?: string) {

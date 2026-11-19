@@ -2,8 +2,11 @@
 
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
-import { Alert, DatePicker, Form, Input, Modal, Select } from 'antd';
+import { useState } from 'react';
+import { DatePicker, Form, Input, Modal, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -32,10 +35,12 @@ export function EmployeeSetInactiveDialog({
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SetInactiveValues>();
+  const [files, setFiles] = useState<File[]>([]);
   const setInactive = useSetInactive(userId);
 
   function close(): void {
     form.resetFields();
+    setFiles([]);
     onClose();
   }
 
@@ -47,6 +52,7 @@ export function EmployeeSetInactiveDialog({
         fromDate: values.fromDate.format('YYYY-MM-DD'),
         toDate: values.toDate ? values.toDate.format('YYYY-MM-DD') : undefined,
         reason: values.reason.trim(),
+        files,
       });
       messageApi.success(t('users.employment.inactiveSaved', { name: employeeName }));
       close();
@@ -69,9 +75,8 @@ export function EmployeeSetInactiveDialog({
       rootClassName="erp-hr-travel-modal"
       className="erp-hr-travel-modal"
     >
-      <Alert
-        type="info"
-        showIcon
+      <ErpNotice
+        tone="info"
         className="mb-4"
         title={t('users.employment.setInactiveHint')}
       />
@@ -123,6 +128,17 @@ export function EmployeeSetInactiveDialog({
           ]}
         >
           <Input.TextArea rows={3} maxLength={2000} showCount />
+        </Form.Item>
+        <Form.Item
+          label={t('users.employment.attachments')}
+          extra={t('users.employment.attachmentsHint')}
+        >
+          <FileUploadInput
+            files={files}
+            onChange={setFiles}
+            multiple
+            placeholder={t('users.employment.attachmentsPlaceholder')}
+          />
         </Form.Item>
       </Form>
     </Modal>

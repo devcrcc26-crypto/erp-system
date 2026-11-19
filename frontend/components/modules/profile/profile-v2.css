@@ -32,8 +32,10 @@
   box-shadow: var(--pv2-shadow);
 }
 
-.erp-profile-page.erp-profile-v2 > .ant-alert {
+.erp-profile-page.erp-profile-v2 > .ant-alert,
+.erp-profile-page.erp-profile-v2 > .erp-notice {
   border-radius: 12px;
+  margin-bottom: 0;
 }
 
 /* ── Hero ── */

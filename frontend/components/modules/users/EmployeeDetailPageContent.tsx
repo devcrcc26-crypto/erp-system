@@ -5,7 +5,8 @@ import '@/components/modules/profile/profile-v2.css';
 import './employee-detail-v2.css';
 
 import { useRef, useState } from 'react';
-import { Alert, Button, Dropdown, Grid, Skeleton } from 'antd';
+import { Button, Dropdown, Grid, Skeleton } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import type { MenuProps } from 'antd';
 import {
   BarChartOutlined,
@@ -42,6 +43,7 @@ import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnly
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import EmployeeRolesCard from '@/components/modules/users/EmployeeRolesCard';
+import EmployeeInactiveBanner from '@/components/modules/users/EmployeeInactiveBanner';
 import EmployeeSeparationBanner from '@/components/modules/users/EmployeeSeparationBanner';
 import EmployeeSeparationDialog from '@/components/modules/users/EmployeeSeparationDialog';
 import {
@@ -417,9 +419,8 @@ export default function EmployeeDetailPageContent({
 
     return (
       <div className={`${DETAIL_ROOT}`}>
-        <Alert
-          type="error"
-          showIcon
+        <ErpNotice
+          tone="error"
           title={
             status === 403 || status === 401
               ? t('users.noPermission')
@@ -605,13 +606,6 @@ export default function EmployeeDetailPageContent({
             </p>
           </div>
         </div>
-        {employment ? (
-          <EmployeeSeparationBanner
-            userId={user.id}
-            employment={employment}
-            canManage={canManageEmployment}
-          />
-        ) : null}
 
         <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
           <MetaStat label={t('common.department')} value={user.department?.name} />
@@ -660,6 +654,22 @@ export default function EmployeeDetailPageContent({
           onClose={() => setEmploymentDialog(null)}
         />
       </div>
+
+      {employment?.separation ? (
+        <EmployeeSeparationBanner
+          userId={user.id}
+          employment={employment}
+          canManage={canManageEmployment}
+        />
+      ) : null}
+      {employment?.inactive && !employment.separation ? (
+        <EmployeeInactiveBanner
+          userId={user.id}
+          inactive={employment.inactive}
+          canManage={canManageEmployment}
+          onReactivate={() => setEmploymentDialog('reactivate')}
+        />
+      ) : null}
 
       <div className="erp-pro-card erp-profile-workspace">
         <div

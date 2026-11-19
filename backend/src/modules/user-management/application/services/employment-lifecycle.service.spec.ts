@@ -21,6 +21,7 @@ interface InactiveRow {
   createdAt: Date;
   endedAt: Date | null;
   loginDisabledByInactive: boolean;
+  attachmentFolderId: string | null;
 }
 
 interface State {
@@ -87,6 +88,7 @@ function makeService(state: State) {
           createdAt: new Date(),
           endedAt: null,
           loginDisabledByInactive: false,
+          attachmentFolderId: null,
           ...data,
         };
         state.inactive.push(row);
@@ -102,6 +104,8 @@ function makeService(state: State) {
         state.inactive = state.inactive.filter((r) => r.id !== where.id);
       }),
     },
+    document: { findMany: jest.fn(async () => []), findFirst: jest.fn(async () => null) },
+    documentFolder: { create: jest.fn(async ({ data }: any) => data) },
     userSession: { deleteMany: jest.fn(async () => { state.sessions = 0; }) },
     payrollRun: { findMany: jest.fn(async () => []), updateMany: jest.fn() },
     policySetting: { findMany: jest.fn(async () => []) },
@@ -117,6 +121,7 @@ function makeService(state: State) {
     }),
   };
   const passwords = { hash: jest.fn(async (p: string) => `hash:${p}`) };
+  const documents = { uploadDocument: jest.fn(async () => ({ id: 'doc-1' })), getDownloadUrl: jest.fn() };
   const service = new EmploymentLifecycleService(
     prisma,
     audit as any,
@@ -124,8 +129,9 @@ function makeService(state: State) {
     attendance as any,
     contracts as any,
     passwords as any,
+    documents as any,
   );
-  return { service, prisma, audit, attendance, contracts };
+  return { service, prisma, audit, attendance, contracts, documents };
 }
 
 const ctx = { companyId: COMPANY, userId: HR };

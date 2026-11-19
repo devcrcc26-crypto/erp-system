@@ -98,14 +98,34 @@ export class UsersController {
   )
   @ApiOperation({
     summary:
-      'Separate an employee (leaving date = last working day). Future-dated allowed; locked payroll months need confirmLockedPayroll.',
+      'Separate an employee (leaving date = last working day). Future-dated allowed; locked payroll months need confirmLockedPayroll. Optional supporting files.',
   })
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['leavingDate', 'separationType', 'reason'],
+      properties: {
+        leavingDate: { type: 'string', example: '2026-10-14' },
+        separationType: { type: 'string' },
+        reason: { type: 'string' },
+        confirmLockedPayroll: { type: 'boolean' },
+        handover: { type: 'string', description: 'JSON handover payload (multipart)' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 10, { storage: memoryStorage() }))
   separate(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: SeparateEmployeeDto,
+    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
-    return this.separationService.separate(this.ctx(user), id, dto);
+    return this.separationService.separate(this.ctx(user), id, dto, files ?? []);
   }
 
   @Patch(':id/separation')
@@ -143,14 +163,51 @@ export class UsersController {
   )
   @ApiOperation({
     summary:
-      'Set an employee inactive (suspension / long leave / other). Pay and login follow the inactivePaid / inactiveCanLogin policies.',
+      'Set an employee inactive (suspension / long leave / other). Pay and login follow the inactivePaid / inactiveCanLogin policies. Optional supporting files.',
   })
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['type', 'fromDate', 'reason'],
+      properties: {
+        type: { type: 'string' },
+        fromDate: { type: 'string', example: '2026-11-01' },
+        toDate: { type: 'string', example: '2026-11-10' },
+        reason: { type: 'string' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 10, { storage: memoryStorage() }))
   setInactive(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: SetInactiveDto,
+    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
-    return this.lifecycle.setInactive(this.ctx(user), id, dto);
+    return this.lifecycle.setInactive(this.ctx(user), id, dto, files ?? []);
+  }
+
+  @Get(':id/employment-documents/:documentId/download-url')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Presigned download URL for an inactive/separation attachment',
+  })
+  async getEmploymentDocumentDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    await this.assertCanViewUser(user, id);
+    return this.lifecycle.getEmploymentDocumentDownloadUrl(
+      this.ctx(user),
+      id,
+      documentId,
+    );
   }
 
   @Post(':id/reactivate')

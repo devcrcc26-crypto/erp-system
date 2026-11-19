@@ -121,14 +121,20 @@ function makeService(state: State) {
   const notifications = { send: jest.fn(async () => ({ emailQueued: false })) };
   const reassignment = { reassignTier: jest.fn(async () => undefined) };
   const approvals = { rejectTier: jest.fn(async () => undefined) };
+  const documents = { uploadDocument: jest.fn(async () => ({ id: 'doc-1' })) };
+  prisma.document = {
+    findMany: jest.fn(async () => []),
+    findFirst: jest.fn(async () => null),
+  };
   const service = new EmploymentSeparationService(
     prisma,
     audit as any,
     notifications as any,
     reassignment as any,
     approvals as any,
+    documents as any,
   );
-  return { service, prisma, audit, notifications, reassignment, approvals };
+  return { service, prisma, audit, notifications, reassignment, approvals, documents };
 }
 
 const ctx = { companyId: COMPANY, userId: HR };

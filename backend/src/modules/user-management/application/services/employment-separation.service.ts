@@ -8,6 +8,7 @@ import {
 import {
   AuditLogSource,
   EmployeeContractStatus,
+  FolderContextType,
   type EmploymentPeriod,
   type Prisma,
   type SeparationType,
@@ -16,10 +17,17 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { DocumentService } from '../../../documents/application/services/document.service';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import { ApprovalReassignmentService } from '../../../approvals/application/services/approval-reassignment.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { isVacantApprover } from '../../../../shared/employment/vacant-approver.util';
+import {
+  attachEmploymentFiles,
+  listEmploymentAttachments,
+  type EmploymentAttachmentDto,
+  type UploadedEmploymentFile,
+} from '../../../../shared/employment/employment-attachments.util';
 import {
   formatDateOnlyUtc,
   minDate,
@@ -145,9 +153,18 @@ export interface EmploymentState {
     separationType: string | null;
     separationReason: string | null;
     separatedAt: string | null;
+    attachments: EmploymentAttachmentDto[];
   }>;
   /** Current or next upcoming inactive period, if any. */
-  inactive: { id: string; type: string; fromDate: string; toDate: string | null; current: boolean } | null;
+  inactive: {
+    id: string;
+    type: string;
+    fromDate: string;
+    toDate: string | null;
+    current: boolean;
+    reason?: string | null;
+    attachments: EmploymentAttachmentDto[];
+  } | null;
   /** Latest separation on the employee's latest period, if any. */
   separation: {
     periodId: string;
@@ -157,6 +174,7 @@ export interface EmploymentState {
     effective: boolean;
     canCancel: boolean;
     cancelBlockedReason: string | null;
+    attachments: EmploymentAttachmentDto[];
   } | null;
 }
 
@@ -174,6 +192,7 @@ export class EmploymentSeparationService {
     private readonly notifications: NotificationService,
     private readonly reassignment: ApprovalReassignmentService,
     private readonly approvals: ApprovalsService,
+    private readonly documents: DocumentService,
   ) {}
 
   async getEmployment(ctx: Ctx, userId: string): Promise<EmploymentState> {
@@ -194,6 +213,11 @@ export class EmploymentSeparationService {
         effective: separationIsEffective(latest.endDate, todayInAddisUtc()),
         canCancel: blocked == null,
         cancelBlockedReason: blocked,
+        attachments: await listEmploymentAttachments(
+          this.prisma,
+          ctx.companyId,
+          latest.attachmentFolderId,
+        ),
       };
     }
     const today = todayInAddisUtc();
@@ -201,6 +225,21 @@ export class EmploymentSeparationService {
       where: { userId, OR: [{ toDate: null }, { toDate: { gte: today } }] },
       orderBy: { fromDate: 'asc' },
     });
+    const periodDtos = await Promise.all(
+      periods.map(async (p) => ({
+        id: p.id,
+        startDate: formatDateOnlyUtc(p.startDate),
+        endDate: p.endDate ? formatDateOnlyUtc(p.endDate) : null,
+        separationType: p.separationType,
+        separationReason: p.separationReason,
+        separatedAt: p.separatedAt?.toISOString() ?? null,
+        attachments: await listEmploymentAttachments(
+          this.prisma,
+          ctx.companyId,
+          p.attachmentFolderId,
+        ),
+      })),
+    );
     return {
       inactive: inactiveRow
         ? {
@@ -209,19 +248,18 @@ export class EmploymentSeparationService {
             fromDate: formatDateOnlyUtc(inactiveRow.fromDate),
             toDate: inactiveRow.toDate ? formatDateOnlyUtc(inactiveRow.toDate) : null,
             current: inactiveRow.fromDate.getTime() <= today.getTime(),
+            reason: inactiveRow.reason,
+            attachments: await listEmploymentAttachments(
+              this.prisma,
+              ctx.companyId,
+              inactiveRow.attachmentFolderId,
+            ),
           }
         : null,
       employmentStatus: user.employmentStatus,
       isActive: user.isActive,
       employmentDate: user.employmentDate ? formatDateOnlyUtc(user.employmentDate) : null,
-      periods: periods.map((p) => ({
-        id: p.id,
-        startDate: formatDateOnlyUtc(p.startDate),
-        endDate: p.endDate ? formatDateOnlyUtc(p.endDate) : null,
-        separationType: p.separationType,
-        separationReason: p.separationReason,
-        separatedAt: p.separatedAt?.toISOString() ?? null,
-      })),
+      periods: periodDtos,
       separation,
     };
   }
@@ -260,7 +298,12 @@ export class EmploymentSeparationService {
     };
   }
 
-  async separate(ctx: Ctx, userId: string, input: SeparateEmployeeInput): Promise<EmploymentState> {
+  async separate(
+    ctx: Ctx,
+    userId: string,
+    input: SeparateEmployeeInput,
+    files: UploadedEmploymentFile[] = [],
+  ): Promise<EmploymentState> {
     const leavingDate = this.parseLeavingDate(input.leavingDate);
     const reason = input.reason?.trim() ?? '';
     if (!reason) {
@@ -346,6 +389,26 @@ export class EmploymentSeparationService {
       }
     });
 
+    const uploadedFiles = files.filter((f) => f?.buffer?.length);
+    await attachEmploymentFiles({
+      prisma: this.prisma,
+      documents: this.documents,
+      companyId: ctx.companyId,
+      actorUserId: ctx.userId,
+      recordId: period.id,
+      contextType: FolderContextType.EMPLOYMENT_SEPARATION,
+      folderName: `Separation ${formatDateOnlyUtc(leavingDate)}`,
+      folderPath: `/hr/employment/${userId}/separation/${period.id}`,
+      existingFolderId: period.attachmentFolderId,
+      linkFolder: async (folderId) => {
+        await this.prisma.employmentPeriod.update({
+          where: { id: period.id },
+          data: { attachmentFolderId: folderId },
+        });
+      },
+      files: uploadedFiles,
+    });
+
     await this.afterPayrollAffectingChange(ctx, user, leavingDate, lockedRuns, 'separated');
     const handoverResult = await this.applyHandover(
       ctx,
@@ -366,6 +429,7 @@ export class EmploymentSeparationService {
           leavingDate: formatDateOnlyUtc(leavingDate),
           separationType: input.separationType,
           reason,
+          attachmentCount: uploadedFiles.length,
           effectiveImmediately: effective,
           contractId: contract?.id ?? null,
           lockedPayrollRuns: lockedRuns.map((r) => r.runNumber),

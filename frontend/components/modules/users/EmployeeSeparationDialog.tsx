@@ -3,8 +3,10 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useState } from 'react';
-import { Alert, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Spin } from 'antd';
+import { Button, Checkbox, DatePicker, Form, Input, Modal, Select, Spin } from 'antd';
 import type { Dayjs } from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -46,6 +48,7 @@ export default function EmployeeSeparationDialog({
   const [form] = Form.useForm<FormValues>();
   const [leavingDate, setLeavingDate] = useState<string | null>(null);
   const [confirmLocked, setConfirmLocked] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [step, setStep] = useState<'details' | 'handover'>('details');
   const [handover, setHandover] = useState<HandoverState>(emptyHandoverState);
   const previewQuery = useSeparationPreview(userId, open ? leavingDate : null);
@@ -61,6 +64,7 @@ export default function EmployeeSeparationDialog({
     form.resetFields();
     setLeavingDate(null);
     setConfirmLocked(false);
+    setFiles([]);
     setStep('details');
     setHandover(emptyHandoverState);
     onClose();
@@ -82,6 +86,7 @@ export default function EmployeeSeparationDialog({
         reason: values.reason.trim(),
         confirmLockedPayroll: needsLockedConfirm ? confirmLocked : undefined,
         handover: handoverPayload,
+        files,
       });
       messageApi.success(t('users.separation.saved', { name: employeeName }));
       close();
@@ -143,125 +148,132 @@ export default function EmployeeSeparationDialog({
         />
       ) : null}
       <div hidden={step === 'handover'}>
-      <Form form={form} layout="vertical" requiredMark>
-        <Form.Item
-          name="leavingDate"
-          label={t('users.separation.leavingDate')}
-          extra={t('users.separation.leavingDateHint')}
-          rules={[{ required: true, message: t('users.separation.leavingDateRequired') }]}
-        >
-          <DatePicker
-            className="w-full"
-            onChange={(value) => {
-              setConfirmLocked(false);
-              setHandover(emptyHandoverState);
-              setLeavingDate(value ? value.format('YYYY-MM-DD') : null);
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          name="separationType"
-          label={t('users.separation.type')}
-          rules={[{ required: true, message: t('users.separation.typeRequired') }]}
-        >
-          <Select
-            options={SEPARATION_TYPES.map((type) => ({
-              value: type,
-              label: t(`users.separation.types.${type}`),
-            }))}
-          />
-        </Form.Item>
-        <Form.Item
-          name="reason"
-          label={t('users.separation.reason')}
-          rules={[
-            { required: true, whitespace: true, message: t('users.separation.reasonRequired') },
-            { max: 2000 },
-          ]}
-        >
-          <Input.TextArea rows={3} maxLength={2000} showCount />
-        </Form.Item>
-      </Form>
+        <Form form={form} layout="vertical" requiredMark>
+          <Form.Item
+            name="leavingDate"
+            label={t('users.separation.leavingDate')}
+            extra={t('users.separation.leavingDateHint')}
+            rules={[{ required: true, message: t('users.separation.leavingDateRequired') }]}
+          >
+            <DatePicker
+              className="w-full"
+              onChange={(value) => {
+                setConfirmLocked(false);
+                setHandover(emptyHandoverState);
+                setLeavingDate(value ? value.format('YYYY-MM-DD') : null);
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="separationType"
+            label={t('users.separation.type')}
+            rules={[{ required: true, message: t('users.separation.typeRequired') }]}
+          >
+            <Select
+              options={SEPARATION_TYPES.map((type) => ({
+                value: type,
+                label: t(`users.separation.types.${type}`),
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="reason"
+            label={t('users.separation.reason')}
+            rules={[
+              { required: true, whitespace: true, message: t('users.separation.reasonRequired') },
+              { max: 2000 },
+            ]}
+          >
+            <Input.TextArea rows={3} maxLength={2000} showCount />
+          </Form.Item>
+          <Form.Item
+            label={t('users.separation.attachments')}
+            extra={t('users.separation.attachmentsHint')}
+          >
+            <FileUploadInput
+              files={files}
+              onChange={setFiles}
+              multiple
+              placeholder={t('users.separation.attachmentsPlaceholder')}
+            />
+          </Form.Item>
+        </Form>
 
-      {leavingDate && previewQuery.isLoading ? <Spin size="small" /> : null}
+        {leavingDate && previewQuery.isLoading ? <Spin size="small" /> : null}
 
-      {preview ? (
-        <div className="flex flex-col gap-2">
-          <Alert
-            type="info"
-            showIcon
-            title={
-              preview.effectiveImmediately
-                ? t('users.separation.effectiveNow')
-                : t('users.separation.effectiveLater', { date: preview.leavingDate })
-            }
-            description={
-              preview.activeContract
-                ? t('users.separation.contractEffect', {
-                    contract: preview.activeContract.contractNumber,
-                    date: preview.leavingDate,
-                  })
-                : t('users.separation.noActiveContract')
-            }
-          />
-          {preview.pendingApprovalTiers.count > 0 ? (
-            <Alert
-              type="warning"
-              showIcon
-              title={t('users.separation.pendingApprovals', {
-                count: preview.pendingApprovalTiers.count,
-              })}
+        {preview ? (
+          <div className="mt-3 flex flex-col gap-2">
+            <ErpNotice
+              tone="info"
+              title={
+                preview.effectiveImmediately
+                  ? t('users.separation.effectiveNow')
+                  : t('users.separation.effectiveLater', { date: preview.leavingDate })
+              }
               description={
-                <ul className="m-0 pl-4">
-                  {preview.pendingApprovalTiers.items.map((item) => (
-                    <li key={`${item.requestId}-${item.tierLabel}`}>
-                      {item.requestNumber} · {item.title} ({item.tierLabel})
-                    </li>
-                  ))}
-                </ul>
+                preview.activeContract
+                  ? t('users.separation.contractEffect', {
+                      contract: preview.activeContract.contractNumber,
+                      date: preview.leavingDate,
+                    })
+                  : t('users.separation.noActiveContract')
               }
             />
-          ) : null}
-          {preview.pendingSubmittedRequests.count > 0 ? (
-            <Alert
-              type="warning"
-              showIcon
-              title={t('users.separation.pendingSubmitted', {
-                count: preview.pendingSubmittedRequests.count,
-              })}
-              description={
-                <ul className="m-0 pl-4">
-                  {preview.pendingSubmittedRequests.items.map((item) => (
-                    <li key={item.requestId}>
-                      {item.requestNumber} · {item.title}
-                    </li>
-                  ))}
-                </ul>
-              }
-            />
-          ) : null}
-          {needsLockedConfirm ? (
-            <Alert
-              type="error"
-              showIcon
-              title={t('users.separation.lockedPayroll', {
-                runs: lockedRuns.map((r) => r.runNumber).join(', '),
-              })}
-              description={
-                <Checkbox
-                  checked={confirmLocked}
-                  onChange={(event) => setConfirmLocked(event.target.checked)}
-                >
-                  {t('users.separation.lockedPayrollConfirm')}
-                </Checkbox>
-              }
-            />
-          ) : null}
-          <p className="m-0 text-xs text-[var(--erp-text-secondary,#4B5563)]">
-            {t('users.separation.finalSettlementNote')}
-          </p>
-        </div>
-      ) : null}
+            {preview.pendingApprovalTiers.count > 0 ? (
+              <ErpNotice
+                tone="warning"
+                title={t('users.separation.pendingApprovals', {
+                  count: preview.pendingApprovalTiers.count,
+                })}
+                description={
+                  <ul className="m-0 pl-4">
+                    {preview.pendingApprovalTiers.items.map((item) => (
+                      <li key={`${item.requestId}-${item.tierLabel}`}>
+                        {item.requestNumber} · {item.title} ({item.tierLabel})
+                      </li>
+                    ))}
+                  </ul>
+                }
+              />
+            ) : null}
+            {preview.pendingSubmittedRequests.count > 0 ? (
+              <ErpNotice
+                tone="warning"
+                title={t('users.separation.pendingSubmitted', {
+                  count: preview.pendingSubmittedRequests.count,
+                })}
+                description={
+                  <ul className="m-0 pl-4">
+                    {preview.pendingSubmittedRequests.items.map((item) => (
+                      <li key={item.requestId}>
+                        {item.requestNumber} · {item.title}
+                      </li>
+                    ))}
+                  </ul>
+                }
+              />
+            ) : null}
+            {needsLockedConfirm ? (
+              <ErpNotice
+                tone="error"
+                title={t('users.separation.lockedPayroll', {
+                  runs: lockedRuns.map((r) => r.runNumber).join(', '),
+                })}
+                description={
+                  <Checkbox
+                    checked={confirmLocked}
+                    onChange={(event) => setConfirmLocked(event.target.checked)}
+                  >
+                    {t('users.separation.lockedPayrollConfirm')}
+                  </Checkbox>
+                }
+              />
+            ) : null}
+            <p className="m-0 text-xs text-[var(--erp-text-secondary,#4B5563)]">
+              {t('users.separation.finalSettlementNote')}
+            </p>
+          </div>
+        ) : null}
       </div>
     </Modal>
   );

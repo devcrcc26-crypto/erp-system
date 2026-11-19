@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Button, Checkbox, DatePicker, Form, Modal, Space, Spin, Tooltip } from 'antd';
+import { Button, Checkbox, DatePicker, Form, Modal, Space, Spin, Tooltip } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import EmploymentAttachmentsList from '@/components/modules/users/EmploymentAttachmentsList';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -116,10 +118,9 @@ export default function EmployeeSeparationBanner({
 
   return (
     <>
-      <Alert
-        type={separation.effective ? 'error' : 'warning'}
-        showIcon
-        className="mx-4 mb-4 sm:mx-6"
+      <ErpNotice
+        className="mb-4"
+        tone={separation.effective ? 'error' : 'warning'}
         title={
           separation.effective
             ? t('users.separation.bannerSeparated', {
@@ -131,7 +132,15 @@ export default function EmployeeSeparationBanner({
                 type: typeLabel,
               })
         }
-        description={separation.reason ?? undefined}
+        description={
+          <>
+            {separation.reason ? <p>{separation.reason}</p> : null}
+            <EmploymentAttachmentsList
+              userId={userId}
+              attachments={separation.attachments ?? []}
+            />
+          </>
+        }
         action={actions}
       />
       <ConfirmDialog
@@ -181,10 +190,9 @@ export default function EmployeeSeparationBanner({
           </Form.Item>
           {leavingDateKey && previewQuery.isLoading ? <Spin size="small" /> : null}
           {previewQuery.data ? (
-            <Alert
+            <ErpNotice
               className="mb-3"
-              type={previewQuery.data.effectiveImmediately ? 'warning' : 'info'}
-              showIcon
+              tone={previewQuery.data.effectiveImmediately ? 'warning' : 'info'}
               title={
                 previewQuery.data.effectiveImmediately
                   ? t('users.separation.effectiveNow')
@@ -196,10 +204,9 @@ export default function EmployeeSeparationBanner({
           ) : null}
           {needsLockedConfirm ? (
             <>
-              <Alert
+              <ErpNotice
                 className="mb-3"
-                type="error"
-                showIcon
+                tone="error"
                 title={t('users.separation.lockedPayroll', {
                   runs: lockedRuns.map((r) => r.runNumber).join(', '),
                 })}

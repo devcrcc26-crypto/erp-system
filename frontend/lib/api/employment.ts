@@ -1,6 +1,22 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
+import { apiDelete, apiGet, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 
 export type EmploymentStatus = 'ACTIVE' | 'INACTIVE' | 'SEPARATED';
+
+export interface EmploymentAttachment {
+  id: string;
+  name: string;
+  fileType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+}
+
+/** Presigned download path for an inactive/separation attachment. */
+export function employmentDocumentDownloadPath(
+  userId: string,
+  documentId: string,
+): string {
+  return `/users/${userId}/employment-documents/${documentId}/download-url`;
+}
 
 export type SeparationType =
   | 'RESIGNATION'
@@ -30,6 +46,8 @@ export interface EmploymentState {
     fromDate: string;
     toDate: string | null;
     current: boolean;
+    reason?: string | null;
+    attachments: EmploymentAttachment[];
   } | null;
   isActive: boolean;
   employmentDate: string | null;
@@ -40,6 +58,7 @@ export interface EmploymentState {
     separationType: SeparationType | null;
     separationReason: string | null;
     separatedAt: string | null;
+    attachments: EmploymentAttachment[];
   }>;
   separation: {
     periodId: string;
@@ -49,6 +68,7 @@ export interface EmploymentState {
     effective: boolean;
     canCancel: boolean;
     cancelBlockedReason: string | null;
+    attachments: EmploymentAttachment[];
   } | null;
 }
 
@@ -120,6 +140,7 @@ export interface SeparateEmployeePayload {
   reason: string;
   confirmLockedPayroll?: boolean;
   handover?: HandoverPayload;
+  files?: File[];
 }
 
 export interface InactivePeriod {
@@ -130,6 +151,7 @@ export interface InactivePeriod {
   reason: string;
   createdAt: string;
   endedAt: string | null;
+  attachments: EmploymentAttachment[];
 }
 
 export interface SetInactivePayload {
@@ -137,6 +159,7 @@ export interface SetInactivePayload {
   fromDate: string;
   toDate?: string;
   reason: string;
+  files?: File[];
 }
 
 export type RehireContractType = 'FIXED_TERM' | 'OPEN_ENDED' | 'PROBATION' | 'RENEWAL';
@@ -173,7 +196,30 @@ export function separateEmployee(
   userId: string,
   payload: SeparateEmployeePayload,
 ): Promise<EmploymentState> {
-  return apiPost<EmploymentState>(`/users/${userId}/separation`, payload);
+  const files = payload.files ?? [];
+  if (files.length === 0) {
+    return apiPost<EmploymentState>(`/users/${userId}/separation`, {
+      leavingDate: payload.leavingDate,
+      separationType: payload.separationType,
+      reason: payload.reason,
+      confirmLockedPayroll: payload.confirmLockedPayroll,
+      handover: payload.handover,
+    });
+  }
+  const formData = new FormData();
+  formData.append('leavingDate', payload.leavingDate);
+  formData.append('separationType', payload.separationType);
+  formData.append('reason', payload.reason);
+  if (payload.confirmLockedPayroll != null) {
+    formData.append('confirmLockedPayroll', String(payload.confirmLockedPayroll));
+  }
+  if (payload.handover) {
+    formData.append('handover', JSON.stringify(payload.handover));
+  }
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return apiPostForm<EmploymentState>(`/users/${userId}/separation`, formData);
 }
 
 export function cancelSeparation(userId: string): Promise<EmploymentState> {
@@ -200,7 +246,26 @@ export function setInactive(
   userId: string,
   payload: SetInactivePayload,
 ): Promise<InactivePeriod[]> {
-  return apiPost<InactivePeriod[]>(`/users/${userId}/inactive`, payload);
+  const files = payload.files ?? [];
+  if (files.length === 0) {
+    return apiPost<InactivePeriod[]>(`/users/${userId}/inactive`, {
+      type: payload.type,
+      fromDate: payload.fromDate,
+      toDate: payload.toDate,
+      reason: payload.reason,
+    });
+  }
+  const formData = new FormData();
+  formData.append('type', payload.type);
+  formData.append('fromDate', payload.fromDate);
+  if (payload.toDate) {
+    formData.append('toDate', payload.toDate);
+  }
+  formData.append('reason', payload.reason);
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  return apiPostForm<InactivePeriod[]>(`/users/${userId}/inactive`, formData);
 }
 
 export function reactivateEmployee(

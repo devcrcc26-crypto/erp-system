@@ -3,8 +3,9 @@
 import '@/components/modules/hr/shared/hr-travel-v2.css';
 
 import { useState } from 'react';
-import { Alert, DatePicker, Form, Input, InputNumber, Modal, Select, Typography } from 'antd';
+import { DatePicker, Form, Input, InputNumber, Modal, Select, Typography } from 'antd';
 import type { Dayjs } from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -94,9 +95,8 @@ export default function EmployeeRehireDialog({
       className="erp-hr-travel-modal"
     >
       {temporaryPassword ? (
-        <Alert
-          type="success"
-          showIcon
+        <ErpNotice
+          tone="success"
           title={t('users.employment.temporaryPasswordTitle')}
           description={
             <div className="flex flex-col gap-2">
@@ -109,9 +109,8 @@ export default function EmployeeRehireDialog({
         />
       ) : (
         <>
-          <Alert
-            type="info"
-            showIcon
+          <ErpNotice
+            tone="info"
             className="mb-4"
             title={t('users.employment.rehireHint')}
           />

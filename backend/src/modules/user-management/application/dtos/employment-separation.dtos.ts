@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeContractType, InactiveType, SeparationType } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -18,6 +18,35 @@ import {
 } from 'class-validator';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Multipart sends booleans as strings; JSON sends real booleans. */
+function parseBooleanFlag(value: unknown): unknown {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (value === 'true' || value === '1') {
+    return true;
+  }
+  if (value === 'false' || value === '0') {
+    return false;
+  }
+  return value;
+}
+
+/** Multipart sends nested handover as a JSON string. */
+function parseHandoverJson(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
 
 export class SeparationPreviewDto {
   @ApiProperty({ example: '2026-08-20', description: 'Last working day' })
@@ -97,11 +126,18 @@ export class SeparateEmployeeDto extends SeparationPreviewDto {
       'Required when the leaving date falls in a month whose payroll is already approved or paid',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => parseBooleanFlag(value))
   @IsBoolean()
   confirmLockedPayroll?: boolean;
 
   @ApiPropertyOptional({ type: () => HandoverDto })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    const parsed = parseHandoverJson(value);
+    return parsed && typeof parsed === 'object'
+      ? plainToInstance(HandoverDto, parsed)
+      : parsed;
+  })
   @ValidateNested()
   @Type(() => HandoverDto)
   handover?: HandoverDto;
@@ -114,6 +150,7 @@ export class UpdateLeavingDateDto extends SeparationPreviewDto {
       'Required when the new leaving date falls in a month whose payroll is already approved or paid',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => parseBooleanFlag(value))
   @IsBoolean()
   confirmLockedPayroll?: boolean;
 }
