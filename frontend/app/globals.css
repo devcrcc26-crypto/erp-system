@@ -14,6 +14,19 @@
   --erp-accent-hover-rgb: 15, 76, 143;
 
   /*
+   * Three-role color system (neutral / action / brand+semantic).
+   * --action aliases the existing CRCC azure (#1667C2). Contrast AA:
+   * action on white 5.60:1; action on action-soft 4.86:1; text on white 14.68:1.
+   */
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --surface: #f8fafc;
+  --action: var(--erp-accent);
+  --action-soft: var(--erp-accent-light);
+  --brand: #d7000f;
+
+  /*
    * Brand tokens extracted from the login page (Nov 2026). Values that are not
    * a Tailwind @theme namespace (gradients, type scale) live here; colours,
    * radii and shadows are in @theme below so they also generate utilities
@@ -69,21 +82,30 @@
 
 /* `static`: always emit these, since most consumers read them via var(). */
 @theme static {
-  /* Brand palette (login page). Primary follows the ACCENT_MODE switch. */
-  --color-primary: var(--erp-accent);              /* #1667c2 - buttons, links, focus */
-  --color-primary-dark: var(--erp-accent-hover);   /* #0f4c8f - headings, hover, sidebar active */
-  --color-primary-light: #2b7fd9;                  /* gradient end (button, card accent) */
+  /* Brand palette (login page). Primary / action follow the ACCENT_MODE switch. */
+  --color-primary: var(--action);                  /* #1667c2 - interactive only */
+  --color-primary-dark: var(--erp-accent-hover);   /* #0f4c8f - hover, sidebar active */
+  --color-primary-light: #2b7fd9;                  /* gradient end (button) */
   --color-primary-deep: #0a1a30;                   /* deep navy (login panel start) */
-  --color-primary-soft: var(--erp-accent-light);   /* #e7f0fb - tinted fills */
+  --color-primary-soft: var(--action-soft);        /* #e7f0fb - action soft fills */
   --color-background: #eceff3;                     /* auth page background */
-  --color-surface: #ffffff;                        /* cards */
-  --color-text-heading: var(--erp-accent-hover);   /* #0f4c8f */
+  --color-surface: #ffffff;                        /* cards (white) */
+  /* Role utilities: text-fg, text-fg-muted, border-line, bg-surface, bg-action, … */
+  --color-fg: var(--text);
+  --color-fg-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-surface-page: var(--surface);            /* #f8fafc page wash (bg-surface-page) */
+  --color-action: var(--action);
+  --color-action-soft: var(--action-soft);
+  --color-brand: var(--brand);
+  /* Headings are neutral — action blue is reserved for interactive/selected UI. */
+  --color-text-heading: var(--text);
   --color-text-body: #33403c;                      /* form labels */
   --color-text-muted: #5f6b66;                     /* subtitles */
   --color-text-subtle: #7a8782;                    /* help text */
   --color-input-bg: #f7faf8;
   --color-input-border: #d5e0dc;
-  --color-card-border: rgba(var(--erp-accent-rgb), 0.16);
+  --color-card-border: var(--border);
   --radius-card: 12px;
   --radius-control: 10px;
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
@@ -5196,14 +5218,14 @@ main::-webkit-scrollbar,
   animation: erp-login-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
-/* CRCC logo red, same accent as the employee ID card stripe. */
+/* CRCC logo red — --brand only (logo / brand stripe; not status). */
 .erp-login-brand-accent {
   display: block;
   width: 2.5rem;
   height: 3px;
   margin-bottom: 1rem;
   border-radius: 999px;
-  background: #d7000f;
+  background: var(--brand);
 }
 
 .erp-login-brand-top {
@@ -5308,7 +5330,7 @@ main::-webkit-scrollbar,
 
 .erp-login-brand-help-icon {
   border-color: transparent;
-  background: #d7000f;
+  background: var(--brand);
 }
 
 /* Short laptop screens: drop the feature descriptions so nothing is clipped. */

@@ -21,9 +21,20 @@ export const tokens = {
   colorCoral400: '#D85A30',
   colorCoral50: '#FAECE7',
 
-  colorBlue400: '#378ADD',
-  colorBlue50: '#E6F1FB',
-  colorBlue800: '#1A4A7A',
+  /**
+   * @deprecated Do not use as a generic accent. Prefer {@link colorAction}.
+   * Kept for legacy chart callers until they move to CHART_SERIES.
+   */
+  colorBlue400: '#5B7C99',
+  colorBlue50: '#E8EEF3',
+  colorBlue800: '#3D556B',
+
+  /** Interactive / selected UI only — aliases CSS `--action` (#1667C2). */
+  colorAction: accent.primary,
+  colorActionSoft: accent.light,
+  colorActionHover: accent.hover,
+  /** Logo / brand stripe only — CSS `--brand`. Not for status. */
+  colorBrand: '#d7000f',
 
   colorCyan400: '#0891B2',
   colorCyan50: '#ECFEFF',
@@ -62,11 +73,11 @@ export const tokens = {
   colorPageBg: '#EFF4F1', // --erp-n-100
   colorCardBg: '#FFFFFF',
   colorSurfaceSecondary: '#F7FAF8', // --erp-n-50
-  /** Dividers and card outlines. */
-  colorBorder: '#E1E9E5', // --erp-n-200
+  /** Dividers and card outlines — CSS `--border` / `--color-line`. */
+  colorBorder: '#E5E7EB',
   colorBorderSecondary: '#D0DBD6', // --erp-n-300
-  colorTextPrimary: '#141D19', // --erp-n-900
-  colorTextSecondary: '#4A5651', // --erp-n-600
+  colorTextPrimary: '#1F2937', // --text / --color-fg
+  colorTextSecondary: '#6B7280', // --text-muted / --color-fg-muted
   colorTextTertiary: '#7A8782', // --color-text-subtle
   /** Form labels - matches `--color-text-body`. */
   colorTextBody: '#33403C',
@@ -104,8 +115,8 @@ export const tokens = {
   shadowCard: '0 8px 32px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06)',
   /** Floating panels: dropdowns, date pickers, popovers. */
   shadowPopup: '0 1px 2px rgba(20, 29, 25, 0.06), 0 8px 24px rgba(20, 29, 25, 0.1)',
-  /** Heading text - matches `--color-text-heading` (login heading). */
-  colorTextHeading: accent.hover,
+  /** Heading text - neutral `--text` (not action blue). */
+  colorTextHeading: '#1F2937',
   sidebarWidth: 256,
 
   /** Outer page padding */

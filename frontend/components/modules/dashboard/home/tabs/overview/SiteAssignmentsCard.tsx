@@ -63,7 +63,7 @@ export default function SiteAssignmentsCard({
     <OverviewCard
       title={t(`${STATS}.siteAssignments.title`)}
       icon={<MapPin size={18} strokeWidth={1.9} />}
-      tone={exp7 > 0 ? 'warn' : 'info'}
+      tone="neutral"
       viewAllHref="/hr/site-assignments"
       query={query}
       isEmpty={!sites}

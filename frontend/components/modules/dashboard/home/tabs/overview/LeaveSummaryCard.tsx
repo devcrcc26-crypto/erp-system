@@ -115,7 +115,7 @@ export default function LeaveSummaryCard({
       title={t(`${STATS}.leave.title`)}
       subtitle={t(`${HOME}.overview.leaveByType`)}
       icon={<CalendarDays size={18} strokeWidth={1.9} />}
-      tone={pending > 0 ? 'urgent' : 'ok'}
+      tone="neutral"
       viewAllHref="/hr/leave-requests"
       query={query}
       isEmpty={!leave}

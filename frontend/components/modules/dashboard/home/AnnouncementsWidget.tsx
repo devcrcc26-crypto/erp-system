@@ -23,7 +23,7 @@ export default function AnnouncementsWidget({ enabled }: { enabled: boolean }): 
     <OverviewCard
       title={t('announcements.widget.title')}
       icon={<Megaphone size={18} strokeWidth={1.9} />}
-      tone="info"
+      tone="neutral"
       viewAllHref="/announcements"
       query={query}
       isEmpty={items.length === 0}
@@ -53,7 +53,7 @@ export default function AnnouncementsWidget({ enabled }: { enabled: boolean }): 
                   {!item.readAt ? (
                     <span
                       aria-hidden
-                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--erp-accent)] align-middle"
+                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-action align-middle"
                     />
                   ) : null}
                   {localized(locale, item.title, item.titleZh)}

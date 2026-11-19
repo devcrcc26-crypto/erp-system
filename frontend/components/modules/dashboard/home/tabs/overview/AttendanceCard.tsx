@@ -93,7 +93,7 @@ export default function AttendanceCard({
       title={t(`${STATS}.attendance.title`)}
       subtitle={attendance?.month}
       icon={<UserCheck size={18} strokeWidth={1.9} />}
-      tone="info"
+      tone="neutral"
       viewAllHref="/hr/attendance"
       query={query}
       isEmpty={!attendance}
@@ -131,26 +131,26 @@ export default function AttendanceCard({
               label={t(`${STATS}.attendance.submitted`)}
               current={attendance.submittedCount}
               total={attendance.totalEmployees}
-              tone="ok"
+              tone="neutral"
               locale={locale}
             />
             <ProgressRow
               label={t(`${STATS}.attendance.approved`)}
               current={attendance.approvedCount}
               total={attendance.totalEmployees}
-              tone="info"
+              tone="ok"
               locale={locale}
             />
           </div>
 
           {canImport && attendance.importStatus === 'not_imported' ? (
-            <div className="mt-auto flex items-center justify-between gap-3 rounded-xl bg-[color:var(--erp-accent-light)] px-4 py-3 ring-1 ring-inset ring-[rgba(var(--erp-accent-rgb),0.22)]">
-              <p className="m-0 text-xs text-[color:var(--erp-accent-hover)]">
+            <div className="mt-auto flex items-center justify-between gap-3 rounded-xl bg-action-soft px-4 py-3 ring-1 ring-inset ring-[rgba(var(--erp-accent-rgb),0.22)]">
+              <p className="m-0 text-xs text-action">
                 {t(`${HOME}.overview.attendanceImportHint`)}
               </p>
               <Link
                 href="/hr/attendance"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--erp-accent-hover)] ring-1 ring-inset ring-[rgba(var(--erp-accent-rgb),0.28)] transition-colors hover:bg-[color:var(--erp-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--erp-accent)]"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-action px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[color:var(--erp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
               >
                 <Upload size={14} aria-hidden />
                 {t(`${STATS}.attendance.importAction`)}

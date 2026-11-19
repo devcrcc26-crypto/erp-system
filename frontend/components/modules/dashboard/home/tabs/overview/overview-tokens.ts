@@ -1,8 +1,8 @@
-import { accent } from '@/lib/theme/accent';
-
 /**
  * Design tokens for the Overview tab. Tailwind utilities carry the UI; the hex
  * values exist only for SVG fills (Recharts cannot read utility classes).
+ *
+ * Color roles: neutral (default) · action (interactive only) · semantic (status).
  */
 
 export type OverviewTone = 'neutral' | 'ok' | 'warn' | 'urgent' | 'info';
@@ -21,23 +21,26 @@ export interface ToneClasses {
 export const TONE: Record<OverviewTone, ToneClasses> = {
   neutral: {
     badge: 'bg-slate-500/10 text-slate-600 ring-slate-500/15',
-    value: 'text-slate-900',
+    value: 'text-fg',
     pill: 'bg-slate-50 text-slate-600 ring-slate-200/70',
     fill: 'bg-slate-400',
   },
+  /** Success / approved — green, never action blue. */
   ok: {
-    badge:
-      'bg-[color:var(--erp-accent-light)] text-[color:var(--erp-accent-hover)] ring-[rgba(var(--erp-accent-rgb),0.22)]',
-    value: 'text-[color:var(--erp-accent-hover)]',
-    pill:
-      'bg-[color:var(--erp-accent-light)] text-[color:var(--erp-accent-hover)] ring-[rgba(var(--erp-accent-rgb),0.22)]',
-    fill: 'bg-[image:var(--gradient-primary)]',
+    badge: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/15',
+    value: 'text-emerald-700',
+    pill: 'bg-emerald-50 text-emerald-700 ring-emerald-200/70',
+    fill: 'bg-emerald-500',
   },
+  /**
+   * Decorative / informational chrome — same as neutral.
+   * Interactive CTAs use `text-action` / `bg-action-soft` directly.
+   */
   info: {
-    badge: 'bg-sky-500/10 text-sky-700 ring-sky-500/15',
-    value: 'text-sky-700',
-    pill: 'bg-sky-50 text-sky-700 ring-sky-200/70',
-    fill: 'bg-sky-500',
+    badge: 'bg-slate-500/10 text-slate-600 ring-slate-500/15',
+    value: 'text-fg',
+    pill: 'bg-slate-50 text-slate-600 ring-slate-200/70',
+    fill: 'bg-slate-400',
   },
   warn: {
     badge: 'bg-amber-500/10 text-amber-700 ring-amber-500/15',
@@ -45,6 +48,7 @@ export const TONE: Record<OverviewTone, ToneClasses> = {
     pill: 'bg-amber-50 text-amber-700 ring-amber-200/70',
     fill: 'bg-amber-500',
   },
+  /** Expired / rejected / error — red only. */
   urgent: {
     badge: 'bg-rose-500/10 text-rose-700 ring-rose-500/15',
     value: 'text-rose-700',
@@ -53,34 +57,43 @@ export const TONE: Record<OverviewTone, ToneClasses> = {
   },
 };
 
-/** Contract-expiry warning levels (soft → severe). */
+/**
+ * Contract-expiry urgency ramp (semantic only).
+ * Expired = red-700 · ≤30d = orange-500 · ≤60d = amber-400 · ≤90d = slate-300.
+ */
 export const CONTRACT_LEVEL_COLORS = {
-  within30: '#fb7185', // rose-400
+  within30: '#f97316', // orange-500
   within60: '#fbbf24', // amber-400
-  within90: '#fde047', // yellow-300
-  expired: '#b91c1c', // red-700 (muted)
+  within90: '#cbd5e1', // slate-300
+  expired: '#b91c1c', // red-700
 } as const;
 
-/** Donut palette for leave types (ordered by prominence). */
-export const LEAVE_PALETTE: readonly string[] = [
-  accent.primary, // brand blue
-  '#14b8a6', // teal-500 (sky is too close to brand blue)
+/**
+ * Categorical chart series — visibly distinct from `--action` (#1667C2).
+ * First hue is a muted slate-blue (#5B7C99), not the interactive action color.
+ */
+export const CHART_SERIES: readonly string[] = [
+  '#5B7C99', // muted slate-blue
+  '#14b8a6', // teal-500
   '#8b5cf6', // violet-500
   '#f59e0b', // amber-500
   '#f43f5e', // rose-500
-  accent.hover, // brand blue dark
-  '#5f6b66', // --erp-n-500
+  '#64748b', // slate-500
+  '#0d9488', // teal-600
 ];
+
+/** @deprecated Prefer {@link CHART_SERIES}. */
+export const LEAVE_PALETTE: readonly string[] = CHART_SERIES;
 
 export const CHART_TEXT = '#4a5651'; // --erp-n-600
 export const CHART_GRID = '#eff4f1'; // --erp-n-100
 
 /** Stacked overtime series (normal / evening / sunday / holiday). */
 export const OT_SERIES_COLORS = {
-  normal: accent.primary, // brand blue
-  evening: '#14b8a6', // teal-500
-  sunday: '#8b5cf6', // violet-500
-  holiday: '#f59e0b', // amber-500
+  normal: CHART_SERIES[0]!,
+  evening: CHART_SERIES[1]!,
+  sunday: CHART_SERIES[2]!,
+  holiday: CHART_SERIES[3]!,
 } as const;
 
-export const BAR_FILL = accent.primary; // brand — default single-series bar
+export const BAR_FILL = CHART_SERIES[0]!;

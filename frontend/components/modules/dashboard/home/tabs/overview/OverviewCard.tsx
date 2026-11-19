@@ -19,7 +19,7 @@ export default function OverviewCard({
   title,
   subtitle,
   icon,
-  tone = 'ok',
+  tone = 'neutral',
   viewAllHref,
   query,
   isEmpty = false,
@@ -32,6 +32,7 @@ export default function OverviewCard({
   title: string;
   subtitle?: string;
   icon: React.ReactNode;
+  /** Icon tile tone — decorative defaults to neutral. */
   tone?: OverviewTone;
   viewAllHref?: string;
   query: WidgetQueryState;
@@ -81,7 +82,7 @@ export default function OverviewCard({
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--color-card-border)] bg-white shadow-[var(--shadow-panel)] transition-all duration-200 hover:border-[rgba(var(--erp-accent-rgb),0.32)] hover:shadow-[0_2px_6px_rgba(20,29,25,0.05),0_12px_28px_rgba(var(--erp-accent-hover-rgb),0.11)] ${className}`.trim()}
+      className={`flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-panel)] transition-all duration-200 hover:border-slate-300 hover:shadow-[0_2px_6px_rgba(20,29,25,0.05),0_12px_28px_rgba(20,29,25,0.08)] ${className}`.trim()}
     >
       <header className="flex items-start gap-3 border-b border-slate-150 bg-[linear-gradient(180deg,#ffffff_0%,#fafdfc_100%)] px-5 py-4">
         <span
@@ -93,19 +94,19 @@ export default function OverviewCard({
         <div className="min-w-0 flex-1">
           <h2
             id={headingId}
-            className="m-0 truncate text-[15px] font-semibold leading-6 tracking-[-0.01em] text-[color:var(--color-text-heading)]"
+            className="m-0 truncate text-[15px] font-semibold leading-6 tracking-[-0.01em] text-fg"
           >
             {title}
           </h2>
           {subtitle ? (
-            <p className="m-0 mt-0.5 truncate text-xs text-slate-500">{subtitle}</p>
+            <p className="m-0 mt-0.5 truncate text-xs text-fg-muted">{subtitle}</p>
           ) : null}
         </div>
         {action}
         {viewAllHref ? (
           <Link
             href={viewAllHref}
-            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[rgba(var(--erp-accent-rgb),0.08)] px-2.5 py-1 text-xs font-semibold text-[color:var(--erp-accent-hover)] transition-colors hover:bg-[rgba(var(--erp-accent-rgb),0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--erp-accent)]"
+            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-action-soft px-2.5 py-1 text-xs font-semibold text-action transition-colors hover:bg-[color:var(--erp-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
           >
             {t(`${HOME}.viewAll`)}
             <span className="sr-only">{`: ${title}`}</span>

@@ -37,7 +37,7 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
         <OverviewStatCard
           index={0}
           icon={Users}
-          tone="info"
+          tone="neutral"
           valueTone="neutral"
           label={t(`${STATS}.headcount.total`)}
           value={formatCount(headcount?.total ?? 0, locale)}
@@ -47,8 +47,8 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
         <OverviewStatCard
           index={1}
           icon={CalendarDays}
-          tone={onLeave > 0 ? 'warn' : 'neutral'}
-          valueTone="neutral"
+          tone="neutral"
+          valueTone={onLeave > 0 ? 'warn' : 'neutral'}
           label={t(`${STATS}.headcount.onLeaveToday`)}
           value={formatCount(onLeave, locale)}
           badge={t(`${HOME}.overview.onLeaveHint`)}
@@ -57,8 +57,8 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
         <OverviewStatCard
           index={2}
           icon={UserPlus}
-          tone={newHires > 0 ? 'ok' : 'neutral'}
-          valueTone={newHires > 0 ? 'ok' : 'neutral'}
+          tone="neutral"
+          valueTone="neutral"
           label={t(`${STATS}.headcount.newThisMonth`)}
           value={formatCount(newHires, locale)}
           badge={
@@ -71,8 +71,9 @@ export default function OverviewTab({ enabled }: { enabled: boolean }): React.Re
         <OverviewStatCard
           index={3}
           icon={Inbox}
-          tone={pendingCompanyWide > 0 ? 'urgent' : 'neutral'}
-          valueTone={pendingCompanyWide > 0 ? 'urgent' : 'neutral'}
+          tone="neutral"
+          valueTone={pendingCompanyWide > 0 ? 'warn' : 'neutral'}
+          topAccent={pendingCompanyWide > 0 ? 'amber' : 'none'}
           label={t(`${HOME}.overview.pendingApprovals`)}
           value={formatCount(pendingCompanyWide, locale)}
           badge={t(`${HOME}.overview.pendingApprovalsHint`)}

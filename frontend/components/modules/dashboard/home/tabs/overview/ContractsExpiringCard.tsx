@@ -41,12 +41,12 @@ function initials(name: string): string {
 /** Deterministic soft tint for an avatar based on the name. */
 function avatarTint(name: string): string {
   const palette = [
+    'bg-slate-100 text-slate-700 ring-slate-200',
     'bg-emerald-50 text-emerald-700 ring-emerald-100',
-    'bg-sky-50 text-sky-700 ring-sky-100',
     'bg-violet-50 text-violet-700 ring-violet-100',
     'bg-amber-50 text-amber-700 ring-amber-100',
-    'bg-rose-50 text-rose-700 ring-rose-100',
     'bg-teal-50 text-teal-700 ring-teal-100',
+    'bg-stone-100 text-stone-700 ring-stone-200',
   ];
   let hash = 0;
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
@@ -129,7 +129,7 @@ export default function ContractsExpiringCard({
       title={t(`${HOME}.contracts.title`)}
       subtitle={t(`${HOME}.overview.contractsSubtitle`)}
       icon={<FileSignature size={18} strokeWidth={1.9} />}
-      tone={contracts && contracts.within30 > 0 ? 'urgent' : 'warn'}
+      tone="neutral"
       viewAllHref="/hr/employee-contract"
       query={query}
       isEmpty={isEmpty}

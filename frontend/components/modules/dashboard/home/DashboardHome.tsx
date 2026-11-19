@@ -256,9 +256,13 @@ function DashboardHomeInner({ enabled }: { enabled: boolean }): React.ReactNode 
               .filter((action) => action.visible)
               .map((action) => {
                 const Icon = action.icon;
+                const isPrimary = action.key === 'approvalsInbox';
                 return (
                   <li key={action.key}>
-                    <Link href={action.href} className="dv2-action">
+                    <Link
+                      href={action.href}
+                      className={`dv2-action${isPrimary ? ' dv2-action--primary' : ''}`}
+                    >
                       <span className="dv2-action-icon" aria-hidden>
                         <Icon size={18} strokeWidth={1.9} />
                       </span>

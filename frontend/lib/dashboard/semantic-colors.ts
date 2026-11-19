@@ -1,6 +1,7 @@
 /**
  * Dashboard semantic colors - one mapping used by KPI cards, charts, and alerts.
  * Do not introduce ad-hoc hex values for status elsewhere on the dashboard.
+ * Interactive accent goes through `tokens.colorAction` / CSS `--action` only.
  */
 import { tokens } from '@/lib/theme/tokens';
 
@@ -10,8 +11,9 @@ export const dashboardSemantic = {
   dangerBg: tokens.colorRed50,
   warning: tokens.colorAmber400,
   warningBg: tokens.colorAmber50,
-  accent: tokens.colorBlue400,
-  accentBg: tokens.colorBlue50,
+  /** @deprecated Use {@link tokens.colorAction} for interactive UI. */
+  accent: tokens.colorAction,
+  accentBg: tokens.colorActionSoft,
   success: tokens.colorGreen400,
   successStrong: tokens.colorGreen600,
   successBg: tokens.colorGreen50,
@@ -23,8 +25,8 @@ export const dashboardSemantic = {
 /** Status → semantic fill for categorical charts (issues, risks, projects). */
 export const STATUS_SEMANTIC_COLOR: Record<string, string> = {
   OPEN: dashboardSemantic.warning,
-  IN_PROGRESS: dashboardSemantic.accent,
-  MITIGATED: dashboardSemantic.accent,
+  IN_PROGRESS: tokens.colorBlue400, // muted slate-blue series hue, not --action
+  MITIGATED: tokens.colorBlue400,
   ACCEPTED: dashboardSemantic.neutralText,
   CLOSED: dashboardSemantic.success,
   NOT_STARTED: dashboardSemantic.neutral,
@@ -32,7 +34,7 @@ export const STATUS_SEMANTIC_COLOR: Record<string, string> = {
   COMPLETED: dashboardSemantic.success,
   CANCELLED: dashboardSemantic.danger,
   RAISED: dashboardSemantic.neutral,
-  ASSIGNED: dashboardSemantic.accent,
+  ASSIGNED: tokens.colorBlue400,
   CORRECTED: dashboardSemantic.warning,
   VERIFIED: dashboardSemantic.success,
   DRAFT: dashboardSemantic.neutral,
