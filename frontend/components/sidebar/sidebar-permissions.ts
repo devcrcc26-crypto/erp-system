@@ -1,6 +1,7 @@
 import type { Capabilities } from '@/lib/api/types';
 import { canViewGlobalNavKey } from '@/lib/navigation/project-nav-visibility';
 import type { SidebarPermission } from '@/components/sidebar/sidebar.config';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 
 export interface SidebarPermissionContext {
   /** Session capabilities from `/auth/capabilities`. */
@@ -92,8 +93,10 @@ export function resolveSidebarPermissions(
   // Other employees file and track their own via New Request and Approvals.
   const payTravelLists = team || caps.isSystemAdministrator;
   grant('expenseClaims.access', payTravelLists);
-  grant('perDiem.access', payTravelLists);
-  grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet - the /hr route guard requires hr.view.
+  // TODO: re-enable when per diem rates are seeded
+  grant('perDiem.access', PER_DIEM_UI_ENABLED && payTravelLists);
+  // No dedicated backend flags yet - the /hr route guard requires hr.view.
+  grant('perDiemRates.manage', PER_DIEM_UI_ENABLED && (hr || caps.canManageUsers));
   grant(
     'procurement.access',
     caps.canCreatePurchaseRequest || caps.canViewPurchaseRequest,

@@ -216,7 +216,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           'site-assignments',
           'evaluations',
           'expense-claims',
-          'per-diem',
+          // TODO: re-enable when per diem rates are seeded
+          // 'per-diem',
           'flight-applications',
           'business-trips',
           'vehicle-applications',
@@ -378,8 +379,9 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access', 'team.view'], keywords: ['ticket', 'air'] },
             { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access', 'team.view'], keywords: ['travel'] },
-            { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: ['perDiem.access'], keywords: ['allowance'] },
-            { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
+            // TODO: re-enable when per diem rates are seeded
+            // { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: ['perDiem.access'], keywords: ['allowance'] },
+            // { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
           ],
         },
       ],
@@ -508,7 +510,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.groups.payTravel',
           items: [
             guideTopic('expense-claims'),
-            guideTopic('per-diem'),
+            // TODO: re-enable when per diem rates are seeded
+            // guideTopic('per-diem'),
             guideTopic('flight'),
             guideTopic('business-trips'),
             guideTopic('payroll'),

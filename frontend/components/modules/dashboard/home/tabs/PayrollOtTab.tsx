@@ -10,6 +10,7 @@ import OtStackedBarChart from './overview/OtStackedBarChart';
 import PayrollStatusCard from './overview/PayrollStatusCard';
 import PerDiemCard from './overview/PerDiemCard';
 import { MetricStrip } from './TabParts';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 
 const HOME = 'pages.dashboard.home';
 const STATS = `${HOME}.stats`;
@@ -74,7 +75,8 @@ export default function PayrollOtTab({ enabled }: { enabled: boolean }): React.R
       </OverviewCard>
 
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
-        <PerDiemCard stats={stats} query={query} />
+        {/* TODO: re-enable when per diem rates are seeded */}
+        {PER_DIEM_UI_ENABLED ? <PerDiemCard stats={stats} query={query} /> : null}
         <PayrollStatusCard stats={stats} query={query} />
       </div>
     </div>

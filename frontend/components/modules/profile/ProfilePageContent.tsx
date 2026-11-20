@@ -32,6 +32,7 @@ import EmployeeSiteAssignmentsSection from '@/components/modules/hr/site-assignm
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePayslipsSection from '@/components/modules/hr/payroll/EmployeePayslipsSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
@@ -95,6 +96,12 @@ const PROFILE_TABS = [
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
+
+/** Tabs shown in the profile tab bar (Per Diem hidden until rates are seeded). */
+// TODO: re-enable when per diem rates are seeded
+const VISIBLE_PROFILE_TABS: readonly ProfileTab[] = PROFILE_TABS.filter(
+  (tab) => PER_DIEM_UI_ENABLED || tab !== 'perDiem',
+);
 
 const PERIOD_FILTER_TABS: ReadonlySet<ProfileTab> = new Set([
   'leave',
@@ -162,7 +169,8 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const tabFromUrl = searchParams.get('tab');
   const initialTab: ProfileTab =
-    tabFromUrl && (PROFILE_TABS as readonly string[]).includes(tabFromUrl)
+    tabFromUrl &&
+    (VISIBLE_PROFILE_TABS as readonly string[]).includes(tabFromUrl)
       ? (tabFromUrl as ProfileTab)
       : 'account';
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -294,22 +302,23 @@ export default function ProfilePageContent(): React.ReactNode {
 
   /** WAI-ARIA tabs: arrows / Home / End move focus and select. */
   function handleTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
-    const index = PROFILE_TABS.indexOf(activeTab);
+    const index = VISIBLE_PROFILE_TABS.indexOf(activeTab);
     let next: number | null = null;
     if (event.key === 'ArrowRight') {
-      next = (index + 1) % PROFILE_TABS.length;
+      next = (index + 1) % VISIBLE_PROFILE_TABS.length;
     } else if (event.key === 'ArrowLeft') {
-      next = (index - 1 + PROFILE_TABS.length) % PROFILE_TABS.length;
+      next =
+        (index - 1 + VISIBLE_PROFILE_TABS.length) % VISIBLE_PROFILE_TABS.length;
     } else if (event.key === 'Home') {
       next = 0;
     } else if (event.key === 'End') {
-      next = PROFILE_TABS.length - 1;
+      next = VISIBLE_PROFILE_TABS.length - 1;
     }
     if (next === null) {
       return;
     }
     event.preventDefault();
-    const tab = PROFILE_TABS[next];
+    const tab = VISIBLE_PROFILE_TABS[next];
     setActiveTab(tab);
     tabRefs.current[tab]?.focus();
   }
@@ -894,7 +903,7 @@ export default function ProfilePageContent(): React.ReactNode {
           aria-label={t('profile.title')}
           onKeyDown={handleTabKeyDown}
         >
-          {PROFILE_TABS.map((tab) => (
+          {VISIBLE_PROFILE_TABS.map((tab) => (
             <button
               key={tab}
               ref={(element) => {

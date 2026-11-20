@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 import { useDashboardOperationalStats } from '@/lib/query/dashboard';
 import WidgetCard, { WidgetFigure, type WidgetSpan } from './WidgetCard';
 import { formatCount } from './format';
@@ -565,7 +566,10 @@ export default function OperationalStatsWidgets({
       <OvertimeStatsCard enabled={enabled} span={6} />
       <LeaveStatsCard enabled={enabled} span={6} />
       <SiteAssignmentsStatsCard enabled={enabled} span={6} />
-      <PerDiemStatsCard enabled={enabled} span={showSite ? 6 : 12} />
+      {/* TODO: re-enable when per diem rates are seeded */}
+      {PER_DIEM_UI_ENABLED ? (
+        <PerDiemStatsCard enabled={enabled} span={showSite ? 6 : 12} />
+      ) : null}
 
       {showContracts ? (
         <WidgetCard

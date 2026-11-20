@@ -24,6 +24,7 @@ import {
   useCanCreateOvertime,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import {
@@ -225,7 +226,11 @@ function DashboardHomeInner({ enabled }: { enabled: boolean }): React.ReactNode 
       key: 'newPerDiem',
       href: '/approvals/new/per-diem',
       icon: Wallet,
-      visible: categoryCodes !== null && categoryCodes.has('PER_DIEM'),
+      // TODO: re-enable when per diem rates are seeded
+      visible:
+        PER_DIEM_UI_ENABLED &&
+        categoryCodes !== null &&
+        categoryCodes.has('PER_DIEM'),
     },
     {
       key: 'newFlight',

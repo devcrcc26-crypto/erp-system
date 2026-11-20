@@ -71,6 +71,7 @@ import {
   useCanViewTeam,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 import EmployeeContractsSection from '@/components/modules/hr/employee-contract/EmployeeContractsSection';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatRoleDisplayName } from '@/lib/utils/role-colors';
@@ -323,7 +324,9 @@ export default function EmployeeDetailPageContent({
     onContractPeriodChange: contractPeriod.setSelectedId,
     hidePeriodControl: true as const,
   };
-  const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
+  // TODO: re-enable when per diem rates are seeded
+  const showPerDiemTab =
+    PER_DIEM_UI_ENABLED && (isOwnProfile || canManagePerDiemRates);
   const showPayrollTab = isOwnProfile || canCreatePayroll;
   // Read-only contracts for HR and the employee's supervisors.
   const showContractsTab = canViewTeam && !isOwnProfile;

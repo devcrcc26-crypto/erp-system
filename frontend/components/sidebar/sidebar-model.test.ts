@@ -235,13 +235,14 @@ describe('sidebar permissions and filtering', () => {
         'site-assignments',
         'evaluations',
         'expense-claims',
-        'per-diem',
+        // TODO: re-enable when per diem rates are seeded — 'per-diem' returns then
         'flight-applications',
         'business-trips',
         'vehicle-applications',
         'exit-permit',
       ]),
     );
+    expect(links).not.toContain('per-diem');
     // Team lists only - never HR admin pages, payroll or the full Users list.
     for (const hrOnly of [
       'users',
@@ -268,7 +269,7 @@ describe('sidebar permissions and filtering', () => {
     expect(hrManager).not.toContain('my-team');
   });
 
-  it('grants the expense claim and per diem lists to HR, admins and supervisors only', () => {
+  it('grants the expense claim list to HR, admins and supervisors only', () => {
     const permissions = (overrides: Partial<Capabilities>) =>
       resolveSidebarPermissions({
         capabilities: capabilities(overrides),
@@ -276,6 +277,7 @@ describe('sidebar permissions and filtering', () => {
         hasProjectAdministratorRole: false,
       });
     expect(permissions({}).has('expenseClaims.access')).toBe(false);
+    // TODO: re-enable when per diem rates are seeded
     expect(permissions({}).has('perDiem.access')).toBe(false);
     for (const caps of [
       { canViewHr: true },
@@ -283,7 +285,8 @@ describe('sidebar permissions and filtering', () => {
       { hasDirectReports: true },
     ]) {
       expect(permissions(caps).has('expenseClaims.access')).toBe(true);
-      expect(permissions(caps).has('perDiem.access')).toBe(true);
+      // TODO: re-enable when per diem rates are seeded
+      expect(permissions(caps).has('perDiem.access')).toBe(false);
     }
     expect(permissions({ hasDirectReports: true }).has('team.view')).toBe(true);
     expect(permissions({}).has('team.view')).toBe(false);
@@ -391,7 +394,8 @@ describe('active link resolution', () => {
     expect(resolveActiveLink('/hr/leave-history/me', links)?.link.id).toBe(
       'my-profile',
     );
-    expect(resolveActiveLink('/hr/per-diem/9', links)?.folderId).toBe('finance');
+    // TODO: re-enable when per diem rates are seeded — was /hr/per-diem/9
+    expect(resolveActiveLink('/hr/expense-claims/9', links)?.folderId).toBe('finance');
     expect(resolveActiveLink('/hr/work-from-home', links)?.link.id).toBe(
       'work-from-home',
     );

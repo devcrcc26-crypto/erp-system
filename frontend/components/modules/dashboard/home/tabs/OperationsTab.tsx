@@ -8,6 +8,7 @@ import LeaveSummaryCard from './overview/LeaveSummaryCard';
 import OvertimeOpsCard from './overview/OvertimeOpsCard';
 import PerDiemCard from './overview/PerDiemCard';
 import SiteAssignmentsCard from './overview/SiteAssignmentsCard';
+import { PER_DIEM_UI_ENABLED } from '@/lib/features/per-diem-ui';
 
 /**
  * HR "Operations": announcements plus the operational cards. Contracts are
@@ -30,7 +31,8 @@ export default function OperationsTab({ enabled }: { enabled: boolean }): React.
         <OvertimeOpsCard stats={stats} query={query} />
         <LeaveSummaryCard stats={stats} query={query} />
         {showSite ? <SiteAssignmentsCard stats={stats} query={query} /> : null}
-        <PerDiemCard stats={stats} query={query} />
+        {/* TODO: re-enable when per diem rates are seeded */}
+        {PER_DIEM_UI_ENABLED ? <PerDiemCard stats={stats} query={query} /> : null}
       </div>
     </div>
   );

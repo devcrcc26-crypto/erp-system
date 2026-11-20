@@ -31,6 +31,10 @@ import {
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  isPerDiemCategoryCode,
+  PER_DIEM_UI_ENABLED,
+} from '@/lib/features/per-diem-ui';
 import NewRequestCategoryPicker from './NewRequestCategoryPicker';
 
 const PAGE_ROOT =
@@ -169,7 +173,9 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   const categories = (categoriesQuery.data ?? []).filter(
     (category) =>
       category.isUserRequestable !== false &&
-      (category.code !== 'PURCHASE_REQUEST' || canCreatePurchaseRequest),
+      (category.code !== 'PURCHASE_REQUEST' || canCreatePurchaseRequest) &&
+      // TODO: re-enable when per diem rates are seeded
+      (PER_DIEM_UI_ENABLED || !isPerDiemCategoryCode(category.code)),
   );
 
   if (!selectedCategory) {

@@ -49,12 +49,13 @@ export const HELP_MODULES: readonly HelpModule[] = [
     titleZh: '现场派驻',
     roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
   },
-  {
-    slug: 'per-diem',
-    titleEn: 'Per Diem',
-    titleZh: '差旅补贴',
-    roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
-  },
+  // TODO: re-enable when per diem rates are seeded
+  // {
+  //   slug: 'per-diem',
+  //   titleEn: 'Per Diem',
+  //   titleZh: '差旅补贴',
+  //   roles: ['HR', 'SUPERVISOR', 'EMPLOYEE'],
+  // },
   {
     slug: 'flight',
     titleEn: 'Flight Applications',
