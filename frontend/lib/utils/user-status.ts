@@ -1,16 +1,28 @@
 import type { User } from '@/lib/api/types';
 
-export function userStatusVariant(user: User): 'default' | 'warning' | 'success' {
+/** True when the account has a sign-in path (email invite or login name). */
+function hasLoginPath(user: User): boolean {
+  return Boolean(user.email?.trim() || user.loginName?.trim());
+}
+
+/**
+ * Account-access status for the users list and employee detail.
+ * Active means the person has signed in at least once — adding an email alone
+ * does not count.
+ */
+export function userStatusVariant(
+  user: User,
+): 'default' | 'warning' | 'success' {
   if (!user.isActive) {
     return 'default';
   }
-  if (!user.email) {
+  if (user.lastLogin) {
+    return 'success';
+  }
+  if (!hasLoginPath(user)) {
     return 'default';
   }
-  if (!user.emailVerifiedAt) {
-    return 'warning';
-  }
-  return 'success';
+  return 'warning';
 }
 
 export function userStatusLabel(
@@ -20,11 +32,16 @@ export function userStatusLabel(
   if (!user.isActive) {
     return t('users.statusInactive');
   }
-  if (!user.email) {
+  if (user.lastLogin) {
+    return t('users.statusActive');
+  }
+  if (!hasLoginPath(user)) {
     return t('users.statusNoLogin');
   }
-  if (!user.emailVerifiedAt) {
-    return t('users.statusPending');
-  }
-  return t('users.statusActive');
+  return t('users.statusPending');
+}
+
+/** Active account that can sign in but has never logged in. */
+export function isPendingFirstLogin(user: User): boolean {
+  return Boolean(user.isActive && !user.lastLogin && hasLoginPath(user));
 }

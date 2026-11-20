@@ -132,10 +132,6 @@ function formatUserRoleNames(user: User): string {
 }
 
 
-function isPendingActivation(user: User): boolean {
-  return Boolean(user.isActive && user.email && !user.emailVerifiedAt);
-}
-
 function UserListAvatar({ user }: { user: User }): React.ReactNode {
   const photoQuery = useUserPhotoUrl(user.id, user.photoDocumentId);
   const initials = userInitials(user.firstName, user.lastName);
@@ -410,10 +406,12 @@ export default function UsersPageContent(): React.ReactNode {
     for (const user of scoped) {
       if (!user.isActive) {
         inactiveCount += 1;
-      } else if (isPendingActivation(user)) {
-        pendingCount += 1;
-      } else {
+      } else if (user.lastLogin) {
+        // Active only after the employee has signed in at least once.
         activeCount += 1;
+      } else {
+        // Pending first login, or record-only (no login path yet).
+        pendingCount += 1;
       }
     }
     return {
