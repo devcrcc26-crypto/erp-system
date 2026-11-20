@@ -44,6 +44,7 @@ import {
   resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 import { CategoryIcon } from '@/components/modules/approvals/request-category-visuals';
 
@@ -191,6 +192,28 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   const balanceYearLabel =
     selectedBalance?.year ?? balancesQuery.data?.[0]?.year;
+
+  const leaveYearCycle = useMemo(() => {
+    const start =
+      selectedBalance?.leaveYearStart ??
+      balancesQuery.data?.[0]?.leaveYearStart;
+    const end =
+      selectedBalance?.leaveYearEnd ?? balancesQuery.data?.[0]?.leaveYearEnd;
+    if (!start || !end) {
+      return null;
+    }
+    return { start, end };
+  }, [balancesQuery.data, selectedBalance]);
+
+  const spansLeaveAnniversary = useMemo(() => {
+    if (!leaveYearCycle || !coverageSpan) {
+      return false;
+    }
+    return (
+      coverageSpan.from < leaveYearCycle.start ||
+      coverageSpan.to > leaveYearCycle.end
+    );
+  }, [coverageSpan, leaveYearCycle]);
 
   useEffect(() => {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
@@ -454,45 +477,63 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     const showPendingTile = !showProjection && pendingNow > 0;
 
     return (
-      <div className="erp-leave-form-balance-tiles">
-        <div className="erp-leave-form-balance-tile erp-leave-form-balance-tile--primary">
-          <p className="erp-leave-fact-label">
-            {showProjection
-              ? t('hr.form.remainingAfter')
-              : t('hr.labels.remaining')}
-          </p>
-          <p className="erp-leave-fact-value">{remainingDisplay}</p>
-        </div>
-        <div className="erp-leave-form-balance-tile">
-          <p className="erp-leave-fact-label">
-            {showProjection || pendingNow > 0
-              ? t('hr.form.usedIncludingPending')
-              : t('hr.labels.used')}
-          </p>
-          <p className="erp-leave-fact-value">{committedDisplay}</p>
-          {showProjection || pendingNow > 0 ? (
-            <p className="erp-users-cell-sub m-0 mt-0.5">
-              {t('hr.leave.usedPending', {
-                used: usedApproved,
-                pending: showProjection ? pendingDisplay : pendingNow,
-              })}
+      <div className="flex flex-col gap-2">
+        <div className="erp-leave-form-balance-tiles">
+          <div className="erp-leave-form-balance-tile erp-leave-form-balance-tile--primary">
+            <p className="erp-leave-fact-label">
+              {showProjection
+                ? t('hr.form.remainingAfter')
+                : t('hr.labels.available')}
             </p>
-          ) : null}
+            <p className="erp-leave-fact-value">{remainingDisplay}</p>
+          </div>
+          <div className="erp-leave-form-balance-tile">
+            <p className="erp-leave-fact-label">
+              {showProjection || pendingNow > 0
+                ? t('hr.form.usedIncludingPending')
+                : t('hr.labels.used')}
+            </p>
+            <p className="erp-leave-fact-value">{committedDisplay}</p>
+            {showProjection || pendingNow > 0 ? (
+              <p className="erp-users-cell-sub m-0 mt-0.5">
+                {t('hr.leave.usedPending', {
+                  used: usedApproved,
+                  pending: showProjection ? pendingDisplay : pendingNow,
+                })}
+              </p>
+            ) : null}
+          </div>
+          <div className="erp-leave-form-balance-tile">
+            <p className="erp-leave-fact-label">{t('hr.labels.entitlement')}</p>
+            <p className="erp-leave-fact-value">{entitled}</p>
+          </div>
+          <div className="erp-leave-form-balance-tile">
+            <p className="erp-leave-fact-label">
+              {showPendingTile
+                ? t('hr.labels.pending')
+                : t('hr.labels.broughtForward')}
+            </p>
+            <p className="erp-leave-fact-value">
+              {showPendingTile ? pendingNow : broughtForward}
+            </p>
+          </div>
         </div>
-        <div className="erp-leave-form-balance-tile">
-          <p className="erp-leave-fact-label">{t('hr.labels.entitled')}</p>
-          <p className="erp-leave-fact-value">{entitled}</p>
-        </div>
-        <div className="erp-leave-form-balance-tile">
-          <p className="erp-leave-fact-label">
-            {showPendingTile
-              ? t('hr.labels.pending')
-              : t('hr.labels.broughtForward')}
+        {leaveYearCycle ? (
+          <p className="erp-users-cell-sub m-0">
+            {t('hr.leave.leaveYearRange', {
+              start: formatProjectDate(leaveYearCycle.start),
+              end: formatProjectDate(leaveYearCycle.end),
+            })}
           </p>
-          <p className="erp-leave-fact-value">
-            {showPendingTile ? pendingNow : broughtForward}
-          </p>
-        </div>
+        ) : null}
+        {spansLeaveAnniversary ? (
+          <Alert
+            type="info"
+            showIcon
+            className="mt-1"
+            title={t('hr.form.leaveSpansAnniversary')}
+          />
+        ) : null}
       </div>
     );
   }
@@ -735,6 +776,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       preview,
       previewError,
       sickRequiresReceipt,
+      leaveYearCycle,
+      spansLeaveAnniversary,
     ],
   );
 

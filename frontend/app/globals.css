@@ -3139,6 +3139,43 @@ main::-webkit-scrollbar,
   gap: 8px;
 }
 
+.erp-leave-balance-year {
+  font-size: calc(13px * var(--erp-font-scale));
+  color: var(--erp-n-500);
+}
+
+.erp-leave-balance-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.erp-leave-balance-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.erp-leave-balance-fact-label {
+  font-size: calc(11px * var(--erp-font-scale));
+  color: var(--erp-n-400);
+  line-height: 1.2;
+}
+
+.erp-leave-balance-fact-value {
+  font-size: calc(15px * var(--erp-font-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--erp-n-800);
+  line-height: 1.2;
+}
+
+.erp-leave-balance-fact-value--emphasis {
+  font-size: calc(20px * var(--erp-font-scale));
+  font-weight: 700;
+}
+
 .erp-leave-balance-dot {
   width: 8px;
   height: 8px;

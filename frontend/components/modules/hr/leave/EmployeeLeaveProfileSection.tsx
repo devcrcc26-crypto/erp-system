@@ -24,8 +24,6 @@ import {
   useMyLeaveBalances,
   useMyLeaveRequestsAll,
 } from '@/lib/query/leave';
-import { useCurrentUser } from '@/lib/query/profile';
-import { leaveBalanceTypesForGender } from '@/lib/utils/leave-balance-access';
 import {
   leaveDaysInContractPeriod,
   requestOverlapsContractPeriod,
@@ -71,13 +69,6 @@ const BALANCE_ACCENT: Record<string, string> = {
   SICK: '#2563eb',
 };
 
-function pickBalance(
-  balances: LeaveBalance[],
-  leaveType: LeaveType,
-): LeaveBalance | null {
-  return balances.find((row) => row.leaveType === leaveType) ?? null;
-}
-
 function LeaveProfileSection({
   title,
   action,
@@ -102,6 +93,32 @@ function LeaveProfileSection({
   );
 }
 
+function BalanceFact({
+  label,
+  value,
+  emphasize = false,
+  accentColor,
+}: {
+  label: string;
+  value: number;
+  emphasize?: boolean;
+  accentColor?: string;
+}): React.ReactNode {
+  return (
+    <div className="erp-leave-balance-fact">
+      <span className="erp-leave-balance-fact-label">{label}</span>
+      <span
+        className={`erp-leave-balance-fact-value${
+          emphasize ? ' erp-leave-balance-fact-value--emphasis' : ''
+        }`}
+        style={emphasize && accentColor ? { color: accentColor } : undefined}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function BalanceTile({
   leaveType,
   label,
@@ -109,44 +126,43 @@ function BalanceTile({
 }: {
   leaveType: LeaveType;
   label: string;
-  balance: LeaveBalance | null;
+  balance: LeaveBalance;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const accent = BALANCE_ACCENT[leaveType] ?? '#64748b';
-  const remaining = balance?.remaining ?? 0;
-  const isLow = balance != null && remaining <= LOW_BALANCE_THRESHOLD;
+  const accentColor = BALANCE_ACCENT[leaveType] ?? '#64748b';
+  const remaining = balance.remaining;
+  const isLow = remaining <= LOW_BALANCE_THRESHOLD;
 
   return (
-    <article className="erp-leave-balance-card">
+    <article
+      className={`erp-leave-balance-card${isLow ? ' erp-leave-balance-card--low' : ''}`}
+    >
       <div className="erp-leave-balance-card-head">
         <span
           className="erp-leave-balance-dot"
-          style={{ background: accent }}
+          style={{ background: accentColor }}
           aria-hidden
         />
         <p className="erp-leave-balance-label">{label}</p>
       </div>
-      <p className="erp-leave-balance-value">
-        <span
-          className="erp-leave-balance-remaining"
-          style={{ color: isLow ? '#b42318' : accent }}
-        >
-          {balance != null ? remaining : '—'}
-        </span>
-        {balance != null ? (
-          <span className="erp-leave-balance-unit">
-            {t('hr.leave.daysRemaining')}
-          </span>
-        ) : null}
-      </p>
-      <p className="erp-leave-balance-meta">
-        {balance == null
-          ? t('hr.leave.noBalance')
-          : t('hr.leave.usedPending', {
-              used: balance.used,
-              pending: balance.pending,
-            })}
-      </p>
+      <div className="erp-leave-balance-facts">
+        <BalanceFact
+          label={t('hr.labels.broughtForward')}
+          value={balance.broughtForward}
+        />
+        <BalanceFact
+          label={t('hr.labels.entitlement')}
+          value={balance.entitled}
+        />
+        <BalanceFact label={t('hr.labels.used')} value={balance.used} />
+        <BalanceFact label={t('hr.labels.pending')} value={balance.pending} />
+        <BalanceFact
+          label={t('hr.labels.available')}
+          value={remaining}
+          emphasize
+          accentColor={isLow ? '#b42318' : accentColor}
+        />
+      </div>
     </article>
   );
 }
@@ -168,7 +184,6 @@ export default function EmployeeLeaveProfileSection({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
-  const currentUser = useCurrentUser();
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
@@ -227,34 +242,29 @@ export default function EmployeeLeaveProfileSection({
     ? myHistoryQuery.error
     : employeeHistoryQuery.error;
 
+  // Only show leave types that already have a LeaveBalance record.
   const displayBalances = useMemo((): Array<{
     leaveType: LeaveType;
-    balance: LeaveBalance | null;
+    balance: LeaveBalance;
   }> => {
-    const rows = balancesQuery.data ?? [];
-    const types = leaveBalanceTypesForGender(
-      isSelf ? currentUser.data?.gender : undefined,
-    );
-    let displayTypes = types as Array<
-      'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY'
-    >;
-    if (
-      !displayTypes.includes('MATERNITY') &&
-      rows.some((row) => row.leaveType === 'MATERNITY')
-    ) {
-      displayTypes = [...displayTypes, 'MATERNITY'];
-    }
-    if (
-      !displayTypes.includes('PATERNITY') &&
-      rows.some((row) => row.leaveType === 'PATERNITY')
-    ) {
-      displayTypes = [...displayTypes, 'PATERNITY'];
-    }
-    return displayTypes.map((leaveType) => ({
-      leaveType,
-      balance: pickBalance(rows, leaveType),
+    return (balancesQuery.data ?? []).map((balance) => ({
+      leaveType: balance.leaveType,
+      balance,
     }));
-  }, [balancesQuery.data, isSelf, currentUser.data?.gender]);
+  }, [balancesQuery.data]);
+
+  const leaveYearRange = useMemo(() => {
+    const withDates = displayBalances.find(
+      (row) => row.balance.leaveYearStart && row.balance.leaveYearEnd,
+    );
+    if (!withDates?.balance.leaveYearStart || !withDates.balance.leaveYearEnd) {
+      return null;
+    }
+    return {
+      start: withDates.balance.leaveYearStart,
+      end: withDates.balance.leaveYearEnd,
+    };
+  }, [displayBalances]);
 
   const allHistory = useMemo(() => {
     const rows = isSelf
@@ -444,16 +454,28 @@ export default function EmployeeLeaveProfileSection({
             showIcon
             title={t('hr.leave.noContractPeriods')}
           />
+        ) : displayBalances.length === 0 ? (
+          <Alert type="info" showIcon title={t('hr.leave.noBalance')} />
         ) : (
-          <div className="erp-leave-balance-grid">
-            {displayBalances.map(({ leaveType, balance }) => (
-              <BalanceTile
-                key={leaveType}
-                leaveType={leaveType}
-                label={formatLeaveType(leaveType, t)}
-                balance={balance}
-              />
-            ))}
+          <div className="flex flex-col gap-3">
+            {leaveYearRange ? (
+              <p className="erp-leave-balance-year m-0">
+                {t('hr.leave.leaveYearRange', {
+                  start: formatProjectDate(leaveYearRange.start),
+                  end: formatProjectDate(leaveYearRange.end),
+                })}
+              </p>
+            ) : null}
+            <div className="erp-leave-balance-grid">
+              {displayBalances.map(({ leaveType, balance }) => (
+                <BalanceTile
+                  key={leaveType}
+                  leaveType={leaveType}
+                  label={formatLeaveType(leaveType, t)}
+                  balance={balance}
+                />
+              ))}
+            </div>
           </div>
         )}
       </LeaveProfileSection>
