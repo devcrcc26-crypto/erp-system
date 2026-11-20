@@ -103,14 +103,15 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @MaxLength(2000)
   notes?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      'Employee-entered daily rate for this trip. Seeded rate tables are not used for auto-fill.',
+      'Employee-entered daily rate when no active company rate exists for the destination category. Ignored when a seeded company rate applies.',
     example: 500,
   })
+  @IsOptional()
   @IsNumber()
   @Min(0.01)
-  dailyRate!: number;
+  dailyRate?: number;
 
   @ApiPropertyOptional({
     enum: SupportedCurrency,
