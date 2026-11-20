@@ -127,38 +127,28 @@ async function fetchAllLeaveRequestPages(
 
 /**
  * Loads every page of company leave balances for a year.
+ * Pages are fetched sequentially so we do not stampede the API/DB pool.
  */
 async function fetchAllLeaveBalancePages(
   params: Omit<ListLeaveBalancesParams, 'page' | 'limit' | 'search'>,
 ): Promise<EmployeeLeaveBalanceSummary[]> {
-  const first = await apiGetPaginated<EmployeeLeaveBalanceSummary>(
-    `${LEAVE_PATH}/balances${toQueryString({
-      ...params,
-      page: 1,
-      limit: FETCH_PAGE_SIZE,
-    })}`,
-  );
-  const all = [...first.data];
-  const pages = first.meta.pages;
-  if (pages <= 1) {
-    return all;
-  }
+  const all: EmployeeLeaveBalanceSummary[] = [];
+  let page = 1;
+  let pages = 1;
 
-  const rest = await Promise.all(
-    Array.from({ length: pages - 1 }, (_, index) =>
-      apiGetPaginated<EmployeeLeaveBalanceSummary>(
-        `${LEAVE_PATH}/balances${toQueryString({
-          ...params,
-          page: index + 2,
-          limit: FETCH_PAGE_SIZE,
-        })}`,
-      ),
-    ),
-  );
+  do {
+    const result = await apiGetPaginated<EmployeeLeaveBalanceSummary>(
+      `${LEAVE_PATH}/balances${toQueryString({
+        ...params,
+        page,
+        limit: FETCH_PAGE_SIZE,
+      })}`,
+    );
+    all.push(...result.data);
+    pages = result.meta.pages;
+    page += 1;
+  } while (page <= pages);
 
-  for (const page of rest) {
-    all.push(...page.data);
-  }
   return all;
 }
 

@@ -182,15 +182,23 @@ export class LeaveBalanceService {
       return buildPaginatedResult([], total, page, limit);
     }
 
-    // One ensure + one batched cache read per page - not 3× getLeaveBalance
-    // per employee (that exhausted the Postgres pool / reset connections).
+    // Read-only list: do not call ensureLeaveYear here. That path opens the
+    // leave year and upserts every LeaveType cache row per employee, which
+    // stalled the HR Balances tab (especially for System Admin, who always
+    // reaches this company-wide endpoint). Lazy ensure stays on single-
+    // employee reads / submit / cron.
     const yearByEmployee = new Map<string, number>();
-    for (const employee of employees) {
-      const resolved =
-        query.year ??
-        (await this.leaveLedger.currentYearLabel(employee.id, companyId));
-      yearByEmployee.set(employee.id, resolved);
-      await this.ensureBalance(employee.id, resolved, companyId);
+    if (query.year != null) {
+      for (const employee of employees) {
+        yearByEmployee.set(employee.id, query.year);
+      }
+    } else {
+      for (const employee of employees) {
+        yearByEmployee.set(
+          employee.id,
+          await this.leaveLedger.currentYearLabel(employee.id, companyId),
+        );
+      }
     }
 
     const balanceRows = await this.prisma.leaveBalance.findMany({
@@ -200,7 +208,7 @@ export class LeaveBalanceService {
           employeeId: employee.id,
           year: yearByEmployee.get(employee.id)!,
         })),
-        leaveType: { in: OWN_BALANCE_LEAVE_TYPES },
+        leaveType: { in: [...OWN_BALANCE_LEAVE_TYPES] },
       },
     });
 
