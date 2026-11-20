@@ -116,6 +116,11 @@ export interface PerDiemRequestListItem {
 export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   /** True when the caller may record a cash disbursement for this request. */
   canDisburse?: boolean;
+  /**
+   * COMPANY = matched seeded EmployeePerDiemRate; EMPLOYEE = entered on form.
+   */
+  rateSource?: 'COMPANY' | 'EMPLOYEE';
+  employeePerDiemRateId?: string | null;
   notes?: string | null;
   requestedDailyRate?: string | null;
   rateOverrideReason?: string | null;

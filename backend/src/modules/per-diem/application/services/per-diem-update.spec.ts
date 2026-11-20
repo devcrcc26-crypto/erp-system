@@ -91,6 +91,8 @@ describe('PerDiemService.updateRequest', () => {
         siteAssignmentId: null,
         dailyRate: 500,
         currency: 'ETB',
+        employeePerDiemRateId: null,
+        rateSource: 'EMPLOYEE',
         totalAmount: 1500,
         exchangeRate: 1,
         totalAmountEtb: 1500,

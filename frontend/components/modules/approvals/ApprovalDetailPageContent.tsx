@@ -636,6 +636,9 @@ export default function ApprovalDetailPageContent({
     ? Number(perDiemDetail.requestedDailyRate ?? perDiemDetail.dailyRate)
     : 0;
   const perDiemCurrency = perDiemDetail?.currency ?? 'ETB';
+  const perDiemRateSource =
+    perDiemDetail?.rateSource ??
+    (perDiemDetail?.employeePerDiemRateId ? 'COMPANY' : 'EMPLOYEE');
   const perDiemRateField =
     isPerDiem && perDiemDetail ? (
       <div className="erp-confirm-dialog-field" style={{ marginBottom: 12 }}>
@@ -658,10 +661,20 @@ export default function ApprovalDetailPageContent({
               </p>
             </div>
             <div>
+              <p className="erp-users-cell-sub m-0">
+                {t('pages.approvals.dialog.perDiem.rateSource')}
+              </p>
+              <p className="m-0 font-semibold">
+                {perDiemRateSource === 'COMPANY'
+                  ? t('hr.perDiem.rateSourceCompany')
+                  : t('hr.perDiem.rateSourceEmployee')}
+              </p>
+            </div>
+            <div>
               <p className="erp-users-cell-sub m-0">{t('pages.approvals.dialog.perDiem.days')}</p>
               <p className="m-0 font-semibold">{perDiemDetail.days}</p>
             </div>
-            <div className="col-span-2">
+            <div>
               <p className="erp-users-cell-sub m-0">
                 {t('hr.form.totalAmount')}
               </p>
@@ -673,9 +686,11 @@ export default function ApprovalDetailPageContent({
               </p>
             </div>
           </div>
-          <p className="erp-users-cell-sub m-0 mt-3">
-            {t('pages.approvals.dialog.perDiem.rejectHint')}
-          </p>
+          {perDiemRateSource === 'EMPLOYEE' ? (
+            <p className="erp-users-cell-sub m-0 mt-3">
+              {t('pages.approvals.dialog.perDiem.rejectHint')}
+            </p>
+          ) : null}
         </div>
         <p className="erp-confirm-dialog-field-label">
           {t('pages.approvals.dialog.perDiem.ratePerDay')}{' '}

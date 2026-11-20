@@ -28,6 +28,7 @@ import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
 import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useFlightApplications } from '@/lib/query/flight';
 import {
+  useActiveEmployeePerDiemCategories,
   useSubmitPerDiemRequest,
   useUpdatePerDiemRequest,
 } from '@/lib/query/per-diem';
@@ -139,6 +140,10 @@ export default function PerDiemRequestForm({
   );
   const updateMutation = useUpdatePerDiemRequest(initialRecord?.id ?? '');
 
+  const ratesQuery = useActiveEmployeePerDiemCategories(
+    onBehalf.effectiveEmployeeId,
+    Boolean(onBehalf.effectiveEmployeeId),
+  );
   const flightsQuery = useFlightApplications(
     { status: 'APPROVED', limit: 50 },
     true,
@@ -153,16 +158,39 @@ export default function PerDiemRequestForm({
   const formValues = Form.useWatch([], form) as PerDiemFormValues | undefined;
   const tripType = formValues?.tripType ?? 'TRAVEL';
   const isSiteDeployment = tripType === 'SITE_DEPLOYMENT';
-  const destinationCategory = formValues?.destinationCategory;
+  const destinationCategory = isSiteDeployment
+    ? 'Domestic'
+    : formValues?.destinationCategory;
   const dateRange = formValues?.dateRange;
+
+  const companyRate = useMemo(
+    () =>
+      (ratesQuery.data ?? []).find(
+        (entry) => entry.destinationCategory === destinationCategory,
+      ) ?? null,
+    [ratesQuery.data, destinationCategory],
+  );
+  const hasCompanyRate = companyRate != null;
 
   useEffect(() => {
     if (isSiteDeployment) {
       form.setFieldValue('linkedTravel', undefined);
+      form.setFieldValue('destinationCategory', 'Domestic');
     } else {
       form.setFieldValue('siteAssignmentId', undefined);
     }
   }, [form, isSiteDeployment]);
+
+  // When a seeded company rate matches, lock the form to that amount/currency.
+  useEffect(() => {
+    if (!companyRate) {
+      return;
+    }
+    form.setFieldsValue({
+      dailyRate: Number(companyRate.dailyRate),
+      currency: (companyRate.currency as PerDiemCurrency) || 'ETB',
+    });
+  }, [form, companyRate]);
 
   const approvedSiteAssignments = useMemo(
     () =>
@@ -658,51 +686,73 @@ export default function PerDiemRequestForm({
               <InputNumber min={1} precision={0} className="w-full" />
             </Form.Item>
 
-            <div className="erp-form-grid-2">
-              <Form.Item
-                name="dailyRate"
-                label={t('hr.form.dailyRate')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.enterDailyRate'),
-                  },
-                  {
-                    type: 'number',
-                    min: 0.01,
-                    message: t('hr.validation.dailyRatePositive'),
-                  },
-                ]}
-                extra={t('hr.perDiem.dailyRateHint')}
-              >
-                <InputNumber
-                  min={0.01}
-                  step={1}
-                  precision={2}
-                  className="w-full"
-                  suffix={currency}
-                />
-              </Form.Item>
-              <Form.Item
-                name="currency"
-                label={t('hr.form.currency')}
-                initialValue="ETB"
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.selectCurrency'),
-                  },
-                ]}
-              >
-                <Select
-                  options={[
-                    { value: 'ETB', label: 'ETB' },
-                    { value: 'USD', label: 'USD' },
-                    { value: 'CNY', label: 'CNY' },
+            {hasCompanyRate && companyRate ? (
+              <div className="mb-4 rounded-md border border-[rgba(0,0,0,0.08)] bg-[var(--color-teal-50,#f0f9f7)] p-4">
+                <p
+                  className="m-0 text-sm font-semibold"
+                  style={{ color: tokens.colorTextPrimary }}
+                >
+                  {t('hr.perDiem.companyRateDisplay', {
+                    amount: formatCurrencyAmount(
+                      companyRate.dailyRate,
+                      companyRate.currency,
+                    ),
+                  })}
+                </p>
+                <Form.Item name="dailyRate" hidden rules={[{ required: true }]}>
+                  <InputNumber />
+                </Form.Item>
+                <Form.Item name="currency" hidden initialValue="ETB">
+                  <Input />
+                </Form.Item>
+              </div>
+            ) : (
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="dailyRate"
+                  label={t('hr.form.dailyRate')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.enterDailyRate'),
+                    },
+                    {
+                      type: 'number',
+                      min: 0.01,
+                      message: t('hr.validation.dailyRatePositive'),
+                    },
                   ]}
-                />
-              </Form.Item>
-            </div>
+                  extra={t('hr.perDiem.noCompanyRateHint')}
+                >
+                  <InputNumber
+                    min={0.01}
+                    step={1}
+                    precision={2}
+                    className="w-full"
+                    suffix={currency}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="currency"
+                  label={t('hr.form.currency')}
+                  initialValue="ETB"
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.selectCurrency'),
+                    },
+                  ]}
+                >
+                  <Select
+                    options={[
+                      { value: 'ETB', label: 'ETB' },
+                      { value: 'USD', label: 'USD' },
+                      { value: 'CNY', label: 'CNY' },
+                    ]}
+                  />
+                </Form.Item>
+              </div>
+            )}
 
             <Form.Item name="notes" label={t('hr.form.notes')}>
               <Input.TextArea
@@ -778,7 +828,11 @@ export default function PerDiemRequestForm({
                 label={t('hr.form.dailyRate')}
                 value={
                   dailyRate > 0
-                    ? formatCurrencyAmount(dailyRate, currency)
+                    ? hasCompanyRate
+                      ? t('hr.perDiem.companyRateDisplay', {
+                          amount: formatCurrencyAmount(dailyRate, currency),
+                        })
+                      : formatCurrencyAmount(dailyRate, currency)
                     : '-'
                 }
               />
@@ -841,6 +895,8 @@ export default function PerDiemRequestForm({
       dailyRate,
       currency,
       totalAmount,
+      hasCompanyRate,
+      companyRate,
     ],
   );
 

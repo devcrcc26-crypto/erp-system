@@ -58,6 +58,9 @@ export default function PerDiemDetail({
 
   const submittedRate = Number(request.requestedDailyRate ?? request.dailyRate);
   const currency = request.currency ?? 'ETB';
+  const rateSource =
+    request.rateSource ??
+    (request.employeePerDiemRateId ? 'COMPANY' : 'EMPLOYEE');
 
   return (
     <div className="flex flex-col gap-3">
@@ -68,6 +71,14 @@ export default function PerDiemDetail({
             label: 'Submitted Daily Rate',
             value: formatCurrencyAmount(submittedRate, currency),
             emphasize: true,
+          },
+          {
+            label: 'Rate Source',
+            value:
+              rateSource === 'COMPANY'
+                ? 'Company rate (from rate table)'
+                : 'Employee-entered rate',
+            emphasize: rateSource === 'EMPLOYEE',
           },
           ...(request.approvedDailyRate != null
             ? [

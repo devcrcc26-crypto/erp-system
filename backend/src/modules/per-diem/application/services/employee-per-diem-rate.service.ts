@@ -25,13 +25,6 @@ import {
   mapEmployeePerDiemRateResponse,
 } from '../../infrastructure/mappers/employee-per-diem-rate.mapper';
 
-const DEFAULT_RATES = {
-  domesticRate: 500,
-  regionalRate: 80,
-  internationalRate: 150,
-  currency: 'ETB' as const,
-};
-
 /**
  * HR-managed per-employee per diem destination rates.
  */
@@ -129,33 +122,70 @@ export class EmployeePerDiemRateService {
   }
 
   /**
-   * Returns the authenticated employee's rate row with active categories only.
+   * Returns active destination categories from an existing rate row only.
+   * Does not create default rates — empty means the employee enters the rate.
    */
   async getMyActiveCategories(
     companyId: string,
     employeeId: string,
   ): Promise<unknown> {
-    const row = await this.findOrCreateForEmployee(
-      companyId,
-      employeeId,
-      employeeId,
-    );
+    const row = await this.prisma.employeePerDiemRate.findFirst({
+      where: activeOnly({ companyId, employeeId }),
+    });
+    if (!row) {
+      return [];
+    }
     return listActiveEmployeePerDiemCategories(row);
   }
 
   /**
+   * Looks up a seeded company rate for the employee + destination category.
+   * Returns null when no active rate row/category exists (no auto-create).
+   */
+  async findActiveCategoryRate(
+    companyId: string,
+    employeeId: string,
+    destinationCategory: string,
+  ): Promise<{
+    employeePerDiemRateId: string;
+    dailyRate: number;
+    currency: SupportedCurrency;
+  } | null> {
+    const row = await this.prisma.employeePerDiemRate.findFirst({
+      where: activeOnly({ companyId, employeeId }),
+    });
+    if (!row) {
+      return null;
+    }
+    const resolved = resolveEmployeePerDiemCategoryRate(
+      row,
+      destinationCategory,
+    );
+    if (!resolved || !resolved.isActive) {
+      return null;
+    }
+    return {
+      employeePerDiemRateId: row.id,
+      dailyRate: resolved.dailyRate,
+      currency: resolved.currency,
+    };
+  }
+
+  /**
    * Returns the full employee rate row for HR profile management.
+   * Does not auto-create defaults (cleared rates stay cleared until HR upserts).
    */
   async getForEmployee(
     employeeId: string,
     companyId: string,
-  ): Promise<EmployeePerDiemRateResponse> {
+  ): Promise<EmployeePerDiemRateResponse | null> {
     await this.assertEmployeeInCompany(employeeId, companyId);
-    const row = await this.findOrCreateForEmployee(
-      companyId,
-      employeeId,
-      employeeId,
-    );
+    const row = await this.prisma.employeePerDiemRate.findFirst({
+      where: activeOnly({ companyId, employeeId }),
+    });
+    if (!row) {
+      return null;
+    }
     return mapEmployeePerDiemRateResponse(row);
   }
 
@@ -170,8 +200,9 @@ export class EmployeePerDiemRateService {
   ): Promise<EmployeePerDiemRateResponse> {
     await this.assertEmployeeInCompany(employeeId, companyId);
 
+    // Include soft-deleted so HR re-seed can revive a cleared row.
     const existing = await this.prisma.employeePerDiemRate.findFirst({
-      where: activeOnly({ companyId, employeeId }),
+      where: { companyId, employeeId },
     });
 
     const rateFields = this.buildRateFields(dto);
@@ -181,6 +212,8 @@ export class EmployeePerDiemRateService {
           where: { id: existing.id },
           data: {
             ...rateFields,
+            deletedAt: null,
+            deletedBy: null,
             updatedBy: userId,
           },
         })
@@ -199,25 +232,21 @@ export class EmployeePerDiemRateService {
   }
 
   /**
-   * Resolves the daily rate for a category when submitting a per diem request.
+   * Resolves a seeded rate for settlement fallbacks. Does not create defaults.
    */
   async resolveRateForSubmission(
     companyId: string,
     employeeId: string,
     destinationCategory: string,
-    actorUserId: string,
+    _actorUserId: string,
   ): Promise<{
     employeePerDiemRateId: string;
     dailyRate: number;
     currency: SupportedCurrency;
   }> {
-    const row = await this.findOrCreateForEmployee(
+    const resolved = await this.findActiveCategoryRate(
       companyId,
       employeeId,
-      actorUserId,
-    );
-    const resolved = resolveEmployeePerDiemCategoryRate(
-      row,
       destinationCategory,
     );
     if (!resolved) {
@@ -225,47 +254,7 @@ export class EmployeePerDiemRateService {
         `No per diem rate configured for "${destinationCategory}"`,
       );
     }
-    if (!resolved.isActive) {
-      throw new BadRequestException(
-        `Per diem rate for "${destinationCategory}" is inactive for this employee`,
-      );
-    }
-
-    return {
-      employeePerDiemRateId: row.id,
-      dailyRate: resolved.dailyRate,
-      currency: resolved.currency,
-    };
-  }
-
-  private async findOrCreateForEmployee(
-    companyId: string,
-    employeeId: string,
-    actorUserId: string,
-  ) {
-    const existing = await this.prisma.employeePerDiemRate.findFirst({
-      where: activeOnly({ companyId, employeeId }),
-    });
-    if (existing) {
-      return existing;
-    }
-
-    return this.prisma.employeePerDiemRate.create({
-      data: {
-        id: randomUUID(),
-        companyId,
-        employeeId,
-        domesticRate: new Prisma.Decimal(DEFAULT_RATES.domesticRate),
-        regionalRate: new Prisma.Decimal(DEFAULT_RATES.regionalRate),
-        internationalRate: new Prisma.Decimal(DEFAULT_RATES.internationalRate),
-        domesticActive: true,
-        regionalActive: true,
-        internationalActive: true,
-        currency: DEFAULT_RATES.currency,
-        createdBy: actorUserId,
-        updatedBy: actorUserId,
-      },
-    });
+    return resolved;
   }
 
   private buildRateFields(

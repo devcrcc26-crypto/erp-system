@@ -7,9 +7,8 @@ import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { perDiemAmounts } from '@/lib/utils/per-diem-display';
 
 /**
- * Standard rate, approver-set rate, days and the approved total that is
- * disbursed and settled against. Once money has been paid out, also shows
- * how much has been disbursed and what remains.
+ * Submitted rate (company or employee-entered), approver-set rate, days and
+ * the approved total that is disbursed and settled against.
  */
 export default function PerDiemRateSummary({
   request,
@@ -18,6 +17,9 @@ export default function PerDiemRateSummary({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const amounts = perDiemAmounts(request);
+  const rateSource =
+    request.rateSource ??
+    (request.employeePerDiemRateId ? 'COMPANY' : 'EMPLOYEE');
   const showDisbursement =
     request.status === 'APPROVED' ||
     request.status === 'ACTIVE' ||
@@ -31,6 +33,11 @@ export default function PerDiemRateSummary({
           {t('hr.perDiem.rateSummary.perDay', {
             amount: formatEtbAmount(amounts.standardRate),
           })}
+        </MetaItem>
+        <MetaItem label={t('pages.approvals.dialog.perDiem.rateSource')}>
+          {rateSource === 'COMPANY'
+            ? t('hr.perDiem.rateSourceCompany')
+            : t('hr.perDiem.rateSourceEmployee')}
         </MetaItem>
         <MetaItem label={t('hr.perDiem.rateSummary.approvedRate')}>
           {amounts.approvedRate != null ? (

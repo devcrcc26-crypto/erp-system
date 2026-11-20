@@ -25,6 +25,7 @@
     "prisma:seed-announcement-permissions": "ts-node --transpile-only prisma/seed-announcement-permissions.ts",
     "prisma:seed-full-project": "ts-node --transpile-only prisma/seed-full-project.ts",
     "prisma:clear-pm": "ts-node --transpile-only prisma/clear-pm-data.ts",
+    "clear:per-diem-rates": "ts-node --transpile-only scripts/clear-employee-per-diem-rates.ts",
     "prisma:recalculate-attendance-paid-days": "ts-node -r tsconfig-paths/register --transpile-only prisma/recalculate-attendance-paid-days.ts",
     "prisma:seed-payroll-test": "ts-node -r tsconfig-paths/register --transpile-only prisma/seed-payroll-test-data.ts",
     "prisma:seed-payroll-test-topup": "ts-node -r tsconfig-paths/register --transpile-only prisma/seed-payroll-test-topup.ts",
