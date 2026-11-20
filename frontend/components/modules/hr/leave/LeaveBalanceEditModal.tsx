@@ -87,37 +87,35 @@ function rowsFromBalances(
   });
 }
 
-/** `Contract #1 · Jun 5, 2026 – Present` (or cycle dates when no contract). */
+/**
+ * One label per leave cycle. Use the cycle dates (unique) so anniversary years
+ * under the same contract do not look identical. Prefer "Present" when this
+ * cycle belongs to an open-ended contract and the cycle end is still ahead.
+ */
 function formatContractOptionLabel(
   option: LeaveYearOption,
-  allYears: LeaveYearOption[],
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): string {
+  const cycleStart = formatProjectDate(option.start);
+  const today = new Date().toISOString().slice(0, 10);
+  const openEnded =
+    option.contract != null &&
+    option.contract.endDate == null &&
+    option.end >= today;
+  const cycleEnd = openEnded
+    ? t(`${KEY}.contractPresent`)
+    : formatProjectDate(option.end);
+
   if (option.contract) {
-    const end = option.contract.endDate
-      ? formatProjectDate(option.contract.endDate)
-      : t(`${KEY}.contractPresent`);
-    const base = t(`${KEY}.contractOption`, {
+    return t(`${KEY}.contractOption`, {
       n: option.contract.sequence,
-      start: formatProjectDate(option.contract.startDate),
-      end,
+      start: cycleStart,
+      end: cycleEnd,
     });
-    // Same contract can cover several anniversary leave years — disambiguate.
-    const sameContract = allYears.filter(
-      (row) => row.contract?.id === option.contract?.id,
-    ).length;
-    if (sameContract > 1) {
-      return t(`${KEY}.contractOptionWithCycle`, {
-        label: base,
-        start: formatProjectDate(option.start),
-        end: formatProjectDate(option.end),
-      });
-    }
-    return base;
   }
   return t(`${KEY}.cycleOnlyOption`, {
-    start: formatProjectDate(option.start),
-    end: formatProjectDate(option.end),
+    start: cycleStart,
+    end: cycleEnd,
   });
 }
 
@@ -162,9 +160,19 @@ export default function LeaveBalanceEditModal({
 
   const contractOptions = useMemo(() => {
     const years = leaveYearsQuery.data?.years ?? [];
-    return years.map((option) => ({
+    // Deduplicate by leave-year label (balance key) — keep newest cycle first.
+    const seen = new Set<number>();
+    const unique: LeaveYearOption[] = [];
+    for (const option of years) {
+      if (seen.has(option.label)) {
+        continue;
+      }
+      seen.add(option.label);
+      unique.push(option);
+    }
+    return unique.map((option) => ({
       value: option.label,
-      label: formatContractOptionLabel(option, years, t),
+      label: formatContractOptionLabel(option, t),
     }));
   }, [leaveYearsQuery.data?.years, t]);
 

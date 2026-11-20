@@ -241,6 +241,48 @@ export function leaveYearByLabel(
   return findContractLeaveYear(starts, (year) => year.label >= label);
 }
 
+/**
+ * Real leave-year cycles through `through` (inclusive of the cycle that
+ * contains that date). Prefer this over inventing consecutive year labels —
+ * contract calendars can skip calendar years when a renewal starts mid-year.
+ */
+export function listLeaveYearsThrough(
+  anchor: LeaveYearAnchor,
+  through: Date | string = new Date(),
+): LeaveYear[] {
+  const throughDay = toDateOnlyUtc(through);
+  const throughKey = toDateOnlyKey(throughDay);
+
+  if (!isLeaveCalendar(anchor) || anchor.contractStarts.length === 0) {
+    const single = singleAnchor(anchor);
+    if (!single) {
+      const label = Number(throughKey.slice(0, 4));
+      return [anniversaryYearByLabel(null, label)];
+    }
+    const first = leaveYearFor(anchor, single);
+    const last = leaveYearFor(anchor, throughDay);
+    const years: LeaveYear[] = [];
+    for (let label = first.label; label <= last.label; label += 1) {
+      years.push(anniversaryYearByLabel(single, label));
+    }
+    return years;
+  }
+
+  const years: LeaveYear[] = [];
+  let walked = 0;
+  for (const year of contractLeaveYears(anchor.contractStarts)) {
+    years.push(year);
+    walked += 1;
+    if (
+      year.end.getTime() >= throughDay.getTime() ||
+      walked > MAX_CONTRACT_LEAVE_YEARS
+    ) {
+      break;
+    }
+  }
+  return years;
+}
+
 /** Leave year containing `date` (Addis civil date). */
 export function leaveYearFor(
   anchor: LeaveYearAnchor,

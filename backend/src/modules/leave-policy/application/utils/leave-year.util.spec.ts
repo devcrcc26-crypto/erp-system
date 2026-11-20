@@ -5,6 +5,7 @@ import {
   leaveCalendarOrigin,
   leaveYearByLabel,
   leaveYearFor,
+  listLeaveYearsThrough,
   splitRangeByLeaveYears,
   toDateOnlyKey,
   toDateOnlyUtc,
@@ -124,5 +125,16 @@ describe('leave-year.util (contract calendar)', () => {
       d('2020-08-01'),
     );
     expect(leaveCalendarOrigin(buildLeaveCalendar([d('2024-03-01')], null))).toEqual(d('2024-03-01'));
+  });
+
+  it('listLeaveYearsThrough enumerates real cycles without inventing skipped labels', () => {
+    // Early renewal in the same calendar year: labels are 2025 then 2026 (not two 2025s).
+    const cal = buildLeaveCalendar([d('2025-03-01'), d('2025-12-01')], null);
+    const years = listLeaveYearsThrough(cal, d('2026-06-01'));
+    expect(years.map((y) => y.label)).toEqual([2025, 2026]);
+    expect(years.map((y) => toDateOnlyKey(y.start))).toEqual([
+      '2025-03-01',
+      '2025-12-01',
+    ]);
   });
 });

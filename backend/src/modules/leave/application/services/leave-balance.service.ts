@@ -14,9 +14,9 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   formatLeaveYearRange,
-  leaveCalendarOrigin,
   leaveYearByLabel,
   leaveYearFor,
+  listLeaveYearsThrough,
   roundDays,
   splitRangeByLeaveYears,
   toDateOnlyKey,
@@ -312,10 +312,10 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Leave-year options for the profile / edit-balances dropdown (newest first).
-   * Includes every year from employment through the current leave year, plus
-   * the owning contract (sequence, dates) so the UI can show contract labels
-   * while still using `label` as the balance-year identifier.
+   * Leave-year options for the edit-balances dropdown (newest first).
+   * One option per real leave cycle (not every calendar year integer), each
+   * tagged with the contract that opened that cycle when the cycle start
+   * equals a contract start; otherwise the covering contract.
    */
   async listLeaveYears(
     employeeId: string,
@@ -339,37 +339,35 @@ export class LeaveBalanceService {
       }),
     ]);
     const current = leaveYearFor(anchor, new Date());
-    const labels = new Set<number>([current.label]);
-    const origin = leaveCalendarOrigin(anchor);
-    if (origin) {
-      const first = leaveYearFor(anchor, origin).label;
-      for (let label = first; label <= current.label + 1; label += 1) {
-        labels.add(label);
-      }
+    // Walk one year past "today" so the upcoming cycle is selectable.
+    const horizon = new Date(current.end.getTime() + 86_400_000);
+    const cycles = listLeaveYearsThrough(anchor, horizon);
+
+    const byStart = new Map<string, LeaveYear>();
+    for (const year of cycles) {
+      byStart.set(toDateOnlyKey(year.start), year);
     }
+    // Include stored balance years that the walk may have missed (legacy data).
     const stored = await this.prisma.leaveBalance.findMany({
       where: { companyId, employeeId },
       select: { year: true },
       distinct: ['year'],
     });
     for (const row of stored) {
-      labels.add(row.year);
+      const year = leaveYearByLabel(anchor, row.year);
+      byStart.set(toDateOnlyKey(year.start), year);
     }
 
-    const toOption = (year: {
-      label: number;
-      start: Date;
-      end: Date;
-    }): LeaveYearOptionDto => ({
+    const toOption = (year: LeaveYear): LeaveYearOptionDto => ({
       label: year.label,
       start: toDateOnlyKey(year.start),
       end: toDateOnlyKey(year.end),
-      contract: this.contractForLeaveYearStart(contracts, year.start),
+      contract: this.contractForLeaveYear(contracts, year),
     });
 
-    const years = [...labels]
-      .sort((a, b) => b - a)
-      .map((label) => toOption(leaveYearByLabel(anchor, label)));
+    const years = [...byStart.values()]
+      .sort((a, b) => b.start.getTime() - a.start.getTime())
+      .map(toOption);
     return {
       current: toOption(current),
       years,
@@ -377,10 +375,11 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Owning contract for a leave-year start: latest contract whose start is on
-   * or before the cycle start (1-based sequence among the employee's contracts).
+   * Contract for a leave cycle: prefer the contract whose start date equals
+   * the cycle start (that contract opened this year). Otherwise the latest
+   * contract that started on or before the cycle (anniversary years).
    */
-  private contractForLeaveYearStart(
+  private contractForLeaveYear(
     contracts: ReadonlyArray<{
       id: string;
       contractNumber: string;
@@ -388,14 +387,20 @@ export class LeaveBalanceService {
       endDate: Date | null;
       terminatedAt: Date | null;
     }>,
-    leaveYearStart: Date,
+    year: LeaveYear,
   ): LeaveYearContractDto | null {
-    const startKey = toDateOnlyKey(leaveYearStart);
+    const startKey = toDateOnlyKey(year.start);
     let match: (typeof contracts)[number] | null = null;
     let sequence = 0;
     for (let index = 0; index < contracts.length; index += 1) {
       const contract = contracts[index]!;
-      if (toDateOnlyKey(contract.startDate) <= startKey) {
+      const contractStart = toDateOnlyKey(contract.startDate);
+      if (contractStart === startKey) {
+        match = contract;
+        sequence = index + 1;
+        break;
+      }
+      if (contractStart <= startKey) {
         match = contract;
         sequence = index + 1;
       } else {
