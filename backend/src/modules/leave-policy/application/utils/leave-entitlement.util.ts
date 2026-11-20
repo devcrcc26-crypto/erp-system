@@ -5,21 +5,29 @@ export const POLICY_BALANCE_LEAVE_TYPES: LeaveType[] = [
   LeaveType.ANNUAL,
   LeaveType.MATERNITY,
   LeaveType.PATERNITY,
+];
+
+/**
+ * Leave types that never touch a leave-balance bucket (no entitlement check,
+ * no pending reserve, no USED ledger entry). Sick is request-only until a pay
+ * tier / illness-onset engine exists (Labour Proclamation No. 1156/2019).
+ * Unpaid is treated like absence for payroll.
+ */
+export const REQUEST_ONLY_LEAVE_TYPES: LeaveType[] = [
+  LeaveType.UNPAID,
   LeaveType.SICK,
 ];
 
 /**
- * Unpaid leave never touches a leave-balance bucket (no entitlement check,
- * no pending reserve, no USED ledger entry). Payroll treats those days like
- * absence instead.
+ * Whether submitting this leave type reserves / deducts a leave-balance bucket.
  */
 export function leaveTypeAffectsBalance(leaveType: LeaveType): boolean {
-  return leaveType !== LeaveType.UNPAID;
+  return !REQUEST_ONLY_LEAVE_TYPES.includes(leaveType);
 }
 
 /**
  * Maps a leave request type to the balance row that should be adjusted.
- * Unpaid leave has no balance row — callers must gate with
+ * Request-only types have no balance row — callers must gate with
  * {@link leaveTypeAffectsBalance} first.
  */
 export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
@@ -35,7 +43,6 @@ export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
     case LeaveType.PATERNITY:
       return LeaveType.PATERNITY;
     case LeaveType.SICK:
-      return LeaveType.SICK;
     case LeaveType.UNPAID:
       // No balance bucket; kept for exhaustiveness / legacy callers.
       return LeaveType.ANNUAL;

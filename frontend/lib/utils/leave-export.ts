@@ -77,7 +77,6 @@ export function buildLeaveBalanceExportSheets(
             { type: 'ANNUAL', balance: row.annual },
             { type: 'MATERNITY', balance: row.maternity },
             { type: 'PATERNITY', balance: row.paternity },
-            { type: 'SICK', balance: row.sick },
           ] as const
         )
           .filter((entry) => Boolean(entry.balance))

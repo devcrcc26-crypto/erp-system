@@ -38,7 +38,7 @@ function summary(
     employee: { id, firstName: id, lastName: 'X', email: null, gender },
     year: 2026,
     annual: balance('ANNUAL'),
-    sick: balance('SICK'),
+    sick: null,
     maternity: balance('MATERNITY', { entitled: 120, remaining: 120 }),
     paternity: balance('PATERNITY', { entitled: 3, remaining: 3 }),
     ...overrides,
@@ -49,9 +49,16 @@ describe('employeeBalanceEntries', () => {
   it('shows maternity only for female and paternity only for male employees', () => {
     const types = (s: EmployeeLeaveBalanceSummary) =>
       employeeBalanceEntries(s).map((entry) => entry.leaveType);
-    expect(types(summary('f', 'FEMALE'))).toEqual(['ANNUAL', 'SICK', 'MATERNITY']);
-    expect(types(summary('m', 'MALE'))).toEqual(['ANNUAL', 'SICK', 'PATERNITY']);
-    expect(types(summary('u', null))).toEqual(['ANNUAL', 'SICK']);
+    expect(types(summary('f', 'FEMALE'))).toEqual(['ANNUAL', 'MATERNITY']);
+    expect(types(summary('m', 'MALE'))).toEqual(['ANNUAL', 'PATERNITY']);
+    expect(types(summary('u', null))).toEqual(['ANNUAL']);
+  });
+
+  it('ignores stale sick balance rows', () => {
+    const types = employeeBalanceEntries(
+      summary('s', 'MALE', { sick: balance('SICK') }),
+    ).map((entry) => entry.leaveType);
+    expect(types).toEqual(['ANNUAL', 'PATERNITY']);
   });
 });
 
@@ -68,9 +75,9 @@ describe('isLowLeaveBalance', () => {
 
 describe('summarizeLeaveBalanceStats', () => {
   it('counts employees, not leave-type rows', () => {
-    const lowOnTwoTypes = summary('a', 'MALE', {
+    const lowAnnual = summary('a', 'MALE', {
       annual: balance('ANNUAL', { remaining: 2 }),
-      sick: balance('SICK', { remaining: 1, pending: 2 }),
+      paternity: balance('PATERNITY', { entitled: 3, remaining: 3, pending: 1 }),
     });
     const fine = summary('b', 'FEMALE', {
       annual: balance('ANNUAL', { pending: 3 }),
@@ -80,7 +87,7 @@ describe('summarizeLeaveBalanceStats', () => {
       maternity: balance('MATERNITY', { entitled: 120, remaining: 0 }),
     });
 
-    expect(summarizeLeaveBalanceStats([lowOnTwoTypes, fine, staleMaternity])).toEqual({
+    expect(summarizeLeaveBalanceStats([lowAnnual, fine, staleMaternity])).toEqual({
       employees: 3,
       lowBalance: 1,
       withPending: 2,

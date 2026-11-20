@@ -10,7 +10,7 @@ export const LOW_LEAVE_BALANCE_THRESHOLD = 5;
 /** Leave types with their own balance, in display order. */
 export type BalanceLeaveType = Extract<
   LeaveType,
-  'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY'
+  'ANNUAL' | 'MATERNITY' | 'PATERNITY'
 >;
 
 export interface EmployeeBalanceEntry {
@@ -49,16 +49,13 @@ export function parentalBalanceFor(
   return null;
 }
 
-/** The employee's balances that apply to them: Annual, Sick, then parental. */
+/** The employee's balances that apply to them: Annual, then parental. */
 export function employeeBalanceEntries(
   summary: EmployeeLeaveBalanceSummary,
 ): EmployeeBalanceEntry[] {
   const entries: EmployeeBalanceEntry[] = [];
   if (summary.annual) {
     entries.push({ leaveType: 'ANNUAL', balance: summary.annual });
-  }
-  if (summary.sick) {
-    entries.push({ leaveType: 'SICK', balance: summary.sick });
   }
   const parental = parentalBalanceFor(summary);
   if (parental) {

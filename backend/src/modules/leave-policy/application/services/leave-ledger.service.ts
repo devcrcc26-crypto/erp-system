@@ -37,6 +37,7 @@ import {
   getBalanceLeaveType,
   leaveTypeAffectsBalance,
   POLICY_BALANCE_LEAVE_TYPES,
+  REQUEST_ONLY_LEAVE_TYPES,
   type PolicyRuleRow,
 } from '../utils/leave-entitlement.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
@@ -44,7 +45,6 @@ import { formatUserDisplayName } from '../../../../shared/utils/user-display.uti
 /** Entitlement when the employee has no leave policy (legacy defaults). */
 export const DEFAULT_ENTITLEMENTS: Partial<Record<LeaveType, number>> = {
   [LeaveType.ANNUAL]: 20,
-  [LeaveType.SICK]: 10,
   [LeaveType.MATERNITY]: 120,
   [LeaveType.PATERNITY]: 3,
 };
@@ -264,7 +264,7 @@ export class LeaveLedgerService {
       }
     }
 
-    await this.syncCache(employee, year, Object.values(LeaveType));
+    await this.syncCache(employee, year, POLICY_BALANCE_LEAVE_TYPES);
   }
 
   /**
@@ -977,7 +977,7 @@ export class LeaveLedgerService {
       });
     }
 
-    await this.syncCache(employee, year, Object.values(LeaveType));
+    await this.syncCache(employee, year, POLICY_BALANCE_LEAVE_TYPES);
 
     const cacheRows = await this.prisma.leaveBalance.findMany({
       where: {
@@ -1051,7 +1051,7 @@ export class LeaveLedgerService {
       reason: `Imported balance: entitled ${input.entitled}, brought forward ${broughtForward}, used ${input.used ?? 0}`,
       actorUserId: input.actorUserId,
     });
-    await this.syncCache(employee, year, Object.values(LeaveType));
+    await this.syncCache(employee, year, POLICY_BALANCE_LEAVE_TYPES);
     return { created: entryCount === 0 };
   }
 
@@ -1736,19 +1736,26 @@ export class LeaveLedgerService {
     year: LeaveYear,
     leaveTypes: ReadonlyArray<LeaveType>,
   ): Promise<void> {
+    // Sick / unpaid are request-only — never upsert a balance cache row for them.
+    const cacheTypes = leaveTypes.filter(
+      (leaveType) => !REQUEST_ONLY_LEAVE_TYPES.includes(leaveType),
+    );
+    if (cacheTypes.length === 0) {
+      return;
+    }
     const yearStart = toDateOnlyUtc(year.start);
     const yearEnd = toDateOnlyUtc(year.end);
     const rows = await this.prisma.leaveBalanceEntry.findMany({
       where: {
         employeeId: employee.id,
-        leaveType: { in: [...leaveTypes] },
+        leaveType: { in: [...cacheTypes] },
       },
       select: { leaveType: true, kind: true, leaveYearStart: true, days: true },
     });
     const yearRows = rows.filter((row) =>
       matchesLeaveYearStart(row.leaveYearStart, yearStart),
     );
-    for (const leaveType of leaveTypes) {
+    for (const leaveType of cacheTypes) {
       const sum = (kinds: LeaveBalanceEntryKind[]): number =>
         roundDays(
           yearRows

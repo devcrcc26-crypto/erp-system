@@ -1,8 +1,9 @@
 /**
  * Sets default leave entitlements for all active employees for a leave year label.
  *
- * Defaults: annual 20 days, sick 30 days, maternity 120 days, paternity 3 days.
+ * Defaults: annual 20 days, maternity 120 days, paternity 3 days.
  * Maternity is applied only when gender is FEMALE; paternity only for MALE.
+ * Sick leave is request-only (no balance bucket).
  *
  *   $env:SEED_MODE='true'
  *   npx ts-node -r tsconfig-paths/register --transpile-only scripts/seed-leave-balances-year.ts --year=2025
@@ -22,7 +23,6 @@ import {
 } from './lib/login-setup-guards';
 
 const DEFAULT_ANNUAL_DAYS = 20;
-const DEFAULT_SICK_DAYS = 30;
 /** Labour Proclamation No. 1156/2019 — 120 consecutive days of maternity leave. */
 const DEFAULT_MATERNITY_DAYS = 120;
 /** Labour Proclamation No. 1156/2019 — 3 working days of paternity leave. */
@@ -103,7 +103,6 @@ async function main(): Promise<void> {
   console.log(`EMPLOYEES=${employees.length}`);
 
   let annualCount = 0;
-  let sickCount = 0;
   let maternityCount = 0;
   let paternityCount = 0;
   let skippedMaternity = 0;
@@ -161,15 +160,6 @@ async function main(): Promise<void> {
         );
         annualCount += 1;
 
-        await seedType(
-          ledger,
-          employee,
-          LeaveType.SICK,
-          DEFAULT_SICK_DAYS,
-          actorUserId,
-        );
-        sickCount += 1;
-
         if (employee.gender === Gender.FEMALE) {
           await seedType(
             ledger,
@@ -206,7 +196,6 @@ async function main(): Promise<void> {
   } else {
     for (const employee of employees) {
       annualCount += 1;
-      sickCount += 1;
       if (employee.gender === Gender.FEMALE) {
         maternityCount += 1;
       } else {
@@ -221,7 +210,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `ANNUAL=${annualCount}@${DEFAULT_ANNUAL_DAYS} SICK=${sickCount}@${DEFAULT_SICK_DAYS} MATERNITY=${maternityCount}@${DEFAULT_MATERNITY_DAYS} PATERNITY=${paternityCount}@${DEFAULT_PATERNITY_DAYS} SKIP_MATERNITY_NON_FEMALE=${skippedMaternity} SKIP_PATERNITY_NON_MALE=${skippedPaternity} ERRORS=${errors.length}`,
+    `ANNUAL=${annualCount}@${DEFAULT_ANNUAL_DAYS} MATERNITY=${maternityCount}@${DEFAULT_MATERNITY_DAYS} PATERNITY=${paternityCount}@${DEFAULT_PATERNITY_DAYS} SKIP_MATERNITY_NON_FEMALE=${skippedMaternity} SKIP_PATERNITY_NON_MALE=${skippedPaternity} ERRORS=${errors.length}`,
   );
   if (errors.length > 0) {
     for (const line of errors.slice(0, 20)) {

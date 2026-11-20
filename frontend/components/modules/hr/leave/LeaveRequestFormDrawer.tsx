@@ -250,6 +250,10 @@ export default function LeaveRequestFormDrawer({
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
               Loading balance…
             </Typography.Paragraph>
+          ) : leaveType === 'SICK' ? (
+            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+              {t('hr.form.sickLeaveNoBalanceNote')}
+            </Typography.Paragraph>
           ) : leaveType && !leaveTypeAffectsBalance(leaveType) ? (
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
               {t('hr.messages.unpaidLeaveNoBalance')}

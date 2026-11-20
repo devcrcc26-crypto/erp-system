@@ -19,12 +19,12 @@ export function canEditLeaveBalances(
 
 export function leaveBalanceTypesForGender(
   gender: 'MALE' | 'FEMALE' | string | null | undefined,
-): Array<'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY'> {
+): Array<'ANNUAL' | 'MATERNITY' | 'PATERNITY'> {
   if (gender === 'FEMALE') {
-    return ['ANNUAL', 'SICK', 'MATERNITY'];
+    return ['ANNUAL', 'MATERNITY'];
   }
   if (gender === 'MALE') {
-    return ['ANNUAL', 'SICK', 'PATERNITY'];
+    return ['ANNUAL', 'PATERNITY'];
   }
-  return ['ANNUAL', 'SICK'];
+  return ['ANNUAL'];
 }

@@ -1141,3 +1141,229 @@
   outline: 2px solid var(--lv2-primary);
   outline-offset: 2px;
 }
+
+/* ── Set leave balances modal (LeaveBalanceEditModal, portaled) ── */
+
+.erp-leave-bal-modal .ant-modal-content {
+  border-radius: 16px;
+}
+
+.erp-leave-bal-modal .erp-lbm-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 14px;
+  background: var(--erp-accent-wash, #f3f7fd);
+}
+
+.erp-leave-bal-modal .erp-lbm-person {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 260px;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-leave-bal-modal .erp-lbm-name {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.erp-leave-bal-modal .erp-lbm-meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 2px 0 0;
+  color: var(--erp-n-600);
+  font-size: 13px;
+}
+
+.erp-leave-bal-modal .erp-lbm-email {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.erp-leave-bal-modal .erp-lbm-chip {
+  padding: 1px 8px;
+  border: 1px solid rgba(var(--erp-accent-rgb), 0.24);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--erp-accent-hover);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-leave-bal-modal .erp-lbm-year {
+  width: 140px;
+  margin-bottom: 0;
+}
+
+.erp-leave-bal-modal .erp-lbm-year .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+.erp-leave-bal-modal .erp-lbm-hint {
+  margin: 12px 0 14px;
+  color: var(--erp-n-600);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.erp-leave-bal-modal .erp-lbm-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-leave-bal-modal .erp-lbm-card {
+  padding: 14px 16px 2px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.erp-leave-bal-modal .erp-lbm-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.erp-leave-bal-modal .erp-lbm-type-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--erp-accent-light);
+  color: var(--erp-accent-hover);
+  font-size: 15px;
+}
+
+
+
+.erp-leave-bal-modal .erp-lbm-card-title {
+  flex: 1;
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.erp-leave-bal-modal .erp-lbm-remaining {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: var(--erp-accent-wash, #f3f7fd);
+  line-height: 1.2;
+}
+
+.erp-leave-bal-modal .erp-lbm-remaining-label {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-leave-bal-modal .erp-lbm-remaining-value {
+  color: var(--erp-accent-hover);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-bal-modal .erp-lbm-remaining--negative {
+  background: #fef3f2;
+}
+
+.erp-leave-bal-modal .erp-lbm-remaining--negative .erp-lbm-remaining-value {
+  color: #b42318;
+}
+
+.erp-leave-bal-modal .erp-lbm-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.erp-leave-bal-modal .erp-lbm-fields .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.erp-leave-bal-modal .erp-lbm-fields .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+.erp-leave-bal-modal .erp-lbm-fields .ant-form-item-label > label,
+.erp-leave-bal-modal .erp-lbm-static-label {
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+/* Read-only cells line up with the inputs beside them. */
+.erp-leave-bal-modal .erp-lbm-static {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.erp-leave-bal-modal .erp-lbm-static-label {
+  line-height: 22px;
+}
+
+.erp-leave-bal-modal .erp-lbm-static-value {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px dashed var(--erp-n-200);
+  border-radius: 8px;
+  background: var(--erp-n-50);
+  color: var(--erp-n-800);
+  font-variant-numeric: tabular-nums;
+}
+
+
+.erp-leave-bal-modal .erp-lbm-formula {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 16px;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-leave-bal-modal .erp-lbm-reason {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 639px) {
+  .erp-leave-bal-modal .erp-lbm-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-leave-bal-modal .erp-lbm-year {
+    width: 100%;
+  }
+
+  .erp-leave-bal-modal .erp-lbm-card {
+    padding-inline: 12px;
+  }
+}

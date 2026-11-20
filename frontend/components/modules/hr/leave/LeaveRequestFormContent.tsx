@@ -228,15 +228,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     }
   }, [form, leaveOwnerGender, leaveType]);
 
-  const sickRequiresReceipt = useMemo(() => {
-    if (leaveType !== 'SICK') {
-      return false;
-    }
-    const sickBalance = balancesQuery.data?.find(
-      (row) => row.leaveType === 'SICK',
-    );
-    return sickBalance?.requiresReceipt === true;
-  }, [balancesQuery.data, leaveType]);
+  // Sick is request-only (no balance). Medical certificate stays required on FE;
+  // the API still honours the policy requiresReceipt flag.
+  const sickRequiresReceipt = leaveType === 'SICK';
 
   useEffect(() => {
     const inputs = toLeavePeriodInputs(periods);
@@ -437,6 +431,16 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         <p className="erp-users-cell-sub m-0">
           {t('hr.messages.selectLeaveTypeForBalance')}
         </p>
+      );
+    }
+
+    if (leaveType === 'SICK') {
+      return (
+        <Alert
+          type="info"
+          showIcon
+          title={t('hr.form.sickLeaveNoBalanceNote')}
+        />
       );
     }
 

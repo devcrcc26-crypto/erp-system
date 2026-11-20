@@ -19,12 +19,14 @@ export const OWN_BALANCE_LEAVE_TYPES: LeaveType[] = [
   'ANNUAL',
   'MATERNITY',
   'PATERNITY',
-  'SICK',
 ];
 
-/** Unpaid leave never consumes a leave-balance bucket. */
+/** Request-only types: no entitlement check or balance deduction. */
+export const REQUEST_ONLY_LEAVE_TYPES: LeaveType[] = ['UNPAID', 'SICK'];
+
+/** Whether this leave type reserves / deducts a leave-balance bucket. */
 export function leaveTypeAffectsBalance(leaveType: LeaveType): boolean {
-  return leaveType !== 'UNPAID';
+  return !REQUEST_ONLY_LEAVE_TYPES.includes(leaveType);
 }
 
 export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
@@ -40,7 +42,6 @@ export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
     case 'PATERNITY':
       return 'PATERNITY';
     case 'SICK':
-      return 'SICK';
     case 'UNPAID':
       return 'ANNUAL';
     default:

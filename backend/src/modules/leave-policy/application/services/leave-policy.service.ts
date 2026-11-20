@@ -21,6 +21,7 @@ import {
   getBalanceLeaveType,
   leaveTypeAffectsBalance,
   POLICY_BALANCE_LEAVE_TYPES,
+  REQUEST_ONLY_LEAVE_TYPES,
   type PolicyRuleRow,
 } from '../utils/leave-entitlement.util';
 
@@ -28,6 +29,7 @@ export {
   getBalanceLeaveType,
   leaveTypeAffectsBalance,
   POLICY_BALANCE_LEAVE_TYPES,
+  REQUEST_ONLY_LEAVE_TYPES,
 };
 
 @Injectable()

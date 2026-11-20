@@ -243,14 +243,17 @@ export default function EmployeeLeaveProfileSection({
     : employeeHistoryQuery.error;
 
   // Only show leave types that already have a LeaveBalance record.
+  // Sick is request-only (no balance bucket).
   const displayBalances = useMemo((): Array<{
     leaveType: LeaveType;
     balance: LeaveBalance;
   }> => {
-    return (balancesQuery.data ?? []).map((balance) => ({
-      leaveType: balance.leaveType,
-      balance,
-    }));
+    return (balancesQuery.data ?? [])
+      .filter((balance) => balance.leaveType !== 'SICK')
+      .map((balance) => ({
+        leaveType: balance.leaveType,
+        balance,
+      }));
   }, [balancesQuery.data]);
 
   const leaveYearRange = useMemo(() => {

@@ -279,14 +279,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         ),
       },
       {
-        title: formatLeaveType('SICK', t),
-        key: 'sick',
-        width: 120,
-        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
-          <BalanceCell balance={row.sick} t={t} />
-        ),
-      },
-      {
         title: t(`${TABLE_KEY}.parental`),
         key: 'parental',
         width: 150,

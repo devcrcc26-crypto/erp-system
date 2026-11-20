@@ -69,13 +69,14 @@ describe('inferMinServiceYears', () => {
 });
 
 describe('leaveTypeAffectsBalance', () => {
-  it('unpaid leave never consumes a balance bucket', () => {
+  it('unpaid and sick leave never consume a balance bucket', () => {
     expect(leaveTypeAffectsBalance(LeaveType.UNPAID)).toBe(false);
+    expect(leaveTypeAffectsBalance(LeaveType.SICK)).toBe(false);
   });
 
-  it('annual / sick / study still affect balance', () => {
+  it('annual / maternity / study still affect balance', () => {
     expect(leaveTypeAffectsBalance(LeaveType.ANNUAL)).toBe(true);
-    expect(leaveTypeAffectsBalance(LeaveType.SICK)).toBe(true);
+    expect(leaveTypeAffectsBalance(LeaveType.MATERNITY)).toBe(true);
     expect(leaveTypeAffectsBalance(LeaveType.STUDY)).toBe(true);
   });
 });
@@ -91,7 +92,8 @@ describe('getBalanceLeaveType', () => {
     expect(getBalanceLeaveType(LeaveType.PATERNITY)).toBe(LeaveType.PATERNITY);
   });
 
-  it('does not treat unpaid as a balance type for callers that gate first', () => {
+  it('does not treat unpaid or sick as balance types for callers that gate first', () => {
     expect(leaveTypeAffectsBalance(LeaveType.UNPAID)).toBe(false);
+    expect(leaveTypeAffectsBalance(LeaveType.SICK)).toBe(false);
   });
 });

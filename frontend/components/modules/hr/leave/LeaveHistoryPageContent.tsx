@@ -261,7 +261,10 @@ export default function LeaveHistoryPageContent({
           leaveType: 'MATERNITY' as const,
           balance: summary?.maternity ?? null,
         },
-        { leaveType: 'SICK' as const, balance: summary?.sick ?? null },
+        {
+          leaveType: 'PATERNITY' as const,
+          balance: summary?.paternity ?? null,
+        },
       ];
     }
 
@@ -459,7 +462,9 @@ export default function LeaveHistoryPageContent({
   }
 
   const annual = displayBalances.find((b) => b.leaveType === 'ANNUAL')?.balance;
-  const sick = displayBalances.find((b) => b.leaveType === 'SICK')?.balance;
+  const parental = displayBalances.find(
+    (b) => b.leaveType === 'MATERNITY' || b.leaveType === 'PATERNITY',
+  );
 
   return (
     <div className={HISTORY_ROOT}>
@@ -498,13 +503,14 @@ export default function LeaveHistoryPageContent({
                   ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
                   : '-',
             },
-            {
-              label: t('hr.leaveType.SICK'),
-              value:
-                sick != null
-                  ? `${sick.remaining} / ${sick.entitled + sick.broughtForward}`
-                  : '-',
-            },
+            ...(parental?.balance
+              ? [
+                  {
+                    label: t(`hr.leaveType.${parental.leaveType}`),
+                    value: `${parental.balance.remaining} / ${parental.balance.entitled + parental.balance.broughtForward}`,
+                  },
+                ]
+              : []),
           ].map((item) => (
             <div key={item.label} className="erp-users-stat">
               <div className="min-w-0 text-left">

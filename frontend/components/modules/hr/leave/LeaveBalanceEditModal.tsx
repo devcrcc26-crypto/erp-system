@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Form, Input, InputNumber, Modal, Select } from 'antd';
+import { useEffect } from 'react';
+import { Form, Input, InputNumber, Modal, Select, Spin } from 'antd';
+import { CalendarOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import type {
@@ -10,12 +12,19 @@ import type {
   LeaveType,
 } from '@/lib/api/leave.types';
 import { useMyLeaveBalances, useSetLeaveBalanceSnapshot } from '@/lib/query/leave';
-import { leaveBalanceTypesForGender } from '@/lib/utils/leave-balance-access';
-import { formatLeaveType } from '@/lib/utils/leave-display';
+import { formatLeaveEmployeeName, formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import './leave-v2.css';
 
 const KEY = 'hr.leave.ledger';
+
+/**
+ * Only annual leave is set by hand. Maternity and paternity entitlements are
+ * fixed by Ethiopian Labour Proclamation No. 1156/2019 and are created
+ * automatically when the leave year opens, so they never appear here.
+ */
+const EDITABLE_LEAVE_TYPES: LeaveType[] = ['ANNUAL'];
 
 interface SnapshotRowValues {
   leaveType: LeaveType;
@@ -30,15 +39,31 @@ interface SnapshotFormValues {
   rows: SnapshotRowValues[];
 }
 
+/** Remaining = Entitlement + Brought Forward − Used − Pending (one decimal). */
 function remainingOf(row: {
   entitled?: number | null;
   broughtForward?: number | null;
   used?: number | null;
+  pending?: number | null;
 }): number {
   const entitled = Number(row.entitled ?? 0);
   const broughtForward = Number(row.broughtForward ?? 0);
   const used = Number(row.used ?? 0);
-  return Math.round((entitled + broughtForward - used) * 10) / 10;
+  const pending = Number(row.pending ?? 0);
+  return Math.round((entitled + broughtForward - used - pending) * 10) / 10;
+}
+
+/**
+ * The current balance for a type, if one exists. When the employee has no
+ * annual record yet, the form starts at zero and saving creates it.
+ */
+function existingBalance(
+  leaveType: LeaveType,
+  balances: LeaveBalance[] | undefined,
+  summary: EmployeeLeaveBalanceSummary | null,
+): LeaveBalance | null | undefined {
+  const fromList = leaveType === 'ANNUAL' ? summary?.annual : undefined;
+  return fromList ?? balances?.find((row) => row.leaveType === leaveType);
 }
 
 function rowsFromBalances(
@@ -47,28 +72,28 @@ function rowsFromBalances(
   summary: EmployeeLeaveBalanceSummary | null,
 ): SnapshotRowValues[] {
   return leaveTypes.map((leaveType) => {
-    const fromList =
-      leaveType === 'ANNUAL'
-        ? summary?.annual
-        : leaveType === 'SICK'
-          ? summary?.sick
-          : leaveType === 'PATERNITY'
-            ? summary?.paternity
-            : summary?.maternity;
-    const existing =
-      fromList ?? balances?.find((row) => row.leaveType === leaveType);
+    const existing = existingBalance(leaveType, balances, summary);
     return {
       leaveType,
       entitled: existing?.entitled ?? 0,
-      broughtForward: leaveType === 'ANNUAL' ? (existing?.broughtForward ?? 0) : 0,
+      broughtForward: existing?.broughtForward ?? 0,
       used: existing?.used ?? 0,
     };
   });
 }
 
+const DAY_INPUT = {
+  className: 'w-full',
+  min: 0,
+  max: 365,
+  step: 0.5,
+  precision: 1,
+} as const;
+
 /**
- * HR / GM / System Admin modal to set entitled, brought-forward (annual only),
- * and used for an employee's leave year. Remaining is calculated.
+ * HR / GM / System Admin modal to set annual leave entitlement, brought
+ * forward and used for an employee's leave year. Remaining (incl. pending)
+ * updates as you type.
  */
 export default function LeaveBalanceEditModal({
   open,
@@ -87,11 +112,7 @@ export default function LeaveBalanceEditModal({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SnapshotFormValues>();
   const employeeId = employeeSummary?.employeeId;
-  const gender = employeeSummary?.employee.gender;
-  const leaveTypes = useMemo(
-    () => leaveBalanceTypesForGender(gender),
-    [gender],
-  );
+  const leaveTypes = EDITABLE_LEAVE_TYPES;
   const year = Form.useWatch('year', form) ?? defaultYear;
   const balancesQuery = useMyLeaveBalances({
     year,
@@ -140,8 +161,7 @@ export default function LeaveBalanceEditModal({
         rows: values.rows.map((row) => ({
           leaveType: row.leaveType,
           entitled: Number(row.entitled ?? 0),
-          broughtForward:
-            row.leaveType === 'ANNUAL' ? Number(row.broughtForward ?? 0) : 0,
+          broughtForward: Number(row.broughtForward ?? 0),
           used: Number(row.used ?? 0),
         })),
       });
@@ -164,6 +184,8 @@ export default function LeaveBalanceEditModal({
     (value) => ({ value, label: String(value) }),
   );
 
+  const employee = employeeSummary?.employee;
+
   return (
     <Modal
       open={open}
@@ -175,164 +197,157 @@ export default function LeaveBalanceEditModal({
       onOk={submit}
       onCancel={onClose}
       destroyOnHidden
+      rootClassName="erp-leave-bal-modal"
     >
-      <p className="m-0 mb-3 text-sm text-slate-700">{t(`${KEY}.snapshotHint`)}</p>
-      {employeeSummary ? (
-        <p className="m-0 mb-3 text-sm font-medium text-slate-900">
-          {employeeSummary.employee.firstName}{' '}
-          {employeeSummary.employee.lastName}
-          {employeeSummary.employee.email
-            ? ` · ${employeeSummary.employee.email}`
-            : ''}
-        </p>
-      ) : null}
       <Form<SnapshotFormValues> form={form} layout="vertical" requiredMark={false}>
-        <Form.Item
-          name="year"
-          label={t(`${KEY}.leaveYearLabel`)}
-          extra={
-            leaveYearHint
-              ? t(`${KEY}.leaveYearExtra`, {
-                  start: formatProjectDate(leaveYearHint.start),
-                  end: formatProjectDate(leaveYearHint.end),
-                })
-              : undefined
-          }
-          rules={[{ required: true }]}
-        >
-          <Select options={yearOptions} />
-        </Form.Item>
-
-        <Form.List name="rows">
-          {(fields) => (
-            <div className="mb-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-600">
-                    <th className="px-3 py-2 font-semibold">
-                      {t('hr.table.leaveType')}
-                    </th>
-                    <th className="px-3 py-2 font-semibold">
-                      {t('hr.labels.entitled')}
-                    </th>
-                    <th className="px-3 py-2 font-semibold">
-                      {t('hr.labels.broughtForward')}
-                    </th>
-                    <th className="px-3 py-2 font-semibold">
-                      {t('hr.labels.used')}
-                    </th>
-                    <th className="px-3 py-2 font-semibold">
-                      {t('hr.labels.remaining')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fields.map((field, index) => {
-                    const row = watchedRows?.[index];
-                    const leaveType = (row?.leaveType ??
-                      leaveTypes[index]!) as LeaveType;
-                    const isAnnual = leaveType === 'ANNUAL';
-                    const remaining = remainingOf({
-                      entitled: row?.entitled,
-                      broughtForward: isAnnual ? row?.broughtForward : 0,
-                      used: row?.used,
-                    });
-                    return (
-                      <tr key={field.key} className="border-t border-slate-100">
-                        <td className="px-3 py-2">
-                          <Form.Item name={[field.name, 'leaveType']} hidden>
-                            <Input />
-                          </Form.Item>
-                          {formatLeaveType(leaveType, t)}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Form.Item
-                            name={[field.name, 'entitled']}
-                            className="mb-0"
-                            rules={[{ required: true }]}
-                          >
-                            <InputNumber
-                              className="w-full"
-                              min={0}
-                              max={365}
-                              step={0.5}
-                              precision={1}
-                            />
-                          </Form.Item>
-                        </td>
-                        <td className="px-3 py-2">
-                          {isAnnual ? (
-                            <Form.Item
-                              name={[field.name, 'broughtForward']}
-                              className="mb-0"
-                              rules={[{ required: true }]}
-                            >
-                              <InputNumber
-                                className="w-full"
-                                min={0}
-                                max={365}
-                                step={0.5}
-                                precision={1}
-                              />
-                            </Form.Item>
-                          ) : (
-                            <>
-                              <Form.Item
-                                name={[field.name, 'broughtForward']}
-                                hidden
-                                initialValue={0}
-                              >
-                                <InputNumber />
-                              </Form.Item>
-                              <span className="erp-users-cell-sub">-</span>
-                            </>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Form.Item
-                            name={[field.name, 'used']}
-                            className="mb-0"
-                            rules={[{ required: true }]}
-                          >
-                            <InputNumber
-                              className="w-full"
-                              min={0}
-                              max={365}
-                              step={0.5}
-                              precision={1}
-                            />
-                          </Form.Item>
-                        </td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={`tabular-nums font-semibold ${
-                              remaining < 0 ? 'text-red-700' : 'text-slate-900'
-                            }`}
-                          >
-                            {remaining}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <p className="m-0 border-t border-slate-100 px-3 py-2 text-xs text-slate-600">
-                {t(`${KEY}.remainingFormula`)}
-              </p>
+        {/* Who, and which leave year. */}
+        <div className="erp-lbm-head">
+          {employee ? (
+            <div className="erp-lbm-person">
+              <EvaluationListAvatar
+                firstName={employee.firstName}
+                lastName={employee.lastName}
+                userId={employee.id}
+              />
+              <div className="min-w-0">
+                <p className="erp-lbm-name">{formatLeaveEmployeeName(employee)}</p>
+                <p className="erp-lbm-meta">
+                  {employee.employeeCode ? (
+                    <span className="erp-lbm-chip">{employee.employeeCode}</span>
+                  ) : null}
+                  {employee.email ? (
+                    <span className="erp-lbm-email">{employee.email}</span>
+                  ) : null}
+                </p>
+              </div>
             </div>
-          )}
-        </Form.List>
+          ) : null}
+          <Form.Item
+            name="year"
+            label={t(`${KEY}.leaveYearLabel`)}
+            className="erp-lbm-year"
+            rules={[{ required: true }]}
+          >
+            <Select options={yearOptions} />
+          </Form.Item>
+        </div>
+
+        <p className="erp-lbm-hint">
+          {t(`${KEY}.snapshotHint`)}
+          {leaveYearHint ? (
+            <>
+              {' '}
+              {t(`${KEY}.leaveYearExtra`, {
+                start: formatProjectDate(leaveYearHint.start),
+                end: formatProjectDate(leaveYearHint.end),
+              })}
+            </>
+          ) : null}
+        </p>
+
+        <Spin spinning={balancesQuery.isFetching}>
+          <Form.List name="rows">
+            {(fields) => (
+              <div className="erp-lbm-cards">
+                {fields.map((field, index) => {
+                  const row = watchedRows?.[index];
+                  const leaveType = (row?.leaveType ??
+                    leaveTypes[index]!) as LeaveType;
+                  const pending =
+                    existingBalance(leaveType, balancesQuery.data, employeeSummary)
+                      ?.pending ?? 0;
+                  const remaining = remainingOf({
+                    entitled: row?.entitled,
+                    broughtForward: row?.broughtForward,
+                    used: row?.used,
+                    pending,
+                  });
+                  const typeLabel = formatLeaveType(leaveType, t);
+                  return (
+                    <section
+                      key={field.key}
+                      className="erp-lbm-card"
+                      aria-label={typeLabel}
+                    >
+                      <header className="erp-lbm-card-head">
+                        <span
+                          className={`erp-lbm-type-icon erp-lbm-type-icon--${leaveType.toLowerCase()}`}
+                          aria-hidden
+                        >
+                          <CalendarOutlined />
+                        </span>
+                        <h3 className="erp-lbm-card-title">{typeLabel}</h3>
+                        <div
+                          className={`erp-lbm-remaining${
+                            remaining < 0 ? ' erp-lbm-remaining--negative' : ''
+                          }`}
+                        >
+                          <span className="erp-lbm-remaining-label">
+                            {t('hr.labels.remaining')}
+                          </span>
+                          <span className="erp-lbm-remaining-value">{remaining}</span>
+                        </div>
+                      </header>
+
+                      <Form.Item name={[field.name, 'leaveType']} hidden>
+                        <Input />
+                      </Form.Item>
+
+                      <div className="erp-lbm-fields">
+                        <Form.Item
+                          name={[field.name, 'entitled']}
+                          label={t('hr.labels.entitled')}
+                          rules={[{ required: true }]}
+                        >
+                          <InputNumber {...DAY_INPUT} />
+                        </Form.Item>
+
+                        <Form.Item
+                          name={[field.name, 'broughtForward']}
+                          label={t('hr.labels.broughtForward')}
+                          rules={[{ required: true }]}
+                        >
+                          <InputNumber {...DAY_INPUT} />
+                        </Form.Item>
+
+                        <Form.Item
+                          name={[field.name, 'used']}
+                          label={t('hr.labels.used')}
+                          rules={[{ required: true }]}
+                        >
+                          <InputNumber {...DAY_INPUT} />
+                        </Form.Item>
+
+                        <div className="erp-lbm-static">
+                          <span className="erp-lbm-static-label">
+                            {t('hr.labels.pending')}
+                          </span>
+                          <span className="erp-lbm-static-value">{pending}</span>
+                        </div>
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </Form.List>
+        </Spin>
+
+        <p className="erp-lbm-formula">
+          <InfoCircleOutlined aria-hidden />
+          {t(`${KEY}.remainingFormula`)}
+        </p>
 
         <Form.Item
           name="reason"
           label={t(`${KEY}.reason`)}
+          className="erp-lbm-reason"
           rules={[
             { required: true, whitespace: true, message: t(`${KEY}.reasonRequired`) },
             { min: 3, message: t(`${KEY}.reasonRequired`) },
           ]}
         >
-          <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} maxLength={1000} />
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} maxLength={1000} showCount />
         </Form.Item>
       </Form>
     </Modal>
