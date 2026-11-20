@@ -1205,7 +1205,7 @@
 
 
 
-/* Contract period + leave cycle tabs. */
+/* Leave-year tabs (one per contract leave year). */
 .erp-leave-bal-modal .erp-lbm-period {
   display: flex;
   flex-direction: column;
@@ -1304,33 +1304,9 @@
   color: var(--erp-accent-hover);
 }
 
-/* Anniversary-cycle sub-tabs: smaller, pill-shaped. */
-.erp-leave-bal-modal .erp-lbm-tabs--sm {
-  gap: 6px;
-  padding-left: 12px;
-  border-left: 2px solid var(--erp-n-150);
-}
 
-.erp-leave-bal-modal .erp-lbm-tabs--sm .erp-lbm-tab {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-}
 
-.erp-leave-bal-modal .erp-lbm-tabs--sm .erp-lbm-tab-title {
-  font-size: 13px;
-}
 
-.erp-leave-bal-modal .erp-lbm-cycle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  color: var(--erp-n-600);
-  font-size: 13px;
-}
 
 /* No balance record for the selected cycle. */
 .erp-leave-bal-modal .erp-lbm-empty {

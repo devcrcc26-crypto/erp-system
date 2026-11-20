@@ -22,19 +22,12 @@ import {
   useMyLeaveBalances,
   useSetLeaveBalanceSnapshot,
 } from '@/lib/query/leave';
-import {
-  groupForCycle,
-  groupLeaveYearsByContract,
-  type ContractCycleGroup,
-} from '@/lib/utils/leave-contract-cycles';
 import { formatLeaveEmployeeName, formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import './leave-v2.css';
 
 const KEY = 'hr.leave.ledger';
-
-type Translate = ReturnType<typeof useEpcTranslation>['t'];
 
 /**
  * Only annual leave is set by hand. Maternity and paternity entitlements are
@@ -108,31 +101,13 @@ function rowsFromBalances(
   });
 }
 
-/** "Jun 2026" in the UI language. */
-function monthYear(value: string, locale: string): string {
-  return new Date(`${value.slice(0, 10)}T00:00:00Z`).toLocaleDateString(
-    locale === 'zh' ? 'zh-CN' : 'en-US',
-    { month: 'short', year: 'numeric', timeZone: 'UTC' },
-  );
-}
-
-/** Contract tab text, e.g. "Jun 2026 – Present". */
-function contractRange(
-  group: ContractCycleGroup,
-  locale: string,
-  t: Translate,
-): string {
-  if (group.contract) {
-    const end = group.contract.endDate
-      ? monthYear(group.contract.endDate, locale)
-      : t(`${KEY}.contractPresent`);
-    return `${monthYear(group.contract.startDate, locale)} – ${end}`;
-  }
-  const first = group.cycles[0];
-  const last = group.cycles[group.cycles.length - 1];
-  return first && last
-    ? `${monthYear(first.start, locale)} – ${monthYear(last.end, locale)}`
-    : '';
+/**
+ * Exact leave-year dates, e.g. "Jun 5, 2026 – Jun 4, 2027". A leave year
+ * starts on the contract start date (or its anniversary) and ends the day
+ * before the next one, so the exact days matter, not just month and year.
+ */
+function cycleRange(cycle: LeaveYearOption): string {
+  return `${formatProjectDate(cycle.start)} – ${formatProjectDate(cycle.end)}`;
 }
 
 const DAY_INPUT = {
@@ -145,27 +120,21 @@ const DAY_INPUT = {
 
 /**
  * Selectable chips in a tablist. Each chip has a small top line (contract
- * number or "Year N") and the period below.
+ * number) and the exact leave-year dates below.
  */
 function PeriodTabs<T extends string | number>({
   label,
   items,
   value,
   onChange,
-  size = 'md',
 }: {
   label: string;
   items: Array<{ value: T; title: string; caption?: string }>;
   value: T | null;
   onChange: (value: T) => void;
-  size?: 'md' | 'sm';
 }): React.ReactNode {
   return (
-    <div
-      role="tablist"
-      aria-label={label}
-      className={`erp-lbm-tabs${size === 'sm' ? ' erp-lbm-tabs--sm' : ''}`}
-    >
+    <div role="tablist" aria-label={label} className="erp-lbm-tabs">
       {items.map((item) => {
         const selected = item.value === value;
         return (
@@ -208,9 +177,8 @@ function PeriodTabs<T extends string | number>({
 
 /**
  * HR / GM / System Admin modal to set annual leave entitlement, brought
- * forward and used for one leave cycle of one contract. Pick the contract
- * period, then (for multi-year contracts) the anniversary cycle; the balance
- * below is that cycle's, and saving writes to that cycle.
+ * forward and used for one contract leave year. Pick the leave year (exact
+ * dates); the balance below is that year's, and saving writes to that year.
  */
 export default function LeaveBalanceEditModal({
   open,
@@ -223,7 +191,7 @@ export default function LeaveBalanceEditModal({
   defaultYear: number;
   onClose: () => void;
 }): React.ReactNode {
-  const { t, locale } = useEpcTranslation();
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SnapshotFormValues>();
   const employeeId = employeeSummary?.employeeId;
@@ -241,13 +209,20 @@ export default function LeaveBalanceEditModal({
   const [initialized, setInitialized] = useState<ReadonlySet<string>>(new Set());
   const cycleKey = `${employeeId ?? ''}:${year}`;
 
-  const groups = useMemo(
-    () => groupLeaveYearsByContract(leaveYearsQuery.data?.years ?? []),
-    [leaveYearsQuery.data?.years],
-  );
-  const selectedGroup = groupForCycle(groups, year);
+  /** One entry per leave year (newest first); the label is the balance key. */
+  const cycles = useMemo(() => {
+    const seen = new Set<number>();
+    return (leaveYearsQuery.data?.years ?? []).filter((cycle) => {
+      if (seen.has(cycle.label)) {
+        return false;
+      }
+      seen.add(cycle.label);
+      return true;
+    });
+  }, [leaveYearsQuery.data?.years]);
+  const currentLabel = leaveYearsQuery.data?.current.label;
   const selectedCycle: LeaveYearOption | null =
-    selectedGroup?.cycles.find((cycle) => cycle.label === year) ?? null;
+    cycles.find((cycle) => cycle.label === year) ?? null;
 
   // Seed year + reason when the modal opens for an employee.
   useEffect(() => {
@@ -299,21 +274,6 @@ export default function LeaveBalanceEditModal({
     });
   }
 
-  function selectContract(key: string): void {
-    const group = groups.find((entry) => entry.key === key);
-    if (!group || group.key === selectedGroup?.key) {
-      return;
-    }
-    // Prefer the contract's current cycle, else its latest one.
-    const current = leaveYearsQuery.data?.current.label;
-    const cycle =
-      group.cycles.find((entry) => entry.label === current) ??
-      group.cycles[group.cycles.length - 1];
-    if (cycle) {
-      selectCycle(cycle.label);
-    }
-  }
-
   const annualBalance = balancesQuery.data?.find(
     (row) => row.leaveType === 'ANNUAL',
   );
@@ -329,8 +289,8 @@ export default function LeaveBalanceEditModal({
       const values = await form.validateFields();
       await snapshotMutation.mutateAsync({
         employeeId,
-        // The cycle label is unique per employee and belongs to the selected
-        // contract, so this writes to exactly that contract cycle.
+        // The leave-year label is unique per employee and maps to exactly one
+        // contract leave year (exact start/end dates), so this writes to it.
         year: values.year,
         reason: values.reason.trim(),
         rows: values.rows.map((row) => ({
@@ -357,16 +317,17 @@ export default function LeaveBalanceEditModal({
 
   const employee = employeeSummary?.employee;
 
-  const contractItems = groups.map((group) => ({
-    value: group.key,
-    caption: group.contract?.contractNumber ?? t(`${KEY}.noContract`),
-    title: contractRange(group, locale, t),
-  }));
-  const cycleItems = (selectedGroup?.cycles ?? []).map((cycle, index) => ({
-    value: cycle.label,
-    caption: t(`${KEY}.cycleYear`, { n: index + 1 }),
-    title: `${monthYear(cycle.start, locale)} – ${monthYear(cycle.end, locale)}`,
-  }));
+  const cycleItems = cycles.map((cycle) => {
+    const contract = cycle.contract?.contractNumber ?? t(`${KEY}.noContract`);
+    return {
+      value: cycle.label,
+      caption:
+        cycle.label === currentLabel
+          ? `${contract} · ${t(`${KEY}.currentCycle`)}`
+          : contract,
+      title: cycleRange(cycle),
+    };
+  });
 
   return (
     <Modal
@@ -411,47 +372,27 @@ export default function LeaveBalanceEditModal({
           </div>
         ) : null}
 
-        {/* Which contract, and which leave cycle of it. */}
+        {/* Which leave year: one tab per contract leave year, exact dates. */}
         <div className="erp-lbm-period">
           <p className="erp-lbm-period-label">{t('hr.leave.contractPeriod')}</p>
           {leaveYearsQuery.isLoading ? (
             <Spin size="small" />
-          ) : groups.length === 0 ? (
+          ) : cycleItems.length === 0 ? (
             <p className="erp-lbm-period-empty">{t(`${KEY}.noCycles`)}</p>
-          ) : groups.length === 1 && contractItems[0] ? (
+          ) : cycleItems.length === 1 && cycleItems[0] ? (
             <div className="erp-lbm-period-static">
               <FileTextOutlined aria-hidden />
-              <span className="erp-lbm-tab-caption">{contractItems[0].caption}</span>
-              <span className="erp-lbm-tab-title">{contractItems[0].title}</span>
+              <span className="erp-lbm-tab-caption">{cycleItems[0].caption}</span>
+              <span className="erp-lbm-tab-title">{cycleItems[0].title}</span>
             </div>
           ) : (
             <PeriodTabs
-              label={t(`${KEY}.contractTabsLabel`)}
-              items={contractItems}
-              value={selectedGroup?.key ?? null}
-              onChange={selectContract}
-            />
-          )}
-
-          {cycleItems.length > 1 ? (
-            <PeriodTabs
-              size="sm"
               label={t(`${KEY}.cycleTabsLabel`)}
               items={cycleItems}
               value={year}
               onChange={selectCycle}
             />
-          ) : null}
-
-          {selectedCycle ? (
-            <p className="erp-lbm-cycle">
-              <CalendarOutlined aria-hidden />
-              {t(`${KEY}.leaveCycle`, {
-                start: formatProjectDate(selectedCycle.start),
-                end: formatProjectDate(selectedCycle.end),
-              })}
-            </p>
-          ) : null}
+          )}
         </div>
 
         <p className="erp-lbm-hint">{t(`${KEY}.snapshotHint`)}</p>
