@@ -230,9 +230,13 @@ export default function LeaveBalanceEditModal({
       return;
     }
     const years = leaveYearsQuery.data?.years ?? [];
+    // Only contract leave years are listed; when today falls outside every
+    // contract, fall back to the newest one.
+    const currentLabel = leaveYearsQuery.data?.current.label;
     const preferred =
       years.find((option) => option.label === defaultYear)?.label ??
-      leaveYearsQuery.data?.current.label ??
+      years.find((option) => option.label === currentLabel)?.label ??
+      years[0]?.label ??
       defaultYear;
     form.setFieldsValue({
       year: preferred,

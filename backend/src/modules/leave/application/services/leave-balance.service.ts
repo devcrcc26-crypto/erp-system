@@ -332,10 +332,12 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Leave-year options for the edit-balances dropdown (newest first).
+   * Leave-year options for the edit-balances modal (newest first).
    * One option per real leave cycle (not every calendar year integer), each
    * tagged with the contract that opened that cycle when the cycle start
    * equals a contract start; otherwise the covering contract.
+   * Cycles no contract covers (before the first contract, or after a
+   * contract ended / was terminated) are left out.
    */
   async listLeaveYears(
     employeeId: string,
@@ -387,7 +389,8 @@ export class LeaveBalanceService {
 
     const years = [...byStart.values()]
       .sort((a, b) => b.start.getTime() - a.start.getTime())
-      .map(toOption);
+      .map(toOption)
+      .filter((option) => option.contract != null);
     return {
       current: toOption(current),
       years,
@@ -397,7 +400,8 @@ export class LeaveBalanceService {
   /**
    * Contract for a leave cycle: prefer the contract whose start date equals
    * the cycle start (that contract opened this year). Otherwise the latest
-   * contract that started on or before the cycle (anniversary years).
+   * contract that started on or before the cycle (anniversary years), as long
+   * as it had not ended or been terminated before the cycle starts.
    */
   private contractForLeaveYear(
     contracts: ReadonlyArray<{
@@ -431,6 +435,10 @@ export class LeaveBalanceService {
       return null;
     }
     const effectiveEnd = match.terminatedAt ?? match.endDate;
+    if (effectiveEnd && toDateOnlyKey(effectiveEnd) < startKey) {
+      // The contract was over before this cycle began: no contract covers it.
+      return null;
+    }
     return {
       id: match.id,
       contractNumber: match.contractNumber,
