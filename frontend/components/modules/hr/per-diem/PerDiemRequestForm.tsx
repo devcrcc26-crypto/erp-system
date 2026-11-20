@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, DatePicker, Form, Input, InputNumber, Radio, Result, Select, Switch, TimePicker } from 'antd';
+import { Alert, DatePicker, Form, Input, InputNumber, Radio, Select, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import CitySelector from '@/components/modules/hr/shared/CitySelector';
 import CountrySelector from '@/components/modules/hr/shared/CountrySelector';
@@ -20,20 +20,24 @@ import type {
   UpdatePerDiemRequestPayload,
 } from '@/lib/api/per-diem.types';
 import type { PerDiemDestinationCategory } from '@/lib/constants/per-diem-destination-categories';
-import { PER_DIEM_CATEGORY_FIELDS } from '@/lib/constants/per-diem-destination-categories';
+import {
+  PER_DIEM_CATEGORY_FIELDS,
+  PER_DIEM_DESTINATION_CATEGORIES,
+} from '@/lib/constants/per-diem-destination-categories';
 import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
 import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useFlightApplications } from '@/lib/query/flight';
 import {
-  useActiveEmployeePerDiemCategories,
   useSubmitPerDiemRequest,
   useUpdatePerDiemRequest,
 } from '@/lib/query/per-diem';
 import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
-import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+
+type PerDiemCurrency = 'ETB' | 'USD' | 'CNY';
 
 interface PerDiemFormValues {
   tripType?: PerDiemTripType;
@@ -44,11 +48,11 @@ interface PerDiemFormValues {
   departureTime?: dayjs.Dayjs;
   returnTime?: dayjs.Dayjs;
   days?: number;
+  dailyRate?: number;
+  currency?: PerDiemCurrency;
   linkedTravel?: string;
   siteAssignmentId?: string;
   notes?: string;
-  requestedDailyRate?: number;
-  rateOverrideReason?: string;
 }
 
 interface PerDiemRequestFormProps {
@@ -89,16 +93,20 @@ function perDiemFormValuesFrom(record: PerDiemRequestDetail): PerDiemFormValues 
     linkedTravel,
     siteAssignmentId: record.siteAssignmentId ?? undefined,
     notes: record.notes ?? undefined,
-    requestedDailyRate:
-      record.requestedDailyRate != null
-        ? Number(record.requestedDailyRate)
-        : undefined,
-    rateOverrideReason: record.rateOverrideReason ?? undefined,
+    dailyRate: Number(record.dailyRate),
+    currency: (record.currency as PerDiemCurrency | undefined) ?? 'ETB',
   };
 }
 
 const DESTINATION_FIELDS = ['tripType', 'destinationCountry', 'destinationCity', 'destinationCategory'] as const;
-const DATES_FIELDS = ['dateRange', 'departureTime', 'returnTime', 'days'] as const;
+const DETAILS_FIELDS = [
+  'dateRange',
+  'departureTime',
+  'returnTime',
+  'days',
+  'dailyRate',
+  'currency',
+] as const;
 
 function calcInclusiveCalendarDays(
   start: dayjs.Dayjs,
@@ -122,16 +130,15 @@ export default function PerDiemRequestForm({
   const [form] = Form.useForm<PerDiemFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [rateOverride, setRateOverride] = useState(
-    initialRecord?.requestedDailyRate != null,
-  );
   const initialValues = useMemo(
-    () => (initialRecord ? perDiemFormValuesFrom(initialRecord) : undefined),
+    () =>
+      initialRecord
+        ? perDiemFormValuesFrom(initialRecord)
+        : ({ currency: 'ETB' } satisfies PerDiemFormValues),
     [initialRecord],
   );
   const updateMutation = useUpdatePerDiemRequest(initialRecord?.id ?? '');
 
-  const ratesQuery = useActiveEmployeePerDiemCategories(onBehalf.employeeId);
   const flightsQuery = useFlightApplications(
     { status: 'APPROVED', limit: 50 },
     true,
@@ -174,14 +181,6 @@ export default function PerDiemRequestForm({
     [approvedSiteAssignments],
   );
 
-  const selectedRate = useMemo(
-    () =>
-      ratesQuery.data?.find(
-        (entry) => entry.destinationCategory === destinationCategory,
-      ),
-    [ratesQuery.data, destinationCategory],
-  );
-
   const calendarSpan = useMemo(() => {
     if (!dateRange?.[0] || !dateRange?.[1]) {
       return 0;
@@ -191,15 +190,12 @@ export default function PerDiemRequestForm({
 
   const days =
     formValues?.days != null && formValues.days > 0 ? formValues.days : 0;
-
-  const totalAmount = selectedRate ? Number(selectedRate.dailyRate) * days : 0;
-
-  const requestedDailyRate = formValues?.requestedDailyRate;
-  const configuredDailyRate = selectedRate ? Number(selectedRate.dailyRate) : 0;
-  const requestedTotal =
-    rateOverride && requestedDailyRate != null && requestedDailyRate > configuredDailyRate && days > 0
-      ? requestedDailyRate * days
-      : null;
+  const dailyRate =
+    formValues?.dailyRate != null && formValues.dailyRate > 0
+      ? formValues.dailyRate
+      : 0;
+  const currency: PerDiemCurrency = formValues?.currency ?? 'ETB';
+  const totalAmount = dailyRate > 0 && days > 0 ? dailyRate * days : 0;
 
   const travelOptions = useMemo(
     () => [
@@ -247,18 +243,11 @@ export default function PerDiemRequestForm({
 
   const categoryOptions = useMemo(
     () =>
-      (ratesQuery.data ?? []).map((entry) => {
-        const labelKey =
-          PER_DIEM_CATEGORY_FIELDS[
-            entry.destinationCategory as keyof typeof PER_DIEM_CATEGORY_FIELDS
-          ]?.labelKey;
-        const label = labelKey ? t(labelKey) : entry.destinationCategory;
-        return {
-          value: entry.destinationCategory,
-          label: `${label} - ${formatEtbAmount(entry.dailyRate)}`,
-        };
-      }),
-    [ratesQuery.data, t],
+      PER_DIEM_DESTINATION_CATEGORIES.map((category) => ({
+        value: category,
+        label: t(PER_DIEM_CATEGORY_FIELDS[category].labelKey),
+      })),
+    [t],
   );
 
   const categoryLabel = useMemo(() => {
@@ -278,9 +267,6 @@ export default function PerDiemRequestForm({
     }
     return travelOptions.find((option) => option.value === value)?.label ?? '-';
   }, [formValues?.linkedTravel, travelOptions, t]);
-
-  const noActiveRates =
-    !ratesQuery.isLoading && (ratesQuery.data?.length ?? 0) === 0;
 
   function resetForm(): void {
     onBehalf.reset();
@@ -385,11 +371,6 @@ export default function PerDiemRequestForm({
   async function handleSubmit(): Promise<void> {
     setFormError(null);
 
-    if (noActiveRates) {
-      messageApi.warning(t('hr.messages.noActiveEmployeePerDiemRates'));
-      return;
-    }
-
     let values: PerDiemFormValues;
     try {
       values = await form.validateFields();
@@ -401,34 +382,14 @@ export default function PerDiemRequestForm({
       !values.destinationCategory ||
       !values.destinationCountry?.trim() ||
       !values.dateRange?.[0] ||
-      !values.dateRange?.[1]
+      !values.dateRange?.[1] ||
+      values.dailyRate == null ||
+      !(values.dailyRate > 0)
     ) {
       return;
     }
 
-    const rate = ratesQuery.data?.find(
-      (entry) => entry.destinationCategory === values.destinationCategory,
-    );
-    if (!rate) {
-      messageApi.warning(t('hr.validation.selectDestinationCategory'));
-      return;
-    }
-
     const [kind, id] = values.linkedTravel?.split(':') ?? [];
-
-    const overrideRate =
-      rateOverride &&
-      values.requestedDailyRate != null &&
-      values.requestedDailyRate > Number(rate.dailyRate)
-        ? values.requestedDailyRate
-        : undefined;
-
-    if (overrideRate != null && !values.rateOverrideReason?.trim()) {
-      messageApi.warning(
-        t('hr.validation.rateOverrideReasonRequired'),
-      );
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -453,6 +414,8 @@ export default function PerDiemRequestForm({
         departureTime: values.departureTime?.format('HH:mm'),
         returnTime: values.returnTime?.format('HH:mm'),
         days: values.days,
+        dailyRate: values.dailyRate,
+        currency: values.currency ?? 'ETB',
         linkedFlightId: kind === 'flight' ? id : undefined,
         linkedBusinessTripId: kind === 'trip' ? id : undefined,
         siteAssignmentId:
@@ -460,8 +423,6 @@ export default function PerDiemRequestForm({
             ? values.siteAssignmentId
             : undefined,
         notes: values.notes?.trim() || undefined,
-        requestedDailyRate: overrideRate,
-        rateOverrideReason: overrideRate != null ? values.rateOverrideReason?.trim() || undefined : undefined,
       } satisfies UpdatePerDiemRequestPayload;
       if (initialRecord) {
         const saved = await updateMutation.mutateAsync(payload);
@@ -489,7 +450,7 @@ export default function PerDiemRequestForm({
   }
 
   const estimateBlock =
-    selectedRate && days > 0 ? (
+    dailyRate > 0 && days > 0 ? (
       <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 border-t border-[rgba(0,0,0,0.06)] pt-4 sm:grid-cols-2">
         <EstimateItem
           label={t('hr.form.totalDays')}
@@ -497,20 +458,13 @@ export default function PerDiemRequestForm({
         />
         <EstimateItem
           label={t('hr.form.dailyRate')}
-          value={formatEtbAmount(selectedRate.dailyRate)}
+          value={formatCurrencyAmount(dailyRate, currency)}
         />
         <EstimateItem
           label={t('hr.form.totalAmount')}
-          value={formatEtbAmount(totalAmount)}
+          value={formatCurrencyAmount(totalAmount, currency)}
           emphasize
         />
-        {requestedTotal != null ? (
-          <EstimateItem
-            label={t('hr.perDiem.requestedTotal')}
-            value={formatEtbAmount(requestedTotal)}
-            emphasize
-          />
-        ) : null}
       </div>
     ) : null;
 
@@ -619,10 +573,8 @@ export default function PerDiemRequestForm({
                   ]}
                 >
                   <Select
-                    loading={ratesQuery.isLoading}
                     placeholder={t('hr.placeholder.selectDestinationCategory')}
                     options={categoryOptions}
-                    disabled={noActiveRates}
                   />
                 </Form.Item>
               </div>
@@ -632,7 +584,7 @@ export default function PerDiemRequestForm({
       },
       {
         title: t('hr.section.requestDetails'),
-        validate: () => validateFields(DATES_FIELDS),
+        validate: () => validateFields(DETAILS_FIELDS),
         content: (
           <FormLayout
             variant="pro"
@@ -706,6 +658,52 @@ export default function PerDiemRequestForm({
               <InputNumber min={1} precision={0} className="w-full" />
             </Form.Item>
 
+            <div className="erp-form-grid-2">
+              <Form.Item
+                name="dailyRate"
+                label={t('hr.form.dailyRate')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.enterDailyRate'),
+                  },
+                  {
+                    type: 'number',
+                    min: 0.01,
+                    message: t('hr.validation.dailyRatePositive'),
+                  },
+                ]}
+                extra={t('hr.perDiem.dailyRateHint')}
+              >
+                <InputNumber
+                  min={0.01}
+                  step={1}
+                  precision={2}
+                  className="w-full"
+                  suffix={currency}
+                />
+              </Form.Item>
+              <Form.Item
+                name="currency"
+                label={t('hr.form.currency')}
+                initialValue="ETB"
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectCurrency'),
+                  },
+                ]}
+              >
+                <Select
+                  options={[
+                    { value: 'ETB', label: 'ETB' },
+                    { value: 'USD', label: 'USD' },
+                    { value: 'CNY', label: 'CNY' },
+                  ]}
+                />
+              </Form.Item>
+            </div>
+
             <Form.Item name="notes" label={t('hr.form.notes')}>
               <Input.TextArea
                 rows={3}
@@ -714,83 +712,6 @@ export default function PerDiemRequestForm({
                 placeholder={t('hr.placeholder.enterNotes')}
               />
             </Form.Item>
-
-            <div className="flex items-center gap-3 pt-2">
-              <Switch
-                checked={rateOverride}
-                onChange={(checked) => {
-                  setRateOverride(checked);
-                  if (!checked) {
-                    form.setFieldsValue({ requestedDailyRate: undefined, rateOverrideReason: undefined });
-                  }
-                }}
-                size="small"
-              />
-              <span className="text-sm" style={{ color: tokens.colorTextSecondary }}>
-                {t('hr.perDiem.requestDifferentRate')}
-              </span>
-            </div>
-
-            {rateOverride ? (
-              <div className="mt-4 flex flex-col gap-4 rounded-md border border-[rgba(0,0,0,0.08)] p-4">
-                <Form.Item
-                  name="requestedDailyRate"
-                  label={t('hr.perDiem.requestedDailyRate')}
-                  rules={[
-                    {
-                      required: true,
-                      message: t('hr.validation.enterRequestedDailyRate'),
-                    },
-                    {
-                      validator: async (_, value: number | null | undefined) => {
-                        if (value == null) return;
-                        if (value <= configuredDailyRate) {
-                          throw new Error(
-                            t('hr.validation.requestedRateMustExceedConfigured', {
-                              rate: formatEtbAmount(configuredDailyRate),
-                            }),
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                  extra={
-                    selectedRate
-                      ? t('hr.perDiem.configuredRateHint', {
-                          rate: formatEtbAmount(selectedRate.dailyRate),
-                          currency: selectedRate.currency,
-                        })
-                      : undefined
-                  }
-                >
-                  <InputNumber
-                    min={configuredDailyRate + 0.01}
-                    step={1}
-                    precision={2}
-                    className="w-full"
-                    suffix={selectedRate?.currency ?? 'ETB'}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="rateOverrideReason"
-                  label={t('hr.perDiem.rateOverrideReason')}
-                  rules={[
-                    {
-                      required: true,
-                      message: t('hr.validation.rateOverrideReasonRequired'),
-                    },
-                  ]}
-                >
-                  <Input.TextArea
-                    rows={3}
-                    maxLength={1000}
-                    showCount
-                    placeholder={t('hr.perDiem.rateOverrideReasonPlaceholder')}
-                  />
-                </Form.Item>
-              </div>
-            ) : null}
 
             {estimateBlock}
           </FormLayout>
@@ -855,12 +776,22 @@ export default function PerDiemRequestForm({
               />
               <ReviewItem
                 label={t('hr.form.dailyRate')}
-                value={selectedRate ? formatEtbAmount(selectedRate.dailyRate) : '-'}
+                value={
+                  dailyRate > 0
+                    ? formatCurrencyAmount(dailyRate, currency)
+                    : '-'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.currency')}
+                value={currency}
               />
               <ReviewItem
                 label={t('hr.form.totalAmount')}
                 value={
-                  selectedRate && days > 0 ? formatEtbAmount(totalAmount) : '-'
+                  totalAmount > 0
+                    ? formatCurrencyAmount(totalAmount, currency)
+                    : '-'
                 }
               />
               <ReviewItem
@@ -883,18 +814,6 @@ export default function PerDiemRequestForm({
                   value={formValues.notes.trim()}
                 />
               ) : null}
-              {rateOverride && requestedDailyRate != null && requestedDailyRate > configuredDailyRate ? (
-                <ReviewItem
-                  label={t('hr.perDiem.requestedDailyRate')}
-                  value={formatEtbAmount(requestedDailyRate)}
-                />
-              ) : null}
-              {rateOverride && formValues?.rateOverrideReason?.trim() ? (
-                <ReviewItem
-                  label={t('hr.perDiem.rateOverrideReason')}
-                  value={formValues.rateOverrideReason.trim()}
-                />
-              ) : null}
             </div>
             {estimateBlock}
           </FormLayout>
@@ -905,10 +824,8 @@ export default function PerDiemRequestForm({
       initialRecord,
       onBehalf,
       t,
-      ratesQuery.isLoading,
       siteAssignmentsQuery.isLoading,
       categoryOptions,
-      noActiveRates,
       travelOptions,
       siteAssignmentOptions,
       estimateBlock,
@@ -921,26 +838,11 @@ export default function PerDiemRequestForm({
       tripType,
       calendarSpan,
       days,
-      selectedRate,
+      dailyRate,
+      currency,
       totalAmount,
-      rateOverride,
-      requestedDailyRate,
-      configuredDailyRate,
-      requestedTotal,
     ],
   );
-
-  if (noActiveRates) {
-    return (
-      <div className="erp-pro-card erp-per-diem-no-rate">
-        <Result
-          status="warning"
-          title={t('hr.perDiem.noRateTitle')}
-          subTitle={t('hr.perDiem.noRateSubtitle')}
-        />
-      </div>
-    );
-  }
 
   return (
     <Form<PerDiemFormValues>
@@ -959,16 +861,6 @@ export default function PerDiemRequestForm({
           className="mb-4"
           closable
           onClose={() => setFormError(null)}
-        />
-      ) : null}
-
-      {noActiveRates ? (
-        <Alert
-          type="warning"
-          showIcon
-          className="mb-4"
-          title={t('hr.messages.noActiveEmployeePerDiemRates')}
-          description={t('hr.messages.noActiveEmployeePerDiemRatesDesc')}
         />
       ) : null}
 

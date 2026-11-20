@@ -61,7 +61,7 @@ import {
   useReturnApprovalTier,
 } from '@/lib/query/approvals';
 import { usePerDiemRequest, useSetApprovedPerDiemRate } from '@/lib/query/per-diem';
-import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   findCurrentTier,
@@ -630,8 +630,12 @@ export default function ApprovalDetailPageContent({
     categoryCode !== 'OVERTIME_APPLICATION' &&
     canResubmitOwnRequest(request.status, request.requestedBy, currentUserId);
 
-  // Per diem approval: standard rate, optional requested rate, the approver's
-  // rate per day (editable) and the resulting approved total.
+  // Per diem approval: employee-submitted rate is shown for verification;
+  // the approver sets the approved rate (or returns/rejects with a note).
+  const submittedDailyRate = perDiemDetail
+    ? Number(perDiemDetail.requestedDailyRate ?? perDiemDetail.dailyRate)
+    : 0;
+  const perDiemCurrency = perDiemDetail?.currency ?? 'ETB';
   const perDiemRateField =
     isPerDiem && perDiemDetail ? (
       <div className="erp-confirm-dialog-field" style={{ marginBottom: 12 }}>
@@ -645,11 +649,11 @@ export default function ApprovalDetailPageContent({
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <p className="erp-users-cell-sub m-0">
-                {t('pages.approvals.dialog.perDiem.standardRate')}
+                {t('pages.approvals.dialog.perDiem.submittedRate')}
               </p>
               <p className="m-0 font-semibold">
                 {t('pages.approvals.dialog.perDiem.perDay', {
-                  amount: formatEtbAmount(perDiemDetail.dailyRate),
+                  amount: formatCurrencyAmount(submittedDailyRate, perDiemCurrency),
                 })}
               </p>
             </div>
@@ -657,27 +661,21 @@ export default function ApprovalDetailPageContent({
               <p className="erp-users-cell-sub m-0">{t('pages.approvals.dialog.perDiem.days')}</p>
               <p className="m-0 font-semibold">{perDiemDetail.days}</p>
             </div>
-            {perDiemDetail.requestedDailyRate ? (
-              <div>
-                <p className="erp-users-cell-sub m-0">
-                  {t('pages.approvals.dialog.perDiem.requestedRate')}
-                </p>
-                <p className="m-0 font-semibold">
-                  {t('pages.approvals.dialog.perDiem.perDay', {
-                    amount: formatEtbAmount(perDiemDetail.requestedDailyRate),
-                  })}
-                </p>
-              </div>
-            ) : null}
-            {perDiemDetail.rateOverrideReason ? (
-              <div className="col-span-2">
-                <p className="erp-users-cell-sub m-0">
-                  {t('pages.approvals.dialog.perDiem.overrideReason')}
-                </p>
-                <p className="m-0">{perDiemDetail.rateOverrideReason}</p>
-              </div>
-            ) : null}
+            <div className="col-span-2">
+              <p className="erp-users-cell-sub m-0">
+                {t('hr.form.totalAmount')}
+              </p>
+              <p className="m-0 font-semibold">
+                {formatCurrencyAmount(
+                  submittedDailyRate * perDiemDetail.days,
+                  perDiemCurrency,
+                )}
+              </p>
+            </div>
           </div>
+          <p className="erp-users-cell-sub m-0 mt-3">
+            {t('pages.approvals.dialog.perDiem.rejectHint')}
+          </p>
         </div>
         <p className="erp-confirm-dialog-field-label">
           {t('pages.approvals.dialog.perDiem.ratePerDay')}{' '}
@@ -690,11 +688,14 @@ export default function ApprovalDetailPageContent({
           value={approvedRate}
           onChange={(v) => setApprovedRate(v)}
           aria-label={t('pages.approvals.dialog.perDiem.ratePerDay')}
-          suffix="ETB"
+          suffix={perDiemCurrency}
         />
         <p className="erp-confirm-dialog-field-label" style={{ marginTop: 8 }}>
           {t('pages.approvals.dialog.perDiem.total', {
-            amount: formatEtbAmount((approvedRate ?? 0) * perDiemDetail.days),
+            amount: formatCurrencyAmount(
+              (approvedRate ?? 0) * perDiemDetail.days,
+              perDiemCurrency,
+            ),
           })}
         </p>
       </div>

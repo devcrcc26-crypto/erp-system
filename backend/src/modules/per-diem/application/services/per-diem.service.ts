@@ -231,13 +231,14 @@ export class PerDiemService
         ? 'Domestic'
         : dto.destinationCategory;
 
-    const resolvedRate =
-      await this.employeePerDiemRateService.resolveRateForSubmission(
-        companyId,
-        employeeId,
-        destinationCategory,
-        actorUserId,
-      );
+    // Employee enters the daily rate on the request. Seeded EmployeePerDiemRate
+    // rows stay in the schema for later reference/validation but are not used
+    // to auto-fill create/update.
+    if (dto.dailyRate == null || !(Number(dto.dailyRate) > 0)) {
+      throw new BadRequestException('dailyRate must be greater than 0');
+    }
+    const dailyRate = Number(dto.dailyRate);
+    const currency = dto.currency ?? SupportedCurrency.ETB;
 
     if (dto.linkedFlightId) {
       const flight = await this.prisma.flightApplication.findFirst({
@@ -294,7 +295,6 @@ export class PerDiemService
       siteAssignmentId = assignment.id;
     }
 
-    const dailyRate = resolvedRate.dailyRate;
     const totalAmount = dailyRate * days;
     const exchangeRate = 1;
     const totalAmountEtb = totalAmount;
@@ -306,9 +306,9 @@ export class PerDiemService
       totalDays,
       tripType,
       destinationCategory,
-      resolvedRate,
       siteAssignmentId,
       dailyRate,
+      currency,
       totalAmount,
       exchangeRate,
       totalAmountEtb,
@@ -331,9 +331,9 @@ export class PerDiemService
       totalDays,
       tripType,
       destinationCategory,
-      resolvedRate,
       siteAssignmentId,
       dailyRate,
+      currency,
       totalAmount,
       exchangeRate,
       totalAmountEtb,
@@ -378,7 +378,7 @@ export class PerDiemService
           companyId,
           requestNumber: approval.requestNumber,
           employeeId,
-          employeePerDiemRateId: resolvedRate.employeePerDiemRateId,
+          employeePerDiemRateId: null,
           destinationCategory,
           destination: dto.destination.trim(),
           tripType,
@@ -389,12 +389,11 @@ export class PerDiemService
           days,
           totalDays,
           dailyRate: new Prisma.Decimal(dailyRate),
-          requestedDailyRate:
-            dto.requestedDailyRate != null
-              ? new Prisma.Decimal(dto.requestedDailyRate)
-              : null,
-          rateOverrideReason: dto.rateOverrideReason?.trim() || null,
-          currency: SupportedCurrency.ETB,
+          // Mirror the employee-entered rate so approval UIs that show
+          // "submitted/requested" rate still surface it clearly.
+          requestedDailyRate: new Prisma.Decimal(dailyRate),
+          rateOverrideReason: null,
+          currency,
           totalAmount: new Prisma.Decimal(totalAmount),
           totalAmountEtb: new Prisma.Decimal(totalAmountEtb),
           exchangeRate: new Prisma.Decimal(exchangeRate),
@@ -486,7 +485,7 @@ export class PerDiemService
       await tx.perDiemRequest.update({
         where: { id },
         data: {
-          employeePerDiemRateId: resolved.resolvedRate.employeePerDiemRateId,
+          employeePerDiemRateId: null,
           destinationCategory: resolved.destinationCategory,
           destination: dto.destination.trim(),
           tripType: resolved.tripType,
@@ -497,11 +496,9 @@ export class PerDiemService
           days: resolved.days,
           totalDays: resolved.totalDays,
           dailyRate: new Prisma.Decimal(resolved.dailyRate),
-          requestedDailyRate:
-            dto.requestedDailyRate != null
-              ? new Prisma.Decimal(dto.requestedDailyRate)
-              : null,
-          rateOverrideReason: dto.rateOverrideReason?.trim() || null,
+          requestedDailyRate: new Prisma.Decimal(resolved.dailyRate),
+          rateOverrideReason: null,
+          currency: resolved.currency,
           totalAmount: new Prisma.Decimal(resolved.totalAmount),
           totalAmountEtb: new Prisma.Decimal(resolved.totalAmountEtb),
           exchangeRate: new Prisma.Decimal(resolved.exchangeRate),

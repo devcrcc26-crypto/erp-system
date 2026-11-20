@@ -8,7 +8,10 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import { ApiRequestError } from '@/lib/api/errors';
 import { usePerDiemRequest } from '@/lib/query/per-diem';
-import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import {
+  formatCurrencyAmount,
+  formatEtbAmount,
+} from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import PerDiemRateSummary from '@/components/modules/hr/per-diem/PerDiemRateSummary';
 
@@ -53,26 +56,46 @@ export default function PerDiemDetail({
       ? `Business Trip ${request.linkedTrip.tripNumber} - ${request.linkedTrip.destinationCity}, ${request.linkedTrip.destinationCountry}`
       : null;
 
+  const submittedRate = Number(request.requestedDailyRate ?? request.dailyRate);
+  const currency = request.currency ?? 'ETB';
+
   return (
     <div className="flex flex-col gap-3">
       <SummaryStrip
         items={[
           { label: 'Days', value: String(request.days) },
           {
-            label: 'Daily Rate',
-            value: formatEtbAmount(request.dailyRate),
+            label: 'Submitted Daily Rate',
+            value: formatCurrencyAmount(submittedRate, currency),
+            emphasize: true,
           },
-          ...(request.requestedDailyRate != null
-            ? [{ label: 'Requested Rate', value: formatEtbAmount(request.requestedDailyRate) }]
-            : []),
           ...(request.approvedDailyRate != null
-            ? [{ label: 'Approved Rate', value: formatEtbAmount(request.approvedDailyRate), emphasize: true }]
+            ? [
+                {
+                  label: 'Approved Rate',
+                  value: formatCurrencyAmount(request.approvedDailyRate, currency),
+                  emphasize: true,
+                },
+              ]
             : []),
           {
-            label: 'Total (ETB)',
-            value: formatEtbAmount(request.totalAmountEtb),
+            label: `Total (${currency})`,
+            value: formatCurrencyAmount(
+              request.approvedDailyRate != null
+                ? Number(request.approvedDailyRate) * request.days
+                : submittedRate * request.days,
+              currency,
+            ),
             emphasize: !request.approvedDailyRate,
           },
+          ...(currency !== 'ETB'
+            ? [
+                {
+                  label: 'Total (ETB)',
+                  value: formatEtbAmount(request.totalAmountEtb),
+                },
+              ]
+            : []),
         ]}
       />
 

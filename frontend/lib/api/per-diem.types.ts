@@ -168,12 +168,14 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   departureTime?: string;
   returnTime?: string;
   days: number;
+  /** Employee-entered daily rate (required). */
+  dailyRate: number;
+  /** Currency for the daily rate; defaults to ETB on the server. */
+  currency?: 'ETB' | 'USD' | 'CNY';
   linkedFlightId?: string;
   linkedBusinessTripId?: string;
   siteAssignmentId?: string;
   notes?: string;
-  requestedDailyRate?: number;
-  rateOverrideReason?: string;
 }
 
 /** PATCH body when the employee edits a DRAFT / RETURNED request. */

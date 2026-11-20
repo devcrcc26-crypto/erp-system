@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { PerDiemTripType } from '@prisma/client';
+import { PerDiemTripType, SupportedCurrency } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
@@ -103,12 +103,36 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @MaxLength(2000)
   notes?: string;
 
-  @ApiPropertyOptional()
+  @ApiProperty({
+    description:
+      'Employee-entered daily rate for this trip. Seeded rate tables are not used for auto-fill.',
+    example: 500,
+  })
+  @IsNumber()
+  @Min(0.01)
+  dailyRate!: number;
+
+  @ApiPropertyOptional({
+    enum: SupportedCurrency,
+    default: SupportedCurrency.ETB,
+    description: 'Currency for the daily rate (defaults to ETB)',
+  })
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  currency?: SupportedCurrency;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Legacy override field — prefer dailyRate',
+  })
   @IsOptional()
   @IsNumber()
   requestedDailyRate?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Legacy override reason — no longer required',
+  })
   @IsOptional()
   @IsString()
   rateOverrideReason?: string;
