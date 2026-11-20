@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Form, Input, InputNumber, Modal, Select, Spin } from 'antd';
-import { CalendarOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Form, Input, InputNumber, Modal, Spin } from 'antd';
+import {
+  CalendarOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -17,12 +22,19 @@ import {
   useMyLeaveBalances,
   useSetLeaveBalanceSnapshot,
 } from '@/lib/query/leave';
+import {
+  groupForCycle,
+  groupLeaveYearsByContract,
+  type ContractCycleGroup,
+} from '@/lib/utils/leave-contract-cycles';
 import { formatLeaveEmployeeName, formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import './leave-v2.css';
 
 const KEY = 'hr.leave.ledger';
+
+type Translate = ReturnType<typeof useEpcTranslation>['t'];
 
 /**
  * Only annual leave is set by hand. Maternity and paternity entitlements are
@@ -59,25 +71,34 @@ function remainingOf(row: {
 }
 
 /**
- * The current balance for a type, if one exists. When the employee has no
- * annual record yet, the form starts at zero and saving creates it.
+ * The balance for a type in the selected cycle. The list summary is only a
+ * stand-in while that cycle's balances load, and only when it is the same
+ * cycle, so switching cycles never shows another cycle's figures.
  */
 function existingBalance(
   leaveType: LeaveType,
+  year: number,
   balances: LeaveBalance[] | undefined,
   summary: EmployeeLeaveBalanceSummary | null,
 ): LeaveBalance | null | undefined {
-  const fromList = leaveType === 'ANNUAL' ? summary?.annual : undefined;
-  return fromList ?? balances?.find((row) => row.leaveType === leaveType);
+  const fromCycle = balances?.find((row) => row.leaveType === leaveType);
+  if (fromCycle) {
+    return fromCycle;
+  }
+  if (leaveType === 'ANNUAL' && summary?.year === year) {
+    return summary.annual;
+  }
+  return undefined;
 }
 
 function rowsFromBalances(
   leaveTypes: LeaveType[],
+  year: number,
   balances: LeaveBalance[] | undefined,
   summary: EmployeeLeaveBalanceSummary | null,
 ): SnapshotRowValues[] {
   return leaveTypes.map((leaveType) => {
-    const existing = existingBalance(leaveType, balances, summary);
+    const existing = existingBalance(leaveType, year, balances, summary);
     return {
       leaveType,
       entitled: existing?.entitled ?? 0,
@@ -87,36 +108,31 @@ function rowsFromBalances(
   });
 }
 
-/**
- * One label per leave cycle. Use the cycle dates (unique) so anniversary years
- * under the same contract do not look identical. Prefer "Present" when this
- * cycle belongs to an open-ended contract and the cycle end is still ahead.
- */
-function formatContractOptionLabel(
-  option: LeaveYearOption,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string {
-  const cycleStart = formatProjectDate(option.start);
-  const today = new Date().toISOString().slice(0, 10);
-  const openEnded =
-    option.contract != null &&
-    option.contract.endDate == null &&
-    option.end >= today;
-  const cycleEnd = openEnded
-    ? t(`${KEY}.contractPresent`)
-    : formatProjectDate(option.end);
+/** "Jun 2026" in the UI language. */
+function monthYear(value: string, locale: string): string {
+  return new Date(`${value.slice(0, 10)}T00:00:00Z`).toLocaleDateString(
+    locale === 'zh' ? 'zh-CN' : 'en-US',
+    { month: 'short', year: 'numeric', timeZone: 'UTC' },
+  );
+}
 
-  if (option.contract) {
-    return t(`${KEY}.contractOption`, {
-      n: option.contract.sequence,
-      start: cycleStart,
-      end: cycleEnd,
-    });
+/** Contract tab text, e.g. "Jun 2026 – Present". */
+function contractRange(
+  group: ContractCycleGroup,
+  locale: string,
+  t: Translate,
+): string {
+  if (group.contract) {
+    const end = group.contract.endDate
+      ? monthYear(group.contract.endDate, locale)
+      : t(`${KEY}.contractPresent`);
+    return `${monthYear(group.contract.startDate, locale)} – ${end}`;
   }
-  return t(`${KEY}.cycleOnlyOption`, {
-    start: cycleStart,
-    end: cycleEnd,
-  });
+  const first = group.cycles[0];
+  const last = group.cycles[group.cycles.length - 1];
+  return first && last
+    ? `${monthYear(first.start, locale)} – ${monthYear(last.end, locale)}`
+    : '';
 }
 
 const DAY_INPUT = {
@@ -128,9 +144,73 @@ const DAY_INPUT = {
 } as const;
 
 /**
+ * Selectable chips in a tablist. Each chip has a small top line (contract
+ * number or "Year N") and the period below.
+ */
+function PeriodTabs<T extends string | number>({
+  label,
+  items,
+  value,
+  onChange,
+  size = 'md',
+}: {
+  label: string;
+  items: Array<{ value: T; title: string; caption?: string }>;
+  value: T | null;
+  onChange: (value: T) => void;
+  size?: 'md' | 'sm';
+}): React.ReactNode {
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className={`erp-lbm-tabs${size === 'sm' ? ' erp-lbm-tabs--sm' : ''}`}
+    >
+      {items.map((item) => {
+        const selected = item.value === value;
+        return (
+          <button
+            key={String(item.value)}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
+            className="erp-lbm-tab"
+            onClick={() => onChange(item.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+                return;
+              }
+              event.preventDefault();
+              const index = items.findIndex((entry) => entry.value === item.value);
+              const step = event.key === 'ArrowRight' ? 1 : -1;
+              const next = items[(index + step + items.length) % items.length];
+              if (next) {
+                onChange(next.value);
+                const buttons =
+                  event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                    '[role="tab"]',
+                  );
+                buttons?.[(index + step + items.length) % items.length]?.focus();
+              }
+            }}
+          >
+            {item.caption ? (
+              <span className="erp-lbm-tab-caption">{item.caption}</span>
+            ) : null}
+            <span className="erp-lbm-tab-title">{item.title}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * HR / GM / System Admin modal to set annual leave entitlement, brought
- * forward and used for an employee's leave year. Remaining (incl. pending)
- * updates as you type. The year is selected via its owning contract label.
+ * forward and used for one leave cycle of one contract. Pick the contract
+ * period, then (for multi-year contracts) the anniversary cycle; the balance
+ * below is that cycle's, and saving writes to that cycle.
  */
 export default function LeaveBalanceEditModal({
   open,
@@ -143,7 +223,7 @@ export default function LeaveBalanceEditModal({
   defaultYear: number;
   onClose: () => void;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
+  const { t, locale } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SnapshotFormValues>();
   const employeeId = employeeSummary?.employeeId;
@@ -157,29 +237,17 @@ export default function LeaveBalanceEditModal({
   });
   const snapshotMutation = useSetLeaveBalanceSnapshot();
   const watchedRows = Form.useWatch('rows', form);
+  /** `employeeId:cycle` pairs HR chose to initialize (no record yet). */
+  const [initialized, setInitialized] = useState<ReadonlySet<string>>(new Set());
+  const cycleKey = `${employeeId ?? ''}:${year}`;
 
-  const contractOptions = useMemo(() => {
-    const years = leaveYearsQuery.data?.years ?? [];
-    // Deduplicate by leave-year label (balance key) — keep newest cycle first.
-    const seen = new Set<number>();
-    const unique: LeaveYearOption[] = [];
-    for (const option of years) {
-      if (seen.has(option.label)) {
-        continue;
-      }
-      seen.add(option.label);
-      unique.push(option);
-    }
-    return unique.map((option) => ({
-      value: option.label,
-      label: formatContractOptionLabel(option, t),
-    }));
-  }, [leaveYearsQuery.data?.years, t]);
-
-  const selectedYearOption = useMemo(() => {
-    const years = leaveYearsQuery.data?.years ?? [];
-    return years.find((option) => option.label === year) ?? null;
-  }, [leaveYearsQuery.data?.years, year]);
+  const groups = useMemo(
+    () => groupLeaveYearsByContract(leaveYearsQuery.data?.years ?? []),
+    [leaveYearsQuery.data?.years],
+  );
+  const selectedGroup = groupForCycle(groups, year);
+  const selectedCycle: LeaveYearOption | null =
+    selectedGroup?.cycles.find((cycle) => cycle.label === year) ?? null;
 
   // Seed year + reason when the modal opens for an employee.
   useEffect(() => {
@@ -194,7 +262,7 @@ export default function LeaveBalanceEditModal({
     form.setFieldsValue({
       year: preferred,
       reason: '',
-      rows: rowsFromBalances(leaveTypes, undefined, employeeSummary),
+      rows: rowsFromBalances(leaveTypes, preferred, undefined, employeeSummary),
     });
   }, [
     open,
@@ -205,7 +273,7 @@ export default function LeaveBalanceEditModal({
     leaveYearsQuery.data,
   ]);
 
-  // Refresh row values when balances for the selected year load.
+  // Load the selected cycle's balances into the form.
   useEffect(() => {
     if (!open || !employeeSummary || !balancesQuery.data) {
       return;
@@ -213,11 +281,45 @@ export default function LeaveBalanceEditModal({
     form.setFieldsValue({
       rows: rowsFromBalances(
         leaveTypes,
+        year,
         balancesQuery.data,
         employeeSummary,
       ),
     });
-  }, [open, employeeSummary, leaveTypes, balancesQuery.data, form]);
+  }, [open, employeeSummary, leaveTypes, year, balancesQuery.data, form]);
+
+  function selectCycle(label: number): void {
+    if (label === year) {
+      return;
+    }
+    // Clear the figures until the new cycle's balances arrive.
+    form.setFieldsValue({
+      year: label,
+      rows: rowsFromBalances(leaveTypes, label, undefined, employeeSummary),
+    });
+  }
+
+  function selectContract(key: string): void {
+    const group = groups.find((entry) => entry.key === key);
+    if (!group || group.key === selectedGroup?.key) {
+      return;
+    }
+    // Prefer the contract's current cycle, else its latest one.
+    const current = leaveYearsQuery.data?.current.label;
+    const cycle =
+      group.cycles.find((entry) => entry.label === current) ??
+      group.cycles[group.cycles.length - 1];
+    if (cycle) {
+      selectCycle(cycle.label);
+    }
+  }
+
+  const annualBalance = balancesQuery.data?.find(
+    (row) => row.leaveType === 'ANNUAL',
+  );
+  const balancesReady = Boolean(balancesQuery.data) && !balancesQuery.isFetching;
+  const hasNoRecord =
+    balancesReady && annualBalance?.hasRecord === false && !initialized.has(cycleKey);
 
   async function submit(): Promise<void> {
     if (!employeeId) {
@@ -227,6 +329,8 @@ export default function LeaveBalanceEditModal({
       const values = await form.validateFields();
       await snapshotMutation.mutateAsync({
         employeeId,
+        // The cycle label is unique per employee and belongs to the selected
+        // contract, so this writes to exactly that contract cycle.
         year: values.year,
         reason: values.reason.trim(),
         rows: values.rows.map((row) => ({
@@ -253,6 +357,17 @@ export default function LeaveBalanceEditModal({
 
   const employee = employeeSummary?.employee;
 
+  const contractItems = groups.map((group) => ({
+    value: group.key,
+    caption: group.contract?.contractNumber ?? t(`${KEY}.noContract`),
+    title: contractRange(group, locale, t),
+  }));
+  const cycleItems = (selectedGroup?.cycles ?? []).map((cycle, index) => ({
+    value: cycle.label,
+    caption: t(`${KEY}.cycleYear`, { n: index + 1 }),
+    title: `${monthYear(cycle.start, locale)} – ${monthYear(cycle.end, locale)}`,
+  }));
+
   return (
     <Modal
       open={open}
@@ -260,6 +375,7 @@ export default function LeaveBalanceEditModal({
       okText={t('common.save')}
       cancelText={t('common.cancel')}
       confirmLoading={snapshotMutation.isPending}
+      okButtonProps={{ disabled: hasNoRecord || !selectedCycle }}
       width={720}
       onOk={submit}
       onCancel={onClose}
@@ -267,9 +383,13 @@ export default function LeaveBalanceEditModal({
       rootClassName="erp-leave-bal-modal"
     >
       <Form<SnapshotFormValues> form={form} layout="vertical" requiredMark={false}>
-        {/* Who, and which contract / leave cycle. */}
-        <div className="erp-lbm-head">
-          {employee ? (
+        <Form.Item name="year" hidden rules={[{ required: true }]}>
+          <InputNumber />
+        </Form.Item>
+
+        {/* Who. */}
+        {employee ? (
+          <div className="erp-lbm-head">
             <div className="erp-lbm-person">
               <EvaluationListAvatar
                 firstName={employee.firstName}
@@ -288,47 +408,85 @@ export default function LeaveBalanceEditModal({
                 </p>
               </div>
             </div>
-          ) : null}
-          <Form.Item
-            name="year"
-            label={t(`${KEY}.contractLabel`)}
-            className="erp-lbm-year"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={contractOptions}
-              loading={leaveYearsQuery.isLoading}
-              placeholder={t(`${KEY}.contractPlaceholder`)}
-              showSearch
-              optionFilterProp="label"
+          </div>
+        ) : null}
+
+        {/* Which contract, and which leave cycle of it. */}
+        <div className="erp-lbm-period">
+          <p className="erp-lbm-period-label">{t('hr.leave.contractPeriod')}</p>
+          {leaveYearsQuery.isLoading ? (
+            <Spin size="small" />
+          ) : groups.length === 0 ? (
+            <p className="erp-lbm-period-empty">{t(`${KEY}.noCycles`)}</p>
+          ) : groups.length === 1 && contractItems[0] ? (
+            <div className="erp-lbm-period-static">
+              <FileTextOutlined aria-hidden />
+              <span className="erp-lbm-tab-caption">{contractItems[0].caption}</span>
+              <span className="erp-lbm-tab-title">{contractItems[0].title}</span>
+            </div>
+          ) : (
+            <PeriodTabs
+              label={t(`${KEY}.contractTabsLabel`)}
+              items={contractItems}
+              value={selectedGroup?.key ?? null}
+              onChange={selectContract}
             />
-          </Form.Item>
+          )}
+
+          {cycleItems.length > 1 ? (
+            <PeriodTabs
+              size="sm"
+              label={t(`${KEY}.cycleTabsLabel`)}
+              items={cycleItems}
+              value={year}
+              onChange={selectCycle}
+            />
+          ) : null}
+
+          {selectedCycle ? (
+            <p className="erp-lbm-cycle">
+              <CalendarOutlined aria-hidden />
+              {t(`${KEY}.leaveCycle`, {
+                start: formatProjectDate(selectedCycle.start),
+                end: formatProjectDate(selectedCycle.end),
+              })}
+            </p>
+          ) : null}
         </div>
 
-        <p className="erp-lbm-hint">
-          {t(`${KEY}.snapshotHint`)}
-          {selectedYearOption ? (
-            <>
-              {' '}
-              {t(`${KEY}.leaveYearExtra`, {
-                start: formatProjectDate(selectedYearOption.start),
-                end: formatProjectDate(selectedYearOption.end),
-              })}
-            </>
-          ) : null}
-        </p>
+        <p className="erp-lbm-hint">{t(`${KEY}.snapshotHint`)}</p>
 
         <Spin spinning={balancesQuery.isFetching || leaveYearsQuery.isFetching}>
+          {hasNoRecord ? (
+            <div className="erp-lbm-empty" role="status">
+              <p className="erp-lbm-empty-title">{t(`${KEY}.noRecordTitle`)}</p>
+              <p className="erp-lbm-empty-hint">{t(`${KEY}.noRecordHint`)}</p>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setInitialized((previous) => new Set(previous).add(cycleKey))
+                }
+              >
+                {t(`${KEY}.initialize`)}
+              </Button>
+            </div>
+          ) : null}
+
           <Form.List name="rows">
             {(fields) => (
-              <div className="erp-lbm-cards">
+              <div className="erp-lbm-cards" hidden={hasNoRecord}>
                 {fields.map((field, index) => {
                   const row = watchedRows?.[index];
                   const leaveType = (row?.leaveType ??
                     leaveTypes[index]!) as LeaveType;
                   const pending =
-                    existingBalance(leaveType, balancesQuery.data, employeeSummary)
-                      ?.pending ?? 0;
+                    existingBalance(
+                      leaveType,
+                      year,
+                      balancesQuery.data,
+                      employeeSummary,
+                    )?.pending ?? 0;
                   const remaining = remainingOf({
                     entitled: row?.entitled,
                     broughtForward: row?.broughtForward,

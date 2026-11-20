@@ -123,6 +123,11 @@ export interface LeaveBalance {
   remaining: number;
   /** From the employee's leave-policy rule (sick medical certificate). */
   requiresReceipt?: boolean;
+  /**
+   * Single-employee reads: false when the cycle has no ledger entries for this
+   * type yet (the figures are computed zeros).
+   */
+  hasRecord?: boolean;
 }
 
 /** Contract that owns a leave-year cycle (for UI labels). */

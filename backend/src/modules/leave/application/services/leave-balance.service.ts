@@ -306,9 +306,29 @@ export class LeaveBalanceService {
         return this.mapLedgerBalance(row);
       }),
     );
-    return rows.sort((a, b) =>
-      String(a.leaveType).localeCompare(String(b.leaveType)),
-    );
+
+    // Read-only flag for the edit-balances modal: does this cycle have any
+    // ledger entries for the type, or is the figure only a computed zero?
+    const recorded = await this.prisma.leaveBalanceEntry.findMany({
+      where: {
+        companyId,
+        employeeId,
+        leaveYearStart: leaveYear.start,
+        leaveType: { in: [...OWN_BALANCE_LEAVE_TYPES] },
+      },
+      select: { leaveType: true },
+      distinct: ['leaveType'],
+    });
+    const recordedTypes = new Set(recorded.map((entry) => entry.leaveType));
+
+    return rows
+      .map(
+        (row): Record<string, unknown> => ({
+          ...row,
+          hasRecord: recordedTypes.has(row.leaveType as LeaveType),
+        }),
+      )
+      .sort((a, b) => String(a.leaveType).localeCompare(String(b.leaveType)));
   }
 
   /**
