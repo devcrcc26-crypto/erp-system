@@ -176,7 +176,7 @@ export class LeaveController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Leave-year periods for the year dropdown (contract leave-year ranges)',
+      'Leave-year periods with owning contract details (for contract dropdowns)',
   })
   async listLeaveYears(
     @CurrentUser() user: AuthenticatedUser,

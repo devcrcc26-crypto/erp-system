@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Form, Input, InputNumber, Modal, Select, Spin } from 'antd';
 import { CalendarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
@@ -10,8 +10,13 @@ import type {
   EmployeeLeaveBalanceSummary,
   LeaveBalance,
   LeaveType,
+  LeaveYearOption,
 } from '@/lib/api/leave.types';
-import { useMyLeaveBalances, useSetLeaveBalanceSnapshot } from '@/lib/query/leave';
+import {
+  useLeaveYears,
+  useMyLeaveBalances,
+  useSetLeaveBalanceSnapshot,
+} from '@/lib/query/leave';
 import { formatLeaveEmployeeName, formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -82,6 +87,40 @@ function rowsFromBalances(
   });
 }
 
+/** `Contract #1 · Jun 5, 2026 – Present` (or cycle dates when no contract). */
+function formatContractOptionLabel(
+  option: LeaveYearOption,
+  allYears: LeaveYearOption[],
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  if (option.contract) {
+    const end = option.contract.endDate
+      ? formatProjectDate(option.contract.endDate)
+      : t(`${KEY}.contractPresent`);
+    const base = t(`${KEY}.contractOption`, {
+      n: option.contract.sequence,
+      start: formatProjectDate(option.contract.startDate),
+      end,
+    });
+    // Same contract can cover several anniversary leave years — disambiguate.
+    const sameContract = allYears.filter(
+      (row) => row.contract?.id === option.contract?.id,
+    ).length;
+    if (sameContract > 1) {
+      return t(`${KEY}.contractOptionWithCycle`, {
+        label: base,
+        start: formatProjectDate(option.start),
+        end: formatProjectDate(option.end),
+      });
+    }
+    return base;
+  }
+  return t(`${KEY}.cycleOnlyOption`, {
+    start: formatProjectDate(option.start),
+    end: formatProjectDate(option.end),
+  });
+}
+
 const DAY_INPUT = {
   className: 'w-full',
   min: 0,
@@ -93,19 +132,17 @@ const DAY_INPUT = {
 /**
  * HR / GM / System Admin modal to set annual leave entitlement, brought
  * forward and used for an employee's leave year. Remaining (incl. pending)
- * updates as you type.
+ * updates as you type. The year is selected via its owning contract label.
  */
 export default function LeaveBalanceEditModal({
   open,
   employeeSummary,
   defaultYear,
-  leaveYearHint,
   onClose,
 }: {
   open: boolean;
   employeeSummary: EmployeeLeaveBalanceSummary | null;
   defaultYear: number;
-  leaveYearHint?: { start: string; end: string } | null;
   onClose: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -114,6 +151,7 @@ export default function LeaveBalanceEditModal({
   const employeeId = employeeSummary?.employeeId;
   const leaveTypes = EDITABLE_LEAVE_TYPES;
   const year = Form.useWatch('year', form) ?? defaultYear;
+  const leaveYearsQuery = useLeaveYears(employeeId, open && Boolean(employeeId));
   const balancesQuery = useMyLeaveBalances({
     year,
     employeeId,
@@ -122,17 +160,42 @@ export default function LeaveBalanceEditModal({
   const snapshotMutation = useSetLeaveBalanceSnapshot();
   const watchedRows = Form.useWatch('rows', form);
 
+  const contractOptions = useMemo(() => {
+    const years = leaveYearsQuery.data?.years ?? [];
+    return years.map((option) => ({
+      value: option.label,
+      label: formatContractOptionLabel(option, years, t),
+    }));
+  }, [leaveYearsQuery.data?.years, t]);
+
+  const selectedYearOption = useMemo(() => {
+    const years = leaveYearsQuery.data?.years ?? [];
+    return years.find((option) => option.label === year) ?? null;
+  }, [leaveYearsQuery.data?.years, year]);
+
   // Seed year + reason when the modal opens for an employee.
   useEffect(() => {
     if (!open || !employeeSummary) {
       return;
     }
+    const years = leaveYearsQuery.data?.years ?? [];
+    const preferred =
+      years.find((option) => option.label === defaultYear)?.label ??
+      leaveYearsQuery.data?.current.label ??
+      defaultYear;
     form.setFieldsValue({
-      year: defaultYear,
+      year: preferred,
       reason: '',
       rows: rowsFromBalances(leaveTypes, undefined, employeeSummary),
     });
-  }, [open, employeeSummary?.employeeId, defaultYear, leaveTypes, form]);
+  }, [
+    open,
+    employeeSummary?.employeeId,
+    defaultYear,
+    leaveTypes,
+    form,
+    leaveYearsQuery.data,
+  ]);
 
   // Refresh row values when balances for the selected year load.
   useEffect(() => {
@@ -180,10 +243,6 @@ export default function LeaveBalanceEditModal({
     }
   }
 
-  const yearOptions = [defaultYear - 1, defaultYear, defaultYear + 1].map(
-    (value) => ({ value, label: String(value) }),
-  );
-
   const employee = employeeSummary?.employee;
 
   return (
@@ -200,7 +259,7 @@ export default function LeaveBalanceEditModal({
       rootClassName="erp-leave-bal-modal"
     >
       <Form<SnapshotFormValues> form={form} layout="vertical" requiredMark={false}>
-        {/* Who, and which leave year. */}
+        {/* Who, and which contract / leave cycle. */}
         <div className="erp-lbm-head">
           {employee ? (
             <div className="erp-lbm-person">
@@ -224,28 +283,34 @@ export default function LeaveBalanceEditModal({
           ) : null}
           <Form.Item
             name="year"
-            label={t(`${KEY}.leaveYearLabel`)}
+            label={t(`${KEY}.contractLabel`)}
             className="erp-lbm-year"
             rules={[{ required: true }]}
           >
-            <Select options={yearOptions} />
+            <Select
+              options={contractOptions}
+              loading={leaveYearsQuery.isLoading}
+              placeholder={t(`${KEY}.contractPlaceholder`)}
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
         </div>
 
         <p className="erp-lbm-hint">
           {t(`${KEY}.snapshotHint`)}
-          {leaveYearHint ? (
+          {selectedYearOption ? (
             <>
               {' '}
               {t(`${KEY}.leaveYearExtra`, {
-                start: formatProjectDate(leaveYearHint.start),
-                end: formatProjectDate(leaveYearHint.end),
+                start: formatProjectDate(selectedYearOption.start),
+                end: formatProjectDate(selectedYearOption.end),
               })}
             </>
           ) : null}
         </p>
 
-        <Spin spinning={balancesQuery.isFetching}>
+        <Spin spinning={balancesQuery.isFetching || leaveYearsQuery.isFetching}>
           <Form.List name="rows">
             {(fields) => (
               <div className="erp-lbm-cards">

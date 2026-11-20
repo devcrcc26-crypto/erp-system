@@ -6,6 +6,7 @@ import {
 import { LeaveType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -37,6 +38,25 @@ export type LeaveBalanceField = 'pending';
 export interface LeaveYearCharge {
   year: LeaveYear;
   days: number;
+}
+
+/** Contract that owns a leave-year cycle (for UI labels). */
+export interface LeaveYearContractDto {
+  id: string;
+  contractNumber: string;
+  /** 1-based index among the employee's contracts (oldest first). */
+  sequence: number;
+  startDate: string;
+  /** Effective end (terminatedAt or endDate); null = still open / Present. */
+  endDate: string | null;
+}
+
+/** Leave-year option for dropdowns; `label` remains the balance-year key. */
+export interface LeaveYearOptionDto {
+  label: number;
+  start: string;
+  end: string;
+  contract: LeaveYearContractDto | null;
 }
 
 /**
@@ -292,17 +312,32 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Leave-year options for the profile year dropdown (newest first).
-   * Includes every year from employment through the current leave year.
+   * Leave-year options for the profile / edit-balances dropdown (newest first).
+   * Includes every year from employment through the current leave year, plus
+   * the owning contract (sequence, dates) so the UI can show contract labels
+   * while still using `label` as the balance-year identifier.
    */
   async listLeaveYears(
     employeeId: string,
     companyId: string,
   ): Promise<{
-    current: { label: number; start: string; end: string };
-    years: Array<{ label: number; start: string; end: string }>;
+    current: LeaveYearOptionDto;
+    years: LeaveYearOptionDto[];
   }> {
-    const anchor = await this.leaveLedger.leaveCalendar(employeeId, companyId);
+    const [anchor, contracts] = await Promise.all([
+      this.leaveLedger.leaveCalendar(employeeId, companyId),
+      this.prisma.employeeContract.findMany({
+        where: activeOnly({ companyId, employeeId }),
+        orderBy: { startDate: 'asc' },
+        select: {
+          id: true,
+          contractNumber: true,
+          startDate: true,
+          endDate: true,
+          terminatedAt: true,
+        },
+      }),
+    ]);
     const current = leaveYearFor(anchor, new Date());
     const labels = new Set<number>([current.label]);
     const origin = leaveCalendarOrigin(anchor);
@@ -320,23 +355,63 @@ export class LeaveBalanceService {
     for (const row of stored) {
       labels.add(row.year);
     }
+
+    const toOption = (year: {
+      label: number;
+      start: Date;
+      end: Date;
+    }): LeaveYearOptionDto => ({
+      label: year.label,
+      start: toDateOnlyKey(year.start),
+      end: toDateOnlyKey(year.end),
+      contract: this.contractForLeaveYearStart(contracts, year.start),
+    });
+
     const years = [...labels]
       .sort((a, b) => b - a)
-      .map((label) => {
-        const year = leaveYearByLabel(anchor, label);
-        return {
-          label: year.label,
-          start: toDateOnlyKey(year.start),
-          end: toDateOnlyKey(year.end),
-        };
-      });
+      .map((label) => toOption(leaveYearByLabel(anchor, label)));
     return {
-      current: {
-        label: current.label,
-        start: toDateOnlyKey(current.start),
-        end: toDateOnlyKey(current.end),
-      },
+      current: toOption(current),
       years,
+    };
+  }
+
+  /**
+   * Owning contract for a leave-year start: latest contract whose start is on
+   * or before the cycle start (1-based sequence among the employee's contracts).
+   */
+  private contractForLeaveYearStart(
+    contracts: ReadonlyArray<{
+      id: string;
+      contractNumber: string;
+      startDate: Date;
+      endDate: Date | null;
+      terminatedAt: Date | null;
+    }>,
+    leaveYearStart: Date,
+  ): LeaveYearContractDto | null {
+    const startKey = toDateOnlyKey(leaveYearStart);
+    let match: (typeof contracts)[number] | null = null;
+    let sequence = 0;
+    for (let index = 0; index < contracts.length; index += 1) {
+      const contract = contracts[index]!;
+      if (toDateOnlyKey(contract.startDate) <= startKey) {
+        match = contract;
+        sequence = index + 1;
+      } else {
+        break;
+      }
+    }
+    if (!match) {
+      return null;
+    }
+    const effectiveEnd = match.terminatedAt ?? match.endDate;
+    return {
+      id: match.id,
+      contractNumber: match.contractNumber,
+      sequence,
+      startDate: toDateOnlyKey(match.startDate),
+      endDate: effectiveEnd ? toDateOnlyKey(effectiveEnd) : null,
     };
   }
 

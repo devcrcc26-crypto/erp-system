@@ -125,11 +125,23 @@ export interface LeaveBalance {
   requiresReceipt?: boolean;
 }
 
-/** Contract leave year option for the profile year dropdown. */
+/** Contract that owns a leave-year cycle (for UI labels). */
+export interface LeaveYearContract {
+  id: string;
+  contractNumber: string;
+  /** 1-based index among the employee's contracts (oldest first). */
+  sequence: number;
+  startDate: string;
+  /** Effective end; null means still open (Present). */
+  endDate: string | null;
+}
+
+/** Leave-year option; `label` is the balance-year key (leave_balance.year). */
 export interface LeaveYearOption {
   label: number;
   start: string;
   end: string;
+  contract?: LeaveYearContract | null;
 }
 
 export interface LeaveYearsResponse {
