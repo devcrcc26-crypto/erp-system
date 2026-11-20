@@ -27,7 +27,7 @@ import { previewEntitlement } from '@/lib/utils/leave-policy-preview';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 const LIST_PATH = '/hr/leave-policy';
-const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
+const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'PATERNITY', 'SICK'] as const;
 const PREVIEW_YEARS = 3;
 
 function sortRules(rules: LeavePolicyRule[]): LeavePolicyRule[] {

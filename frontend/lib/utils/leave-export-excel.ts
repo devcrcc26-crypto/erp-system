@@ -66,6 +66,7 @@ export async function exportLeaveBalancesExcel(input: {
     const types = [
       { key: 'ANNUAL' as const, balance: row.annual },
       { key: 'MATERNITY' as const, balance: row.maternity },
+      { key: 'PATERNITY' as const, balance: row.paternity },
       { key: 'SICK' as const, balance: row.sick },
     ];
     for (const entry of types) {

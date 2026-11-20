@@ -283,7 +283,7 @@ export const leavePolicyImportSchema: HrImportModuleSchema = {
       label: 'Leave Type',
       type: 'enum',
       required: true,
-      enumValues: ['ANNUAL', 'MATERNITY', 'SICK'],
+      enumValues: ['ANNUAL', 'MATERNITY', 'PATERNITY', 'SICK'],
     },
     { field: 'baseDays', label: 'Base Days', type: 'number', required: true, min: 0 },
     { field: 'isProgressive', label: 'Progressive', type: 'string' },

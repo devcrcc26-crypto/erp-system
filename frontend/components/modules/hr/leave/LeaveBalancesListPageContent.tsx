@@ -193,6 +193,18 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             : renderBalanceCell(row.maternity, lowLabel),
       },
       {
+        title: formatLeaveType('PATERNITY', t),
+        key: 'paternity',
+        width: 160,
+        responsive: ['md'],
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
+          row.employee.gender === 'FEMALE'
+            ? (
+                <span className="erp-users-cell-sub">-</span>
+              )
+            : renderBalanceCell(row.paternity, lowLabel),
+      },
+      {
         title: formatLeaveType('SICK', t),
         key: 'sick',
         width: 160,

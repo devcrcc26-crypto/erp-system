@@ -97,10 +97,15 @@ export default function LeaveRequestFormDrawer({
       { value: 'STUDY' as const, label: t('hr.leaveType.STUDY') },
       { value: 'EXAM' as const, label: t('hr.leaveType.EXAM') },
     ];
-    if (currentUser.data?.gender === 'FEMALE') {
-      return options;
-    }
-    return options.filter((option) => option.value !== 'MATERNITY');
+    return options.filter((option) => {
+      if (option.value === 'MATERNITY' && currentUser.data?.gender !== 'FEMALE') {
+        return false;
+      }
+      if (option.value === 'PATERNITY' && currentUser.data?.gender !== 'MALE') {
+        return false;
+      }
+      return true;
+    });
   }, [currentUser.data?.gender, t]);
 
   const selectedBalance = useMemo(() => {

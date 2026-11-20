@@ -28,6 +28,8 @@ export interface LeavePolicyFormValues {
   annualMaxCarryForwardDays?: number;
   maternityBaseDays: number;
   maternityMinimumServiceMonths: number;
+  paternityBaseDays: number;
+  paternityMinimumServiceMonths: number;
   sickBaseDays: number;
   sickRequiresReceipt: boolean;
 }
@@ -49,6 +51,8 @@ const RULES_FIELDS_BASE = [
   'annualMaxDaysCap',
   'maternityBaseDays',
   'maternityMinimumServiceMonths',
+  'paternityBaseDays',
+  'paternityMinimumServiceMonths',
   'sickBaseDays',
   'sickRequiresReceipt',
 ] as const;
@@ -71,8 +75,10 @@ function defaultValues(): LeavePolicyFormValues {
     annualMaxDaysCap: undefined,
     annualMinimumServiceMonths: 0,
     annualMaxCarryForwardDays: 8,
-    maternityBaseDays: 90,
+    maternityBaseDays: 120,
     maternityMinimumServiceMonths: 0,
+    paternityBaseDays: 3,
+    paternityMinimumServiceMonths: 0,
     sickBaseDays: 30,
     sickRequiresReceipt: true,
   };
@@ -82,6 +88,7 @@ function valuesFromPolicy(policy: LeavePolicy): LeavePolicyFormValues {
   const byType = new Map(policy.rules.map((rule) => [rule.leaveType, rule]));
   const annual = byType.get('ANNUAL');
   const maternity = byType.get('MATERNITY');
+  const paternity = byType.get('PATERNITY');
   const sick = byType.get('SICK');
 
   return {
@@ -96,8 +103,10 @@ function valuesFromPolicy(policy: LeavePolicy): LeavePolicyFormValues {
     annualMaxDaysCap: annual?.maxDaysCap ?? undefined,
     annualMinimumServiceMonths: annual?.minimumServiceMonths ?? 0,
     annualMaxCarryForwardDays: annual?.maxCarryForwardDays ?? undefined,
-    maternityBaseDays: maternity?.baseDays ?? 90,
+    maternityBaseDays: maternity?.baseDays ?? 120,
     maternityMinimumServiceMonths: maternity?.minimumServiceMonths ?? 0,
+    paternityBaseDays: paternity?.baseDays ?? 3,
+    paternityMinimumServiceMonths: paternity?.minimumServiceMonths ?? 0,
     sickBaseDays: sick?.baseDays ?? 30,
     sickRequiresReceipt: sick?.requiresReceipt ?? true,
   };
@@ -130,6 +139,13 @@ export function buildLeavePolicyRules(
       baseDays: values.maternityBaseDays,
       isProgressive: false,
       minimumServiceMonths: values.maternityMinimumServiceMonths,
+      requiresReceipt: false,
+    },
+    {
+      leaveType: 'PATERNITY',
+      baseDays: values.paternityBaseDays,
+      isProgressive: false,
+      minimumServiceMonths: values.paternityMinimumServiceMonths,
       requiresReceipt: false,
     },
     {
@@ -429,6 +445,24 @@ export default function LeavePolicyForm({
               </div>
             </FormLayout>
 
+            <FormLayout variant="pro" dense title={ruleTitle('PATERNITY')}>
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="paternityBaseDays"
+                  label={t('hr.leavePolicy.baseDays')}
+                  rules={[{ required: true, message: t('common.required') }]}
+                >
+                  <InputNumber className="w-full" min={0} step={0.5} />
+                </Form.Item>
+                <Form.Item
+                  name="paternityMinimumServiceMonths"
+                  label={t('hr.leavePolicy.minimumServiceMonths')}
+                >
+                  <InputNumber className="w-full" min={0} step={1} />
+                </Form.Item>
+              </div>
+            </FormLayout>
+
             <FormLayout variant="pro" dense title={ruleTitle('SICK')}>
               <div className="erp-form-grid-2">
                 <Form.Item
@@ -549,6 +583,22 @@ export default function LeavePolicyForm({
                   <ReviewItem
                     label={t('hr.leavePolicy.minimumServiceMonths')}
                     value={String(review.maternityMinimumServiceMonths ?? '-')}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className="erp-leave-policy-form-hero-title mb-2 !text-sm">
+                  {ruleTitle('PATERNITY')}
+                </p>
+                <div className="erp-leave-policy-review-grid">
+                  <ReviewItem
+                    label={t('hr.leavePolicy.baseDays')}
+                    value={String(review.paternityBaseDays ?? '-')}
+                  />
+                  <ReviewItem
+                    label={t('hr.leavePolicy.minimumServiceMonths')}
+                    value={String(review.paternityMinimumServiceMonths ?? '-')}
                   />
                 </div>
               </div>

@@ -167,18 +167,23 @@ export default function LeaveRequestDetailPageContent({
     (request?.status === 'DRAFT' || request?.status === 'RETURNED') &&
     (canManage || isOwner);
 
-  const canCancel =
+  const isApprovedLeave = request?.status === 'APPROVED';
+  const canCancelPending =
     Boolean(request) &&
     (canManage || isOwner) &&
     (request?.status === 'DRAFT' ||
       request?.status === 'SUBMITTED' ||
       request?.status === 'IN_REVIEW');
+  // HR (leave.manage / canViewHr) may cancel APPROVED leave and restore balance.
+  const canCancelApproved = Boolean(request) && isApprovedLeave && canManage;
+  const canCancel = canCancelPending || canCancelApproved;
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
       messageApi.success(t('hr.messages.leaveRequestCancelled'));
       setConfirmCancel(false);
+      await detailQuery.refetch();
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -319,9 +324,17 @@ export default function LeaveRequestDetailPageContent({
                 danger
                 icon={<StopOutlined />}
                 onClick={() => setConfirmCancel(true)}
-                aria-label={t('hr.buttons.cancelRequest')}
+                aria-label={
+                  isApprovedLeave
+                    ? t('hr.buttons.cancelLeave')
+                    : t('hr.buttons.cancelRequest')
+                }
               >
-                {isNarrow ? undefined : t('hr.buttons.cancelRequest')}
+                {isNarrow
+                  ? undefined
+                  : isApprovedLeave
+                    ? t('hr.buttons.cancelLeave')
+                    : t('hr.buttons.cancelRequest')}
               </Button>
             ) : null}
             {canEdit || canManage ? (
@@ -604,9 +617,21 @@ export default function LeaveRequestDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
-        title={t('hr.dialog.cancelLeaveTitle')}
-        description={t('hr.dialog.cancelLeaveDesc')}
-        confirmLabel={t('hr.buttons.cancelRequest')}
+        title={
+          isApprovedLeave
+            ? t('hr.dialog.cancelApprovedLeaveTitle')
+            : t('hr.dialog.cancelLeaveTitle')
+        }
+        description={
+          isApprovedLeave
+            ? t('hr.dialog.cancelApprovedLeaveDesc')
+            : t('hr.dialog.cancelLeaveDesc')
+        }
+        confirmLabel={
+          isApprovedLeave
+            ? t('hr.buttons.cancelLeave')
+            : t('hr.buttons.cancelRequest')
+        }
         danger
         confirmLoading={cancelMutation.isPending}
         onCancel={() => setConfirmCancel(false)}

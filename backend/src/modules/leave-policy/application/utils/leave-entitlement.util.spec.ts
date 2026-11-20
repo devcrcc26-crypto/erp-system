@@ -87,6 +87,10 @@ describe('getBalanceLeaveType', () => {
     expect(getBalanceLeaveType(LeaveType.EMERGENCY)).toBe(LeaveType.ANNUAL);
   });
 
+  it('maps paternity to its own balance bucket', () => {
+    expect(getBalanceLeaveType(LeaveType.PATERNITY)).toBe(LeaveType.PATERNITY);
+  });
+
   it('does not treat unpaid as a balance type for callers that gate first', () => {
     expect(leaveTypeAffectsBalance(LeaveType.UNPAID)).toBe(false);
   });

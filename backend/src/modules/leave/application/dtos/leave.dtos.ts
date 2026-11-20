@@ -288,8 +288,20 @@ export class LeaveBalanceAdjustmentDto {
   @IsUUID()
   employeeId!: string;
 
-  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
-  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  @ApiProperty({
+    enum: [
+      LeaveType.ANNUAL,
+      LeaveType.MATERNITY,
+      LeaveType.PATERNITY,
+      LeaveType.SICK,
+    ],
+  })
+  @IsIn([
+    LeaveType.ANNUAL,
+    LeaveType.MATERNITY,
+    LeaveType.PATERNITY,
+    LeaveType.SICK,
+  ])
   leaveType!: LeaveType;
 
   @ApiProperty({ example: -1.5, description: 'Signed days, multiple of 0.5' })
@@ -312,8 +324,20 @@ export class LeaveOpeningBalanceDto {
   @IsUUID()
   employeeId!: string;
 
-  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
-  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  @ApiProperty({
+    enum: [
+      LeaveType.ANNUAL,
+      LeaveType.MATERNITY,
+      LeaveType.PATERNITY,
+      LeaveType.SICK,
+    ],
+  })
+  @IsIn([
+    LeaveType.ANNUAL,
+    LeaveType.MATERNITY,
+    LeaveType.PATERNITY,
+    LeaveType.SICK,
+  ])
   leaveType!: LeaveType;
 
   @ApiProperty({ example: 12.5, description: 'Days, multiple of 0.5' })
@@ -331,8 +355,20 @@ export class LeaveOpeningBalanceDto {
 }
 
 export class LeaveBalanceSnapshotRowDto {
-  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
-  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  @ApiProperty({
+    enum: [
+      LeaveType.ANNUAL,
+      LeaveType.MATERNITY,
+      LeaveType.PATERNITY,
+      LeaveType.SICK,
+    ],
+  })
+  @IsIn([
+    LeaveType.ANNUAL,
+    LeaveType.MATERNITY,
+    LeaveType.PATERNITY,
+    LeaveType.SICK,
+  ])
   leaveType!: LeaveType;
 
   @ApiProperty({ example: 20 })

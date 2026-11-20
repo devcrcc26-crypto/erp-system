@@ -222,18 +222,55 @@ export class LeaveService
       companyId,
     );
 
-    if (dto.leaveType === LeaveType.MATERNITY) {
+    if (
+      dto.leaveType === LeaveType.MATERNITY ||
+      dto.leaveType === LeaveType.PATERNITY ||
+      dto.leaveType === LeaveType.SICK
+    ) {
       const employee = await this.prisma.user.findFirst({
         where: { id: employeeId, companyId, deletedAt: null },
-        select: { gender: true },
+        select: {
+          gender: true,
+          leavePolicyId: true,
+          leavePolicy: {
+            select: {
+              rules: {
+                where: { leaveType: dto.leaveType },
+                select: { requiresReceipt: true },
+                take: 1,
+              },
+            },
+          },
+        },
       });
       if (!employee) {
         throw new NotFoundException('Employee not found in this company');
       }
-      if (employee.gender !== Gender.FEMALE) {
+      if (
+        dto.leaveType === LeaveType.MATERNITY &&
+        employee.gender !== Gender.FEMALE
+      ) {
         throw new BadRequestException(
           'Maternity leave is only available for female employees',
         );
+      }
+      if (
+        dto.leaveType === LeaveType.PATERNITY &&
+        employee.gender !== Gender.MALE
+      ) {
+        throw new BadRequestException(
+          'Paternity leave is only available for male employees',
+        );
+      }
+      if (dto.leaveType === LeaveType.SICK) {
+        const requiresReceipt = Boolean(
+          employee.leavePolicy?.rules[0]?.requiresReceipt,
+        );
+        if (requiresReceipt && files.length === 0) {
+          throw new BadRequestException(
+            'A medical certificate is required for sick leave',
+          );
+        }
       }
     }
 

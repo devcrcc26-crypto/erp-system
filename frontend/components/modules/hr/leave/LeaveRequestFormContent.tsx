@@ -147,10 +147,15 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       { value: 'STUDY' as const, label: t('hr.leaveType.STUDY') },
       { value: 'EXAM' as const, label: t('hr.leaveType.EXAM') },
     ];
-    if (leaveOwnerGender === 'FEMALE') {
-      return options;
-    }
-    return options.filter((option) => option.value !== 'MATERNITY');
+    return options.filter((option) => {
+      if (option.value === 'MATERNITY' && leaveOwnerGender !== 'FEMALE') {
+        return false;
+      }
+      if (option.value === 'PATERNITY' && leaveOwnerGender !== 'MALE') {
+        return false;
+      }
+      return true;
+    });
   }, [leaveOwnerGender, t]);
 
   const selectedBalance = useMemo(() => {
@@ -192,10 +197,23 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }, [form]);
 
   useEffect(() => {
-    if (leaveType === 'MATERNITY' && leaveOwnerGender !== 'FEMALE') {
+    if (
+      (leaveType === 'MATERNITY' && leaveOwnerGender !== 'FEMALE') ||
+      (leaveType === 'PATERNITY' && leaveOwnerGender !== 'MALE')
+    ) {
       form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
     }
   }, [form, leaveOwnerGender, leaveType]);
+
+  const sickRequiresReceipt = useMemo(() => {
+    if (leaveType !== 'SICK') {
+      return false;
+    }
+    const sickBalance = balancesQuery.data?.find(
+      (row) => row.leaveType === 'SICK',
+    );
+    return sickBalance?.requiresReceipt === true;
+  }, [balancesQuery.data, leaveType]);
 
   useEffect(() => {
     const inputs = toLeavePeriodInputs(periods);
@@ -288,6 +306,11 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }
 
   async function validateDocumentsStep(): Promise<boolean> {
+    if (sickRequiresReceipt && selectedFiles.length === 0) {
+      setFormError(t('hr.validation.sickMedicalCertificateRequired'));
+      return false;
+    }
+    setFormError(null);
     captureSnapshot();
     return true;
   }
@@ -572,8 +595,21 @@ export default function LeaveRequestFormContent(): React.ReactNode {
             variant="pro"
             dense
             title={t('hr.section.supportingDocuments')}
-            description={t('pages.hr.leave.documentsStepDescription')}
+            description={
+              sickRequiresReceipt
+                ? t('hr.form.sickMedicalCertificateHint')
+                : t('pages.hr.leave.documentsStepDescription')
+            }
           >
+            {sickRequiresReceipt ? (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-3"
+                title={t('hr.form.sickMedicalCertificateRequiredTitle')}
+                description={t('hr.form.sickMedicalCertificateHint')}
+              />
+            ) : null}
             <FileUploadInput
               files={selectedFiles}
               onChange={setSelectedFiles}
@@ -643,6 +679,17 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               dense
               title={t('hr.section.supportingDocuments')}
             >
+              {sickRequiresReceipt ? (
+                <ReviewItem
+                  label={t('hr.form.medicalCertificate')}
+                  value={
+                    selectedFiles.length > 0
+                      ? t('hr.form.medicalCertificateAttached')
+                      : t('hr.form.medicalCertificateMissing')
+                  }
+                  wide
+                />
+              ) : null}
               {selectedFiles.length > 0 ? (
                 <ul className="erp-leave-review-files">
                   {selectedFiles.map((file) => (
@@ -687,6 +734,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       periods,
       preview,
       previewError,
+      sickRequiresReceipt,
     ],
   );
 

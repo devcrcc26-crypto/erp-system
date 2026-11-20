@@ -1,5 +1,6 @@
 /**
- * Seeds sample leave policies (ANNUAL / MATERNITY / SICK rules) for the first company.
+ * Seeds sample leave policies (ANNUAL / MATERNITY / PATERNITY / SICK rules)
+ * for the first company.
  * Idempotent by policy name within the company.
  *
  * Usage:
@@ -56,7 +57,12 @@ const SAMPLE_POLICIES: SamplePolicy[] = [
       },
       {
         leaveType: LeaveType.MATERNITY,
-        baseDays: 90,
+        baseDays: 120,
+        minimumServiceMonths: 0,
+      },
+      {
+        leaveType: LeaveType.PATERNITY,
+        baseDays: 3,
         minimumServiceMonths: 0,
       },
       {
@@ -82,7 +88,12 @@ const SAMPLE_POLICIES: SamplePolicy[] = [
       },
       {
         leaveType: LeaveType.MATERNITY,
-        baseDays: 90,
+        baseDays: 120,
+        minimumServiceMonths: 6,
+      },
+      {
+        leaveType: LeaveType.PATERNITY,
+        baseDays: 3,
         minimumServiceMonths: 6,
       },
       {
@@ -111,7 +122,12 @@ const SAMPLE_POLICIES: SamplePolicy[] = [
       },
       {
         leaveType: LeaveType.MATERNITY,
-        baseDays: 90,
+        baseDays: 120,
+        minimumServiceMonths: 0,
+      },
+      {
+        leaveType: LeaveType.PATERNITY,
+        baseDays: 3,
         minimumServiceMonths: 0,
       },
       {
@@ -137,7 +153,12 @@ const SAMPLE_POLICIES: SamplePolicy[] = [
       },
       {
         leaveType: LeaveType.MATERNITY,
-        baseDays: 90,
+        baseDays: 120,
+        minimumServiceMonths: 12,
+      },
+      {
+        leaveType: LeaveType.PATERNITY,
+        baseDays: 3,
         minimumServiceMonths: 12,
       },
       {

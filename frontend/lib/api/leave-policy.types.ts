@@ -1,4 +1,8 @@
-export type LeavePolicyLeaveType = 'ANNUAL' | 'MATERNITY' | 'SICK';
+export type LeavePolicyLeaveType =
+  | 'ANNUAL'
+  | 'MATERNITY'
+  | 'PATERNITY'
+  | 'SICK';
 
 export interface LeavePolicyRule {
   id?: string;

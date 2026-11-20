@@ -52,7 +52,9 @@ function rowsFromBalances(
         ? summary?.annual
         : leaveType === 'SICK'
           ? summary?.sick
-          : summary?.maternity;
+          : leaveType === 'PATERNITY'
+            ? summary?.paternity
+            : summary?.maternity;
     const existing =
       fromList ?? balances?.find((row) => row.leaveType === leaveType);
     return {

@@ -1,8 +1,8 @@
 /**
  * Sets default leave entitlements for all active employees for a leave year label.
  *
- * Defaults: annual 20 days, sick 30 days, maternity 90 days (3 months).
- * Maternity is applied only when gender is FEMALE.
+ * Defaults: annual 20 days, sick 30 days, maternity 120 days, paternity 3 days.
+ * Maternity is applied only when gender is FEMALE; paternity only for MALE.
  *
  *   $env:SEED_MODE='true'
  *   npx ts-node -r tsconfig-paths/register --transpile-only scripts/seed-leave-balances-year.ts --year=2025
@@ -23,8 +23,10 @@ import {
 
 const DEFAULT_ANNUAL_DAYS = 20;
 const DEFAULT_SICK_DAYS = 30;
-/** Three calendar months of working days (company policy / seed convention). */
-const DEFAULT_MATERNITY_DAYS = 90;
+/** Labour Proclamation No. 1156/2019 — 120 consecutive days of maternity leave. */
+const DEFAULT_MATERNITY_DAYS = 120;
+/** Labour Proclamation No. 1156/2019 — 3 working days of paternity leave. */
+const DEFAULT_PATERNITY_DAYS = 3;
 
 function parseYear(argv: string[]): number {
   const arg = argv.find((a) => a.startsWith('--year='));
@@ -103,7 +105,9 @@ async function main(): Promise<void> {
   let annualCount = 0;
   let sickCount = 0;
   let maternityCount = 0;
+  let paternityCount = 0;
   let skippedMaternity = 0;
+  let skippedPaternity = 0;
   const errors: string[] = [];
 
   async function seedType(
@@ -178,6 +182,19 @@ async function main(): Promise<void> {
         } else {
           skippedMaternity += 1;
         }
+
+        if (employee.gender === Gender.MALE) {
+          await seedType(
+            ledger,
+            employee,
+            LeaveType.PATERNITY,
+            DEFAULT_PATERNITY_DAYS,
+            actorUserId,
+          );
+          paternityCount += 1;
+        } else {
+          skippedPaternity += 1;
+        }
       } catch (error) {
         errors.push(
           `${label}: ${error instanceof Error ? error.message : String(error)}`,
@@ -195,11 +212,16 @@ async function main(): Promise<void> {
       } else {
         skippedMaternity += 1;
       }
+      if (employee.gender === Gender.MALE) {
+        paternityCount += 1;
+      } else {
+        skippedPaternity += 1;
+      }
     }
   }
 
   console.log(
-    `ANNUAL=${annualCount}@${DEFAULT_ANNUAL_DAYS} SICK=${sickCount}@${DEFAULT_SICK_DAYS} MATERNITY=${maternityCount}@${DEFAULT_MATERNITY_DAYS} SKIP_MATERNITY_NON_FEMALE=${skippedMaternity} ERRORS=${errors.length}`,
+    `ANNUAL=${annualCount}@${DEFAULT_ANNUAL_DAYS} SICK=${sickCount}@${DEFAULT_SICK_DAYS} MATERNITY=${maternityCount}@${DEFAULT_MATERNITY_DAYS} PATERNITY=${paternityCount}@${DEFAULT_PATERNITY_DAYS} SKIP_MATERNITY_NON_FEMALE=${skippedMaternity} SKIP_PATERNITY_NON_MALE=${skippedPaternity} ERRORS=${errors.length}`,
   );
   if (errors.length > 0) {
     for (const line of errors.slice(0, 20)) {

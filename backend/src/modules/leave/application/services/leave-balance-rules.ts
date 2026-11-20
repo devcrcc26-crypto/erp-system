@@ -12,7 +12,6 @@ export const DEDUCTS_FROM_ANNUAL: LeaveType[] = [
   LeaveType.STUDY,
   LeaveType.EXAM,
   LeaveType.EMERGENCY,
-  LeaveType.PATERNITY,
   LeaveType.COMPASSIONATE,
 ];
 

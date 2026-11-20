@@ -4,6 +4,7 @@ import { LeaveType, type Prisma } from '@prisma/client';
 export const POLICY_BALANCE_LEAVE_TYPES: LeaveType[] = [
   LeaveType.ANNUAL,
   LeaveType.MATERNITY,
+  LeaveType.PATERNITY,
   LeaveType.SICK,
 ];
 
@@ -27,11 +28,12 @@ export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
     case LeaveType.STUDY:
     case LeaveType.EXAM:
     case LeaveType.EMERGENCY:
-    case LeaveType.PATERNITY:
     case LeaveType.COMPASSIONATE:
       return LeaveType.ANNUAL;
     case LeaveType.MATERNITY:
       return LeaveType.MATERNITY;
+    case LeaveType.PATERNITY:
+      return LeaveType.PATERNITY;
     case LeaveType.SICK:
       return LeaveType.SICK;
     case LeaveType.UNPAID:

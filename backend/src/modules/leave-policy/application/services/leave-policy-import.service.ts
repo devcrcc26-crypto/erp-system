@@ -78,7 +78,12 @@ const LEAVE_POLICY_IMPORT_SCHEMA: ImportColumnSchema = {
       label: 'Leave Type',
       type: 'enum',
       required: true,
-      enumValues: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK],
+      enumValues: [
+        LeaveType.ANNUAL,
+        LeaveType.MATERNITY,
+        LeaveType.PATERNITY,
+        LeaveType.SICK,
+      ],
       example: 'Annual',
       width: 16,
     },

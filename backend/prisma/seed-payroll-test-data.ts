@@ -475,6 +475,11 @@ async function main(): Promise<void> {
             minimumServiceMonths: 0,
           },
           {
+            leaveType: LeaveType.PATERNITY,
+            baseDays: 3,
+            minimumServiceMonths: 0,
+          },
+          {
             leaveType: LeaveType.SICK,
             baseDays: 30,
             requiresReceipt: true,
@@ -484,10 +489,10 @@ async function main(): Promise<void> {
       companyId,
       actorId,
     );
-    bump(counts, 'leavePolicyRule', 3);
+    bump(counts, 'leavePolicyRule', 4);
 
     policyNotes.push(
-      'PATERNITY (3 days): no LeaveType policy rule bucket - requests use ANNUAL balance mapping only',
+      'PATERNITY (3 days): own leave-balance bucket (Labour Proclamation 1156/2019)',
     );
     policyNotes.push(
       'MARRIAGE (3 days): LeaveType not in schema - cannot configure',

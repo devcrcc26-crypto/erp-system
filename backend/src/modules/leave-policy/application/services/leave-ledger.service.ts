@@ -45,6 +45,8 @@ import { formatUserDisplayName } from '../../../../shared/utils/user-display.uti
 export const DEFAULT_ENTITLEMENTS: Partial<Record<LeaveType, number>> = {
   [LeaveType.ANNUAL]: 20,
   [LeaveType.SICK]: 10,
+  [LeaveType.MATERNITY]: 120,
+  [LeaveType.PATERNITY]: 3,
 };
 
 /** Only annual leave carries over between leave years. */
@@ -110,6 +112,8 @@ export interface LeaveBalanceView {
   remaining: number;
   /** Policy id when the employee is on a leave policy; otherwise null. */
   leavePolicyId: string | null;
+  /** From the policy rule for this leave type (e.g. sick medical certificate). */
+  requiresReceipt: boolean;
 }
 
 /**
@@ -1393,6 +1397,9 @@ export class LeaveLedgerService {
       pending,
       remaining: roundDays(entitled + broughtForward - used - pending),
       leavePolicyId: employee.policyId,
+      requiresReceipt: Boolean(
+        employee.rules.get(balanceLeaveType)?.requiresReceipt,
+      ),
     };
   }
 
@@ -1413,8 +1420,9 @@ export class LeaveLedgerService {
     }
     const startKey = dateOnlyKey(year.start);
     const serviceYears = fullServiceYears(employee.serviceStart, year.start);
+    const leaveTypes = this.policyBalanceTypesFor(employee, options.leaveTypes);
 
-    for (const leaveType of options.leaveTypes) {
+    for (const leaveType of leaveTypes) {
       const hasEntitlement =
         (await this.prisma.leaveBalanceEntry.count({
           where: {
@@ -1448,7 +1456,7 @@ export class LeaveLedgerService {
         }
       }
     }
-    await this.syncCache(employee, year, options.leaveTypes);
+    await this.syncCache(employee, year, leaveTypes);
   }
 
   /**
@@ -1787,7 +1795,8 @@ export class LeaveLedgerService {
   }
 
   /**
-   * Maternity balances and requests are female-only.
+   * Maternity is female-only; paternity is male-only
+   * (Ethiopian Labour Proclamation No. 1156/2019).
    * Brought-forward days apply only to annual leave (enforced at snapshot write).
    */
   assertBalanceLeaveTypeAllowed(
@@ -1802,6 +1811,38 @@ export class LeaveLedgerService {
         'Maternity leave is only available for female employees',
       );
     }
+    if (
+      leaveType === LeaveType.PATERNITY &&
+      employee.gender !== Gender.MALE
+    ) {
+      throw new BadRequestException(
+        'Paternity leave is only available for male employees',
+      );
+    }
+  }
+
+  /**
+   * Policy balance types allowed for this employee (gender gates).
+   */
+  private policyBalanceTypesFor(
+    employee: Pick<LedgerEmployee, 'gender'>,
+    leaveTypes: ReadonlyArray<LeaveType>,
+  ): LeaveType[] {
+    return leaveTypes.filter((leaveType) => {
+      if (
+        leaveType === LeaveType.MATERNITY &&
+        employee.gender !== Gender.FEMALE
+      ) {
+        return false;
+      }
+      if (
+        leaveType === LeaveType.PATERNITY &&
+        employee.gender !== Gender.MALE
+      ) {
+        return false;
+      }
+      return true;
+    });
   }
 
   private async loadLeaveCalendar(

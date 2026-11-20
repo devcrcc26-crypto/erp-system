@@ -12,13 +12,13 @@ export const DEDUCTS_FROM_ANNUAL: LeaveType[] = [
   'STUDY',
   'EXAM',
   'EMERGENCY',
-  'PATERNITY',
   'COMPASSIONATE',
 ];
 
 export const OWN_BALANCE_LEAVE_TYPES: LeaveType[] = [
   'ANNUAL',
   'MATERNITY',
+  'PATERNITY',
   'SICK',
 ];
 
@@ -33,11 +33,12 @@ export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
     case 'STUDY':
     case 'EXAM':
     case 'EMERGENCY':
-    case 'PATERNITY':
     case 'COMPASSIONATE':
       return 'ANNUAL';
     case 'MATERNITY':
       return 'MATERNITY';
+    case 'PATERNITY':
+      return 'PATERNITY';
     case 'SICK':
       return 'SICK';
     case 'UNPAID':

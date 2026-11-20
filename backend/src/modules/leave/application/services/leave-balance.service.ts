@@ -94,6 +94,7 @@ export class LeaveBalanceService {
     pending: number;
     remaining: number;
     leavePolicyId: string | null;
+    requiresReceipt: boolean;
   }> {
     const view = await this.leaveLedger.getLeaveBalance(
       employeeId,
@@ -113,6 +114,7 @@ export class LeaveBalanceService {
       pending: view.pending,
       remaining: view.remaining,
       leavePolicyId: view.leavePolicyId,
+      requiresReceipt: view.requiresReceipt,
     };
   }
 
@@ -238,6 +240,7 @@ export class LeaveBalanceService {
         year,
         annual: findRow(LeaveType.ANNUAL),
         maternity: findRow(LeaveType.MATERNITY),
+        paternity: findRow(LeaveType.PATERNITY),
         sick: findRow(LeaveType.SICK),
       };
     });
@@ -749,6 +752,7 @@ export class LeaveBalanceService {
     used: number;
     pending: number;
     remaining: number;
+    requiresReceipt?: boolean;
   }): Record<string, unknown> {
     return {
       // Stable client key (cache row id is not required for display/validation).
@@ -763,6 +767,7 @@ export class LeaveBalanceService {
       used: row.used,
       pending: row.pending,
       remaining: row.remaining,
+      requiresReceipt: Boolean(row.requiresReceipt),
     };
   }
 

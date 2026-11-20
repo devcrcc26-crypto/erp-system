@@ -119,6 +119,8 @@ export interface LeaveBalance {
   used: number;
   pending: number;
   remaining: number;
+  /** From the employee's leave-policy rule (sick medical certificate). */
+  requiresReceipt?: boolean;
 }
 
 /** Contract leave year option for the profile year dropdown. */
@@ -139,6 +141,7 @@ export interface EmployeeLeaveBalanceSummary {
   year: number;
   annual: LeaveBalance | null;
   maternity: LeaveBalance | null;
+  paternity: LeaveBalance | null;
   sick: LeaveBalance | null;
 }
 

@@ -67,6 +67,7 @@ interface EmployeeLeaveProfileSectionProps {
 const BALANCE_ACCENT: Record<string, string> = {
   ANNUAL: accent.primary,
   MATERNITY: '#be185d',
+  PATERNITY: '#0f766e',
   SICK: '#2563eb',
 };
 
@@ -234,12 +235,22 @@ export default function EmployeeLeaveProfileSection({
     const types = leaveBalanceTypesForGender(
       isSelf ? currentUser.data?.gender : undefined,
     );
-    const withMaternity =
-      !types.includes('MATERNITY') &&
+    let displayTypes = types as Array<
+      'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY'
+    >;
+    if (
+      !displayTypes.includes('MATERNITY') &&
       rows.some((row) => row.leaveType === 'MATERNITY')
-        ? ([...types, 'MATERNITY'] as const)
-        : types;
-    return withMaternity.map((leaveType) => ({
+    ) {
+      displayTypes = [...displayTypes, 'MATERNITY'];
+    }
+    if (
+      !displayTypes.includes('PATERNITY') &&
+      rows.some((row) => row.leaveType === 'PATERNITY')
+    ) {
+      displayTypes = [...displayTypes, 'PATERNITY'];
+    }
+    return displayTypes.map((leaveType) => ({
       leaveType,
       balance: pickBalance(rows, leaveType),
     }));
