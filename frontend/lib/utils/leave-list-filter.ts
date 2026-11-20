@@ -123,6 +123,7 @@ export function matchesLeaveBalanceSearch(
     employeeName,
     email,
     chineseName,
+    row.employee?.employeeCode ?? '',
   ]
     .join(' ')
     .toLowerCase();

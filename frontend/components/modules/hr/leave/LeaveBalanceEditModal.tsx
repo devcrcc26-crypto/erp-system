@@ -319,8 +319,6 @@ export default function LeaveBalanceEditModal({
               </table>
               <p className="m-0 border-t border-slate-100 px-3 py-2 text-xs text-slate-600">
                 {t(`${KEY}.remainingFormula`)}
-                {' · '}
-                {t(`${KEY}.broughtForwardAnnualOnly`)}
               </p>
             </div>
           )}

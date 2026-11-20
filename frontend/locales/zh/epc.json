@@ -775,6 +775,14 @@
           "lowBalanceSub": "≤ {{threshold}} 天",
           "withPending": "有待审批",
           "withPendingSub": "年假"
+        },
+        "balanceTable": {
+          "parental": "产假 / 陪产假",
+          "details": "{{name}} 的假期余额明细",
+          "viewHistory": "查看请假记录",
+          "lowBalanceHint": "余额偏低：可用天数不超过 {{count}} 天",
+          "notApplicable": "不适用",
+          "availableOfEntitled": "可用 {{available}} 天，共 {{entitled}} 天"
         }
       },
       "siteAssignments": {
@@ -5918,7 +5926,6 @@
         "adjustHint": "在当前假期年度增加或扣减天数。已有记录不会被修改。",
         "openingHint": "上线时使用：转入当前假期年度的余额。仅在该年度尚无应享天数或期初余额时可用。",
         "snapshotHint": "为所选假期年度填写各假期类型的应享天数、结转天数和已用天数。剩余天数将自动计算。",
-        "broughtForwardAnnualOnly": "结转仅适用于年假",
         "editBalances": "编辑余额",
         "leaveYearLabel": "假期年度",
         "leaveYearExtra": "当前假期年度为 {{start}} – {{end}}（按合同开始日期）。",

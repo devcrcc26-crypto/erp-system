@@ -775,6 +775,14 @@
           "lowBalanceSub": "≤ {{threshold}} days",
           "withPending": "With pending",
           "withPendingSub": "Annual leave"
+        },
+        "balanceTable": {
+          "parental": "Maternity / Paternity",
+          "details": "Balance details for {{name}}",
+          "viewHistory": "View leave history",
+          "lowBalanceHint": "Low balance: {{count}} days or less available",
+          "notApplicable": "Not applicable",
+          "availableOfEntitled": "{{available}} of {{entitled}} days available"
         }
       },
       "siteAssignments": {
@@ -5919,11 +5927,10 @@
         "adjustHint": "Adds or removes days on the current leave year. Existing entries are never changed.",
         "openingHint": "For go-live: the balance carried into the current leave year. Only possible while the year has no entitlement or opening balance.",
         "snapshotHint": "Enter entitled, brought forward and used for each leave type on the selected leave year. Remaining is calculated automatically.",
-        "broughtForwardAnnualOnly": "Brought forward applies to annual leave only",
         "editBalances": "Edit balances",
         "leaveYearLabel": "Leave year",
         "leaveYearExtra": "Current leave year runs {{start}} – {{end}} (from the contract start date).",
-        "remainingFormula": "Remaining = entitled + brought forward − used − pending",
+        "remainingFormula": "Remaining = Entitlement + Brought Forward − Used − Pending",
         "days": "Days",
         "daysHint": "Use a minus sign to remove days, e.g. -1.5",
         "daysRequired": "Enter the number of days",

@@ -27,6 +27,8 @@ export interface LeaveUserSummary {
   email: string | null;
   chineseName?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
+  /** Company employee ID (HR balances list). */
+  employeeCode?: string | null;
 }
 
 export interface LeaveApprovalTier {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Alert,
   Button,
@@ -14,20 +15,20 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   EditOutlined,
+  HistoryOutlined,
   ReloadOutlined,
   SearchOutlined,
   UserOutlined,
   WalletOutlined,
+  WarningFilled,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useRouter } from 'next/navigation';
 import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
 import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import LeaveBalanceEditModal from '@/components/modules/hr/leave/LeaveBalanceEditModal';
 import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanEditLeaveBalances } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -36,67 +37,160 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type {
   EmployeeLeaveBalanceSummary,
   LeaveBalance,
-  LeaveType,
 } from '@/lib/api/leave.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { useLeaveBalancesAll } from '@/lib/query/leave';
 import {
+  employeeBalanceEntries,
+  isLowLeaveBalance,
+  LOW_LEAVE_BALANCE_THRESHOLD,
+  parentalBalanceFor,
+  summarizeLeaveBalanceStats,
+} from '@/lib/utils/leave-balance-summary';
+import {
   formatLeaveEmployeeName,
   formatLeaveType,
-  leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { buildLeaveBalanceExportSheets } from '@/lib/utils/leave-export';
 import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 
-const LOW_BALANCE_THRESHOLD = 5;
+type Translate = ReturnType<typeof useEpcTranslation>['t'];
 
-interface LeaveBalanceFlatRow {
-  key: string;
-  employeeId: string;
-  employee: EmployeeLeaveBalanceSummary['employee'];
-  year: number;
-  leaveType: LeaveType;
-  balance: LeaveBalance;
-  summary: EmployeeLeaveBalanceSummary;
+const TABLE_KEY = 'pages.hr.leave.balanceTable';
+
+/** `available / entitlement`, amber with a warning icon when low. */
+function BalanceCell({
+  balance,
+  caption,
+  t,
+}: {
+  balance: LeaveBalance | null;
+  /** Small label under the figure (the parental column names the type). */
+  caption?: string;
+  t: Translate;
+}): React.ReactNode {
+  if (!balance) {
+    return (
+      <span
+        className="erp-users-cell-sub"
+        aria-label={t(`${TABLE_KEY}.notApplicable`)}
+      >
+        —
+      </span>
+    );
+  }
+  const isLow = isLowLeaveBalance(balance);
+  const summary = t(`${TABLE_KEY}.availableOfEntitled`, {
+    available: balance.remaining,
+    entitled: balance.entitled,
+  });
+  return (
+    <div className="erp-leave-bal-cell">
+      <span className="erp-leave-bal-figure" title={summary}>
+        <span
+          className={`erp-leave-balance-remaining${
+            isLow ? ' erp-leave-balance-remaining--low' : ''
+          }`}
+        >
+          {balance.remaining}
+        </span>
+        <span className="erp-leave-bal-of"> / {balance.entitled}</span>
+        {isLow ? (
+          <Tooltip
+            title={t(`${TABLE_KEY}.lowBalanceHint`, {
+              count: LOW_LEAVE_BALANCE_THRESHOLD,
+            })}
+          >
+            <WarningFilled
+              className="erp-leave-bal-low-icon"
+              aria-label={t('pages.hr.leave.balanceStats.lowBalance')}
+              role="img"
+            />
+          </Tooltip>
+        ) : null}
+      </span>
+      {caption ? <span className="erp-leave-bal-caption">{caption}</span> : null}
+    </div>
+  );
 }
 
-function flattenBalanceSummaries(
-  summaries: EmployeeLeaveBalanceSummary[],
-): LeaveBalanceFlatRow[] {
-  const rows: LeaveBalanceFlatRow[] = [];
-  for (const summary of summaries) {
-    const entries: Array<{ leaveType: LeaveType; balance: LeaveBalance | null }> =
-      [
-        { leaveType: 'ANNUAL', balance: summary.annual },
-        { leaveType: 'MATERNITY', balance: summary.maternity },
-        { leaveType: 'PATERNITY', balance: summary.paternity },
-        { leaveType: 'SICK', balance: summary.sick },
-      ];
-    for (const entry of entries) {
-      if (!entry.balance) {
-        continue;
-      }
-      rows.push({
-        key: `${summary.employeeId}-${entry.leaveType}`,
-        employeeId: summary.employeeId,
-        employee: summary.employee,
-        year: summary.year,
-        leaveType: entry.leaveType,
-        balance: entry.balance,
-        summary,
-      });
-    }
-  }
-  return rows;
+/** Expanded row: full breakdown per leave type that applies to the employee. */
+function BalanceDetails({
+  summary,
+  t,
+}: {
+  summary: EmployeeLeaveBalanceSummary;
+  t: Translate;
+}): React.ReactNode {
+  const entries = employeeBalanceEntries(summary);
+  const name = formatLeaveEmployeeName(summary.employee);
+  return (
+    <div
+      className="erp-leave-bal-details"
+      role="region"
+      aria-label={t(`${TABLE_KEY}.details`, { name })}
+    >
+      <div className="erp-leave-bal-detail-grid">
+        {entries.map(({ leaveType, balance }) => {
+          const isLow = isLowLeaveBalance(balance);
+          const rows: Array<{ label: string; value: number; strong?: boolean }> = [
+            { label: t('hr.labels.entitlement'), value: balance.entitled },
+            { label: t('hr.labels.broughtForward'), value: balance.broughtForward },
+            { label: t('hr.labels.used'), value: balance.used },
+            { label: t('hr.labels.pending'), value: balance.pending },
+            { label: t('hr.labels.available'), value: balance.remaining, strong: true },
+          ];
+          return (
+            <section
+              key={leaveType}
+              className={`erp-leave-bal-detail-card${
+                isLow ? ' erp-leave-bal-detail-card--low' : ''
+              }`}
+            >
+              <h4 className="erp-leave-bal-detail-title">
+                {formatLeaveType(leaveType, t)}
+                {isLow ? (
+                  <span className="erp-leave-balance-low-pill">
+                    {t('pages.hr.leave.balanceStats.lowBalance')}
+                  </span>
+                ) : null}
+              </h4>
+              <dl className="erp-leave-bal-detail-list">
+                {rows.map((row) => (
+                  <div
+                    key={row.label}
+                    className={
+                      row.strong ? 'erp-leave-bal-detail-row--total' : undefined
+                    }
+                  >
+                    <dt>{row.label}</dt>
+                    <dd>{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          );
+        })}
+      </div>
+      <Link
+        href={leaveHistoryPath(summary.employeeId)}
+        className="erp-leave-bal-history-link"
+      >
+        <HistoryOutlined aria-hidden />
+        {t(`${TABLE_KEY}.viewHistory`)}
+      </Link>
+    </div>
+  );
 }
 
 /**
- * HR leave balances tab - Employees v2 chrome (floating stats, soft card).
+ * HR leave balances tab: one row per employee with Annual, Sick and the
+ * gender-applicable parental balance side by side; expand a row for the
+ * full breakdown.
  */
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
-  const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const canEditBalances = useCanEditLeaveBalances();
@@ -109,7 +203,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     useState<EmployeeLeaveBalanceSummary | null>(null);
 
   const balancesQuery = useLeaveBalancesAll({ year }, true);
-  const allRows = balancesQuery.data ?? [];
+  const allRows = useMemo(() => balancesQuery.data ?? [], [balancesQuery.data]);
 
   const filtered = useMemo(
     () =>
@@ -119,13 +213,8 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     [allRows, appliedSearch],
   );
 
-  const flatRows = useMemo(
-    () => flattenBalanceSummaries(filtered),
-    [filtered],
-  );
-
   const meta: PaginationMeta = useMemo(() => {
-    const total = flatRows.length;
+    const total = filtered.length;
     const limit = params.limit ?? 10;
     const page = params.page ?? 1;
     return {
@@ -134,42 +223,22 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       limit,
       pages: Math.max(1, Math.ceil(total / limit) || 1),
     };
-  }, [flatRows.length, params.limit, params.page]);
+  }, [filtered.length, params.limit, params.page]);
 
   const rows = useMemo(() => {
     const start = (meta.page - 1) * meta.limit;
-    return flatRows.slice(start, start + meta.limit);
-  }, [flatRows, meta.page, meta.limit]);
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
-  const pageStats = useMemo(() => {
-    let lowBalance = 0;
-    let withPending = 0;
-    const employeeIds = new Set<string>();
+  const pageStats = useMemo(() => summarizeLeaveBalanceStats(filtered), [filtered]);
 
-    for (const row of flatRows) {
-      employeeIds.add(row.employeeId);
-      if (row.balance.remaining <= LOW_BALANCE_THRESHOLD) {
-        lowBalance += 1;
-      }
-      if (row.balance.pending > 0) {
-        withPending += 1;
-      }
-    }
-
-    return {
-      employees: employeeIds.size,
-      lowBalance,
-      withPending,
-    };
-  }, [flatRows]);
-
-  const columns: ColumnsType<LeaveBalanceFlatRow> = useMemo(() => {
-    const cols: ColumnsType<LeaveBalanceFlatRow> = [
+  const columns: ColumnsType<EmployeeLeaveBalanceSummary> = useMemo(() => {
+    const cols: ColumnsType<EmployeeLeaveBalanceSummary> = [
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        width: isCompact ? 180 : 240,
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
+        width: isCompact ? 190 : 260,
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
           <div className="erp-leave-person">
             <EvaluationListAvatar
               firstName={row.employee.firstName}
@@ -190,76 +259,47 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('hr.table.leaveType'),
-        key: 'leaveType',
+        title: t('users.form.employeeId'),
+        key: 'employeeCode',
         width: 130,
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
-          <StatusBadge
-            label={formatLeaveType(row.leaveType, t)}
-            variant={leaveTypeVariant(row.leaveType)}
-          />
-        ),
-      },
-      {
-        title: t('hr.labels.entitlement'),
-        key: 'entitled',
-        width: 110,
-        align: 'right',
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
-          <span className="tabular-nums">{row.balance.entitled}</span>
-        ),
-      },
-      {
-        title: t('hr.labels.broughtForward'),
-        key: 'broughtForward',
-        width: 130,
-        align: 'right',
         responsive: ['md'],
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
-          <span className="tabular-nums">{row.balance.broughtForward}</span>
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
+          row.employee.employeeCode ? (
+            <span className="erp-users-id-chip">{row.employee.employeeCode}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
+      },
+      {
+        title: formatLeaveType('ANNUAL', t),
+        key: 'annual',
+        width: 120,
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
+          <BalanceCell balance={row.annual} t={t} />
         ),
       },
       {
-        title: t('hr.labels.used'),
-        key: 'used',
-        width: 90,
-        align: 'right',
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
-          <span className="tabular-nums">{row.balance.used}</span>
+        title: formatLeaveType('SICK', t),
+        key: 'sick',
+        width: 120,
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
+          <BalanceCell balance={row.sick} t={t} />
         ),
       },
       {
-        title: t('hr.labels.pending'),
-        key: 'pending',
-        width: 100,
-        align: 'right',
-        responsive: ['md'],
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
-          <span className="tabular-nums">{row.balance.pending}</span>
-        ),
-      },
-      {
-        title: t('hr.labels.available'),
-        key: 'available',
-        width: 110,
-        align: 'right',
-        render: (_: unknown, row: LeaveBalanceFlatRow) => {
-          const isLow = row.balance.remaining <= LOW_BALANCE_THRESHOLD;
+        title: t(`${TABLE_KEY}.parental`),
+        key: 'parental',
+        width: 150,
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => {
+          const parental = parentalBalanceFor(row);
           return (
-            <div className="erp-leave-balance-cell">
-              <span
-                className={`erp-leave-balance-remaining${
-                  isLow ? ' erp-leave-balance-remaining--low' : ''
-                }`}
-              >
-                {row.balance.remaining}
-              </span>
-              {isLow ? (
-                <span className="erp-leave-balance-low-pill">
-                  {t('pages.hr.leave.balanceStats.lowBalance')}
-                </span>
-              ) : null}
-            </div>
+            <BalanceCell
+              balance={parental?.balance ?? null}
+              caption={
+                parental ? formatLeaveType(parental.leaveType, t) : undefined
+              }
+              t={t}
+            />
           );
         },
       },
@@ -269,9 +309,9 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       cols.push({
         title: t('common.actions'),
         key: 'actions',
-        width: 110,
+        width: 130,
         fixed: isCompact ? undefined : 'right',
-        render: (_: unknown, row: LeaveBalanceFlatRow) => (
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
           <Button
             type="link"
             size="small"
@@ -279,7 +319,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             className="!px-0"
             onClick={(event) => {
               event.stopPropagation();
-              setEditTarget(row.summary);
+              setEditTarget(row);
             }}
           >
             {t('hr.leave.ledger.editBalances')}
@@ -450,17 +490,20 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         </div>
 
         <div className="erp-pro-table-card-body">
-          <DataTable<LeaveBalanceFlatRow>
-            rowKey="key"
-            className="erp-pro-table erp-users-table erp-leave-v2"
+          <DataTable<EmployeeLeaveBalanceSummary>
+            rowKey="employeeId"
+            className="erp-pro-table erp-users-table erp-leave-v2 erp-leave-bal-table"
             size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={{ x: isCompact ? 560 : 900 }}
-            onRow={(record) => ({
-              onClick: () => router.push(leaveHistoryPath(record.employeeId)),
-              className: 'cursor-pointer',
-            })}
+            scroll={{ x: isCompact ? 640 : 900 }}
+            expandable={{
+              expandRowByClick: true,
+              expandedRowRender: (record) => (
+                <BalanceDetails summary={record} t={t} />
+              ),
+            }}
+            rowClassName={() => 'cursor-pointer'}
             locale={{
               emptyText: (
                 <TableEmptyState

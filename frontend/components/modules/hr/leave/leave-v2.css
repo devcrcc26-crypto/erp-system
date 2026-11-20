@@ -1008,3 +1008,136 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── HR leave balances: one row per employee (LeaveBalancesListPageContent) ── */
+
+.erp-leave-v2 .erp-leave-bal-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.erp-leave-v2 .erp-leave-bal-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.erp-leave-v2 .erp-leave-bal-of {
+  color: var(--lv2-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Amber warning: #b54708 on white 5.4:1. */
+.erp-leave-v2 .erp-leave-bal-low-icon {
+  margin-left: 6px;
+  color: #b54708;
+  font-size: 13px;
+}
+
+.erp-leave-v2 .erp-leave-bal-caption {
+  margin-top: 2px;
+  color: var(--lv2-muted);
+  font-size: 12px;
+}
+
+.erp-leave-v2.erp-leave-bal-table .ant-table-expanded-row > td {
+  background: var(--lv2-subtle) !important;
+}
+
+.erp-leave-v2 .erp-leave-bal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 4px 2px;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-card {
+  padding: 12px 14px;
+  border: 1px solid var(--lv2-divider);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-card--low {
+  border-color: #fedf89;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--lv2-strong);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-title .erp-leave-balance-low-pill {
+  margin-top: 0;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-list dt {
+  color: var(--lv2-muted);
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-list dd {
+  margin: 0;
+  color: var(--lv2-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-row--total {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--lv2-divider);
+}
+
+.erp-leave-v2 .erp-leave-bal-detail-row--total dt,
+.erp-leave-v2 .erp-leave-bal-detail-row--total dd {
+  color: var(--lv2-strong);
+  font-weight: 650;
+}
+
+.erp-leave-v2 .erp-leave-bal-history-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  color: var(--lv2-primary-strong) !important;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.erp-leave-v2 .erp-leave-bal-history-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.erp-leave-v2 .erp-leave-bal-history-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--lv2-primary);
+  outline-offset: 2px;
+}

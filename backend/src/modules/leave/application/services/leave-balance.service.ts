@@ -119,7 +119,8 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Paginated company-wide leave balances for HR (annual, maternity, sick).
+   * Paginated company-wide leave balances for HR (annual, sick, and maternity
+   * for female / paternity for male employees only).
    * Without `year`, each employee's current leave year is shown.
    */
   async listCompanyBalances(
@@ -175,6 +176,7 @@ export class LeaveBalanceService {
           email: true,
           chineseName: true,
           gender: true,
+          employeeId: true,
         },
       }),
       this.prisma.user.count({ where: userWhere }),
@@ -236,11 +238,16 @@ export class LeaveBalanceService {
           email: employee.email,
           chineseName: employee.chineseName,
           gender: employee.gender,
+          employeeCode: employee.employeeId,
         },
         year,
         annual: findRow(LeaveType.ANNUAL),
-        maternity: findRow(LeaveType.MATERNITY),
-        paternity: findRow(LeaveType.PATERNITY),
+        // Maternity only for female, paternity only for male employees
+        // (neither when gender is not recorded).
+        maternity:
+          employee.gender === 'FEMALE' ? findRow(LeaveType.MATERNITY) : null,
+        paternity:
+          employee.gender === 'MALE' ? findRow(LeaveType.PATERNITY) : null,
         sick: findRow(LeaveType.SICK),
       };
     });
