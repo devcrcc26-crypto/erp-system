@@ -77,6 +77,11 @@ import {
   type OvertimeWeekdaySlice,
 } from '../utils/payroll-overtime.util';
 import {
+  combineManualOvertime,
+  type AppliedManualOt,
+  type ManualOtAdjustmentInput,
+} from '../utils/payroll-ot-adjustment.util';
+import {
   unpaidLeaveDateKeysInRange,
   unpaidLeaveDaysStillToDeduct,
 } from '../utils/payroll-unpaid-leave.util';
@@ -235,6 +240,11 @@ interface SalaryPeriodDraft {
 interface EntryDraft {
   entry: Prisma.PayrollEntryCreateManyInput;
   salaryPeriods: SalaryPeriodDraft[];
+  /**
+   * What each manual (paper-based) OT adjustment of this employee added to the
+   * entry; zero when not applied (e.g. 0 paid days). Saved on the adjustments.
+   */
+  manualOt?: AppliedManualOt[];
 }
 
 interface DateWindow {
@@ -1786,6 +1796,48 @@ export class PayrollRunService {
   }
 
   /**
+   * Entry figures after its OT totals change (manual OT adjustments): the OT
+   * hours/pay given, then the rest repriced from the entry's own snapshot with
+   * its stored top-ups (same path as {@link updateEntry}). Does not write.
+   */
+  async entryUpdateForOvertime(
+    entry: PayrollEntry,
+    run: Pick<PayrollRun, 'taxableThreshold' | 'companyId' | 'month' | 'year'>,
+    ot: {
+      hours: { normalHours: number; eveningHours: number; sundayHours: number; holidayHours: number };
+      pay: { normalOtPay: number; eveningOtPay: number; sundayOtPay: number; holidayOtPay: number };
+    },
+  ): Promise<Prisma.PayrollEntryUncheckedUpdateInput> {
+    const hours = {
+      normalOtHours: new Decimal(ot.hours.normalHours),
+      eveningOtHours: new Decimal(ot.hours.eveningHours),
+      sundayOtHours: new Decimal(ot.hours.sundayHours),
+      holidayOtHours: new Decimal(ot.hours.holidayHours),
+    };
+    const result = await this.recalcEntryAmounts(
+      {
+        ...entry,
+        ...hours,
+        normalOtPay: new Decimal(ot.pay.normalOtPay),
+        eveningOtPay: new Decimal(ot.pay.eveningOtPay),
+        sundayOtPay: new Decimal(ot.pay.sundayOtPay),
+        holidayOtPay: new Decimal(ot.pay.holidayOtPay),
+      },
+      run,
+      {
+        bonusTopUp: this.toNumber(entry.bonusTopUp),
+        netTopUp: this.toNumber(entry.netTopUp),
+      },
+    );
+    return { ...hours, ...this.calculationToEntryUpdate(result) };
+  }
+
+  /** Recomputes a run's header totals from its entries. */
+  async refreshRunTotals(runId: string, ctx: ServiceContext): Promise<void> {
+    await this.updateRunTotals(runId, ctx);
+  }
+
+  /**
    * Override history of an entry, newest first. HR only.
    */
   async getEntryAudit(
@@ -2249,6 +2301,22 @@ export class PayrollRunService {
     const policy = await loadPolicySnapshot(this.prisma, ctx.companyId, monthStart);
     const drafts: EntryDraft[] = [];
 
+    // Manual (paper-based) OT entered by HR on this run, added on top of system OT.
+    const manualOtRows = await this.prisma.payrollOtAdjustment.findMany({
+      where: {
+        companyId: ctx.companyId,
+        payrollRunId: run.id,
+        employeeId: { in: employeeIds },
+      },
+      select: { employeeId: true, otCategory: true, hours: true },
+    });
+    const manualOtByEmployee = new Map<string, ManualOtAdjustmentInput[]>();
+    for (const row of manualOtRows) {
+      const list = manualOtByEmployee.get(row.employeeId) ?? [];
+      list.push({ category: row.otCategory, hours: this.toNumber(row.hours) });
+      manualOtByEmployee.set(row.employeeId, list);
+    }
+
     for (const employee of employees) {
       const overlapping = contractsByEmployee.get(employee.id) ?? [];
       const attendance = attendanceByEmployee.get(employee.id);
@@ -2281,6 +2349,7 @@ export class PayrollRunService {
           netTopUp: topUp?.netTopUp ?? 0,
           netTopUpReason: topUp?.netTopUpReason ?? null,
           preservedNotes: topUp?.notes ?? null,
+          manualOt: manualOtByEmployee.get(employee.id) ?? [],
         }),
       );
     }
@@ -2515,6 +2584,8 @@ export class PayrollRunService {
     netTopUp: number;
     netTopUpReason: string | null;
     preservedNotes: string | null;
+    /** Manual (paper-based) OT adjustments for this employee on this run. */
+    manualOt?: ManualOtAdjustmentInput[];
   }): Promise<EntryDraft> {
     const {
       run,
@@ -2931,6 +3002,38 @@ export class PayrollRunService {
           holidayHours: assignedOt.totals.holidayHours,
         };
 
+    const systemOtPay = zeroOtForUnpaidMonth
+      ? {
+          normalOtPay: 0,
+          eveningOtPay: 0,
+          sundayOtPay: 0,
+          holidayOtPay: 0,
+        }
+      : {
+          normalOtPay: assignedOt.totals.normalOtPay,
+          eveningOtPay: assignedOt.totals.eveningOtPay,
+          sundayOtPay: assignedOt.totals.sundayOtPay,
+          holidayOtPay: assignedOt.totals.holidayOtPay,
+        };
+    // System OT (above, unchanged) plus manual paper-based OT, priced on the
+    // month-end basic. A month that pays no OT pays no manual OT either.
+    const manualOtInput = input.manualOt ?? [];
+    const combinedOt = combineManualOvertime({
+      systemHours: overtimeHours,
+      systemPay: systemOtPay,
+      adjustments: zeroOtForUnpaidMonth ? [] : manualOtInput,
+      basicSalary: monthEndBasic,
+      rates: policy,
+    });
+    const manualOt: AppliedManualOt[] = manualOtInput.map(
+      (adjustment) =>
+        combinedOt.applied.find((row) => row.category === adjustment.category) ?? {
+          category: adjustment.category,
+          hours: 0,
+          amount: 0,
+        },
+    );
+
     const result = this.calc.calculate({
       basicSalary: monthEndBasic,
       transportAllowance: transport,
@@ -2940,20 +3043,13 @@ export class PayrollRunService {
       netTopUp: effectiveNetTopUp,
       payrollDays,
       earnedSalary: sumEarned,
-      overtimeHours,
-      overtimePay: zeroOtForUnpaidMonth
-        ? {
-            normalOtPay: 0,
-            eveningOtPay: 0,
-            sundayOtPay: 0,
-            holidayOtPay: 0,
-          }
-        : {
-            normalOtPay: assignedOt.totals.normalOtPay,
-            eveningOtPay: assignedOt.totals.eveningOtPay,
-            sundayOtPay: assignedOt.totals.sundayOtPay,
-            holidayOtPay: assignedOt.totals.holidayOtPay,
-          },
+      overtimeHours: combinedOt.hours,
+      overtimePay: {
+        normalOtPay: combinedOt.pay.normalOtPay,
+        eveningOtPay: combinedOt.pay.eveningOtPay,
+        sundayOtPay: combinedOt.pay.sundayOtPay,
+        holidayOtPay: combinedOt.pay.holidayOtPay,
+      },
       taxableThreshold,
       pensionApplicable,
       taxApplicable,
@@ -3022,10 +3118,10 @@ export class PayrollRunService {
       monthlyBonus: new Decimal(monthlyBonus),
       contractNetBonus: new Decimal(contractNetBonus),
       earnedSalary: new Decimal(result.earnedSalary),
-      normalOtHours: new Decimal(overtimeHours.normalHours),
-      eveningOtHours: new Decimal(overtimeHours.eveningHours),
-      sundayOtHours: new Decimal(overtimeHours.sundayHours),
-      holidayOtHours: new Decimal(overtimeHours.holidayHours),
+      normalOtHours: new Decimal(combinedOt.hours.normalHours),
+      eveningOtHours: new Decimal(combinedOt.hours.eveningHours),
+      sundayOtHours: new Decimal(combinedOt.hours.sundayHours),
+      holidayOtHours: new Decimal(combinedOt.hours.holidayHours),
       normalOtPay: new Decimal(result.normalOtPay),
       eveningOtPay: new Decimal(result.eveningOtPay),
       sundayOtPay: new Decimal(result.sundayOtPay),
@@ -3057,7 +3153,7 @@ export class PayrollRunService {
       updatedBy: ctx.userId,
     };
 
-    return { entry, salaryPeriods };
+    return { entry, salaryPeriods, manualOt };
   }
 
   /** Inactive days in the employed part of the month, by type, with paid/unpaid split. */
@@ -3140,6 +3236,24 @@ export class PayrollRunService {
   ): Promise<void> {
     if (drafts.length === 0) {
       return;
+    }
+
+    // Record what each manual OT adjustment added, so it can be removed exactly.
+    for (const draft of drafts) {
+      for (const applied of draft.manualOt ?? []) {
+        await this.prisma.payrollOtAdjustment.updateMany({
+          where: {
+            companyId: ctx.companyId,
+            payrollRunId: draft.entry.runId,
+            employeeId: draft.entry.employeeId,
+            otCategory: applied.category,
+          },
+          data: {
+            appliedHours: new Decimal(applied.hours),
+            amount: new Decimal(applied.amount),
+          },
+        });
+      }
     }
 
     for (let i = 0; i < drafts.length; i += ENTRY_WRITE_CHUNK) {

@@ -15,6 +15,9 @@ import type {
   PayrollEmploymentReviewEntry,
   PayrollEntryAuditRecord,
   PayrollEntryDetail,
+  PayrollOtAdjustment,
+  PayrollOtBreakdown,
+  UpsertPayrollOtAdjustmentPayload,
   PayrollFreelancerOption,
   PayrollRunDetail,
   PayrollRunListItem,
@@ -155,6 +158,42 @@ export async function getPayrollEntryAudit(
   entryId: string,
 ): Promise<PayrollEntryAuditRecord[]> {
   return apiGet<PayrollEntryAuditRecord[]>(`${BASE}/runs/${runId}/entries/${entryId}/audit`);
+}
+
+/** Manual (paper-based) OT adjustments on a run, optionally for one employee. */
+export async function listPayrollOtAdjustments(
+  runId: string,
+  employeeId?: string,
+): Promise<PayrollOtAdjustment[]> {
+  const query = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : '';
+  return apiGet<PayrollOtAdjustment[]>(`${BASE}/runs/${runId}/ot-adjustments${query}`);
+}
+
+/** System OT, manual OT and combined totals per category for one employee. */
+export async function getPayrollOtBreakdown(
+  runId: string,
+  employeeId: string,
+): Promise<PayrollOtBreakdown> {
+  return apiGet<PayrollOtBreakdown>(
+    `${BASE}/runs/${runId}/ot-adjustments/breakdown?employeeId=${encodeURIComponent(employeeId)}`,
+  );
+}
+
+/** Create or update the adjustment for (employee, category); returns the new breakdown. */
+export async function upsertPayrollOtAdjustment(
+  runId: string,
+  payload: UpsertPayrollOtAdjustmentPayload,
+): Promise<PayrollOtBreakdown> {
+  return apiPost<PayrollOtBreakdown>(`${BASE}/runs/${runId}/ot-adjustments`, payload);
+}
+
+export async function deletePayrollOtAdjustment(
+  runId: string,
+  adjustmentId: string,
+): Promise<PayrollOtBreakdown> {
+  return apiDelete<PayrollOtBreakdown>(
+    `${BASE}/runs/${runId}/ot-adjustments/${adjustmentId}`,
+  );
 }
 
 /**

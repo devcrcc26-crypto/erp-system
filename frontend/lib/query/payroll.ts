@@ -28,6 +28,9 @@ import {
   updatePayrollCompanySettings,
   updatePayrollEntry,
   updatePayrollEntryDays,
+  deletePayrollOtAdjustment,
+  getPayrollOtBreakdown,
+  upsertPayrollOtAdjustment,
 } from '@/lib/api/payroll';
 import type {
   ApprovePayrollRunPayload,
@@ -37,6 +40,7 @@ import type {
   UpdatePayrollCompanySettingsPayload,
   UpdatePayrollEntryDaysPayload,
   UpdatePayrollEntryPayload,
+  UpsertPayrollOtAdjustmentPayload,
 } from '@/lib/api/payroll.types';
 
 export const payrollKeys = {
@@ -262,6 +266,33 @@ export function useUpdatePayrollEntryDays(runId: string, entryId: string) {
   return useMutation({
     mutationFn: (payload: UpdatePayrollEntryDaysPayload) =>
       updatePayrollEntryDays(runId, entryId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** System vs manual OT for one employee (under the run key, so run refreshes reload it). */
+export function usePayrollOtBreakdown(runId: string, employeeId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...payrollKeys.run(runId), 'ot-breakdown', employeeId] as const,
+    queryFn: () => getPayrollOtBreakdown(runId, employeeId),
+    enabled,
+  });
+}
+
+/** Saves a manual OT adjustment; the entry and run totals change, so the run reloads. */
+export function useUpsertPayrollOtAdjustment(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpsertPayrollOtAdjustmentPayload) =>
+      upsertPayrollOtAdjustment(runId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useDeletePayrollOtAdjustment(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (adjustmentId: string) => deletePayrollOtAdjustment(runId, adjustmentId),
     onSuccess: () => invalidateRun(queryClient, runId),
   });
 }

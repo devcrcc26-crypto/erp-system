@@ -339,3 +339,63 @@ export interface PayrollCompanySettings {
 
 export type UpdatePayrollCompanySettingsPayload = Partial<PayrollCompanySettings>;
 
+
+/** Payroll OT bucket (same four as the entry's *_ot_hours / *_ot_pay). */
+export type PayrollOtCategory = 'NORMAL' | 'EVENING' | 'SUNDAY' | 'HOLIDAY';
+
+interface PayrollOtPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+/** Manual (paper-based) OT hours on a run for one employee and category. */
+export interface PayrollOtAdjustment {
+  id: string;
+  payrollRunId: string;
+  employeeId: string;
+  employee: PayrollOtPerson & { employeeId: string | null };
+  otCategory: PayrollOtCategory;
+  /** Hours HR entered (negative subtracts). */
+  hours: number;
+  /** Hours actually added (capped so a category never goes below zero). */
+  appliedHours: number;
+  /** OT pay those hours added. */
+  amount: number;
+  note: string | null;
+  createdBy: PayrollOtPerson;
+  createdAt: string;
+  updatedBy: PayrollOtPerson;
+  updatedAt: string;
+}
+
+export interface PayrollOtCategoryBreakdown {
+  category: PayrollOtCategory;
+  systemHours: number;
+  systemPay: number;
+  manualHours: number;
+  manualPay: number;
+  totalHours: number;
+  totalPay: number;
+}
+
+/** System OT vs manual OT for one employee on one run. */
+export interface PayrollOtBreakdown {
+  runId: string;
+  runStatus: string;
+  editable: boolean;
+  employeeId: string;
+  entryId: string | null;
+  overtimeSheetId: string | null;
+  paidDays: number;
+  categories: PayrollOtCategoryBreakdown[];
+  totals: { systemPay: number; manualPay: number; totalPay: number };
+  adjustments: PayrollOtAdjustment[];
+}
+
+export interface UpsertPayrollOtAdjustmentPayload {
+  employeeId: string;
+  otCategory: PayrollOtCategory;
+  hours: number;
+  note: string;
+}

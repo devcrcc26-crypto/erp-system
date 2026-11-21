@@ -382,6 +382,7 @@ model Company {
   payrollRuns                PayrollRun[]
   payrollEntries             PayrollEntry[]
   payrollEntryAudits         PayrollEntryAudit[]
+  payrollOtAdjustments       PayrollOtAdjustment[]
   payrollPayslips            PayrollPayslip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -1014,6 +1015,9 @@ model User {
   payrollPayslips                    PayrollPayslip[]            @relation("PayrollPayslipEmployee")
   payrollPayslipsGenearted           PayrollPayslip[]            @relation("PayrollPayslipGenerator")
   payrollPayslipsReleased            PayrollPayslip[]            @relation("PayrollPayslipReleaser")
+  payrollOtAdjustments               PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentEmployee")
+  payrollOtAdjustmentsCreated        PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentCreator")
+  payrollOtAdjustmentsUpdated        PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentUpdater")
   payrollPayslipsCreated             PayrollPayslip[]            @relation("PayrollPayslipCreator")
   payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
   educationRecords                   EducationRecord[]
@@ -6816,6 +6820,7 @@ model PayrollRun{
   corrections             PayrollRun[]                        @relation("PayrollCorrections")
   entries                 PayrollEntry[]
   payslips                PayrollPayslip[]
+  otAdjustments           PayrollOtAdjustment[]
 
 
   /// One active REGULAR run per company/month (enforced in SQL partial unique index).
@@ -6825,6 +6830,51 @@ model PayrollRun{
   @@map("payroll_run")
 }
 
+
+/// Payroll OT buckets (same four as PayrollEntry *_ot_hours / *_ot_pay).
+enum PayrollOtCategory {
+  NORMAL
+  EVENING
+  SUNDAY
+  HOLIDAY
+
+  @@map("payroll_ot_category")
+}
+
+/// Manual OT hours for paper-based records, per run / employee / OT category.
+/// Added on top of system OT (approved overtime sheets), never merged into it.
+model PayrollOtAdjustment {
+  id           String            @id @default(uuid())
+  companyId    String            @map("company_id")
+  payrollRunId String            @map("payroll_run_id")
+  employeeId   String            @map("employee_id")
+  otCategory   PayrollOtCategory @map("ot_category")
+  /// Hours to add (positive) or subtract (negative).
+  hours        Decimal           @db.Decimal(6, 2)
+  /// Hours actually added to the entry: equals `hours` unless a negative
+  /// adjustment was capped so the category total cannot go below zero.
+  appliedHours Decimal           @default(0) @map("applied_hours") @db.Decimal(6, 2)
+  /// OT pay this adjustment added to the entry (month-end basic x policy rate),
+  /// kept so the system part of the entry's OT stays separable.
+  amount       Decimal           @default(0) @db.Decimal(14, 2)
+  /// Source of the hours, e.g. "Paper records - Nov 2026". Required when hours != 0.
+  note         String?           @db.VarChar(500)
+  createdBy    String            @map("created_by")
+  updatedBy    String            @map("updated_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  company    Company    @relation(fields: [companyId], references: [id])
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee   User       @relation("PayrollOtAdjustmentEmployee", fields: [employeeId], references: [id])
+  creator    User       @relation("PayrollOtAdjustmentCreator", fields: [createdBy], references: [id])
+  updater    User       @relation("PayrollOtAdjustmentUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([payrollRunId, employeeId, otCategory], map: "uq_payroll_ot_adjustment_run_employee_category")
+  @@index([companyId], map: "idx_payroll_ot_adjustment_company")
+  @@index([employeeId], map: "idx_payroll_ot_adjustment_employee")
+  @@map("payroll_ot_adjustment")
+}
 
 model PayrollEntry {
   id                        String             @id @default(uuid())

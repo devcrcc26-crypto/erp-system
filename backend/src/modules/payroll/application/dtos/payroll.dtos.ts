@@ -4,6 +4,7 @@ import {
   IsArray,
   IsUUID,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   Max,
   MaxLength,
   Min,
+  NotEquals,
   ValidateIf,
 } from 'class-validator';
 
@@ -216,4 +218,37 @@ export class UpdatePayrollCompanySettingsDto {
   @IsOptional()
   @IsString()
   bankLetterRefPrefix?: string;
+}
+
+/** Manual (paper-based) OT hours for one employee and OT category on a payroll run. */
+export class UpsertPayrollOtAdjustmentDto {
+  @ApiProperty({ description: 'Employee (user id) with an entry on this run' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({
+    description: 'OT category (same buckets as the payroll entry)',
+    enum: ['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'],
+  })
+  @IsIn(['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'])
+  otCategory!: 'NORMAL' | 'EVENING' | 'SUNDAY' | 'HOLIDAY';
+
+  @ApiProperty({
+    description: 'Hours to add (positive) or subtract (negative). Not zero.',
+    minimum: -744,
+    maximum: 744,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(-744)
+  @Max(744)
+  @NotEquals(0)
+  hours!: number;
+
+  @ApiPropertyOptional({
+    description: 'Source of the hours, e.g. "Paper records - Nov 2026". Required when hours is not zero.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }

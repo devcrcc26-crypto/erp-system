@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   StreamableFile,
   UseGuards,
@@ -31,7 +32,9 @@ import {
   UpdatePayrollCompanySettingsDto,
   UpdatePayrollEntryDaysDto,
   UpdatePayrollEntryDto,
+  UpsertPayrollOtAdjustmentDto,
 } from '../../application/dtos/payroll.dtos';
+import { PayrollOtAdjustmentService } from '../../application/services/payroll-ot-adjustment.service';
 import {
   PayrollBankLetterPreview,
   PayrollBankLetterService,
@@ -58,6 +61,7 @@ export class PayrollController {
     private readonly payrollPayslipService: PayrollPayslipService,
     private readonly payrollCompanySettingsService: PayrollCompanySettingsService,
     private readonly permissionService: PermissionService,
+    private readonly payrollOtAdjustmentService: PayrollOtAdjustmentService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { userId: string; companyId: string } {
@@ -242,6 +246,58 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollRunService.getEntryAudit(id, entryId, user.companyId);
+  }
+
+  @Get('runs/:id/ot-adjustments')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Manual (paper-based) OT adjustments on a run, optionally for one employee (payroll managers)',
+  })
+  listOtAdjustments(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.list(id, user.companyId, employeeId || undefined);
+  }
+
+  @Get('runs/:id/ot-adjustments/breakdown')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary: 'System OT, manual OT and combined totals per category for one employee',
+  })
+  otBreakdown(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.breakdown(id, employeeId, user.companyId);
+  }
+
+  @Post('runs/:id/ot-adjustments')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Create or update the manual OT adjustment for an employee + OT category and reprice the entry (DRAFT / REVIEWED runs, audited)',
+  })
+  upsertOtAdjustment(
+    @Param('id') id: string,
+    @Body() dto: UpsertPayrollOtAdjustmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.upsert(id, dto, this.ctx(user));
+  }
+
+  @Delete('runs/:id/ot-adjustments/:adjustmentId')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({ summary: 'Remove a manual OT adjustment and reprice the entry (audited)' })
+  removeOtAdjustment(
+    @Param('id') id: string,
+    @Param('adjustmentId') adjustmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.remove(id, adjustmentId, this.ctx(user));
   }
 
   @Post('runs/:id/mark-reviewed')

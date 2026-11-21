@@ -12,6 +12,7 @@ import { PayrollCompanySettingsService } from './application/services/payroll-co
 import { PayrollExcelExportService } from './application/services/payroll-excel-export.service';
 import { PayrollPayslipPdfService } from './application/services/payroll-payslip-pdf.service';
 import { PayrollPayslipService } from './application/services/payroll-payslip.service';
+import { PayrollOtAdjustmentService } from './application/services/payroll-ot-adjustment.service';
 import { PayrollRunService } from './application/services/payroll-run.service';
 /**
  * NotificationService is exported by NotificationsModule (registered globally
@@ -35,6 +36,7 @@ import { PayrollRunService } from './application/services/payroll-run.service';
     PayrollPayslipPdfService,
     PayrollPayslipService,
     PayrollRunService,
+    PayrollOtAdjustmentService,
   ],
   exports: [
     PayrollRunService,
