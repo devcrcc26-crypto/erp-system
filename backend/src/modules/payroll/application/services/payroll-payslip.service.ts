@@ -110,6 +110,7 @@ type PayslipWithRelations = {
     year: number;
     type: string;
     notes: string | null;
+    considerAttendance: boolean;
   };
   employee: {
     firstName: string;
@@ -450,6 +451,7 @@ export class PayrollPayslipService {
           year: true,
           type: true,
           notes: true,
+          considerAttendance: true,
         },
       },
       employee: {
@@ -586,6 +588,7 @@ export class PayrollPayslipService {
       incomeTax: item.incomeTax,
       totalDeductions: item.totalDeductions,
       netPay: item.netPay,
+      attendanceConsidered: payslip.run.considerAttendance,
       correction,
     };
   }

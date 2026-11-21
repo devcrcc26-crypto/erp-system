@@ -6793,6 +6793,9 @@ model PayrollRun{
   /// Approved/paid run whose month is affected by a later policy change - HR must review (never auto-recalculated).
   policyReviewRequired    Boolean                             @default(false) @map("policy_review_required")
   policyReviewNote        String?                             @map("policy_review_note")
+  /// false = attendance is ignored for this run: every employed day is paid and
+  /// only approved leave (and unpaid inactive days) reduce pay.
+  considerAttendance      Boolean                             @default(true) @map("consider_attendance")
   submittedAt             DateTime?                           @map("submitted_at")
   submittedBy             String?                             @map("submitted_by")
   approvedAt              DateTime?                           @map("approved_at")

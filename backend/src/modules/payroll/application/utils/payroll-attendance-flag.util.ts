@@ -8,6 +8,8 @@ export interface EntryAttendanceFlagInput {
   /** Resolution of a missing-from-file row when there is no record. */
   missingResolution?: string | null;
   monthEndBasic: number;
+  /** The run ignores attendance: no MISSING_ATTENDANCE flag, no enrolment note. */
+  attendanceIgnored?: boolean;
 }
 
 export interface EntryAttendanceFlag {
@@ -25,7 +27,7 @@ export function resolveEntryAttendanceFlag(
   input: EntryAttendanceFlagInput,
 ): EntryAttendanceFlag {
   const entryNote =
-    input.attendance?.matchMethod === 'NEEDS_ENROLMENT'
+    !input.attendanceIgnored && input.attendance?.matchMethod === 'NEEDS_ENROLMENT'
       ? NOT_ENROLLED_PAYROLL_NOTE
       : undefined;
 
@@ -36,7 +38,7 @@ export function resolveEntryAttendanceFlag(
       entryNote,
     };
   }
-  if (input.hasContract && !input.attendance) {
+  if (input.hasContract && !input.attendance && !input.attendanceIgnored) {
     const suffix: Record<string, string> = {
       NEEDS_ENROLMENT: ' (Needs enrolment)',
       PENDING: ' (Pending resolution)',

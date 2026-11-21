@@ -6202,6 +6202,24 @@
         "cancelTitle": "Cancel payroll run?",
         "cancelDescription": "Cancel this run so the month can be processed again."
       },
+      "attendanceSetting": {
+        "label": "Consider attendance",
+        "on": "On — deduct for absences and late arrivals",
+        "off": "Off — ignore attendance, use approved leave only",
+        "warning": "Attendance will not be considered. Payroll will be calculated based on approved leave records only. Absent days and late deductions will be ignored.",
+        "badge": "Attendance not considered",
+        "confirmTitle": "Recalculate this run?",
+        "confirmOff": "Every entry will be recalculated without attendance: only approved leave reduces pay.",
+        "confirmOn": "Every entry will be recalculated with attendance: absences are deducted again.",
+        "confirmOk": "Recalculate",
+        "changedOn": "Attendance is considered again. The run was recalculated.",
+        "changedOff": "Attendance is no longer considered. The run was recalculated.",
+        "changeFailed": "Could not change the attendance setting.",
+        "sectionTitle": "Payroll calculation",
+        "sectionDesc": "Defaults applied when a new payroll run is created.",
+        "companyDefault": "Consider attendance by default for new payroll runs",
+        "companyDefaultHint": "New runs start with this setting; it can be changed on each run."
+      },
       "otAdjust": {
         "systemTitle": "System OT (from approved requests)",
         "systemEmpty": "No approved OT requests for this period",

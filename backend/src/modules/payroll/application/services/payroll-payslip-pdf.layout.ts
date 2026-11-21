@@ -56,6 +56,8 @@ export interface PayslipPdfModel {
   incomeTax: number;
   totalDeductions: number;
   netPay: number;
+  /** False when the run was calculated without attendance data. */
+  attendanceConsidered?: boolean;
   /** When set, payslip is a correction slip for a locked month. */
   correction?: {
     originalAmount: number;
@@ -360,6 +362,12 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
         : 'Not applicable / 不适用'
     }`,
   });
+  if (model.attendanceConsidered === false) {
+    lines.push({
+      kind: 'note',
+      text: 'Note: This payslip was processed without attendance data. / 注：本工资单未使用考勤数据计算。',
+    });
+  }
   lines.push({
     kind: 'note',
     text: `Run ${model.runNumber} · Generated ${formatGeneratedDate(model.generatedAt)}`,

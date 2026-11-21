@@ -6201,6 +6201,24 @@
         "cancelTitle": "取消薪资运行？",
         "cancelDescription": "取消后可重新处理该月份。"
       },
+      "attendanceSetting": {
+        "label": "考虑考勤",
+        "on": "开启 — 按缺勤和迟到扣款",
+        "off": "关闭 — 忽略考勤，仅使用已批准的请假",
+        "warning": "将不考虑考勤。薪资仅根据已批准的请假记录计算，缺勤天数和迟到扣款将被忽略。",
+        "badge": "未考虑考勤",
+        "confirmTitle": "重新计算本次薪资？",
+        "confirmOff": "所有条目将在不考虑考勤的情况下重新计算：仅已批准的请假会减少工资。",
+        "confirmOn": "所有条目将按考勤重新计算：缺勤将再次扣款。",
+        "confirmOk": "重新计算",
+        "changedOn": "已重新考虑考勤，本次薪资已重新计算。",
+        "changedOff": "已不再考虑考勤，本次薪资已重新计算。",
+        "changeFailed": "无法更改考勤设置。",
+        "sectionTitle": "薪资计算",
+        "sectionDesc": "创建新的薪资运行时使用的默认设置。",
+        "companyDefault": "新的薪资运行默认考虑考勤",
+        "companyDefaultHint": "新的薪资运行将采用此设置，每次运行均可单独更改。"
+      },
       "otAdjust": {
         "systemTitle": "系统加班（来自已批准申请）",
         "systemEmpty": "本期没有已批准的加班申请",

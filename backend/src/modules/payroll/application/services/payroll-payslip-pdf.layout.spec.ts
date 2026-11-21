@@ -154,6 +154,13 @@ describe('payslip layout', () => {
     }
   });
 
+  it('adds a footnote only when the run ignored attendance', () => {
+    const note = 'processed without attendance data';
+    expect(textOf(buildPayslipLines(model({ attendanceConsidered: false })))).toContain(note);
+    expect(textOf(buildPayslipLines(model({ attendanceConsidered: true })))).not.toContain(note);
+    expect(textOf(buildPayslipLines(model()))).not.toContain(note);
+  });
+
   it('formatEmployeeName includes first, middle, and last', () => {
     expect(
       formatEmployeeName({

@@ -14,6 +14,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Radio,
   Select,
   Spin,
@@ -46,6 +47,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
 import PayrollOtAdjustmentsSection from '@/components/modules/hr/payroll/PayrollOtAdjustmentsSection';
+import PayrollAttendanceToggle from '@/components/modules/hr/payroll/PayrollAttendanceToggle';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
@@ -86,6 +88,7 @@ import {
   usePayrollRun,
   usePayrollRuns,
   useRecalculatePayrollRun,
+  useUpdatePayrollRun,
   useReleasePayslips,
   useSubmitPayrollRun,
   useUnlockPayrollRun,
@@ -323,6 +326,7 @@ export default function PayrollRunDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isPhone = screens.md === false;
   const recalculateMutation = useRecalculatePayrollRun(runId);
+  const updateRunMutation = useUpdatePayrollRun(runId);
   const markReviewedMutation = useMarkPayrollRunReviewed(runId);
   const submitMutation = useSubmitPayrollRun(runId);
   const approveMutation = useApprovePayrollRun(runId);
@@ -2325,6 +2329,11 @@ export default function PayrollRunDetailPageContent({
                   {t(payrollStatusLabelKey(run.status))}
                 </Tag>
               ) : null}
+              {run.considerAttendance === false ? (
+                <Tag variant="filled" className="erp-payroll-status erp-payroll-attendance-off-tag">
+                  {t('hr.payroll.attendanceSetting.badge')}
+                </Tag>
+              ) : null}
             </div>
             <p className="erp-payroll-hero-meta">
               <span>
@@ -2341,6 +2350,44 @@ export default function PayrollRunDetailPageContent({
                 })}
               </span>
             </p>
+            {canCreate && (run.status === 'DRAFT' || run.status === 'REVIEWED') ? (
+              <PayrollAttendanceToggle
+                className="erp-payroll-hero-attendance"
+                checked={run.considerAttendance !== false}
+                loading={updateRunMutation.isPending}
+                wrapSwitch={(switchNode) => (
+                  <Popconfirm
+                    title={t('hr.payroll.attendanceSetting.confirmTitle')}
+                    description={
+                      run.considerAttendance === false
+                        ? t('hr.payroll.attendanceSetting.confirmOn')
+                        : t('hr.payroll.attendanceSetting.confirmOff')
+                    }
+                    okText={t('hr.payroll.attendanceSetting.confirmOk')}
+                    cancelText={t('common.cancel')}
+                    onConfirm={async () => {
+                      const next = run.considerAttendance === false;
+                      try {
+                        await updateRunMutation.mutateAsync({ considerAttendance: next });
+                        messageApi.success(
+                          next
+                            ? t('hr.payroll.attendanceSetting.changedOn')
+                            : t('hr.payroll.attendanceSetting.changedOff'),
+                        );
+                      } catch (error) {
+                        notifyApiError(
+                          error,
+                          t('hr.payroll.attendanceSetting.changeFailed'),
+                          messageApi,
+                        );
+                      }
+                    }}
+                  >
+                    <span>{switchNode}</span>
+                  </Popconfirm>
+                )}
+              />
+            ) : null}
           </div>
           {renderActionButtons(run.status)}
         </div>

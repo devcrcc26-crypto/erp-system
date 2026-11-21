@@ -31,6 +31,7 @@ import {
   deletePayrollOtAdjustment,
   getPayrollOtBreakdown,
   upsertPayrollOtAdjustment,
+  updatePayrollRun,
 } from '@/lib/api/payroll';
 import type {
   ApprovePayrollRunPayload,
@@ -41,6 +42,7 @@ import type {
   UpdatePayrollEntryDaysPayload,
   UpdatePayrollEntryPayload,
   UpsertPayrollOtAdjustmentPayload,
+  UpdatePayrollRunPayload,
 } from '@/lib/api/payroll.types';
 
 export const payrollKeys = {
@@ -85,6 +87,15 @@ export function useCreatePayrollRun() {
   return useMutation({
     mutationFn: (payload: CreatePayrollRunPayload) => createPayrollRun(payload),
     onSuccess: (run) => invalidateRun(queryClient, run.id),
+  });
+}
+
+/** Run settings (consider attendance, notes). */
+export function useUpdatePayrollRun(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdatePayrollRunPayload) => updatePayrollRun(runId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
   });
 }
 

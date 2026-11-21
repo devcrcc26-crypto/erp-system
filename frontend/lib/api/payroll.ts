@@ -18,6 +18,7 @@ import type {
   PayrollOtAdjustment,
   PayrollOtBreakdown,
   UpsertPayrollOtAdjustmentPayload,
+  UpdatePayrollRunPayload,
   PayrollFreelancerOption,
   PayrollRunDetail,
   PayrollRunListItem,
@@ -43,6 +44,14 @@ export async function createPayrollRun(
   payload: CreatePayrollRunPayload,
 ): Promise<PayrollRunDetail> {
   return apiPost<PayrollRunDetail>(`${BASE}/runs`, payload);
+}
+
+/** Change run settings; changing attendance recalculates the run. */
+export async function updatePayrollRun(
+  runId: string,
+  payload: UpdatePayrollRunPayload,
+): Promise<PayrollRunDetail> {
+  return apiPatch<PayrollRunDetail>(`${BASE}/runs/${runId}`, payload);
 }
 
 export async function generatePayrollEntries(

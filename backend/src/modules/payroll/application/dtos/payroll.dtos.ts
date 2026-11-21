@@ -32,6 +32,30 @@ export class CreatePayrollRunDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Deduct for absences from attendance (default: the company setting). False = pay employed days; only approved leave applies.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  considerAttendance?: boolean;
+}
+
+/** Run settings HR can change on a DRAFT / REVIEWED run (the run is recalculated). */
+export class UpdatePayrollRunDto {
+  @ApiPropertyOptional({
+    description: 'Deduct for absences from attendance. False = only approved leave applies.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  considerAttendance?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
 }
 
 export class CreatePayrollCorrectionDto {
@@ -144,6 +168,13 @@ export class UpdatePayrollEntryDaysDto {
 
 /** HR-editable payroll letterhead / tax-form company settings. */
 export class UpdatePayrollCompanySettingsDto {
+  @ApiPropertyOptional({
+    description: 'Consider attendance by default for new payroll runs',
+  })
+  @IsOptional()
+  @IsBoolean()
+  considerAttendanceDefault?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

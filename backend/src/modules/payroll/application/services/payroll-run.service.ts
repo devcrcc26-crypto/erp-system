@@ -22,6 +22,10 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { EffectiveSalaryService } from './effective-salary.service';
 import {
+  PAYROLL_CONSIDER_ATTENDANCE_KEY,
+  parseConsiderAttendance,
+} from './payroll-company-settings.service';
+import {
   PayrollCalculationService,
   type OvertimeHours,
   type PayrollCalculationResult,
@@ -378,10 +382,14 @@ export class PayrollRunService {
     year: number,
     ctx: ServiceContext,
     notes?: string,
+    considerAttendance?: boolean,
   ): Promise<PayrollRun> {
     if (month < 1 || month > 12) {
       throw new BadRequestException('Month must be between 1 and 12');
     }
+    // Per-run choice, else the company default for new runs.
+    const attendanceOn =
+      considerAttendance ?? (await this.defaultConsiderAttendance(ctx.companyId));
 
     const existing = await this.prisma.payrollRun.findFirst({
       where: {
@@ -414,6 +422,7 @@ export class PayrollRunService {
         data: {
           status: 'DRAFT',
           notes: notes ?? existing.notes,
+          considerAttendance: attendanceOn,
           totalEmployees: 0,
           totalGross: new Decimal(0),
           totalNetPay: new Decimal(0),
@@ -449,6 +458,7 @@ export class PayrollRunService {
           type: 'REGULAR',
           status: 'DRAFT',
           notes: notes ?? null,
+          considerAttendance: attendanceOn,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
         },
@@ -506,6 +516,72 @@ export class PayrollRunService {
       `[PayrollRun] Generated ${drafts.length} entries for ${run.runNumber} in ${elapsedMs}ms`,
     );
 
+    return this.getRun(runId, ctx.companyId);
+  }
+
+  /** Company default for new runs (company_setting, module payroll). */
+  private async defaultConsiderAttendance(companyId: string): Promise<boolean> {
+    const row = await this.prisma.companySetting.findFirst({
+      where: {
+        companyId,
+        module: 'payroll',
+        key: PAYROLL_CONSIDER_ATTENDANCE_KEY,
+        deletedAt: null,
+      },
+      select: { value: true },
+    });
+    return parseConsiderAttendance(row?.value);
+  }
+
+  /**
+   * Run settings on a DRAFT / REVIEWED run. Changing whether attendance is
+   * considered recalculates the run so every entry uses the new basis.
+   */
+  async updateRunSettings(
+    runId: string,
+    dto: { considerAttendance?: boolean; notes?: string },
+    ctx: ServiceContext,
+  ): Promise<PayrollRun> {
+    const run = await this.prisma.payrollRun.findFirst({
+      where: { id: runId, companyId: ctx.companyId, deletedAt: null },
+    });
+    if (!run) {
+      throw new NotFoundException('Payroll run not found');
+    }
+    if (run.status !== 'DRAFT' && run.status !== 'REVIEWED') {
+      throw new BadRequestException(
+        `Run settings can only change in DRAFT or REVIEWED status (now ${run.status})`,
+      );
+    }
+    const attendanceChanged =
+      dto.considerAttendance !== undefined &&
+      dto.considerAttendance !== run.considerAttendance;
+
+    await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        ...(attendanceChanged ? { considerAttendance: dto.considerAttendance } : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes.trim() || null } : {}),
+        updatedBy: ctx.userId,
+      },
+    });
+
+    if (attendanceChanged) {
+      await this.audit.create(
+        this.audit.buildFromRequestContext({
+          userId: ctx.userId,
+          companyId: ctx.companyId,
+          module: 'payroll',
+          action: 'run_consider_attendance_changed',
+          recordType: 'PayrollRun',
+          recordId: runId,
+          recordReference: run.runNumber,
+          beforeValue: { considerAttendance: run.considerAttendance },
+          afterValue: { considerAttendance: dto.considerAttendance },
+        }),
+      );
+      return this.recalculate(runId, ctx);
+    }
     return this.getRun(runId, ctx.companyId);
   }
 
@@ -1304,6 +1380,8 @@ export class PayrollRunService {
         originalRunId: original.id,
         status: 'DRAFT',
         taxableThreshold: original.taxableThreshold,
+        // Same basis as the run it corrects.
+        considerAttendance: original.considerAttendance,
         notes: note?.trim() ? note.trim() : null,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
@@ -2592,7 +2670,7 @@ export class PayrollRunService {
       ctx,
       employee,
       contracts,
-      attendance,
+      attendance: recordedAttendance,
       overtime,
       siteAssignments,
       taxableThreshold,
@@ -2603,6 +2681,11 @@ export class PayrollRunService {
       netTopUpReason,
       preservedNotes,
     } = input;
+    // Attendance off for this run: calculate as if there were no attendance
+    // record (all employed days paid; approved unpaid leave and unpaid inactive
+    // days still deducted). The recorded attendance still decides the roster.
+    const attendanceIgnored = run.considerAttendance === false;
+    const attendance = attendanceIgnored ? undefined : recordedAttendance;
 
     const monthStart = new Date(Date.UTC(run.year, run.month - 1, 1));
     const monthEnd = new Date(Date.UTC(run.year, run.month, 0));
@@ -2917,9 +3000,10 @@ export class PayrollRunService {
 
     const attendanceFlag = resolveEntryAttendanceFlag({
       hasContract: sorted.length > 0,
-      attendance,
+      attendance: recordedAttendance,
       missingResolution: input.missingAttendanceResolution,
       monthEndBasic,
+      attendanceIgnored,
     });
     // Final settlement: only items enabled in the policy for this payroll month.
     const window = input.employmentWindow ?? null;

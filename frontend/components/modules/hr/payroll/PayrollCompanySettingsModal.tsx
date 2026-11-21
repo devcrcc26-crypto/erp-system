@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Alert, Button, Drawer, Form, Input, Spin } from 'antd';
+import { Alert, Button, Drawer, Form, Input, Spin, Switch } from 'antd';
 import {
   BankOutlined,
+  CalculatorOutlined,
   CheckCircleFilled,
   EnvironmentOutlined,
   FileProtectOutlined,
@@ -19,7 +20,7 @@ import {
 } from '@/lib/query/payroll';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-type SettingsField = keyof PayrollCompanySettings;
+type SettingsField = Exclude<keyof PayrollCompanySettings, 'considerAttendanceDefault'>;
 
 const TAX_FIELDS: SettingsField[] = ['orgNameTax', 'tin', 'taxAccountNo', 'taxCollectorOffice'];
 const ADDRESS_FIELDS: SettingsField[] = [
@@ -65,12 +66,14 @@ function SettingsSection({
   icon: React.ReactNode;
   title: string;
   description: string;
-  filled: number;
-  total: number;
+  /** Omit both for a section without a "filled" counter (e.g. switches). */
+  filled?: number;
+  total?: number;
   children: React.ReactNode;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const complete = filled >= total;
+  const showProgress = filled !== undefined && total !== undefined;
+  const complete = showProgress && filled >= total;
   return (
     <section className="erp-payroll-settings-section">
       <header className="erp-payroll-settings-section-header">
@@ -81,14 +84,16 @@ function SettingsSection({
           <h3 className="erp-payroll-settings-section-title">{title}</h3>
           <p className="erp-payroll-settings-section-desc">{description}</p>
         </div>
-        <span
-          className={`erp-payroll-settings-progress${complete ? ' erp-payroll-settings-progress--complete' : ''}`}
-        >
-          {complete ? <CheckCircleFilled aria-hidden /> : null}
-          {complete
-            ? t('hr.payroll.companySettings.complete')
-            : t('hr.payroll.companySettings.filledCount', { filled, total })}
-        </span>
+        {showProgress ? (
+          <span
+            className={`erp-payroll-settings-progress${complete ? ' erp-payroll-settings-progress--complete' : ''}`}
+          >
+            {complete ? <CheckCircleFilled aria-hidden /> : null}
+            {complete
+              ? t('hr.payroll.companySettings.complete')
+              : t('hr.payroll.companySettings.filledCount', { filled, total })}
+          </span>
+        ) : null}
       </header>
       <div className="erp-payroll-settings-section-body">{children}</div>
     </section>
@@ -212,6 +217,21 @@ export default function PayrollCompanySettingsModal({
             requiredMark={false}
             className="erp-payroll-settings-form"
           >
+            <SettingsSection
+              icon={<CalculatorOutlined />}
+              title={t('hr.payroll.attendanceSetting.sectionTitle')}
+              description={t('hr.payroll.attendanceSetting.sectionDesc')}
+            >
+              <Form.Item
+                name="considerAttendanceDefault"
+                valuePropName="checked"
+                label={t('hr.payroll.attendanceSetting.companyDefault')}
+                extra={t('hr.payroll.attendanceSetting.companyDefaultHint')}
+                className="erp-payroll-settings-span-2"
+              >
+                <Switch />
+              </Form.Item>
+            </SettingsSection>
             <SettingsSection
               icon={<FileProtectOutlined />}
               title={t('hr.payroll.companySettings.sectionTax')}

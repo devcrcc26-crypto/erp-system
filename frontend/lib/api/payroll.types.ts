@@ -41,6 +41,8 @@ export interface PayrollRunListItem {
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
   notes: string | null;
+  /** False: this run ignores attendance (only approved leave reduces pay). */
+  considerAttendance?: boolean;
   attendanceSnapshotStale?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -257,6 +259,8 @@ export interface PayrollRunDetail {
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
   notes: string | null;
+  /** False: this run ignores attendance (only approved leave reduces pay). */
+  considerAttendance?: boolean;
   attendanceSnapshotStale?: boolean;
   policyReviewRequired?: boolean;
   policyReviewNote?: string | null;
@@ -280,6 +284,14 @@ export interface CreatePayrollCorrectionPayload {
 export interface CreatePayrollRunPayload {
   month: number;
   year: number;
+  notes?: string;
+  /** Omit to use the company default. */
+  considerAttendance?: boolean;
+}
+
+/** Run settings on a DRAFT / REVIEWED run (changing attendance recalculates it). */
+export interface UpdatePayrollRunPayload {
+  considerAttendance?: boolean;
   notes?: string;
 }
 
@@ -335,6 +347,8 @@ export interface PayrollCompanySettings {
   bankBranch: string;
   companyAccountNumber: string;
   bankLetterRefPrefix: string;
+  /** New runs consider attendance unless turned off for the run. */
+  considerAttendanceDefault: boolean;
 }
 
 export type UpdatePayrollCompanySettingsPayload = Partial<PayrollCompanySettings>;

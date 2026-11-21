@@ -1909,3 +1909,61 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ── "Consider attendance" toggle (PayrollAttendanceToggle) ── */
+
+.erp-payroll-attendance-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-payroll-attendance-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.erp-payroll-attendance-toggle-row .ant-switch {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.erp-payroll-attendance-toggle-label {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erp-payroll-attendance-toggle-state,
+.erp-payroll-attendance-toggle-hint {
+  margin: 2px 0 0;
+  color: var(--erp-n-600);
+  font-size: 13px;
+}
+
+.erp-payroll-attendance-toggle-warning.ant-alert {
+  border-radius: 10px;
+}
+
+/* On the navy run banner. */
+.erp-payroll-hero-attendance {
+  margin-top: 12px;
+}
+
+.erp-payroll-hero-attendance .erp-payroll-attendance-toggle-label {
+  color: #ffffff;
+}
+
+.erp-payroll-hero-attendance .erp-payroll-attendance-toggle-state,
+.erp-payroll-hero-attendance .erp-payroll-attendance-toggle-hint {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Amber "Attendance not considered" tag: #b54708 on #fffaeb 5.6:1. */
+.erp-payroll-attendance-off-tag.ant-tag {
+  border: 1px solid #fedf89;
+  background: #fffaeb !important;
+  color: #b54708 !important;
+}

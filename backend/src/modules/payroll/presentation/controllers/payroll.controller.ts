@@ -32,6 +32,7 @@ import {
   UpdatePayrollCompanySettingsDto,
   UpdatePayrollEntryDaysDto,
   UpdatePayrollEntryDto,
+  UpdatePayrollRunDto,
   UpsertPayrollOtAdjustmentDto,
 } from '../../application/dtos/payroll.dtos';
 import { PayrollOtAdjustmentService } from '../../application/services/payroll-ot-adjustment.service';
@@ -159,7 +160,22 @@ export class PayrollController {
       dto.year,
       this.ctx(user),
       dto.notes,
+      dto.considerAttendance,
     );
+  }
+
+  @Patch('runs/:id')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary:
+      'Change run settings (consider attendance, notes) on a DRAFT / REVIEWED run. Changing attendance recalculates the run (audited).',
+  })
+  updateRun(
+    @Param('id') id: string,
+    @Body() dto: UpdatePayrollRunDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.updateRunSettings(id, dto, this.ctx(user));
   }
 
   @Post('runs/:id/generate')

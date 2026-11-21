@@ -17,7 +17,19 @@ export interface PayrollCompanySettings {
   bankBranch: string;
   companyAccountNumber: string;
   bankLetterRefPrefix: string;
+  /** New payroll runs consider attendance unless HR turns it off for the run. */
+  considerAttendanceDefault: boolean;
 }
+
+/** company_setting key (module = payroll) for {@link PayrollCompanySettings.considerAttendanceDefault}. */
+export const PAYROLL_CONSIDER_ATTENDANCE_KEY = 'consider_attendance_default';
+
+/** Stored value -> boolean; anything but "false" means on (the default). */
+export function parseConsiderAttendance(value: string | null | undefined): boolean {
+  return value?.trim().toLowerCase() !== 'false';
+}
+
+type StringSettingField = Exclude<keyof PayrollCompanySettings, 'considerAttendanceDefault'>;
 
 export const PAYROLL_SETTING_DEFAULTS: PayrollCompanySettings = {
   orgNameTax:
@@ -36,9 +48,10 @@ export const PAYROLL_SETTING_DEFAULTS: PayrollCompanySettings = {
   bankBranch: 'Addis Ababa Branch',
   companyAccountNumber: '',
   bankLetterRefPrefix: 'CRIECC-FZY',
+  considerAttendanceDefault: true,
 };
 
-const KEY_MAP: Record<keyof PayrollCompanySettings, string> = {
+const KEY_MAP: Record<StringSettingField, string> = {
   orgNameTax: 'org_name_tax',
   tin: 'tin',
   taxAccountNo: 'tax_account_no',
@@ -78,13 +91,16 @@ export class PayrollCompanySettingsService {
     const byKey = new Map(rows.map((r) => [r.key, r.value]));
     const result = { ...PAYROLL_SETTING_DEFAULTS };
     for (const [field, key] of Object.entries(KEY_MAP) as Array<
-      [keyof PayrollCompanySettings, string]
+      [StringSettingField, string]
     >) {
       const raw = byKey.get(key);
       if (raw != null && raw.trim() !== '') {
         result[field] = raw.trim();
       }
     }
+    result.considerAttendanceDefault = parseConsiderAttendance(
+      byKey.get(PAYROLL_CONSIDER_ATTENDANCE_KEY),
+    );
     return result;
   }
 
@@ -93,7 +109,7 @@ export class PayrollCompanySettingsService {
    */
   async ensureDefaults(companyId: string, userId: string): Promise<void> {
     for (const [field, key] of Object.entries(KEY_MAP) as Array<
-      [keyof PayrollCompanySettings, string]
+      [StringSettingField, string]
     >) {
       const existing = await this.prisma.companySetting.findFirst({
         where: {
@@ -130,13 +146,23 @@ export class PayrollCompanySettingsService {
     userId: string,
     patch: Partial<PayrollCompanySettings>,
   ): Promise<PayrollCompanySettings> {
+    const entries: Array<{ key: string; value: string; dataType: 'STRING' | 'BOOLEAN' }> = [];
     for (const [field, key] of Object.entries(KEY_MAP) as Array<
-      [keyof PayrollCompanySettings, string]
+      [StringSettingField, string]
     >) {
       if (!(field in patch) || patch[field] === undefined) {
         continue;
       }
-      const value = String(patch[field] ?? '').trim();
+      entries.push({ key, value: String(patch[field] ?? '').trim(), dataType: 'STRING' });
+    }
+    if (typeof patch.considerAttendanceDefault === 'boolean') {
+      entries.push({
+        key: PAYROLL_CONSIDER_ATTENDANCE_KEY,
+        value: patch.considerAttendanceDefault ? 'true' : 'false',
+        dataType: 'BOOLEAN',
+      });
+    }
+    for (const { key, value, dataType } of entries) {
       const existing = await this.prisma.companySetting.findFirst({
         where: { companyId, module: 'payroll', key, deletedAt: null },
         select: { id: true },
@@ -153,7 +179,7 @@ export class PayrollCompanySettingsService {
             module: 'payroll',
             key,
             value,
-            dataType: 'STRING',
+            dataType,
             isPublic: false,
             createdBy: userId,
             updatedBy: userId,

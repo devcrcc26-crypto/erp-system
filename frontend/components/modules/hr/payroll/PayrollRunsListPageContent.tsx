@@ -33,6 +33,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import PayrollAttendanceToggle from '@/components/modules/hr/payroll/PayrollAttendanceToggle';
 import PayrollCompanySettingsModal from '@/components/modules/hr/payroll/PayrollCompanySettingsModal';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
@@ -48,7 +49,11 @@ import type {
   PayrollRunStatus,
 } from '@/lib/api/payroll.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useCreatePayrollRun, usePayrollRuns } from '@/lib/query/payroll';
+import {
+  useCreatePayrollRun,
+  usePayrollCompanySettings,
+  usePayrollRuns,
+} from '@/lib/query/payroll';
 import {
   formatPayrollMoney,
   formatPayrollPeriod,
@@ -147,6 +152,11 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [period, setPeriod] = useState<Dayjs | null>(null);
   const [notes, setNotes] = useState('');
+  // null = not touched yet: follow the company default.
+  const [considerAttendance, setConsiderAttendance] = useState<boolean | null>(null);
+  const settingsQuery = usePayrollCompanySettings(createOpen);
+  const attendanceOn =
+    considerAttendance ?? settingsQuery.data?.considerAttendanceDefault ?? true;
   const [filterMode, setFilterMode] = useState<PayrollFilterMode>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PayrollRunStatus | undefined>();
@@ -388,11 +398,13 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         month: period.month() + 1,
         year: period.year(),
         notes: notes.trim() || undefined,
+        considerAttendance: attendanceOn,
       });
       messageApi.success(t('hr.payroll.create.success'));
       setCreateOpen(false);
       setPeriod(null);
       setNotes('');
+      setConsiderAttendance(null);
       router.push(`/hr/payroll/${run.id}`);
     } catch (error) {
       if (error instanceof ApiRequestError) {
@@ -430,6 +442,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
           setCreateOpen(false);
           setPeriod(null);
           setNotes('');
+          setConsiderAttendance(null);
         }}
         onOk={() => void handleCreateRun()}
         okText={t('hr.payroll.create.submit')}
@@ -450,6 +463,13 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
               }
               className="w-full"
               placeholder={t('hr.payroll.create.periodPlaceholder')}
+            />
+          </Form.Item>
+          <Form.Item>
+            <PayrollAttendanceToggle
+              checked={attendanceOn}
+              onChange={setConsiderAttendance}
+              loading={settingsQuery.isLoading && considerAttendance === null}
             />
           </Form.Item>
           <Form.Item label={t('hr.payroll.create.notes')}>
