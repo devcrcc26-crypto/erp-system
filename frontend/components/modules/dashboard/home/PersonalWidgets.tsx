@@ -160,7 +160,8 @@ export function MyRequestsWidget({ enabled }: { enabled: boolean }): React.React
 /** Remaining days for each leave type the employee holds a balance for. */
 export function LeaveBalanceWidget({ enabled }: { enabled: boolean }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
-  const query = useMyLeaveBalances({ enabled });
+  // TODO: re-enable when leave balances are verified
+  const query = useMyLeaveBalances({ enabled: false && enabled });
   const leaveYearLabel = query.data?.[0]?.year ?? addisParts().year;
   const balances = (query.data ?? []).filter(
     (balance) =>
@@ -174,31 +175,40 @@ export function LeaveBalanceWidget({ enabled }: { enabled: boolean }): React.Rea
       tone="ok"
       viewAllHref="/hr/leave-requests"
       query={query}
-      isEmpty={balances.length === 0}
+      // TODO: re-enable when leave balances are verified
+      isEmpty
       emptyState={
+        <OverviewEmptyState
+          icon={CalendarDays}
+          title={t('hr.leave.balanceUpdatingNotice')}
+        />
+      }
+    >
+      {/* TODO: re-enable when leave balances are verified */}
+      {false ? (
+        <ul className="m-0 flex flex-col p-0">
+          {balances.map((balance) => (
+            <li
+              key={`${balance.year}-${balance.leaveType}`}
+              className="flex list-none items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0 last:pb-0"
+            >
+              <span className="truncate text-sm font-medium text-slate-800">
+                {formatLeaveType(balance.leaveType, t)}
+              </span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                {t(`${HOME}.leaveBalance.daysLeft`, {
+                  days: formatCount(balance.remaining, locale),
+                })}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
         <OverviewEmptyState
           icon={CalendarDays}
           title={t(`${HOME}.leaveBalance.empty`, { year: leaveYearLabel })}
         />
-      }
-    >
-      <ul className="m-0 flex flex-col p-0">
-        {balances.map((balance) => (
-          <li
-            key={`${balance.year}-${balance.leaveType}`}
-            className="flex list-none items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0 last:pb-0"
-          >
-            <span className="truncate text-sm font-medium text-slate-800">
-              {formatLeaveType(balance.leaveType, t)}
-            </span>
-            <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
-              {t(`${HOME}.leaveBalance.daysLeft`, {
-                days: formatCount(balance.remaining, locale),
-              })}
-            </span>
-          </li>
-        ))}
-      </ul>
+      )}
     </OverviewCard>
   );
 }

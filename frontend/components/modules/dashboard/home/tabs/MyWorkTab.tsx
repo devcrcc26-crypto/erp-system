@@ -1,6 +1,7 @@
 'use client';
 
-import { CalendarDays, FileClock, MapPin, MapPinOff, Timer } from 'lucide-react';
+import { Alert } from 'antd';
+import { FileClock, MapPin, MapPinOff, Timer } from 'lucide-react';
 import { useCanAccessOvertime } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useDashboardOperationalStats } from '@/lib/query/dashboard';
@@ -33,23 +34,15 @@ export default function MyWorkTab({ enabled }: { enabled: boolean }): React.Reac
 
   return (
     <div className="flex flex-col gap-5">
-      <MetricStrip query={query} label={t(`${STATS}.personal.title`)} columns={3}>
+      {/* TODO: re-enable when leave balances are verified */}
+      <Alert
+        type="info"
+        showIcon
+        title={t('hr.leave.balanceUpdatingNotice')}
+      />
+      <MetricStrip query={query} label={t(`${STATS}.personal.title`)} columns={2}>
         <OverviewStatCard
           index={0}
-          icon={CalendarDays}
-          tone="info"
-          valueTone="neutral"
-          label={t(`${STATS}.personal.leaveBalance`)}
-          value={
-            work?.leaveBalanceDays == null
-              ? '—'
-              : formatCount(work.leaveBalanceDays, locale)
-          }
-          badge={t(`${HOME}.myWork.leaveBalanceHint`)}
-          href="/hr/leave-requests"
-        />
-        <OverviewStatCard
-          index={1}
           icon={Timer}
           tone="ok"
           valueTone="neutral"
@@ -58,7 +51,7 @@ export default function MyWorkTab({ enabled }: { enabled: boolean }): React.Reac
           badge={t(`${HOME}.myWork.otHoursHint`)}
         />
         <OverviewStatCard
-          index={2}
+          index={1}
           icon={FileClock}
           tone={pending > 0 ? 'warn' : 'neutral'}
           valueTone={pending > 0 ? 'warn' : 'neutral'}

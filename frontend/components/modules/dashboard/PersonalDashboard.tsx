@@ -14,7 +14,7 @@ import {
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useCanAccessOvertime } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useMyLeaveBalances, useMyLeaveRequests } from '@/lib/query/leave';
+import { useMyLeaveRequests } from '@/lib/query/leave';
 import { useCurrentOvertimeSheet } from '@/lib/query/overtime';
 import { useMyUpcomingHolidays } from '@/lib/query/work-schedule';
 import {
@@ -42,7 +42,7 @@ export default function PersonalDashboard({
   const { t, locale } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
   const canAccessOvertime = useCanAccessOvertime();
-  const balancesQuery = useMyLeaveBalances({ enabled });
+  // TODO: re-enable when leave balances are verified — restore useMyLeaveBalances
   const recentLeaveQuery = useMyLeaveRequests(
     { page: 1, limit: 8 },
     enabled,
@@ -58,10 +58,7 @@ export default function PersonalDashboard({
   const overtimeQuery = useCurrentOvertimeSheet(enabled && canAccessOvertime);
   const holidaysQuery = useMyUpcomingHolidays(60, enabled);
 
-  const loading =
-    (balancesQuery.isLoading || recentLeaveQuery.isLoading) &&
-    !balancesQuery.data &&
-    !recentLeaveQuery.data;
+  const loading = recentLeaveQuery.isLoading && !recentLeaveQuery.data;
 
   if (loading) {
     return (
@@ -73,11 +70,6 @@ export default function PersonalDashboard({
     );
   }
 
-  const annual = (balancesQuery.data ?? []).find(
-    (balance) => balance.leaveType === 'ANNUAL',
-  );
-  const remaining = annual?.remaining ?? 0;
-  const entitled = (annual?.entitled ?? 0) + (annual?.broughtForward ?? 0);
   const pendingLeave = pendingLeaveQuery.data?.meta.total ?? 0;
   const overtimeHours = overtimeQuery.data?.totalHours ?? 0;
   const holidays = holidaysQuery.data ?? [];
@@ -110,19 +102,13 @@ export default function PersonalDashboard({
         </h1>
       </div>
 
+      {/* TODO: re-enable when leave balances are verified */}
+      <div className="erp-pro-card rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+        <span className="font-medium">{t(`${PERSONAL}.annualLeave`)}:</span>{' '}
+        {t('hr.leave.balanceUpdatingNotice')}
+      </div>
+
       <div className="erp-users-stat-bar erp-dashboard-stat-bar--4">
-        <StatCard
-          label={t(`${PERSONAL}.annualLeave`)}
-          value={remaining}
-          sub={
-            entitled > 0
-              ? t(`${PERSONAL}.ofEntitled`, { remaining, entitled })
-              : t(`${PERSONAL}.noBalance`)
-          }
-          color={remaining > 0 ? 'teal' : 'default'}
-          icon={<CalendarOutlined />}
-          href="/hr/leave-requests"
-        />
         <StatCard
           label={t(`${PERSONAL}.pendingLeave`)}
           value={pendingLeave}
