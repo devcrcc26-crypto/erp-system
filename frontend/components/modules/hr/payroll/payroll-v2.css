@@ -1739,3 +1739,173 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ── Manual OT adjustments (PayrollOtAdjustmentsSection) ── */
+
+.erp-payroll-entry-otadj {
+  grid-column: 1 / -1;
+}
+
+.erp-payroll-otadj {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--erp-n-150);
+}
+
+.erp-payroll-otadj-block {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+/* Manual rows are visually distinct from system OT (amber edge). */
+.erp-payroll-otadj-block--manual {
+  border-left: 3px solid #f79009;
+}
+
+.erp-payroll-otadj-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.erp-payroll-otadj-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* #b54708 on #fffaeb: 5.6:1. */
+.erp-payroll-otadj-tag.ant-tag {
+  margin: 0;
+  border-color: #fedf89;
+  background: #fffaeb;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.erp-payroll-otadj-empty {
+  margin: 0 0 6px;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-payroll-otadj-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.erp-payroll-otadj-table th {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--erp-n-150);
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.erp-payroll-otadj-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--erp-n-100);
+  color: var(--erp-n-800);
+}
+
+.erp-payroll-otadj-table .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-otadj-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-otadj-row {
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--erp-n-150);
+}
+
+.erp-payroll-otadj-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.erp-payroll-otadj-fields {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(0, 2fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.erp-payroll-otadj-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.erp-payroll-otadj-field > span:first-child {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.erp-payroll-otadj-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.erp-payroll-otadj-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-payroll-otadj-split {
+  display: block;
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+@media (max-width: 1279px) {
+  .erp-payroll-otadj {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .erp-payroll-otadj-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .erp-payroll-otadj-field--note,
+  .erp-payroll-otadj-actions {
+    grid-column: 1 / -1;
+  }
+}

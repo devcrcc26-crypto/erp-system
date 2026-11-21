@@ -45,6 +45,7 @@ import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
+import PayrollOtAdjustmentsSection from '@/components/modules/hr/payroll/PayrollOtAdjustmentsSection';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
@@ -1546,6 +1547,15 @@ export default function PayrollRunDetailPageContent({
             </Button>
           ) : null}
         </div>
+        {canEdit && runId ? (
+          <div className="erp-payroll-entry-otadj">
+            <PayrollOtAdjustmentsSection
+              runId={runId}
+              employeeId={row.employeeId}
+              canEdit={canEdit}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
