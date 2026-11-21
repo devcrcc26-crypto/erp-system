@@ -216,6 +216,8 @@ export default function EmployeeLeaveProfileSection({
     return '/profile?tab=leave';
   }, [isSelf, targetEmployeeId]);
 
+  // TODO: re-enable when leave balances are verified
+  // Employee self-service hides balances until HR finishes recalculation.
   const balancesQuery = useMyLeaveBalances(
     {
       ...(selectedPeriod
@@ -223,7 +225,9 @@ export default function EmployeeLeaveProfileSection({
         : {}),
       employeeId: targetEmployeeId,
     },
-    sectionEnabled && (selectedPeriod != null || !periodsLoading),
+    !isSelf &&
+      sectionEnabled &&
+      (selectedPeriod != null || !periodsLoading),
   );
 
   const myHistoryQuery = useMyLeaveRequestsAll({}, isSelf);
@@ -445,7 +449,14 @@ export default function EmployeeLeaveProfileSection({
         title={t('hr.section.leaveBalance')}
         action={periodControl}
       >
-        {balancesError ? (
+        {isSelf ? (
+          // TODO: re-enable when leave balances are verified
+          <Alert
+            type="info"
+            showIcon
+            title={t('hr.leave.balanceUpdatingNotice')}
+          />
+        ) : balancesError ? (
           <Alert type="error" showIcon title={errorMessage(balancesError)} />
         ) : balancesLoading ? (
           <div className="flex justify-center py-10">

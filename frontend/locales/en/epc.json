@@ -5914,6 +5914,7 @@
       "daysRemaining": "days left",
       "leaveYearRange": "Leave year: {{start}} – {{end}}",
       "noBalance": "No balance on file",
+      "balanceUpdatingNotice": "Leave balance information is currently being updated. Please contact HR for your current balance.",
       "contractPeriod": "Contract period",
       "contractPeriodPlaceholder": "Select contract period",
       "noContractPeriods": "No contracts on file",

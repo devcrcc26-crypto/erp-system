@@ -122,9 +122,10 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     );
   }, [periods]);
 
+  // TODO: re-enable when leave balances are verified
   const balancesQuery = useMyLeaveBalances({
     forDate: balanceForDate,
-    enabled: Boolean(onBehalf.effectiveEmployeeId),
+    enabled: false,
     employeeId: onBehalf.employeeId,
   });
   const submitMutation = useSubmitLeaveRequest();
@@ -305,7 +306,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       setFormError(t('hr.form.periodNoWorkingDays'));
       return false;
     }
+    // TODO: re-enable when leave balances are verified
     if (
+      false &&
       selectedBalance &&
       Math.round(preview.totalDays * 10) / 10 >
         Math.round(selectedBalance.remaining * 10) / 10
@@ -357,7 +360,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       setFormError(t('hr.form.periodNoWorkingDays'));
       return;
     }
+    // TODO: re-enable when leave balances are verified
     if (
+      false &&
       selectedBalance &&
       Math.round(preview.totalDays * 10) / 10 >
         Math.round(selectedBalance.remaining * 10) / 10
@@ -578,7 +583,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 preview={preview}
                 previewError={previewError}
                 previewHint={
-                  selectedBalance && preview ? (
+                  // TODO: re-enable when leave balances are verified
+                  false && selectedBalance && preview ? (
                     <p className="erp-leave-preview-hint">
                       {t('hr.form.remainingAfterRequest', {
                         remaining:
@@ -600,25 +606,28 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 />
               </LeavePeriodsEditor>
 
-              <div className="erp-leave-form-balance mb-4">
-                <p className="erp-leave-form-balance-title">
-                  {leaveType
-                    ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`
-                    : `${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`}
-                </p>
-                {balanceForDate ? (
-                  <p className="erp-users-cell-sub m-0 mb-2">
-                    {t('hr.form.leaveBalanceForDates', {
-                      date: balanceForDate,
-                    })}
+              {/* TODO: re-enable when leave balances are verified */}
+              {false ? (
+                <div className="erp-leave-form-balance mb-4">
+                  <p className="erp-leave-form-balance-title">
+                    {leaveType
+                      ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`
+                      : `${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`}
                   </p>
-                ) : (
-                  <p className="erp-users-cell-sub m-0 mb-2">
-                    {t('hr.form.leaveBalanceSelectDates')}
-                  </p>
-                )}
-                {renderBalancePanel()}
-              </div>
+                  {balanceForDate ? (
+                    <p className="erp-users-cell-sub m-0 mb-2">
+                      {t('hr.form.leaveBalanceForDates', {
+                        date: balanceForDate,
+                      })}
+                    </p>
+                  ) : (
+                    <p className="erp-users-cell-sub m-0 mb-2">
+                      {t('hr.form.leaveBalanceSelectDates')}
+                    </p>
+                  )}
+                  {renderBalancePanel()}
+                </div>
+              ) : null}
 
               <Form.Item name="reason" label={t('hr.form.reason')}>
                 <Input.TextArea
@@ -687,7 +696,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   label={t('hr.form.days')}
                   value={preview ? String(preview.totalDays) : '-'}
                 />
-                {selectedBalance && preview ? (
+                {/* TODO: re-enable when leave balances are verified */}
+                {false && selectedBalance && preview ? (
                   <ReviewItem
                     label={t('hr.form.remainingAfter')}
                     value={String(
@@ -696,7 +706,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                       ) / 10,
                     )}
                   />
-                ) : selectedBalance ? (
+                ) : false && selectedBalance ? (
                   <ReviewItem
                     label={t('hr.labels.remaining')}
                     value={String(selectedBalance.remaining)}

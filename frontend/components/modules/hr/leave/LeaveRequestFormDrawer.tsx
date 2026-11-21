@@ -77,9 +77,10 @@ export default function LeaveRequestFormDrawer({
   const dateRange = Form.useWatch('dateRange', form) as [Dayjs, Dayjs] | undefined;
   const balanceForDate = dateRange?.[0]?.format('YYYY-MM-DD');
 
+  // TODO: re-enable when leave balances are verified
   const balancesQuery = useMyLeaveBalances({
     forDate: balanceForDate,
-    enabled: open,
+    enabled: false,
   });
   const submitMutation = useSubmitLeaveRequest();
 
@@ -245,48 +246,51 @@ export default function LeaveRequestFormDrawer({
           </Form>
         </DrawerSection>
 
-        <DrawerSection title={t('hr.section.leaveBalance')}>
-          {balancesQuery.isLoading ? (
-            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              Loading balance…
-            </Typography.Paragraph>
-          ) : leaveType === 'SICK' ? (
-            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              {t('hr.form.sickLeaveNoBalanceNote')}
-            </Typography.Paragraph>
-          ) : leaveType && !leaveTypeAffectsBalance(leaveType) ? (
-            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              {t('hr.messages.unpaidLeaveNoBalance')}
-            </Typography.Paragraph>
-          ) : leaveType && selectedBalance ? (
-            <Space
-              orientation="vertical"
-              size={4}
-              style={{ width: '100%' }}
-            >
-              <Typography.Text>{formatLeaveType(leaveType, t)}</Typography.Text>
-              <Typography.Text type="secondary">
-                {t('hr.labels.entitled')}: {selectedBalance.entitled}
-              </Typography.Text>
-              <Typography.Text type="secondary">
-                {t('hr.labels.broughtForward')}: {selectedBalance.broughtForward}
-              </Typography.Text>
-              <Typography.Text type="secondary">
-                {t('hr.labels.used')}: {selectedBalance.used}
-              </Typography.Text>
-              <Typography.Text type="secondary">
-                {t('hr.labels.pending')}: {selectedBalance.pending}
-              </Typography.Text>
-              <Typography.Text strong>
-                {t('hr.labels.remaining')}: {selectedBalance.remaining}
-              </Typography.Text>
-            </Space>
-          ) : (
-            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              {t('hr.messages.selectLeaveTypeForBalance')}
-            </Typography.Paragraph>
-          )}
-        </DrawerSection>
+        {/* TODO: re-enable when leave balances are verified */}
+        {false ? (
+          <DrawerSection title={t('hr.section.leaveBalance')}>
+            {balancesQuery.isLoading ? (
+              <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+                Loading balance…
+              </Typography.Paragraph>
+            ) : leaveType === 'SICK' ? (
+              <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+                {t('hr.form.sickLeaveNoBalanceNote')}
+              </Typography.Paragraph>
+            ) : leaveType && !leaveTypeAffectsBalance(leaveType) ? (
+              <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+                {t('hr.messages.unpaidLeaveNoBalance')}
+              </Typography.Paragraph>
+            ) : leaveType && selectedBalance ? (
+              <Space
+                orientation="vertical"
+                size={4}
+                style={{ width: '100%' }}
+              >
+                <Typography.Text>{formatLeaveType(leaveType, t)}</Typography.Text>
+                <Typography.Text type="secondary">
+                  {t('hr.labels.entitled')}: {selectedBalance.entitled}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  {t('hr.labels.broughtForward')}: {selectedBalance.broughtForward}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  {t('hr.labels.used')}: {selectedBalance.used}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  {t('hr.labels.pending')}: {selectedBalance.pending}
+                </Typography.Text>
+                <Typography.Text strong>
+                  {t('hr.labels.remaining')}: {selectedBalance.remaining}
+                </Typography.Text>
+              </Space>
+            ) : (
+              <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+                {t('hr.messages.selectLeaveTypeForBalance')}
+              </Typography.Paragraph>
+            )}
+          </DrawerSection>
+        ) : null}
       </div>
     </Drawer>
   );

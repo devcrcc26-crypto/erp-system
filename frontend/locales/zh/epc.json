@@ -5913,6 +5913,7 @@
       "daysRemaining": "剩余天数",
       "leaveYearRange": "假期年度：{{start}} – {{end}}",
       "noBalance": "暂无余额",
+      "balanceUpdatingNotice": "假期余额信息正在更新中。请联系人力资源部查询您的当前余额。",
       "contractPeriod": "合同期间",
       "contractPeriodPlaceholder": "选择合同期间",
       "noContractPeriods": "暂无合同记录",
