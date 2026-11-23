@@ -25,6 +25,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatPayrollMoney } from '@/lib/utils/payroll-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useReportDirty } from '@/components/modules/hr/payroll/payroll-entry-dirty';
 
 const KEY = 'hr.payroll.otAdjust';
 
@@ -177,6 +178,10 @@ function ManualOtEditor({
   const remove = useDeletePayrollOtAdjustment(runId);
   const [form, setForm] = useState<FormState | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  useReportDirty(
+    'ot-adjustment',
+    form != null && (form.hours != null || form.note.trim() !== ''),
+  );
 
   const used = new Set(data.adjustments.map((row) => row.otCategory));
   const freeCategories = CATEGORIES.filter((category) => !used.has(category));

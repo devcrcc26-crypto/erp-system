@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { Alert, Button, Input, InputNumber, Popconfirm, Tabs } from 'antd';
 import {
   BankOutlined,
+  CalendarOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -15,6 +16,8 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import PayrollOtAdjustmentsSection from '@/components/modules/hr/payroll/PayrollOtAdjustmentsSection';
+import PayrollPaidDaysPanel from '@/components/modules/hr/payroll/PayrollPaidDaysPanel';
+import { useReportDirty } from '@/components/modules/hr/payroll/payroll-entry-dirty';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { PayrollEntryDetail, PayrollRunDetail } from '@/lib/api/payroll.types';
@@ -32,18 +35,22 @@ import {
 
 const KEY = 'hr.payroll.entryPanel';
 
-type TabKey = 'pay' | 'overtime' | 'bonus';
+export type PayrollEntryTab = 'pay' | 'days' | 'overtime' | 'bonus';
 
 /**
- * Expanded payroll row: a summary strip (flag, department, discipline, bank,
- * links) and three tabs - pay details, overtime (system + manual) and
- * bonus / net top-ups, each editable in place where the run allows it.
+ * Body of the payroll entry drawer: a summary strip (flag, department,
+ * discipline, bank, links) and four tabs - pay details, paid days (override +
+ * history), overtime (system + manual) and bonus / net top-ups - each editable
+ * in place where the run allows it.
  */
 export default function PayrollEntryDetailPanel({
   row,
   run,
   canEdit,
   canChangeRun,
+  canOverrideDays,
+  tab,
+  onTabChange,
   onRemoveFreelancer,
 }: {
   row: PayrollEntryDetail;
@@ -52,10 +59,13 @@ export default function PayrollEntryDetailPanel({
   canEdit: boolean;
   /** May add / remove entries on this run. */
   canChangeRun: boolean;
+  /** May override paid days now (edit permission and an editable run). */
+  canOverrideDays: boolean;
+  tab: PayrollEntryTab;
+  onTabChange: (tab: PayrollEntryTab) => void;
   onRemoveFreelancer: (row: PayrollEntryDetail) => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const [tab, setTab] = useState<TabKey>('pay');
   const runEditable = run.status === 'DRAFT' || run.status === 'REVIEWED';
   const canEditEntry = canEdit && runEditable;
 
@@ -72,7 +82,7 @@ export default function PayrollEntryDetailPanel({
       <Tabs
         size="small"
         activeKey={tab}
-        onChange={(key) => setTab(key as TabKey)}
+        onChange={(key) => onTabChange(key as PayrollEntryTab)}
         className="erp-pe-tabs"
         items={[
           {
@@ -84,6 +94,25 @@ export default function PayrollEntryDetailPanel({
               </span>
             ),
             children: <PayDetails row={row} />,
+          },
+          {
+            key: 'days',
+            label: (
+              <span className="erp-pe-tab-label">
+                <CalendarOutlined aria-hidden />
+                {t(`${KEY}.tabDays`)}
+                <span className="erp-pe-tab-count">
+                  {parsePayrollMoney(row.payrollDays)}
+                </span>
+              </span>
+            ),
+            children: (
+              <PayrollPaidDaysPanel
+                runId={run.id}
+                entry={row}
+                canOverride={canOverrideDays}
+              />
+            ),
           },
           {
             key: 'overtime',
@@ -372,6 +401,10 @@ function TopUpCard({
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState<number | null>(current || null);
   const [reason, setReason] = useState(currentReason);
+  useReportDirty(
+    `top-up-${kind}`,
+    editing && ((amount ?? 0) !== current || reason.trim() !== currentReason),
+  );
 
   const value = amount ?? 0;
   const reasonMissing = value > 0 && !reason.trim();

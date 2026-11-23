@@ -518,7 +518,12 @@
 /* Header: grouped two-row header, opaque so rows don't show through when stuck. */
 .erp-payroll-entries-table .ant-table-thead > tr > th.ant-table-cell {
   padding: 10px 12px !important;
+  background: var(--erp-n-50) !important;
+  color: var(--pr-muted) !important;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 18px;
+  white-space: nowrap;
 }
 
 .erp-payroll-entries-table .ant-table-thead > tr:first-child > th.ant-table-cell[colspan] {
@@ -580,8 +585,7 @@
   vertical-align: bottom;
 }
 
-.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.erp-payroll-col-employee,
-.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.ant-table-row-expand-icon-cell {
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.erp-payroll-col-employee {
   vertical-align: top;
 }
 
@@ -669,19 +673,6 @@
   box-shadow: 0 -6px 10px -8px rgba(16, 24, 40, 0.18);
 }
 
-.erp-payroll-entries .ant-table-row-expand-icon {
-  border-radius: 6px;
-}
-
-.erp-payroll-entries .ant-table-row-expand-icon:focus-visible {
-  outline: 2px solid var(--pr-primary);
-  outline-offset: 2px;
-}
-
-.erp-payroll-entries .ant-table-tbody > tr.ant-table-expanded-row > td {
-  padding: 0 !important;
-  background: var(--pr-subtle) !important;
-}
 
 .erp-payroll-employee-name {
   margin: 0;
@@ -1747,12 +1738,6 @@
   min-width: 0;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 20px 16px 40px;
-  background: var(--erp-n-25, #fbfcfe);
-}
-
-.erp-payroll-entry-card-details .erp-pe {
-  padding: 12px;
 }
 
 /* Summary strip: flag, facts, source links. */
@@ -2371,10 +2356,6 @@
 }
 
 @media (max-width: 767px) {
-  .erp-pe {
-    padding: 12px;
-  }
-
   .erp-pe-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2440,4 +2421,247 @@
   border: 1px solid #fedf89;
   background: #fffaeb !important;
   color: #b54708 !important;
+}
+
+/* ── Entries table: clickable rows that open the employee drawer ── */
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row {
+  cursor: pointer;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row:hover > td.ant-table-cell {
+  background: var(--erp-accent-wash, #f3f7fd) !important;
+}
+
+/* Open in the drawer: tinted row + accent bar on the (sticky) employee cell. */
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--active > td.ant-table-cell {
+  background: var(--erp-accent-light) !important;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--active > td.erp-payroll-col-employee {
+  box-shadow: inset 3px 0 0 var(--erp-accent) !important;
+}
+
+/* Flagged rows: amber edge so they stand out while scanning. */
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--flagged:not(.erp-payroll-row--active) > td.erp-payroll-col-employee {
+  box-shadow: inset 3px 0 0 #f79009;
+}
+
+.erp-payroll-entries-table td.erp-payroll-col-details .ant-btn {
+  color: var(--pr-muted);
+}
+
+.erp-payroll-entries-table tr.erp-payroll-row:hover td.erp-payroll-col-details .ant-btn,
+.erp-payroll-entries-table tr.erp-payroll-row--active td.erp-payroll-col-details .ant-btn {
+  color: var(--erp-accent-hover);
+}
+
+.erp-payroll-edited-tag.ant-tag {
+  margin: 0 0 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* ── Employee drawer (PayrollEntryDrawer) ── */
+
+.erp-pe-drawer .ant-drawer-content-wrapper {
+  max-width: 100vw;
+}
+
+.erp-pe-drawer .ant-drawer-header {
+  align-items: flex-start;
+  padding: 14px 20px;
+}
+
+.erp-pe-drawer .ant-drawer-body {
+  padding: 16px 20px 24px;
+  background: var(--erp-n-25, #fbfcfe);
+}
+
+.erp-pe-drawer-title {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.erp-pe-drawer-name {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.erp-pe-drawer-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-pe-inline-tag.ant-tag {
+  margin: 0;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.erp-pe-card-title .erp-pe-inline-tag.ant-tag {
+  margin-left: 6px;
+}
+
+.erp-pe-drawer-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-pe-drawer-pos {
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-pe-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.erp-pe-headline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.erp-pe-headline > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.erp-pe-headline dt {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.erp-pe-headline dd {
+  margin: 2px 0 0;
+  color: var(--erp-n-900);
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.erp-pe-headline .is-net {
+  border-color: rgba(var(--erp-accent-rgb), 0.35);
+  background: var(--erp-accent-wash, #f3f7fd);
+}
+
+.erp-pe-headline .is-net dd {
+  color: var(--erp-accent-hover);
+}
+
+.erp-pe-headline small {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.erp-pe-payslip-btn.ant-btn {
+  align-self: flex-start;
+}
+
+/* Paid days tab */
+.erp-pe-days {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-pe-daycounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.erp-pe-daycounts > div {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--erp-n-50);
+}
+
+.erp-pe-daycounts dt {
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-pe-daycounts dd {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-pe-daycounts .is-strong {
+  background: var(--erp-accent-wash, #f3f7fd);
+}
+
+.erp-pe-daycounts .is-strong dd {
+  color: var(--erp-accent-hover);
+}
+
+.erp-pe-form--boxed {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--erp-accent);
+  border-radius: 10px;
+  background: var(--erp-accent-wash, #f3f7fd);
+  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.1);
+}
+
+.erp-pe-timeline.ant-timeline {
+  margin-top: 8px;
+}
+
+.erp-pe-timeline-title {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-pe-timeline-text {
+  margin: 2px 0 0;
+  color: var(--erp-n-800);
+  font-size: 13px;
+}
+
+@media (max-width: 639px) {
+  .erp-pe-headline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .erp-pe-drawer .ant-drawer-body {
+    padding: 12px;
+  }
+
+  .erp-pe-drawer-pos {
+    display: none;
+  }
 }

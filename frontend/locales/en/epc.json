@@ -6221,8 +6221,26 @@
         "companyDefault": "Consider attendance by default for new payroll runs",
         "companyDefaultHint": "New runs start with this setting; it can be changed on each run."
       },
+      "entryDrawer": {
+        "open": "Open details",
+        "openFor": "Open details for {{name}}",
+        "position": "{{current}} of {{total}}",
+        "previous": "Previous employee",
+        "next": "Next employee",
+        "deductions": "Tax + pension",
+        "discardTitle": "Discard unsaved changes?",
+        "discardBody": "You have an edit that has not been saved. It will be lost.",
+        "discard": "Discard",
+        "keepEditing": "Keep editing",
+        "employedDays": "Employed days",
+        "absentDays": "Absent (incl. unpaid leave)",
+        "changeDays": "Change paid days",
+        "reason": "Reason",
+        "daysRecalcHint": "Saving recalculates this employee’s pay and is recorded in the history below."
+      },
       "entryPanel": {
         "tabPay": "Pay details",
+        "tabDays": "Paid days",
         "tabOvertime": "Overtime",
         "tabBonus": "Bonus & top-ups",
         "sources": "Source records",

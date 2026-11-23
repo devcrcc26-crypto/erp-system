@@ -6220,8 +6220,26 @@
         "companyDefault": "新的薪资运行默认考虑考勤",
         "companyDefaultHint": "新的薪资运行将采用此设置，每次运行均可单独更改。"
       },
+      "entryDrawer": {
+        "open": "查看详情",
+        "openFor": "查看 {{name}} 的详情",
+        "position": "第 {{current}} / {{total}} 位",
+        "previous": "上一位员工",
+        "next": "下一位员工",
+        "deductions": "个税 + 养老金",
+        "discardTitle": "放弃未保存的更改？",
+        "discardBody": "有尚未保存的修改，离开后将丢失。",
+        "discard": "放弃",
+        "keepEditing": "继续编辑",
+        "employedDays": "在职天数",
+        "absentDays": "缺勤（含无薪假）",
+        "changeDays": "修改计薪天数",
+        "reason": "原因",
+        "daysRecalcHint": "保存后将重新计算该员工的工资，并记录在下方的历史中。"
+      },
       "entryPanel": {
         "tabPay": "薪资明细",
+        "tabDays": "计薪天数",
         "tabOvertime": "加班",
         "tabBonus": "奖金与补贴",
         "sources": "来源记录",

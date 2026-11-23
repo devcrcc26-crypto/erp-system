@@ -1,7 +1,7 @@
 'use client';
 
 import './payroll-v2.css';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -27,6 +27,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   DownloadOutlined,
   FilePdfOutlined,
+  RightOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
 import {
@@ -40,11 +41,10 @@ import {
   Wallet,
 } from 'lucide-react';
 import dayjs from 'dayjs';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
-import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
-import PayrollEntryDetailPanel from '@/components/modules/hr/payroll/PayrollEntryDetailPanel';
+import PayrollEntryDrawer from '@/components/modules/hr/payroll/PayrollEntryDrawer';
 import { buildOtBreakdownLines } from '@/lib/utils/payroll-entry-detail';
 import PayrollAttendanceToggle from '@/components/modules/hr/payroll/PayrollAttendanceToggle';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -257,6 +257,24 @@ export default function PayrollRunDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // The open employee lives in the URL (?entry=), so links and refresh reopen it.
+  const selectedEntryId = searchParams.get('entry');
+
+  const setSelectedEntry = useCallback(
+    (entryId: string | null): void => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (entryId) {
+        params.set('entry', entryId);
+      } else {
+        params.delete('entry');
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
   const messageApi = useAppMessage();
   const canAccess = useCanAccessPayroll();
   const canCreate = useCanCreatePayroll();
@@ -313,9 +331,6 @@ export default function PayrollRunDetailPageContent({
   );
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [changedOnly, setChangedOnly] = useState(false);
-  const [expandedEntryIds, setExpandedEntryIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   const [mobilePage, setMobilePage] = useState<{ key: string; count: number }>({
     key: '',
     count: MOBILE_PAGE_SIZE,
@@ -451,18 +466,6 @@ export default function PayrollRunDetailPageContent({
   const mobileFilterKey = [search, departmentFilter, disciplineFilter, flaggedOnly, changedOnly].join('|');
   const mobileVisible =
     mobilePage.key === mobileFilterKey ? mobilePage.count : MOBILE_PAGE_SIZE;
-
-  function toggleEntryExpanded(entryId: string): void {
-    setExpandedEntryIds((current) => {
-      const next = new Set(current);
-      if (next.has(entryId)) {
-        next.delete(entryId);
-      } else {
-        next.add(entryId);
-      }
-      return next;
-    });
-  }
 
   const hasEntryFilters =
     Boolean(search.trim()) ||
@@ -743,7 +746,7 @@ export default function PayrollRunDetailPageContent({
           </Tooltip>
         ),
         key: 'paidDays',
-        width: canEdit ? 148 : 128,
+        width: 128,
         align: 'right',
         render: (_, row) => {
           const lines = contractLinesById.get(row.id);
@@ -758,12 +761,10 @@ export default function PayrollRunDetailPageContent({
               >
                 <span className="erp-payroll-num">{parsePayrollMoney(row.payrollDays)}</span>
               </Tooltip>
-              {canEdit ? (
-                <PayrollPaidDaysControls
-                  runId={runId}
-                  entry={row}
-                  canOverride={canOverrideDays}
-                />
+              {row.hasOverride ? (
+                <Tag color="orange" className="erp-payroll-edited-tag">
+                  {t('hr.payroll.entry.daysOverride.edited')}
+                </Tag>
               ) : null}
             </>
           );
@@ -1077,24 +1078,44 @@ export default function PayrollRunDetailPageContent({
             },
           ]
         : []),
+      {
+        title: <span className="sr-only">{t('hr.payroll.entryDrawer.open')}</span>,
+        key: 'details',
+        fixed: 'right',
+        width: 52,
+        align: 'center',
+        className: 'erp-payroll-col-details',
+        render: (_: unknown, row: PayrollEntryDetail) => (
+          <Tooltip title={t('hr.payroll.entryDrawer.open')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<RightOutlined />}
+              aria-label={t('hr.payroll.entryDrawer.openFor', {
+                name: formatUserName(row.employee),
+              })}
+              onClick={(event) => {
+                event.stopPropagation();
+                setSelectedEntry(row.id);
+              }}
+            />
+          </Tooltip>
+        ),
+      },
     ],
     [
       t,
       showPayslipColumn,
       openingPayslipId,
       contractLinesById,
-      canEdit,
-      canOverrideDays,
-      runId,
       isCorrectionRun,
+      setSelectedEntry,
     ],
   );
 
   function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
-    const expanded = expandedEntryIds.has(entry.id);
     const payslipId =
       showPayslipColumn && entry.payslip?.generatedAt ? entry.payslip.id : null;
-    const detailsId = `payroll-entry-${entry.id}`;
     return (
       <li key={entry.id} className="erp-payroll-entry-card">
         <div className="erp-payroll-entry-card-head">
@@ -1122,12 +1143,10 @@ export default function PayrollRunDetailPageContent({
             <dt>{t('hr.payroll.entry.paidDays')}</dt>
             <dd>
               {parsePayrollMoney(entry.payrollDays)}
-              {canEdit ? (
-                <PayrollPaidDaysControls
-                  runId={runId}
-                  entry={entry}
-                  canOverride={canOverrideDays}
-                />
+              {entry.hasOverride ? (
+                <Tag color="orange" className="erp-payroll-edited-tag">
+                  {t('hr.payroll.entry.daysOverride.edited')}
+                </Tag>
               ) : null}
             </dd>
           </div>
@@ -1157,38 +1176,48 @@ export default function PayrollRunDetailPageContent({
           ) : null}
           <Button
             size="small"
-            type="text"
-            aria-expanded={expanded}
-            aria-controls={detailsId}
-            onClick={() => toggleEntryExpanded(entry.id)}
+            type="primary"
+            ghost
+            icon={<RightOutlined />}
+            iconPlacement="end"
+            onClick={() => setSelectedEntry(entry.id)}
           >
-            {expanded
-              ? t('hr.payroll.detail.hideDetails')
-              : t('hr.payroll.detail.showDetails')}
+            {t('hr.payroll.detail.showDetails')}
           </Button>
         </div>
-        {expanded ? (
-          <div id={detailsId} className="erp-payroll-entry-card-details">
-            {renderExpandedRow(entry)}
-          </div>
-        ) : null}
       </li>
     );
   }
 
-  function renderExpandedRow(row: PayrollEntryDetail): React.ReactNode {
-    if (!run) {
-      return null;
-    }
-    return (
-      <PayrollEntryDetailPanel
-        row={row}
-        run={run}
-        canEdit={canEdit}
-        canChangeRun={canChangeRun}
-        onRemoveFreelancer={setRemovingEntry}
-      />
-    );
+  /** Footer cells in leaf-column order (employee, days, earnings, tax, pay, ...). */
+  function summaryCells(totals: NonNullable<typeof totalsRow>): Array<{
+    content?: React.ReactNode;
+    align?: 'right';
+    className?: string;
+  }> {
+    const money = (value: number): { content: React.ReactNode; align: 'right' } => ({
+      content: <MoneyCell value={value} strong />,
+      align: 'right',
+    });
+    return [
+      { content: <strong>{t('hr.payroll.entry.totals')}</strong> },
+      {},
+      money(totals.basicSalary),
+      money(totals.earnedSalary),
+      money(totals.totalOtPay),
+      money(totals.transport),
+      money(totals.bonus),
+      money(totals.gross),
+      money(totals.taxable),
+      money(totals.pension),
+      money(totals.tax),
+      money(totals.netBonus),
+      { ...money(totals.net), className: 'erp-payroll-col-net' },
+      ...(isCorrectionRun ? [{}, {}, {}] : []),
+      {},
+      ...(showPayslipColumn ? [{}] : []),
+      {},
+    ];
   }
 
   function confirmCopy(action: ConfirmAction): { title: string; description: string } {
@@ -2266,60 +2295,39 @@ export default function PayrollRunDetailPageContent({
             scroll={{ x: 'max-content', y: 'max(320px, calc(100dvh - 300px))' }}
             className="erp-payroll-entries-table"
             rowClassName={(row) =>
-              contractLinesById.get(row.id) ? 'erp-payroll-row--split' : ''
+              [
+                'erp-payroll-row',
+                contractLinesById.get(row.id) ? 'erp-payroll-row--split' : '',
+                row.id === selectedEntryId ? 'erp-payroll-row--active' : '',
+                row.flag !== 'NONE' ? 'erp-payroll-row--flagged' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
             }
+            onRow={(row) => ({
+              onClick: (event) => {
+                // Buttons / links inside the row keep their own action.
+                if ((event.target as HTMLElement).closest('button, a')) {
+                  return;
+                }
+                setSelectedEntry(row.id);
+              },
+            })}
             pagination={false}
-            expandable={{
-              expandedRowRender: renderExpandedRow,
-            }}
             summary={() =>
               totalsRow ? (
                 <Table.Summary fixed="bottom">
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} />
-                    <Table.Summary.Cell index={1}>
-                      <strong>{t('hr.payroll.entry.totals')}</strong>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} />
-                    <Table.Summary.Cell index={3} align="right">
-                      <MoneyCell value={totalsRow.basicSalary} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4} align="right">
-                      <MoneyCell value={totalsRow.earnedSalary} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5} align="right">
-                      <MoneyCell value={totalsRow.totalOtPay} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={6} align="right">
-                      <MoneyCell value={totalsRow.transport} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={7} align="right">
-                      <MoneyCell value={totalsRow.bonus} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={8} align="right">
-                      <MoneyCell value={totalsRow.gross} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={9} align="right">
-                      <MoneyCell value={totalsRow.taxable} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={10} align="right">
-                      <MoneyCell value={totalsRow.pension} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={11} align="right">
-                      <MoneyCell value={totalsRow.tax} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={12} align="right">
-                      <MoneyCell value={totalsRow.netBonus} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell
-                      index={13}
-                      align="right"
-                      className="erp-payroll-col-net"
-                    >
-                      <MoneyCell value={totalsRow.net} strong />
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={14} />
-                    {showPayslipColumn ? <Table.Summary.Cell index={15} /> : null}
+                    {summaryCells(totalsRow).map((cell, index) => (
+                      <Table.Summary.Cell
+                        key={index}
+                        index={index}
+                        align={cell.align}
+                        className={cell.className}
+                      >
+                        {cell.content}
+                      </Table.Summary.Cell>
+                    ))}
                   </Table.Summary.Row>
                 </Table.Summary>
               ) : null
@@ -2327,6 +2335,27 @@ export default function PayrollRunDetailPageContent({
           />
         )}
       </section>
+
+      <PayrollEntryDrawer
+        entry={
+          selectedEntryId
+            ? (run.entries.find((row) => row.id === selectedEntryId) ?? null)
+            : null
+        }
+        entries={filteredEntries}
+        run={run}
+        canEdit={canEdit}
+        canChangeRun={canChangeRun}
+        canOverrideDays={canOverrideDays}
+        payslipLoading={openingPayslipId != null}
+        onOpenPayslip={showPayslipColumn ? (id) => void openPayslip(id) : undefined}
+        onNavigate={setSelectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        onRemoveFreelancer={(row) => {
+          setSelectedEntry(null);
+          setRemovingEntry(row);
+        }}
+      />
     </div>
   );
 }
