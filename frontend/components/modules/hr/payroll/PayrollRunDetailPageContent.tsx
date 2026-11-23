@@ -1,7 +1,7 @@
 'use client';
 
 import './payroll-v2.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -12,10 +12,8 @@ import {
   Form,
   Grid,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
-  Radio,
   Select,
   Spin,
   Steps,
@@ -46,7 +44,8 @@ import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import PayrollPaidDaysControls from '@/components/modules/hr/payroll/PayrollPaidDaysControls';
-import PayrollOtAdjustmentsSection from '@/components/modules/hr/payroll/PayrollOtAdjustmentsSection';
+import PayrollEntryDetailPanel from '@/components/modules/hr/payroll/PayrollEntryDetailPanel';
+import { buildOtBreakdownLines } from '@/lib/utils/payroll-entry-detail';
 import PayrollAttendanceToggle from '@/components/modules/hr/payroll/PayrollAttendanceToggle';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
@@ -92,7 +91,6 @@ import {
   useReleasePayslips,
   useSubmitPayrollRun,
   useUnlockPayrollRun,
-  useUpdatePayrollEntry,
 } from '@/lib/query/payroll';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import {
@@ -227,57 +225,6 @@ function SplitCell({
   );
 }
 
-/** OT buckets with pay — matches policy defaults (÷192 / ÷196 × multipliers). */
-type OtBreakdownLine = {
-  key: 'normal' | 'evening' | 'sunday' | 'holiday';
-  hours: number;
-  pay: number;
-  labelKey:
-    | 'hr.payroll.entry.otNormalLine'
-    | 'hr.payroll.entry.otEveningLine'
-    | 'hr.payroll.entry.otSundayLine'
-    | 'hr.payroll.entry.otHolidayLine';
-};
-
-function buildOtBreakdownLines(source: {
-  normalOtHours: PayrollEntryDetail['normalOtHours'];
-  eveningOtHours: PayrollEntryDetail['eveningOtHours'];
-  sundayOtHours: PayrollEntryDetail['sundayOtHours'];
-  holidayOtHours: PayrollEntryDetail['holidayOtHours'];
-  normalOtPay: PayrollEntryDetail['normalOtPay'];
-  eveningOtPay: PayrollEntryDetail['eveningOtPay'];
-  sundayOtPay: PayrollEntryDetail['sundayOtPay'];
-  holidayOtPay: PayrollEntryDetail['holidayOtPay'];
-}): OtBreakdownLine[] {
-  const rows: OtBreakdownLine[] = [
-    {
-      key: 'normal',
-      hours: parsePayrollMoney(source.normalOtHours),
-      pay: parsePayrollMoney(source.normalOtPay),
-      labelKey: 'hr.payroll.entry.otNormalLine',
-    },
-    {
-      key: 'evening',
-      hours: parsePayrollMoney(source.eveningOtHours),
-      pay: parsePayrollMoney(source.eveningOtPay),
-      labelKey: 'hr.payroll.entry.otEveningLine',
-    },
-    {
-      key: 'sunday',
-      hours: parsePayrollMoney(source.sundayOtHours),
-      pay: parsePayrollMoney(source.sundayOtPay),
-      labelKey: 'hr.payroll.entry.otSundayLine',
-    },
-    {
-      key: 'holiday',
-      hours: parsePayrollMoney(source.holidayOtHours),
-      pay: parsePayrollMoney(source.holidayOtPay),
-      labelKey: 'hr.payroll.entry.otHolidayLine',
-    },
-  ];
-  return rows.filter((row) => row.hours > 0 || row.pay > 0);
-}
-
 const MOBILE_PAGE_SIZE = 20;
 
 function resolveUserLabel(
@@ -335,7 +282,6 @@ export default function PayrollRunDetailPageContent({
   const cancelMutation = useCancelPayrollRun(runId);
   const createCorrectionMutation = useCreatePayrollCorrection(runId);
   const unlockMutation = useUnlockPayrollRun(runId);
-  const updateEntryMutation = useUpdatePayrollEntry(runId);
   const generatePayslipsMutation = useGeneratePayslips(runId);
   const releasePayslipsMutation = useReleasePayslips(runId);
   const addFreelancersMutation = useAddPayrollFreelancers(runId);
@@ -377,16 +323,6 @@ export default function PayrollRunDetailPageContent({
   const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
-  const [bonusEntry, setBonusEntry] = useState<PayrollEntryDetail | null>(null);
-  const [bonusForm] = Form.useForm<{
-    treatment: 'taxable' | 'net';
-    amount: number;
-    reason: string;
-  }>();
-  const [bonusPreview, setBonusPreview] = useState<{
-    treatment: 'taxable' | 'net';
-    amount: number;
-  }>({ treatment: 'taxable', amount: 0 });
   const [exporting, setExporting] = useState(false);
   const [bankLetterLoading, setBankLetterLoading] = useState(false);
   const [bankLetterWarn, setBankLetterWarn] = useState<{
@@ -410,22 +346,6 @@ export default function PayrollRunDetailPageContent({
 
   const run = detailQuery.data;
 
-  useEffect(() => {
-    if (!bonusEntry) {
-      return;
-    }
-    const taxable = parsePayrollMoney(bonusEntry.bonusTopUp);
-    const net = parsePayrollMoney(bonusEntry.netTopUp);
-    const treatment: 'taxable' | 'net' =
-      net > 0 && taxable === 0 ? 'net' : 'taxable';
-    const amount = treatment === 'net' ? net : taxable;
-    const reason =
-      treatment === 'net'
-        ? (bonusEntry.netTopUpReason ?? '')
-        : (bonusEntry.bonusTopUpReason ?? '');
-    bonusForm.setFieldsValue({ treatment, amount, reason });
-    setBonusPreview({ treatment, amount });
-  }, [bonusEntry, bonusForm]);
 
   const flagCounts = useMemo(
     () => (run ? countEntryFlags(run.entries) : null),
@@ -677,61 +597,6 @@ export default function PayrollRunDetailPageContent({
       }
       notifyApiError(error, 'Request failed', messageApi);
     }
-  }
-
-  async function saveBonusTopUp(): Promise<void> {
-    if (!bonusEntry) {
-      return;
-    }
-    try {
-      const values = await bonusForm.validateFields();
-      const amount = values.amount ?? 0;
-      const reason = values.reason?.trim() || undefined;
-      const payload =
-        values.treatment === 'net'
-          ? { netTopUp: amount, netTopUpReason: reason }
-          : { bonusTopUp: amount, bonusTopUpReason: reason };
-      await updateEntryMutation.mutateAsync({
-        entryId: bonusEntry.id,
-        payload,
-      });
-      messageApi.success(t('hr.payroll.entry.bonusSaved'));
-      setBonusEntry(null);
-      setBonusPreview({ treatment: 'taxable', amount: 0 });
-      bonusForm.resetFields();
-    } catch (error) {
-      if (error instanceof ApiRequestError) {
-        messageApi.error(error.message);
-      } else if (!(error as { errorFields?: unknown }).errorFields) {
-        notifyApiError(error, 'Request failed', messageApi);
-      }
-    }
-  }
-
-  function estimateNetIncrease(
-    treatment: 'taxable' | 'net' | undefined,
-    amount: number | undefined,
-    taxableIncome: number,
-  ): number {
-    const value = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
-    if (value <= 0) {
-      return 0;
-    }
-    if (treatment === 'net') {
-      return Math.round(value * 100) / 100;
-    }
-    const taxBefore = estimateEthiopianTax(taxableIncome);
-    const taxAfter = estimateEthiopianTax(taxableIncome + value);
-    return Math.round((value - (taxAfter - taxBefore)) * 100) / 100;
-  }
-
-  function estimateEthiopianTax(taxableIncome: number): number {
-    if (taxableIncome <= 2000) return 0;
-    if (taxableIncome <= 4000) return taxableIncome * 0.15 - 300;
-    if (taxableIncome <= 7000) return taxableIncome * 0.2 - 500;
-    if (taxableIncome <= 10000) return taxableIncome * 0.25 - 850;
-    if (taxableIncome <= 14000) return taxableIncome * 0.3 - 1350;
-    return taxableIncome * 0.35 - 2050;
   }
 
   async function downloadBankLetterFile(
@@ -1312,255 +1177,17 @@ export default function PayrollRunDetailPageContent({
   }
 
   function renderExpandedRow(row: PayrollEntryDetail): React.ReactNode {
-    const canEditBonus =
-      canEdit &&
-      run &&
-      (run.status === 'DRAFT' || run.status === 'REVIEWED');
-    const hasLinks = Boolean(
-      row.contractId || (row.attendanceRecordId && run) || row.overtimeSheetId,
-    );
+    if (!run) {
+      return null;
+    }
     return (
-      <div className="erp-payroll-entry-detail">
-        <div className="erp-payroll-entry-facts">
-          {row.flagNote ? (
-            <div className="erp-payroll-fact erp-payroll-fact--wide erp-payroll-fact--warning">
-              <p className="erp-payroll-fact-label">{t('hr.payroll.entry.flagNote')}</p>
-              <p className="erp-payroll-fact-value">{row.flagNote}</p>
-            </div>
-          ) : null}
-          <div className="erp-payroll-fact">
-            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.department')}</p>
-            <p className="erp-payroll-fact-value">{row.employee.department?.name ?? '-'}</p>
-          </div>
-          <div className="erp-payroll-fact">
-            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.discipline')}</p>
-            <p className="erp-payroll-fact-value">
-              {row.employee.engineeringDiscipline?.name ?? '-'}
-            </p>
-          </div>
-          <div className="erp-payroll-fact erp-payroll-fact--wide">
-            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.bank')}</p>
-            <p className="erp-payroll-fact-value">
-              {row.bankName ?? '-'}
-              {row.bankAccountNumber ? ` · ${row.bankAccountNumber}` : ''}
-            </p>
-          </div>
-          {row.notes ? (
-            <div className="erp-payroll-fact erp-payroll-fact--wide">
-              <p className="erp-payroll-fact-label">{t('hr.payroll.entry.notes')}</p>
-              <p className="erp-payroll-fact-value">{row.notes}</p>
-            </div>
-          ) : null}
-          {parsePayrollMoney(row.contractNetBonus) > 0 ||
-          parsePayrollMoney(row.netTopUp) > 0 ? (
-            <div className="erp-payroll-fact erp-payroll-fact--wide">
-              <p className="erp-payroll-fact-label">
-                {t('hr.payroll.entry.netBonus')}
-              </p>
-              <p className="erp-payroll-fact-value">
-                {parsePayrollMoney(row.contractNetBonus) > 0
-                  ? t('hr.payroll.entry.contractNetBonusValue', {
-                      amount: formatPayrollMoney(row.contractNetBonus, {
-                        emptyZero: false,
-                      }),
-                    })
-                  : null}
-                {parsePayrollMoney(row.contractNetBonus) > 0 &&
-                parsePayrollMoney(row.netTopUp) > 0
-                  ? ' · '
-                  : null}
-                {parsePayrollMoney(row.netTopUp) > 0
-                  ? t('hr.payroll.entry.netTopUpValue', {
-                      amount: formatPayrollMoney(row.netTopUp, {
-                        emptyZero: false,
-                      }),
-                      reason: row.netTopUpReason?.trim()
-                        ? ` - ${row.netTopUpReason.trim()}`
-                        : '',
-                    })
-                  : null}
-              </p>
-            </div>
-          ) : null}
-        </div>
-        <div className="erp-payroll-entry-side">
-          <p className="erp-payroll-fact-label">{t('hr.payroll.entry.salaryPeriods')}</p>
-          {row.salaryPeriods.length === 0 ? (
-            <p className="erp-payroll-fact-value m-0">-</p>
-          ) : (
-            <ul className="erp-payroll-entry-periods">
-              {row.salaryPeriods.map((period) => {
-                const periodOt = parsePayrollMoney(period.totalOtPay);
-                return (
-                  <li key={period.id}>
-                    <span>
-                      {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
-                      {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
-                      {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
-                      {periodOt > 0
-                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })}`
-                        : null}
-                    </span>
-                    <span>
-                      {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {(() => {
-            const periodsWithOt = row.salaryPeriods.filter(
-              (period) => parsePayrollMoney(period.totalOtPay) > 0,
-            );
-            // Prefer per-period basics when OT was priced across contract changes.
-            if (periodsWithOt.length > 1) {
-              return (
-                <div className="erp-payroll-ot-breakdown">
-                  <p className="erp-payroll-fact-label">
-                    {t('hr.payroll.entry.otBreakdown')}
-                  </p>
-                  {periodsWithOt.map((period) => {
-                    const periodLines = buildOtBreakdownLines({
-                      normalOtHours: period.normalOtHours ?? 0,
-                      eveningOtHours: period.eveningOtHours ?? 0,
-                      sundayOtHours: period.sundayOtHours ?? 0,
-                      holidayOtHours: period.holidayOtHours ?? 0,
-                      normalOtPay: period.normalOtPay ?? 0,
-                      eveningOtPay: period.eveningOtPay ?? 0,
-                      sundayOtPay: period.sundayOtPay ?? 0,
-                      holidayOtPay: period.holidayOtPay ?? 0,
-                    });
-                    if (periodLines.length === 0) return null;
-                    const basic = formatPayrollMoney(period.basicSalary, {
-                      emptyZero: false,
-                    });
-                    return (
-                      <div key={period.id} className="erp-payroll-ot-period">
-                        <p className="erp-payroll-ot-period-label">
-                          {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
-                          {dayjs(period.periodEnd).format('YYYY-MM-DD')}
-                        </p>
-                        <ul className="erp-payroll-ot-lines">
-                          {periodLines.map((line) => (
-                            <li key={line.key}>
-                              <span>
-                                {t(line.labelKey, {
-                                  hours: line.hours,
-                                  basic,
-                                })}
-                              </span>
-                              <span>
-                                {formatPayrollMoney(line.pay, {
-                                  emptyZero: false,
-                                })}{' '}
-                                ETB
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })}
-                  <ul className="erp-payroll-ot-lines">
-                    <li className="erp-payroll-ot-total">
-                      <span>{t('hr.payroll.entry.otTotal')}</span>
-                      <span>
-                        {formatPayrollMoney(row.totalOtPay, {
-                          emptyZero: false,
-                        })}{' '}
-                        ETB
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              );
-            }
-
-            const otLines = buildOtBreakdownLines(row);
-            if (otLines.length === 0) return null;
-            const basicSource =
-              periodsWithOt[0]?.basicSalary ?? row.basicSalary;
-            const basic = formatPayrollMoney(basicSource, { emptyZero: false });
-            return (
-              <div className="erp-payroll-ot-breakdown">
-                <p className="erp-payroll-fact-label">
-                  {t('hr.payroll.entry.otBreakdown')}
-                </p>
-                <ul className="erp-payroll-ot-lines">
-                  {otLines.map((line) => (
-                    <li key={line.key}>
-                      <span>
-                        {t(line.labelKey, { hours: line.hours, basic })}
-                      </span>
-                      <span>
-                        {formatPayrollMoney(line.pay, { emptyZero: false })} ETB
-                      </span>
-                    </li>
-                  ))}
-                  <li className="erp-payroll-ot-total">
-                    <span>{t('hr.payroll.entry.otTotal')}</span>
-                    <span>
-                      {formatPayrollMoney(row.totalOtPay, { emptyZero: false })} ETB
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            );
-          })()}
-          {hasLinks ? (
-            <div className="erp-payroll-entry-links">
-              {row.contractId ? (
-                <Link
-                  href={`/hr/employee-contract/${row.contractId}`}
-                  className="erp-payroll-entry-link"
-                >
-                  {t('hr.payroll.entry.linkContract')}
-                </Link>
-              ) : null}
-              {row.attendanceRecordId && run ? (
-                <Link
-                  href={`/hr/attendance/review/${run.month}/${run.year}`}
-                  className="erp-payroll-entry-link"
-                >
-                  {t('hr.payroll.entry.linkAttendance')}
-                </Link>
-              ) : null}
-              {row.overtimeSheetId ? (
-                <Link
-                  href={`/hr/overtime/${row.overtimeSheetId}`}
-                  className="erp-payroll-entry-link"
-                >
-                  {t('hr.payroll.entry.linkOvertime')}
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
-          {canEditBonus ? (
-            <Button
-              onClick={() => {
-                setBonusEntry(row);
-              }}
-            >
-              {t('hr.payroll.entry.editBonusTopUp')}
-            </Button>
-          ) : null}
-          {canChangeRun && row.employee.employeeType === 'FREELANCER' ? (
-            <Button danger onClick={() => setRemovingEntry(row)}>
-              {t('hr.payroll.freelancers.remove')}
-            </Button>
-          ) : null}
-        </div>
-        {canEdit && runId ? (
-          <div className="erp-payroll-entry-otadj">
-            <PayrollOtAdjustmentsSection
-              runId={runId}
-              employeeId={row.employeeId}
-              canEdit={canEdit}
-            />
-          </div>
-        ) : null}
-      </div>
+      <PayrollEntryDetailPanel
+        row={row}
+        run={run}
+        canEdit={canEdit}
+        canChangeRun={canChangeRun}
+        onRemoveFreelancer={setRemovingEntry}
+      />
     );
   }
 
@@ -2140,158 +1767,6 @@ export default function PayrollRunDetailPageContent({
         />
       </Modal>
 
-      <Modal
-        title={t('hr.payroll.entry.editBonusTopUp')}
-        open={Boolean(bonusEntry)}
-        onCancel={() => {
-          setBonusEntry(null);
-          setBonusPreview({ treatment: 'taxable', amount: 0 });
-          bonusForm.resetFields();
-        }}
-        onOk={() => void saveBonusTopUp()}
-        confirmLoading={updateEntryMutation.isPending}
-        destroyOnHidden
-        className="erp-payroll-modal"
-      >
-        {bonusEntry ? (
-          <div className="mb-3 text-sm text-[var(--erp-text-secondary,#6B7280)]">
-            {parsePayrollMoney(bonusEntry.bonusTopUp) > 0 ? (
-              <p className="m-0">
-                {t('hr.payroll.entry.currentTaxableTopUp', {
-                  amount: formatPayrollMoney(bonusEntry.bonusTopUp, {
-                    emptyZero: false,
-                  }),
-                  reason: bonusEntry.bonusTopUpReason?.trim()
-                    ? ` - ${bonusEntry.bonusTopUpReason.trim()}`
-                    : '',
-                })}
-              </p>
-            ) : null}
-            {parsePayrollMoney(bonusEntry.netTopUp) > 0 ? (
-              <p className="m-0">
-                {t('hr.payroll.entry.currentNetTopUp', {
-                  amount: formatPayrollMoney(bonusEntry.netTopUp, {
-                    emptyZero: false,
-                  }),
-                  reason: bonusEntry.netTopUpReason?.trim()
-                    ? ` - ${bonusEntry.netTopUpReason.trim()}`
-                    : '',
-                })}
-              </p>
-            ) : null}
-            {parsePayrollMoney(bonusEntry.contractNetBonus) > 0 ? (
-              <p className="m-0">
-                {t('hr.payroll.entry.contractNetBonusValue', {
-                  amount: formatPayrollMoney(bonusEntry.contractNetBonus, {
-                    emptyZero: false,
-                  }),
-                })}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-        <Form
-          form={bonusForm}
-          layout="vertical"
-          initialValues={{ treatment: 'taxable', amount: 0, reason: '' }}
-          onValuesChange={(_, all) => {
-            setBonusPreview({
-              treatment: (all.treatment as 'taxable' | 'net' | undefined) ?? 'taxable',
-              amount:
-                typeof all.amount === 'number' && Number.isFinite(all.amount)
-                  ? all.amount
-                  : 0,
-            });
-          }}
-        >
-          <Form.Item
-            name="treatment"
-            label={t('hr.payroll.entry.bonusTreatment')}
-            rules={[{ required: true }]}
-          >
-            <Radio.Group
-              onChange={(e) => {
-                if (!bonusEntry) {
-                  return;
-                }
-                const next = e.target.value as 'taxable' | 'net';
-                const amount =
-                  next === 'net'
-                    ? parsePayrollMoney(bonusEntry.netTopUp)
-                    : parsePayrollMoney(bonusEntry.bonusTopUp);
-                const reason =
-                  next === 'net'
-                    ? (bonusEntry.netTopUpReason ?? '')
-                    : (bonusEntry.bonusTopUpReason ?? '');
-                bonusForm.setFieldsValue({ amount, reason });
-                setBonusPreview({ treatment: next, amount });
-              }}
-              options={[
-                {
-                  value: 'taxable',
-                  label: t('hr.payroll.entry.treatmentTaxable'),
-                },
-                {
-                  value: 'net',
-                  label: t('hr.payroll.entry.treatmentNet'),
-                },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item
-            name="amount"
-            label={
-              bonusPreview.treatment === 'net'
-                ? t('hr.payroll.entry.netTopUpAmount')
-                : t('hr.payroll.entry.bonusTopUpAmount')
-            }
-            rules={[
-              { required: true, message: t('hr.payroll.entry.bonusTopUpRequired') },
-            ]}
-          >
-            <InputNumber min={0} precision={2} className="w-full" />
-          </Form.Item>
-          <Form.Item
-            name="reason"
-            label={
-              bonusPreview.treatment === 'net'
-                ? t('hr.payroll.entry.netTopUpReason')
-                : t('hr.payroll.entry.bonusTopUpReason')
-            }
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const amount = getFieldValue('amount') as number | undefined;
-                  if (amount != null && amount !== 0 && !String(value ?? '').trim()) {
-                    return Promise.reject(
-                      new Error(t('hr.payroll.entry.bonusReasonRequired')),
-                    );
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <Input.TextArea rows={3} maxLength={500} />
-          </Form.Item>
-          {bonusEntry && bonusPreview.amount > 0 ? (
-            <Alert
-              type="info"
-              showIcon
-              title={t('hr.payroll.entry.netIncreasePreview', {
-                amount: formatPayrollMoney(
-                  estimateNetIncrease(
-                    bonusPreview.treatment,
-                    bonusPreview.amount,
-                    parsePayrollMoney(bonusEntry.taxableIncome),
-                  ),
-                  { emptyZero: false },
-                ),
-              })}
-            />
-          ) : null}
-        </Form>
-      </Modal>
 
       <section className="erp-pro-card erp-payroll-hero erp-brand-hero">
         <div className="erp-payroll-hero-top">
