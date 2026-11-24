@@ -27,8 +27,6 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import SeniorityLevelFormDrawer from '@/components/modules/org/SeniorityLevelFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -295,13 +293,6 @@ export default function SeniorityLevelsPageContent(): React.ReactNode {
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Link
-              href="/positions"
-              className="inline-flex items-center gap-1.5 rounded text-[13px] font-medium !text-slate-600 no-underline hover:!text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-            >
-              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-              {t('nav.positions')}
-            </Link>
             {canManage ? (
               <Button
                 type="primary"
