@@ -25,27 +25,27 @@ const fullAccess: Flags = { canView: true, canCreate: true, canEdit: true, canDe
 const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
   {
     module: 'users', action: 'view',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
     flags: viewOnly,
   },
   {
     module: 'users', action: 'create',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: viewCreate,
   },
   {
     module: 'users', action: 'edit',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: viewEdit,
   },
   {
     module: 'users', action: 'delete',
-    roles: ['HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: viewDelete,
   },
   {
     module: 'roles', action: 'view',
-    roles: ['HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+    roles: ['HR Manager', 'Local HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
     flags: viewOnly,
   },
   {

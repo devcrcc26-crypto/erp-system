@@ -55,7 +55,7 @@ import {
   useCanCreatePayroll,
   useCanEditPayroll,
   useCanExportPayroll,
-  useIsHrManager,
+  useCanManagePayrollCorrections,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -280,8 +280,7 @@ export default function PayrollRunDetailPageContent({
   const canApprove = useCanApprovePayroll();
   const canExport = useCanExportPayroll();
   const isSysAdmin = useIsSystemAdmin();
-  const isHrManager = useIsHrManager();
-  const canManageCorrections = isSysAdmin || isHrManager;
+  const canManageCorrections = useCanManagePayrollCorrections();
 
   const detailQuery = usePayrollRun(runId, canAccess);
   const runsQuery = usePayrollRuns(canAccess && canManageCorrections);

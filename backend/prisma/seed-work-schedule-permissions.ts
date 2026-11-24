@@ -43,6 +43,7 @@ const VIEW_CREATE_ROLES = [
   'Discipline Lead',
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
@@ -51,6 +52,7 @@ const VIEW_CREATE_ROLES = [
 const MANAGE_ROLES = [
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',

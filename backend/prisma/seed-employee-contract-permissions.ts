@@ -15,6 +15,7 @@ const VIEW_ROLES = [
   'HR Assistant',
   'HR Officer',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
@@ -24,6 +25,7 @@ const CREATE_EDIT_ROLES = [
   'HR Assistant',
   'HR Officer',
   'HR Manager',
+  'Local HR Manager',
   'System Administrator',
 ] as const;
 

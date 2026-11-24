@@ -1,6 +1,7 @@
 export const BUSINESS_TRIP_IMPORT_ROLES: ReadonlySet<string> = new Set([
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
   'HR Assistant',
 ]);

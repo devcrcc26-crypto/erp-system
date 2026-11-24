@@ -23,6 +23,7 @@ const manageFl: Flags = { canView: true, canCreate: true, canEdit: true, canDele
 const PURCHASE_REQUEST_ACCESS_ROLES = [
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
 ];

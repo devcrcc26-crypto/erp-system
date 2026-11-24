@@ -41,7 +41,7 @@ const VA_GRANTS: Array<{ module: string; action: string; roles: string[]; flags:
     module: 'vehicle-application', action: 'view',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewOnly,
@@ -50,14 +50,14 @@ const VA_GRANTS: Array<{ module: string; action: string; roles: string[]; flags:
     module: 'vehicle-application', action: 'create',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewCreate,
   },
   {
     module: 'vehicle-application', action: 'manage',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: manage,
   },
 ];
@@ -67,7 +67,7 @@ const VR_GRANTS: Array<{ module: string; action: string; roles: string[]; flags:
     module: 'vehicle-refueling', action: 'view',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewOnly,
@@ -76,14 +76,14 @@ const VR_GRANTS: Array<{ module: string; action: string; roles: string[]; flags:
     module: 'vehicle-refueling', action: 'create',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewCreate,
   },
   {
     module: 'vehicle-refueling', action: 'manage',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: manage,
   },
 ];
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       select: { id: true, name: true },
     });
 
-    const editRoles = new Set(['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator']);
+    const editRoles = new Set(['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator']);
 
     for (const role of roles) {
       const isEditRole = editRoles.has(role.name);

@@ -39,7 +39,7 @@ import {
 type Ctx = { companyId: string; userId: string };
 
 const DAY_MS = 86_400_000;
-const CONTRACT_ENDED_ROLES = ['HR Officer', 'HR Manager'] as const;
+const CONTRACT_ENDED_ROLES = ['HR Officer', 'HR Manager', 'Local HR Manager'] as const;
 const CONTRACT_ENDED_EVENT = 'employee_contract.ended_not_renewed';
 
 export interface SetInactiveInput {

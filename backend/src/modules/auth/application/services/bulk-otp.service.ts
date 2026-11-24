@@ -20,7 +20,11 @@ export type BulkOtpResult = {
   csv: string;
 };
 
-const BULK_OTP_ROLES = new Set([SYSTEM_ADMINISTRATOR_ROLE, 'HR Manager']);
+const BULK_OTP_ROLES = new Set([
+  SYSTEM_ADMINISTRATOR_ROLE,
+  'HR Manager',
+  'Local HR Manager',
+]);
 
 /**
  * HR/admin bulk issuance of one-time passwords for active employees.
@@ -128,7 +132,7 @@ export class BulkOtpService {
 
     if (!allowed) {
       throw new ForbiddenException(
-        'Only System Administrator or HR Manager can generate one-time passwords',
+        'Only System Administrator, HR Manager, or Local HR Manager can generate one-time passwords',
       );
     }
   }

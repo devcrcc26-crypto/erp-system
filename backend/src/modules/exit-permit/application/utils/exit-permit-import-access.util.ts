@@ -1,6 +1,7 @@
 export const EXIT_PERMIT_IMPORT_ROLES: ReadonlySet<string> = new Set([
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
   'HR Assistant',
 ]);

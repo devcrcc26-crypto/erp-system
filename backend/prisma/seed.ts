@@ -32,7 +32,7 @@ const CORE_ROLES = [
   'Storekeeper',
   'HR Officer', // keep - legacy, maps to HR Manager going forward
   'HR Manager', // NEW - Ms. Dong, full HR access + final approver
-  'Local HR Manager', // NEW - Mekides, full HR access except approvals
+  'Local HR Manager', // Same operational access as HR Manager; no Approvals / payroll approve
   'HR Specialist', // NEW - Ms. Tang, view all HR + manage flight tickets
   'HR Assistant', // NEW - Asli, limited HR view + data entry
   'Department Head', // NEW - view own department employees
@@ -1388,8 +1388,9 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'documents', flags: viewOnlyFlags() },
     { roleName: 'HR Manager', module: 'company', flags: viewOnlyFlags() },
 
-    // ── Local HR Manager (Mekides) - full HR access except approve ──
+    // ── Local HR Manager - same operational access as HR Manager, no approve ──
     { roleName: 'Local HR Manager', module: 'hr', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'departments', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'roles', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'leave', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'overtime', flags: localHrManagerFlags() },
@@ -1416,6 +1417,7 @@ async function main(): Promise<void> {
       flags: localHrManagerFlags(),
     },
     { roleName: 'Local HR Manager', module: 'exit-permit', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'per-diem', flags: localHrManagerFlags() },
     {
       roleName: 'Local HR Manager',
       module: 'employee-contract',
@@ -1423,9 +1425,11 @@ async function main(): Promise<void> {
     },
     { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
+    // Approvals inbox: view only — Local never approves leave/OT/etc. workflows
     { roleName: 'Local HR Manager', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'documents', flags: viewOnlyFlags() },
+    { roleName: 'Local HR Manager', module: 'company', flags: viewOnlyFlags() },
 
     // ── HR Specialist (Ms. Tang) - view all HR + manage flight tickets ──
     { roleName: 'HR Specialist', module: 'hr', flags: viewOnlyFlags() },
@@ -1635,7 +1639,13 @@ async function main(): Promise<void> {
     },
     {
       perm: permissions.find((p) => p.module === 'roles' && p.action === 'view'),
-      roleNames: ['HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+      roleNames: [
+        'HR Manager',
+        'Local HR Manager',
+        'General Manager',
+        'Managing Director',
+        'System Administrator',
+      ],
       flags: viewOnlyFlags(),
     },
     {
@@ -1674,7 +1684,13 @@ async function main(): Promise<void> {
   }> = [
     {
       perm: permissions.find((p) => p.module === 'branches' && p.action === 'view'),
-      roleNames: ['HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+      roleNames: [
+        'HR Manager',
+        'Local HR Manager',
+        'General Manager',
+        'Managing Director',
+        'System Administrator',
+      ],
       flags: viewOnlyFlags(),
     },
     {
@@ -2042,13 +2058,16 @@ async function main(): Promise<void> {
     'Discipline Lead',
     'HR Assistant',
     'HR Manager',
+    'Local HR Manager',
     'General Manager',
     'Managing Director',
     'System Administrator',
   ] as const;
+  // Local: create/edit (review, submit, unlock/correct via role gates) — no approve
   const payrollCreateEditRoleNames = [
     'HR Assistant',
     'HR Manager',
+    'Local HR Manager',
     'System Administrator',
   ] as const;
   const payrollApproveRoleNames = [
@@ -2059,6 +2078,7 @@ async function main(): Promise<void> {
   const payrollExportRoleNames = [
     'HR Assistant',
     'HR Manager',
+    'Local HR Manager',
     'General Manager',
     'Managing Director',
     'System Administrator',

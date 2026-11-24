@@ -424,10 +424,13 @@ export class PayrollController {
   }
 
   @Post('runs/:id/correction')
-  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'edit' },
+    { module: 'payroll', action: 'create' },
+  )
   @ApiOperation({
     summary:
-      'Create a correction draft for a GM_APPROVED/PAID regular run (HR Manager / System Administrator)',
+      'Create a correction draft for a GM_APPROVED/PAID regular run (HR Manager / Local HR Manager / System Administrator)',
   })
   createCorrection(
     @Param('id') id: string,
@@ -442,10 +445,13 @@ export class PayrollController {
   }
 
   @Patch('runs/:id/unlock')
-  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'edit' },
+    { module: 'payroll', action: 'create' },
+  )
   @ApiOperation({
     summary:
-      'Unlock a GM_APPROVED/PAID regular run back to DRAFT and void payslips (HR Manager / System Administrator)',
+      'Unlock a GM_APPROVED/PAID regular run back to DRAFT and void payslips (HR Manager / Local HR Manager / System Administrator)',
   })
   unlockRun(
     @Param('id') id: string,

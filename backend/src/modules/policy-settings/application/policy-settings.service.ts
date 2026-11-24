@@ -28,6 +28,7 @@ import { todayInAddisUtc } from '../../../shared/employment/separation-dates.uti
 type Ctx = { companyId: string; userId: string };
 
 export const HR_MANAGER_ROLE = 'HR Manager';
+export const LOCAL_HR_MANAGER_ROLE = 'Local HR Manager';
 const OPEN_RUN_STATUSES = ['DRAFT', 'REVIEWED', 'SUBMITTED'] as const;
 const LOCKED_RUN_STATUSES = ['APPROVED', 'GM_APPROVED', 'PAID'] as const;
 
@@ -168,7 +169,9 @@ export class PolicySettingsService {
     const definition = this.requireDefinition(key);
     const roles = await this.roleNames(ctx);
     if (!this.canEdit(roles)) {
-      throw new ForbiddenException('Only an HR Manager or System Administrator can change policies');
+      throw new ForbiddenException(
+        'Only an HR Manager, Local HR Manager, or System Administrator can change policies',
+      );
     }
     if (definition.adminOnly && !roles.includes(SYSTEM_ADMINISTRATOR_ROLE)) {
       throw new ForbiddenException('Only a System Administrator can change this policy');
@@ -251,7 +254,11 @@ export class PolicySettingsService {
   // ── helpers ─────────────────────────────────────────────────────────────
 
   private canEdit(roles: readonly string[]): boolean {
-    return roles.includes(HR_MANAGER_ROLE) || roles.includes(SYSTEM_ADMINISTRATOR_ROLE);
+    return (
+      roles.includes(HR_MANAGER_ROLE) ||
+      roles.includes(LOCAL_HR_MANAGER_ROLE) ||
+      roles.includes(SYSTEM_ADMINISTRATOR_ROLE)
+    );
   }
 
   private async roleNames(ctx: Ctx): Promise<string[]> {

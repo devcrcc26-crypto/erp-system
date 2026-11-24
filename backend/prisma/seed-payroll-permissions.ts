@@ -54,14 +54,17 @@ const PAYROLL_VIEW_ROLES = [
   'Discipline Lead',
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
 ] as const;
 
+/** Local HR Manager: review/submit/edit; unlock/correct via role gate — not approve. */
 const PAYROLL_CREATE_EDIT_ROLES = [
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'System Administrator',
 ] as const;
 
@@ -75,6 +78,7 @@ const PAYROLL_APPROVE_ROLES = [
 const PAYROLL_EXPORT_ROLES = [
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'System Administrator',
 ] as const;
@@ -84,12 +88,13 @@ const PAYROLL_OVERSIGHT_ROLES = ['Managing Director'] as const;
 
 const COMPANY_SETTINGS_VIEW_ROLES = [
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
 ] as const;
 
-const COMPANY_SETTINGS_EDIT_ROLES = ['HR Manager', 'System Administrator'] as const;
+const COMPANY_SETTINGS_EDIT_ROLES = ['HR Manager', 'Local HR Manager', 'System Administrator'] as const;
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient();

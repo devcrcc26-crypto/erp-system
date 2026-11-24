@@ -37,7 +37,7 @@ interface ServiceContext {
 }
 
 const DISPUTE_DEADLINE_DAYS = 5;
-const HR_ROLE_NAMES = ['HR Manager', 'HR Officer'] as const;
+const HR_ROLE_NAMES = ['HR Manager', 'Local HR Manager', 'HR Officer'] as const;
 
 type CriteriaWeight = { id: string; weight: number | Decimal };
 

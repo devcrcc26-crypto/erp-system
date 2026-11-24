@@ -1325,7 +1325,7 @@ export class PayrollRunService {
     ctx: ServiceContext,
     note?: string,
   ): Promise<PayrollRun> {
-    await this.assertHrManagerOrSystemAdmin(ctx);
+    await this.assertCanUnlockOrCorrect(ctx);
 
     const original = await this.requireRun(originalRunId, ctx.companyId);
     if (original.type !== 'REGULAR') {
@@ -1532,7 +1532,7 @@ export class PayrollRunService {
    * its payslips. Does not create a correction — for re-editing from scratch.
    */
   async unlockRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
-    await this.assertHrManagerOrSystemAdmin(ctx);
+    await this.assertCanUnlockOrCorrect(ctx);
 
     const run = await this.requireRun(runId, ctx.companyId);
     if (run.type !== 'REGULAR') {
@@ -3641,9 +3641,11 @@ export class PayrollRunService {
     return `PR-${year}-${m}-C${sequence}`;
   }
 
-  private async assertHrManagerOrSystemAdmin(
-    ctx: ServiceContext,
-  ): Promise<void> {
+  /**
+   * Unlock / correction: HR Manager, Local HR Manager, or System Administrator.
+   * Approve stays on assertPayrollApprove (Local is excluded there).
+   */
+  private async assertCanUnlockOrCorrect(ctx: ServiceContext): Promise<void> {
     const roles = await this.prisma.userRole.findMany({
       where: {
         userId: ctx.userId,
@@ -3655,12 +3657,13 @@ export class PayrollRunService {
     const roleNames = roles.map((row) => row.role.name);
     if (
       isTrueSystemAdministrator(roleNames) ||
-      roleNames.includes(HR_MANAGER_ROLE)
+      roleNames.includes(HR_MANAGER_ROLE) ||
+      roleNames.includes(LOCAL_HR_MANAGER_ROLE)
     ) {
       return;
     }
     throw new ForbiddenException(
-      'Only HR Manager or System Administrator can perform this action',
+      'Only HR Manager, Local HR Manager, or System Administrator can unlock or correct payroll',
     );
   }
 

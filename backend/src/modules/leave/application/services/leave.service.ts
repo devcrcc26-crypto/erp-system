@@ -816,6 +816,7 @@ export class LeaveService
       'General Manager',
       'Managing Director',
       'HR Manager',
+      'Local HR Manager',
       'System Administrator',
     ]);
     if (primaryRole !== null && fullAccessRoles.has(primaryRole)) {

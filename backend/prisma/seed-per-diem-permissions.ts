@@ -25,7 +25,7 @@ const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Fl
     module: 'per-diem', action: 'view',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewOnly,
@@ -34,14 +34,14 @@ const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Fl
     module: 'per-diem', action: 'create',
     roles: [
       'Employee', 'Team Lead', 'Department Head', 'Discipline Leader',
-      'HR Assistant', 'HR Officer', 'HR Manager', 'General Manager',
+      'HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager',
       'Managing Director', 'System Administrator',
     ],
     flags: viewCreate,
   },
   {
     module: 'per-diem', action: 'manage',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: manage,
   },
 ];

@@ -21,6 +21,7 @@ const manageFl: Flags = { canView: true, canCreate: true, canEdit: true, canDele
 const ALL_ROLES = [
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
   'HR Assistant',
   'HR Specialist',
@@ -34,6 +35,7 @@ const ALL_ROLES = [
 const EDIT_ROLES = [
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
   'HR Assistant',
 ];

@@ -291,7 +291,7 @@ export class AuthController {
   @Post('bulk-generate-otp')
   @ApiOperation({
     summary:
-      'Generate one-time passwords for all active employees (System Administrator or HR Manager)',
+      'Generate one-time passwords for all active employees (System Administrator, HR Manager, or Local HR Manager)',
   })
   @ApiResponse({ status: 201, type: BulkGenerateOtpResponseDto })
   async bulkGenerateOtp(

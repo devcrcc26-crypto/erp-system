@@ -6,6 +6,7 @@ export const OVERTIME_IMPORT_ROLES: ReadonlySet<string> = new Set([
   'General Manager',
   'Managing Director',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
 ]);
 

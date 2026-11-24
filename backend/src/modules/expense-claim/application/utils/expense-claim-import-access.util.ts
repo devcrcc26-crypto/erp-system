@@ -1,6 +1,7 @@
 export const EXPENSE_CLAIM_IMPORT_ROLES: ReadonlySet<string> = new Set([
   'System Administrator',
   'HR Manager',
+  'Local HR Manager',
 ]);
 
 export function canManageExpenseClaimImport(roleNames: readonly string[]): boolean {

@@ -24,7 +24,7 @@ const deleteFlags: Flags = { canView: true, canCreate: false, canEdit: false, ca
 const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Flags }> = [
   {
     module: 'branches', action: 'view',
-    roles: ['HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+    roles: ['HR Manager', 'Local HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
     flags: viewOnly,
   },
   {
@@ -44,22 +44,22 @@ const GRANTS: Array<{ module: string; action: string; roles: string[]; flags: Fl
   },
   {
     module: 'departments', action: 'view',
-    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
+    roles: ['HR Assistant', 'HR Officer', 'HR Manager', 'Local HR Manager', 'General Manager', 'Managing Director', 'System Administrator'],
     flags: viewOnly,
   },
   {
     module: 'departments', action: 'create',
-    roles: ['HR Manager', 'System Administrator'],
+    roles: ['HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: createFlags,
   },
   {
     module: 'departments', action: 'edit',
-    roles: ['HR Manager', 'System Administrator'],
+    roles: ['HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: editFlags,
   },
   {
     module: 'departments', action: 'delete',
-    roles: ['HR Manager', 'System Administrator'],
+    roles: ['HR Manager', 'Local HR Manager', 'System Administrator'],
     flags: deleteFlags,
   },
 ];

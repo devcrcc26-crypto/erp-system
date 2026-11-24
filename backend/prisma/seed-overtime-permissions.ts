@@ -18,6 +18,7 @@ const MANAGE_ROLES: string[] = [
   'HR Assistant',
   'HR Officer',
   'HR Manager',
+  'Local HR Manager',
   'System Administrator',
 ];
 
@@ -28,6 +29,7 @@ const GRANT_ROLES: string[] = [
   'Discipline Leader',
   'HR Assistant',
   'HR Manager',
+  'Local HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',

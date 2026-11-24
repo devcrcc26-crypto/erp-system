@@ -57,6 +57,7 @@ import {
   useCanCreateUsers,
   useCanEditUsers,
   useIsHrManager,
+  useIsLocalHrManager,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
@@ -262,7 +263,8 @@ export default function UsersPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const viewerIsAdmin = useIsSystemAdmin();
   const isHrManager = useIsHrManager();
-  const canBulkGenerateOtp = viewerIsAdmin || isHrManager;
+  const isLocalHrManager = useIsLocalHrManager();
+  const canBulkGenerateOtp = viewerIsAdmin || isHrManager || isLocalHrManager;
   const canEditUsers = useCanEditUsers();
   // users.view alone (e.g. Managing Director) is read-only: no add/import/row actions.
   const canCreateUsers = useCanCreateUsers();

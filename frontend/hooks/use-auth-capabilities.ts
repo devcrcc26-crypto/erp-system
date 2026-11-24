@@ -239,9 +239,29 @@ export function useIsHrManager(): boolean {
   return Boolean(currentUser.data?.roles?.some((role) => role.name === 'HR Manager'));
 }
 
+/** True when the session holds the Local HR Manager role. */
+export function useIsLocalHrManager(): boolean {
+  const currentUser = useCurrentUser();
+  return Boolean(
+    currentUser.data?.roles?.some((role) => role.name === 'Local HR Manager'),
+  );
+}
+
+/**
+ * Unlock / create payroll corrections (HR Manager, Local HR Manager, or SysAdmin).
+ * Approve stays on useCanApprovePayroll — Local is excluded there.
+ */
+export function useCanManagePayrollCorrections(): boolean {
+  const isSystemAdmin = useIsSystemAdmin();
+  const isHrManager = useIsHrManager();
+  const isLocalHrManager = useIsLocalHrManager();
+  return isSystemAdmin || isHrManager || isLocalHrManager;
+}
+
 /**
  * True when the session may reassign pending approval tiers
  * (HR Manager or System Administrator; the API enforces the same rule).
+ * Local HR Manager cannot reassign.
  */
 export function useCanReassignApprovals(): boolean {
   const isSystemAdmin = useIsSystemAdmin();

@@ -6,6 +6,7 @@ export const LEAVE_REQUEST_EDITOR_ROLES: ReadonlySet<string> = new Set([
   'General Manager',
   'Managing Director',
   'HR Manager',
+  'Local HR Manager',
   'HR Officer',
 ]);
 
