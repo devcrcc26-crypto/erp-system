@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
 import { Alert, Button, Input, InputNumber, Popconfirm, Spin, Tag } from 'antd';
@@ -18,9 +18,8 @@ import type {
   PayrollOtCategory,
 } from '@/lib/api/payroll.types';
 import {
-  useDeletePayrollOtAdjustment,
   usePayrollOtBreakdown,
-  useUpsertPayrollOtAdjustment,
+  useReplacePayrollOtAdjustments,
 } from '@/lib/query/payroll';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatPayrollMoney } from '@/lib/utils/payroll-display';
@@ -199,103 +198,65 @@ function ManualOtEditor({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const upsert = useUpsertPayrollOtAdjustment(runId);
-  const remove = useDeletePayrollOtAdjustment(runId);
-  const [form, setForm] = useState<GridFormState | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [clearing, setClearing] = useState(false);
+  const replace = useReplacePayrollOtAdjustments(runId);
+  const [editing, setEditing] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+
+  useReportDirty('ot-adjustment', editing && formDirty);
 
   const baselineHours = useMemo(
     () => hoursFromAdjustments(data.adjustments),
     [data.adjustments],
   );
   const sharedNote = data.adjustments[0]?.note ?? '';
-
-  const dirty = useMemo(() => {
-    if (!form) return false;
-    if (form.note.trim() !== (sharedNote ?? '').trim()) return true;
-    return CATEGORIES.some(
-      (category) =>
-        coerceHours(form.hours[category]) !== coerceHours(baselineHours[category]),
-    );
-  }, [form, baselineHours, sharedNote]);
-
-  useReportDirty('ot-adjustment', dirty);
-
   const hasManual = data.adjustments.length > 0;
-  const nonZeroDraftCount = form
-    ? CATEGORIES.filter((category) => coerceHours(form.hours[category]) !== 0)
-        .length
-    : 0;
+  const initialForm: GridFormState = {
+    hours: hasManual ? baselineHours : emptyHours(),
+    note: sharedNote,
+  };
 
-  function startEdit(): void {
-    setForm({
-      hours: hoursFromAdjustments(data.adjustments),
-      note: sharedNote,
-    });
-  }
-
-  function startAdd(): void {
-    setForm({ hours: emptyHours(), note: '' });
-  }
-
-  async function save(): Promise<void> {
-    if (!form) return;
-
-    const toUpsert = CATEGORIES.filter(
+  async function save(form: GridFormState): Promise<void> {
+    const items = CATEGORIES.filter(
       (category) => coerceHours(form.hours[category]) !== 0,
-    );
-    const toDelete = data.adjustments.filter(
-      (row) => coerceHours(form.hours[row.otCategory]) === 0,
-    );
+    ).map((category) => ({
+      otCategory: category,
+      hours: coerceHours(form.hours[category]),
+    }));
 
-    if (toUpsert.length === 0 && toDelete.length === 0) {
+    if (items.length === 0 && data.adjustments.length === 0) {
       messageApi.error(t(`${KEY}.hoursRequired`));
       return;
     }
 
     const note = form.note.trim();
-    if (toUpsert.length > 0 && !note) {
+    if (items.length > 0 && !note) {
       messageApi.error(t(`${KEY}.noteRequired`));
       return;
     }
 
-    setSaving(true);
     try {
-      // Sequential so each reprice sees the previous categories.
-      for (const row of toDelete) {
-        await remove.mutateAsync(row.id);
-      }
-      for (const category of toUpsert) {
-        await upsert.mutateAsync({
-          employeeId,
-          otCategory: category,
-          hours: coerceHours(form.hours[category]),
-          note,
-        });
-      }
+      await replace.mutateAsync({
+        employeeId,
+        items,
+        note: items.length > 0 ? note : undefined,
+      });
       messageApi.success(t(`${KEY}.saved`));
-      setForm(null);
+      setEditing(false);
+      setFormDirty(false);
     } catch (error: unknown) {
       notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t);
-    } finally {
-      setSaving(false);
     }
   }
 
   async function clearAll(): Promise<void> {
     if (data.adjustments.length === 0) return;
-    setClearing(true);
     try {
-      for (const row of data.adjustments) {
-        await remove.mutateAsync(row.id);
-      }
+      await replace.mutateAsync({ employeeId, items: [] });
       messageApi.success(t(`${KEY}.deleted`));
-      setForm(null);
+      setEditing(false);
+      setFormDirty(false);
     } catch (error: unknown) {
       notifyApiError(error, t(`${KEY}.deleteFailed`), messageApi, t);
-    } finally {
-      setClearing(false);
     }
   }
 
@@ -323,14 +284,17 @@ function ManualOtEditor({
           </h4>
           <p className="erp-payroll-otadj-sub">{t(`${KEY}.manualSub`)}</p>
         </div>
-        {canEdit && !form ? (
+        {canEdit && !editing ? (
           <div className="erp-payroll-otadj-head-actions">
             {hasManual ? (
               <>
                 <Button
                   size="small"
                   icon={<EditOutlined />}
-                  onClick={startEdit}
+                  onClick={() => {
+                    setFormDirty(false);
+                    setEditing(true);
+                  }}
                 >
                   {t(`${KEY}.edit`)}
                 </Button>
@@ -345,7 +309,7 @@ function ManualOtEditor({
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
-                    loading={clearing}
+                    loading={replace.isPending}
                   >
                     {t(`${KEY}.clearAll`)}
                   </Button>
@@ -356,7 +320,10 @@ function ManualOtEditor({
                 size="small"
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={startAdd}
+                onClick={() => {
+                  setFormDirty(false);
+                  setEditing(true);
+                }}
               >
                 {t(`${KEY}.addAdjustment`)}
               </Button>
@@ -367,18 +334,20 @@ function ManualOtEditor({
 
       {lockedReason ? <p className="erp-payroll-otadj-empty">{lockedReason}</p> : null}
 
-      {form ? (
+      {editing ? (
         <ManualOtGridForm
-          form={form}
-          saving={saving}
-          canSave={
-            nonZeroDraftCount > 0 ||
-            toDeleteCount(data.adjustments, form) > 0
-          }
-          requiresNote={nonZeroDraftCount > 0}
-          onChange={setForm}
-          onSave={() => void save()}
-          onCancel={() => setForm(null)}
+          key={`${employeeId}-${data.adjustments.map((row) => row.id).join(',')}`}
+          initial={initialForm}
+          baselineHours={baselineHours}
+          baselineNote={sharedNote}
+          hadAdjustments={hasManual}
+          saving={replace.isPending}
+          onDirtyChange={setFormDirty}
+          onSave={(form) => void save(form)}
+          onCancel={() => {
+            setEditing(false);
+            setFormDirty(false);
+          }}
         />
       ) : !hasManual ? (
         <div className="erp-payroll-otadj-placeholder">
@@ -414,15 +383,6 @@ function ManualOtEditor({
       )}
     </section>
   );
-}
-
-function toDeleteCount(
-  adjustments: readonly PayrollOtAdjustment[],
-  form: GridFormState,
-): number {
-  return adjustments.filter(
-    (row) => coerceHours(form.hours[row.otCategory]) === 0,
-  ).length;
 }
 
 function ManualOtHoursTable({
@@ -498,25 +458,56 @@ function ManualOtHoursTable({
   );
 }
 
+/**
+ * Keeps hours/note in local state so each keystroke only re-renders this form,
+ * not the payroll entry shell (dirty reporting only flips when dirty changes).
+ */
 function ManualOtGridForm({
-  form,
+  initial,
+  baselineHours,
+  baselineNote,
+  hadAdjustments,
   saving,
-  canSave,
-  requiresNote,
-  onChange,
+  onDirtyChange,
   onSave,
   onCancel,
 }: {
-  form: GridFormState;
+  initial: GridFormState;
+  baselineHours: HoursByCategory;
+  baselineNote: string;
+  hadAdjustments: boolean;
   saving: boolean;
-  canSave: boolean;
-  requiresNote: boolean;
-  onChange: (next: GridFormState) => void;
-  onSave: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onSave: (form: GridFormState) => void;
   onCancel: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const noteMissing = requiresNote && !form.note.trim();
+  const [hours, setHours] = useState<HoursByCategory>(initial.hours);
+  const [note, setNote] = useState(initial.note);
+
+  const nonZeroCount = CATEGORIES.filter(
+    (category) => coerceHours(hours[category]) !== 0,
+  ).length;
+  const hoursChanged = CATEGORIES.some(
+    (category) =>
+      coerceHours(hours[category]) !== coerceHours(baselineHours[category]),
+  );
+  const noteChanged = note.trim() !== (baselineNote ?? '').trim();
+  const dirty = hoursChanged || noteChanged;
+  const canSave = nonZeroCount > 0 || (hadAdjustments && hoursChanged);
+  const noteMissing = nonZeroCount > 0 && !note.trim();
+
+  // Report dirty only when the boolean flips — avoids parent re-renders per keystroke.
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    if (dirtyRef.current === dirty) return;
+    dirtyRef.current = dirty;
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+
+  function submit(): void {
+    onSave({ hours, note });
+  }
 
   return (
     <div
@@ -547,20 +538,16 @@ function ManualOtGridForm({
                     min={-744}
                     max={744}
                     precision={2}
-                    value={form.hours[category]}
+                    value={hours[category]}
                     placeholder="0"
                     className="erp-payroll-otadj-sheet-input"
                     onChange={(value) =>
-                      onChange({
-                        ...form,
-                        hours: {
-                          ...form.hours,
-                          [category]:
-                            typeof value === 'number' ? value : null,
-                        },
-                      })
+                      setHours((prev) => ({
+                        ...prev,
+                        [category]: typeof value === 'number' ? value : null,
+                      }))
                     }
-                    onPressEnter={onSave}
+                    onPressEnter={submit}
                   />
                 </td>
               ))}
@@ -571,12 +558,12 @@ function ManualOtGridForm({
       <label className="erp-payroll-otadj-field erp-payroll-otadj-field--note">
         <span>{t(`${KEY}.colNote`)}</span>
         <Input
-          value={form.note}
+          value={note}
           maxLength={500}
           placeholder={t(`${KEY}.notePlaceholder`)}
           status={noteMissing ? 'error' : undefined}
-          onChange={(event) => onChange({ ...form, note: event.target.value })}
-          onPressEnter={onSave}
+          onChange={(event) => setNote(event.target.value)}
+          onPressEnter={submit}
         />
         <small className={noteMissing ? 'is-error' : undefined}>
           {t(`${KEY}.noteRequired`)}
@@ -591,7 +578,7 @@ function ManualOtGridForm({
           type="primary"
           loading={saving}
           disabled={!canSave || noteMissing}
-          onClick={onSave}
+          onClick={submit}
         >
           {t('common.save')}
         </Button>

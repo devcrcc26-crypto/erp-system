@@ -4,6 +4,7 @@ import {
   apiGet,
   apiPatch,
   apiPost,
+  apiPut,
   downloadApiFile,
 } from '@/lib/api/client';
 import type {
@@ -17,6 +18,7 @@ import type {
   PayrollEntryDetail,
   PayrollOtAdjustment,
   PayrollOtBreakdown,
+  ReplacePayrollOtAdjustmentsPayload,
   UpsertPayrollOtAdjustmentPayload,
   UpdatePayrollRunPayload,
   PayrollFreelancerOption,
@@ -194,6 +196,14 @@ export async function upsertPayrollOtAdjustment(
   payload: UpsertPayrollOtAdjustmentPayload,
 ): Promise<PayrollOtBreakdown> {
   return apiPost<PayrollOtBreakdown>(`${BASE}/runs/${runId}/ot-adjustments`, payload);
+}
+
+/** Replace all manual OT rows for one employee in a single reprice. */
+export async function replacePayrollOtAdjustments(
+  runId: string,
+  payload: ReplacePayrollOtAdjustmentsPayload,
+): Promise<PayrollOtBreakdown> {
+  return apiPut<PayrollOtBreakdown>(`${BASE}/runs/${runId}/ot-adjustments`, payload);
 }
 
 export async function deletePayrollOtAdjustment(

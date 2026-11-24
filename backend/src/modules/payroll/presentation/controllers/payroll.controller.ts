@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   StreamableFile,
@@ -33,6 +34,7 @@ import {
   UpdatePayrollEntryDaysDto,
   UpdatePayrollEntryDto,
   UpdatePayrollRunDto,
+  ReplacePayrollOtAdjustmentsDto,
   UpsertPayrollOtAdjustmentDto,
 } from '../../application/dtos/payroll.dtos';
 import { PayrollOtAdjustmentService } from '../../application/services/payroll-ot-adjustment.service';
@@ -303,6 +305,24 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollOtAdjustmentService.upsert(id, dto, this.ctx(user));
+  }
+
+  @Put('runs/:id/ot-adjustments')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Replace all manual OT adjustments for one employee in a single reprice (spreadsheet UI; DRAFT / REVIEWED, audited)',
+  })
+  replaceOtAdjustments(
+    @Param('id') id: string,
+    @Body() dto: ReplacePayrollOtAdjustmentsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.replaceForEmployee(
+      id,
+      dto,
+      this.ctx(user),
+    );
   }
 
   @Delete('runs/:id/ot-adjustments/:adjustmentId')

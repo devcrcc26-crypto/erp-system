@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayNotEmpty,
   IsArray,
   IsUUID,
@@ -14,6 +16,7 @@ import {
   Min,
   NotEquals,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreatePayrollRunDto {
@@ -277,6 +280,57 @@ export class UpsertPayrollOtAdjustmentDto {
 
   @ApiPropertyOptional({
     description: 'Source of the hours, e.g. "Paper records - Nov 2026". Required when hours is not zero.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+}
+
+/** One non-zero category row inside a bulk replace. */
+export class ReplacePayrollOtAdjustmentItemDto {
+  @ApiProperty({
+    description: 'OT category (same buckets as the payroll entry)',
+    enum: ['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'],
+  })
+  @IsIn(['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'])
+  otCategory!: 'NORMAL' | 'EVENING' | 'SUNDAY' | 'HOLIDAY';
+
+  @ApiProperty({
+    description: 'Hours to add (positive) or subtract (negative). Not zero.',
+    minimum: -744,
+    maximum: 744,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(-744)
+  @Max(744)
+  @NotEquals(0)
+  hours!: number;
+}
+
+/**
+ * Replaces all manual OT adjustments for one employee in a single reprice.
+ * Omit a category (or send hours 0 via UI) by leaving it out of `items`.
+ * Empty `items` clears every manual adjustment for that employee.
+ */
+export class ReplacePayrollOtAdjustmentsDto {
+  @ApiProperty({ description: 'Employee (user id) with an entry on this run' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({
+    description: 'Non-zero category hours to keep. Empty array clears all manual OT.',
+    type: [ReplacePayrollOtAdjustmentItemDto],
+  })
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => ReplacePayrollOtAdjustmentItemDto)
+  items!: ReplacePayrollOtAdjustmentItemDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Source of the hours, e.g. "Paper records - Nov 2026". Required when items is not empty.',
   })
   @IsOptional()
   @IsString()

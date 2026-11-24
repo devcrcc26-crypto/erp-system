@@ -8,7 +8,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import type { UpsertPayrollOtAdjustmentDto } from '../dtos/payroll.dtos';
+import type {
+  ReplacePayrollOtAdjustmentsDto,
+  UpsertPayrollOtAdjustmentDto,
+} from '../dtos/payroll.dtos';
 import {
   combineManualOvertime,
   OT_CATEGORY_KEYS,
@@ -231,6 +234,120 @@ export class PayrollOtAdjustmentService {
           otCategory: dto.otCategory,
           hours,
           note,
+        },
+      }),
+    );
+
+    return this.breakdown(runId, dto.employeeId, ctx.companyId);
+  }
+
+  /**
+   * Replaces every manual OT row for one employee in a single reprice.
+   * Empty `items` clears all adjustments. Used by the spreadsheet-style UI
+   * so entering four categories does not reprice four times.
+   */
+  async replaceForEmployee(
+    runId: string,
+    dto: ReplacePayrollOtAdjustmentsDto,
+    ctx: ServiceContext,
+  ): Promise<PayrollOtBreakdown> {
+    const seen = new Set<string>();
+    for (const item of dto.items) {
+      if (seen.has(item.otCategory)) {
+        throw new BadRequestException(
+          `Duplicate OT category in items: ${item.otCategory}`,
+        );
+      }
+      seen.add(item.otCategory);
+    }
+
+    const note = dto.note?.trim() || null;
+    if (dto.items.length > 0 && !note) {
+      throw new BadRequestException(
+        'A note is required: say where these hours come from (e.g. "Paper records - Nov 2026")',
+      );
+    }
+
+    const next: ManualOtAdjustmentInput[] = dto.items.map((item) => ({
+      category: item.otCategory,
+      hours: round2(item.hours),
+    }));
+    if (next.some((row) => row.hours === 0)) {
+      throw new BadRequestException(
+        'Hours cannot be zero. Omit the category instead',
+      );
+    }
+
+    const { run, entry, existing } = await this.loadEditable(
+      runId,
+      dto.employeeId,
+      ctx,
+    );
+    const system = this.systemOt(entry, existing);
+
+    for (const row of next) {
+      const keys = OT_CATEGORY_KEYS[row.category];
+      if (system.hours[keys.hours] + row.hours < 0) {
+        throw new BadRequestException(
+          `This would take ${row.category.toLowerCase()} OT below zero: the system has ${system.hours[keys.hours]} hours`,
+        );
+      }
+    }
+
+    const before = existing.map((row) => ({
+      otCategory: row.otCategory,
+      hours: num(row.hours),
+      note: row.note,
+    }));
+
+    await this.applyAndSave(run, entry, system, next, ctx, async (tx, applied) => {
+      await tx.payrollOtAdjustment.deleteMany({
+        where: {
+          companyId: ctx.companyId,
+          payrollRunId: runId,
+          employeeId: dto.employeeId,
+        },
+      });
+      if (next.length === 0) {
+        return null;
+      }
+      await tx.payrollOtAdjustment.createMany({
+        data: next.map((row) => {
+          const mine = applied.find((item) => item.category === row.category)!;
+          return {
+            companyId: ctx.companyId,
+            payrollRunId: runId,
+            employeeId: dto.employeeId,
+            otCategory: row.category,
+            hours: new Decimal(row.hours),
+            appliedHours: new Decimal(mine.hours),
+            amount: new Decimal(mine.amount),
+            note,
+            createdBy: ctx.userId,
+            updatedBy: ctx.userId,
+          };
+        }),
+      });
+      return null;
+    });
+
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'ot_adjustment_replaced',
+        recordType: 'PayrollOtAdjustment',
+        recordId: entry.id,
+        recordReference: run.runNumber,
+        beforeValue: { employeeId: dto.employeeId, adjustments: before },
+        afterValue: {
+          employeeId: dto.employeeId,
+          note,
+          adjustments: next.map((row) => ({
+            otCategory: row.category,
+            hours: row.hours,
+          })),
         },
       }),
     );

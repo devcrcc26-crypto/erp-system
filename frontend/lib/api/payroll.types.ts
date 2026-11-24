@@ -413,3 +413,11 @@ export interface UpsertPayrollOtAdjustmentPayload {
   hours: number;
   note: string;
 }
+
+/** Bulk replace of all manual OT rows for one employee (one reprice). */
+export interface ReplacePayrollOtAdjustmentsPayload {
+  employeeId: string;
+  /** Non-zero categories only; empty clears all. */
+  items: Array<{ otCategory: PayrollOtCategory; hours: number }>;
+  note?: string;
+}

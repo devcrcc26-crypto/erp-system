@@ -51,6 +51,8 @@ describe('PayrollOtAdjustmentService', () => {
       payrollOtAdjustment: {
         upsert: jest.fn(async () => ({ id: 'adj-1' })),
         delete: jest.fn(async () => ({})),
+        deleteMany: jest.fn(async () => ({ count: 0 })),
+        createMany: jest.fn(async () => ({ count: 0 })),
         updateMany: jest.fn(async () => ({ count: 1 })),
       },
       payrollEntry: { update: jest.fn(async () => ({})) },
@@ -181,5 +183,100 @@ describe('PayrollOtAdjustmentService', () => {
     expect(audit.create).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'ot_adjustment_deleted' }),
     );
+  });
+
+  it('replaceForEmployee writes all categories in one reprice', async () => {
+    await service.replaceForEmployee(
+      RUN,
+      {
+        employeeId: EMPLOYEE,
+        items: [
+          { otCategory: 'NORMAL', hours: 2 },
+          { otCategory: 'EVENING', hours: 1.5 },
+        ],
+        note: 'Paper records - Nov 2026',
+      },
+      ctx,
+    );
+
+    const tx = (prisma as { tx: {
+      payrollOtAdjustment: {
+        deleteMany: jest.Mock;
+        createMany: jest.Mock;
+      };
+    } }).tx;
+    expect(tx.payrollOtAdjustment.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId: COMPANY,
+          payrollRunId: RUN,
+          employeeId: EMPLOYEE,
+        }),
+      }),
+    );
+    expect(tx.payrollOtAdjustment.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ otCategory: 'NORMAL', hours: expect.any(Decimal) }),
+          expect.objectContaining({ otCategory: 'EVENING', hours: expect.any(Decimal) }),
+        ]),
+      }),
+    );
+
+    const [, , ot] = runService.entryUpdateForOvertime.mock.calls[0] as [
+      unknown,
+      unknown,
+      {
+        hours: { normalHours: number; eveningHours: number };
+        pay: { normalOtPay: number; eveningOtPay: number };
+      },
+    ];
+    expect(ot.hours.normalHours).toBe(6);
+    expect(ot.hours.eveningHours).toBe(1.5);
+    expect(ot.pay.normalOtPay).toBeCloseTo(300 + manualOtPay('NORMAL', 2, BASIC), 2);
+    expect(ot.pay.eveningOtPay).toBeCloseTo(manualOtPay('EVENING', 1.5, BASIC), 2);
+    expect(runService.refreshRunTotals).toHaveBeenCalledTimes(1);
+    expect(audit.create).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'ot_adjustment_replaced' }),
+    );
+  });
+
+  it('replaceForEmployee with empty items clears all manual OT once', async () => {
+    const amount = manualOtPay('NORMAL', 6, BASIC);
+    stored = [
+      {
+        id: 'adj-1',
+        payrollRunId: RUN,
+        employeeId: EMPLOYEE,
+        otCategory: 'NORMAL',
+        hours: new Decimal(6),
+        appliedHours: new Decimal(6),
+        amount: new Decimal(amount),
+        note: 'Paper records',
+      },
+    ];
+    prisma.payrollEntry.findFirst.mockImplementation(async () =>
+      entry({
+        normalOtHours: new Decimal(10),
+        normalOtPay: new Decimal(300 + amount),
+      }),
+    );
+
+    await service.replaceForEmployee(RUN, { employeeId: EMPLOYEE, items: [] }, ctx);
+
+    const tx = (prisma as { tx: {
+      payrollOtAdjustment: { deleteMany: jest.Mock; createMany: jest.Mock };
+    } }).tx;
+    expect(tx.payrollOtAdjustment.deleteMany).toHaveBeenCalled();
+    expect(tx.payrollOtAdjustment.createMany).not.toHaveBeenCalled();
+
+    const [, , ot] = runService.entryUpdateForOvertime.mock.calls[0] as [
+      unknown,
+      unknown,
+      { hours: { normalHours: number }; pay: { normalOtPay: number } },
+    ];
+    expect(ot.hours.normalHours).toBe(4);
+    expect(ot.pay.normalOtPay).toBe(300);
+    expect(runService.refreshRunTotals).toHaveBeenCalledTimes(1);
   });
 });

@@ -30,6 +30,7 @@ import {
   updatePayrollEntryDays,
   deletePayrollOtAdjustment,
   getPayrollOtBreakdown,
+  replacePayrollOtAdjustments,
   upsertPayrollOtAdjustment,
   updatePayrollRun,
 } from '@/lib/api/payroll';
@@ -41,6 +42,7 @@ import type {
   UpdatePayrollCompanySettingsPayload,
   UpdatePayrollEntryDaysPayload,
   UpdatePayrollEntryPayload,
+  ReplacePayrollOtAdjustmentsPayload,
   UpsertPayrollOtAdjustmentPayload,
   UpdatePayrollRunPayload,
 } from '@/lib/api/payroll.types';
@@ -296,6 +298,16 @@ export function useUpsertPayrollOtAdjustment(runId: string) {
   return useMutation({
     mutationFn: (payload: UpsertPayrollOtAdjustmentPayload) =>
       upsertPayrollOtAdjustment(runId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** Replaces all manual OT rows for one employee in a single reprice + refresh. */
+export function useReplacePayrollOtAdjustments(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ReplacePayrollOtAdjustmentsPayload) =>
+      replacePayrollOtAdjustments(runId, payload),
     onSuccess: () => invalidateRun(queryClient, runId),
   });
 }
