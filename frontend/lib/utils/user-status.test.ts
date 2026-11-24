@@ -38,6 +38,28 @@ describe('userStatusLabel / userStatusVariant', () => {
     expect(userStatusVariant(u)).toBe('default');
   });
 
+  it('shows Separated when employment is SEPARATED even if account is inactive', () => {
+    const u = user({
+      isActive: false,
+      employmentStatus: 'SEPARATED',
+      email: 'a@b.com',
+      lastLogin: '2026-01-02',
+    });
+    expect(userStatusLabel(u, t)).toBe('users.employment.statusSeparatedShort');
+    expect(userStatusVariant(u)).toBe('error');
+  });
+
+  it('shows employment Inactive when employment is INACTIVE', () => {
+    const u = user({
+      isActive: true,
+      employmentStatus: 'INACTIVE',
+      email: 'a@b.com',
+      lastLogin: '2026-01-02',
+    });
+    expect(userStatusLabel(u, t)).toBe('users.employment.statusInactiveShort');
+    expect(userStatusVariant(u)).toBe('warning');
+  });
+
   it('shows no login for record-only employees', () => {
     const u = user({ email: null, loginName: null, lastLogin: null });
     expect(userStatusLabel(u, t)).toBe('users.statusNoLogin');

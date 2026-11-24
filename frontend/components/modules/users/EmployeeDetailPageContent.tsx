@@ -108,10 +108,14 @@ import {
 const DETAIL_ROOT =
   'erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2 erp-hr-travel-v2';
 
-const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
+const USER_STATUS_DOT: Record<
+  'success' | 'warning' | 'default' | 'error',
+  string
+> = {
   success: '#16a34a',
   warning: '#d97706',
   default: '#94a3b8',
+  error: '#dc2626',
 };
 
 function displayValue(value: string | number | null | undefined): string {

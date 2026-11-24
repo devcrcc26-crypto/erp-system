@@ -181,10 +181,14 @@ function TruncateText({
   );
 }
 
-const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
+const USER_STATUS_DOT: Record<
+  'success' | 'warning' | 'default' | 'error',
+  string
+> = {
   success: '#16a34a',
   warning: '#d97706',
   default: '#94a3b8',
+  error: '#dc2626',
 };
 
 const USER_STAT_ACCENT: Record<
@@ -404,7 +408,14 @@ export default function UsersPageContent(): React.ReactNode {
     let pendingCount = 0;
     let inactiveCount = 0;
     for (const user of scoped) {
-      if (!user.isActive) {
+      // Separated employees are not “inactive accounts” — they have left.
+      if (user.employmentStatus === 'SEPARATED') {
+        continue;
+      }
+      if (
+        user.employmentStatus === 'INACTIVE' ||
+        !user.isActive
+      ) {
         inactiveCount += 1;
       } else if (user.lastLogin) {
         // Active only after the employee has signed in at least once.
@@ -1192,7 +1203,7 @@ export default function UsersPageContent(): React.ReactNode {
             className="erp-pro-table erp-users-table"
             size={isCompact ? 'small' : 'middle'}
             dataSource={users}
-            scroll={{ x: isCompact ? 720 : 966 }}
+            scroll={{ x: isCompact ? 840 : 1100 }}
             rowSelection={
               canEditUsers
                 ? {
@@ -1250,22 +1261,23 @@ export default function UsersPageContent(): React.ReactNode {
                     <div className="erp-users-person">
                       <UserListAvatar user={record} />
                       <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                          <TruncateText
-                            value={fullName}
-                            className="erp-users-name whitespace-normal break-words"
-                          />
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <p className="erp-users-name m-0 truncate" title={fullName}>
+                            {fullName}
+                          </p>
                           {record.excludedFromHrProcesses ? (
                             <ApproverOnlyTag />
                           ) : null}
                         </div>
                         {record.email ? (
-                          <TruncateText
-                            value={record.email}
-                            className="erp-users-email mt-0.5"
-                          />
+                          <p
+                            className="erp-users-email m-0 mt-0.5 truncate"
+                            title={record.email}
+                          >
+                            {record.email}
+                          </p>
                         ) : (
-                          <p className="erp-users-email m-0 mt-0.5">
+                          <p className="erp-users-email m-0 mt-0.5 truncate">
                             {t('users.noEmailNoLogin')}
                           </p>
                         )}
@@ -1356,6 +1368,25 @@ export default function UsersPageContent(): React.ReactNode {
                       value={record.department.name}
                       className="erp-users-cell-strong"
                     />
+                  ) : (
+                    <span className="erp-users-dash">-</span>
+                  ),
+              },
+              {
+                title: t('users.form.nationality'),
+                key: 'nationality',
+                width: 130,
+                responsive: ['md'],
+                render: (_, record) =>
+                  record.nationality ? (
+                    <span
+                      className="erp-users-nationality-pill"
+                      title={t(`hr.nationality.${record.nationality}`)}
+                    >
+                      <span className="truncate">
+                        {t(`hr.nationality.${record.nationality}`)}
+                      </span>
+                    </span>
                   ) : (
                     <span className="erp-users-dash">-</span>
                   ),
