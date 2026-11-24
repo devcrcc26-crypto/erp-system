@@ -951,9 +951,18 @@ export class PayrollRunService {
     companyId: string,
     options?: GetRunOptions,
   ): Promise<PayrollRun> {
+    const person = {
+      select: { id: true, firstName: true, lastName: true, chineseName: true },
+    } as const;
     const run = await this.prisma.payrollRun.findFirst({
       where: { id: runId, companyId, deletedAt: null },
       include: {
+        // Names for the approval steps (no user-directory download on the page).
+        creator: person,
+        submitter: person,
+        approver: person,
+        gmApprover: person,
+        payer: person,
         originalRun: {
           select: {
             id: true,
@@ -3502,9 +3511,11 @@ export class PayrollRunService {
     runId: string,
     ctx: ServiceContext,
   ): Promise<void> {
-    const entries = await this.prisma.payrollEntry.findMany({
+    // One SUM query instead of loading every entry (runs after each entry edit).
+    const sums = await this.prisma.payrollEntry.aggregate({
       where: { runId },
-      select: {
+      _count: { _all: true },
+      _sum: {
         grossIncome: true,
         netPay: true,
         contractNetBonus: true,
@@ -3514,33 +3525,20 @@ export class PayrollRunService {
         incomeTax: true,
       },
     });
-
-    const totals = entries.reduce(
-      (acc, e) => ({
-        totalGross: acc.totalGross + this.toNumber(e.grossIncome),
-        totalNetPay: acc.totalNetPay + this.toNumber(e.netPay),
-        totalNetBonus:
-          acc.totalNetBonus +
-          this.toNumber(e.contractNetBonus) +
-          this.toNumber(e.netTopUp),
-        totalPensionEmp: acc.totalPensionEmp + this.toNumber(e.pensionEmployee),
-        totalPensionEmr: acc.totalPensionEmr + this.toNumber(e.pensionEmployer),
-        totalTax: acc.totalTax + this.toNumber(e.incomeTax),
-      }),
-      {
-        totalGross: 0,
-        totalNetPay: 0,
-        totalNetBonus: 0,
-        totalPensionEmp: 0,
-        totalPensionEmr: 0,
-        totalTax: 0,
-      },
-    );
+    const sum = sums._sum;
+    const totals = {
+      totalGross: this.toNumber(sum.grossIncome),
+      totalNetPay: this.toNumber(sum.netPay),
+      totalNetBonus: this.toNumber(sum.contractNetBonus) + this.toNumber(sum.netTopUp),
+      totalPensionEmp: this.toNumber(sum.pensionEmployee),
+      totalPensionEmr: this.toNumber(sum.pensionEmployer),
+      totalTax: this.toNumber(sum.incomeTax),
+    };
 
     await this.prisma.payrollRun.update({
       where: { id: runId },
       data: {
-        totalEmployees: entries.length,
+        totalEmployees: sums._count._all,
         totalGross: new Decimal(this.round(totals.totalGross)),
         totalNetPay: new Decimal(this.round(totals.totalNetPay)),
         totalNetBonus: new Decimal(this.round(totals.totalNetBonus)),

@@ -6235,7 +6235,8 @@
         "absentDays": "缺勤（含无薪假）",
         "changeDays": "修改计薪天数",
         "reason": "原因",
-        "daysRecalcHint": "保存后将重新计算该员工的工资，并记录在下方的历史中。"
+        "daysRecalcHint": "保存后将重新计算该员工的工资，并记录在下方的历史中。",
+        "updating": "正在更新…"
       },
       "entryPanel": {
         "tabPay": "薪资明细",
@@ -6262,7 +6263,20 @@
         "removeConfirm": "删除此补贴？",
         "topUpRemoved": "补贴已删除。",
         "saveFailed": "无法保存补贴。",
-        "netChange": "实发工资约变化 {{amount}} ETB"
+        "netChange": "实发工资约变化 {{amount}} ETB",
+        "earned": "应得工资",
+        "earnedSub": "基本工资 {{basic}} · 计薪 {{days}} 天",
+        "taxableSub": "应税收入 {{amount}}",
+        "employeeDetails": "员工与银行信息",
+        "topUpHint": "输入金额和原因，对实发工资的影响会即时显示。按 Enter 保存，Esc 撤销。",
+        "topUpLocked": "补贴只能在草稿或已审核状态下修改。",
+        "colType": "类型",
+        "colAmount": "金额（ETB）",
+        "colReason": "原因",
+        "colNetEffect": "实发变化",
+        "reasonPlaceholder": "补贴原因",
+        "reasonFor": "{{type}} 的原因",
+        "unsaved": "有未保存的更改"
       },
       "otAdjust": {
         "systemTitle": "系统加班（来自已批准申请）",
@@ -6306,7 +6320,16 @@
         "gridHint": "为每种加班类型填写小时数。空白单元格视为 0。",
         "addButton": "添加",
         "summaryTotal": "{{category}} 合计：{{total}} 小时",
-        "summarySplit": "系统 {{system}} · 手动 {{manual}}"
+        "summarySplit": "系统 {{system}} · 手动 {{manual}}",
+        "gridLiveHint": "在高亮列中输入手动小时数，合计和金额会随输入即时更新。按 Enter 保存，Esc 撤销。",
+        "readOnlyHint": "该员工的加班（只读）。",
+        "colSystem": "系统小时",
+        "colManual": "手动小时",
+        "colTotal": "合计小时",
+        "manualHoursFor": "{{category}} 的手动小时",
+        "saving": "正在保存…",
+        "revert": "撤销",
+        "saveEnter": "保存（Enter）"
       },
       "entry": {
         "employee": "员工",

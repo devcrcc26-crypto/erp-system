@@ -6236,7 +6236,8 @@
         "absentDays": "Absent (incl. unpaid leave)",
         "changeDays": "Change paid days",
         "reason": "Reason",
-        "daysRecalcHint": "Saving recalculates this employee’s pay and is recorded in the history below."
+        "daysRecalcHint": "Saving recalculates this employee’s pay and is recorded in the history below.",
+        "updating": "Updating…"
       },
       "entryPanel": {
         "tabPay": "Pay details",
@@ -6263,7 +6264,20 @@
         "removeConfirm": "Remove this top-up?",
         "topUpRemoved": "Top-up removed.",
         "saveFailed": "Could not save the top-up.",
-        "netChange": "Net pay changes by about {{amount}} ETB"
+        "netChange": "Net pay changes by about {{amount}} ETB",
+        "earned": "Earned salary",
+        "earnedSub": "Basic {{basic}} · {{days}} paid days",
+        "taxableSub": "On taxable income {{amount}}",
+        "employeeDetails": "Employee & bank details",
+        "topUpHint": "Type an amount and reason; the effect on net pay shows as you type. Enter saves, Esc reverts.",
+        "topUpLocked": "Top-ups can only change while the run is Draft or Reviewed.",
+        "colType": "Type",
+        "colAmount": "Amount (ETB)",
+        "colReason": "Reason",
+        "colNetEffect": "Net pay change",
+        "reasonPlaceholder": "Why this top-up",
+        "reasonFor": "Reason for {{type}}",
+        "unsaved": "Unsaved changes"
       },
       "otAdjust": {
         "systemTitle": "System OT (from approved requests)",
@@ -6307,7 +6321,16 @@
         "gridHint": "Enter hours for each OT type. Blank cells are treated as 0.",
         "addButton": "Add",
         "summaryTotal": "Total {{category}}: {{total}} hrs",
-        "summarySplit": "{{system}} from system · {{manual}} manual"
+        "summarySplit": "{{system}} from system · {{manual}} manual",
+        "gridLiveHint": "Type manual hours in the highlighted column; totals and pay update as you type. Enter saves, Esc reverts.",
+        "readOnlyHint": "Overtime for this employee (read-only).",
+        "colSystem": "System h",
+        "colManual": "Manual h",
+        "colTotal": "Total h",
+        "manualHoursFor": "Manual hours for {{category}}",
+        "saving": "Saving…",
+        "revert": "Revert",
+        "saveEnter": "Save (Enter)"
       },
       "entry": {
         "employee": "Employee",

@@ -35,6 +35,9 @@ import {
   updatePayrollRun,
 } from '@/lib/api/payroll';
 import type {
+  PayrollEntryDetail,
+  PayrollOtBreakdown,
+  PayrollRunDetail,
   ApprovePayrollRunPayload,
   CreatePayrollCorrectionPayload,
   CreatePayrollRunPayload,
@@ -46,6 +49,12 @@ import type {
   UpsertPayrollOtAdjustmentPayload,
   UpdatePayrollRunPayload,
 } from '@/lib/api/payroll.types';
+import {
+  entryWithOt,
+  entryWithTopUp,
+  previewOtBreakdown,
+  runWithEntry,
+} from '@/lib/utils/payroll-live';
 
 export const payrollKeys = {
   all: ['payroll'] as const,
@@ -71,7 +80,50 @@ export function usePayrollRun(id: string, enabled = true) {
     queryKey: payrollKeys.run(id),
     queryFn: () => getPayrollRun(id),
     enabled: enabled && Boolean(id),
+    // Entry edits patch this cache in place; no reload on focus or remount.
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
+}
+
+type QueryClient = ReturnType<typeof useQueryClient>;
+
+/** Breakdown cache key (under the run key, so a full run reload refreshes it). */
+function otBreakdownKey(runId: string, employeeId: string) {
+  return [...payrollKeys.run(runId), 'ot-breakdown', employeeId] as const;
+}
+
+/** Puts one entry's new figures into the cached run and recomputes its totals. */
+function patchRunEntry(
+  queryClient: QueryClient,
+  runId: string,
+  entry: Partial<PayrollEntryDetail> & { id: string },
+): void {
+  queryClient.setQueryData<PayrollRunDetail>(payrollKeys.run(runId), (run) =>
+    run ? runWithEntry(run, entry) : run,
+  );
+}
+
+/** Runs list totals changed: refetch only when the list is next shown. */
+function markRunsListStale(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: payrollKeys.runs(), refetchType: 'none' });
+}
+
+/** Saved breakdown (+ the repriced entry it carries) into the caches. */
+function applyBreakdownResponse(
+  queryClient: QueryClient,
+  runId: string,
+  employeeId: string,
+  data: PayrollOtBreakdown,
+): void {
+  const { entry, ...breakdown } = data;
+  queryClient.setQueryData(otBreakdownKey(runId, employeeId), breakdown);
+  if (entry) {
+    patchRunEntry(queryClient, runId, entry);
+  } else {
+    void queryClient.invalidateQueries({ queryKey: payrollKeys.run(runId), exact: true });
+  }
+  markRunsListStale(queryClient);
 }
 
 function invalidateRun(queryClient: ReturnType<typeof useQueryClient>, id: string): void {
@@ -260,6 +312,10 @@ export function useEmployeePayslips(employeeId: string, enabled = true) {
   });
 }
 
+/**
+ * Top-ups: shown at once (estimated), then the server's figures replace them;
+ * rolled back if the save fails. No run reload.
+ */
 export function useUpdatePayrollEntry(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -270,53 +326,128 @@ export function useUpdatePayrollEntry(runId: string) {
       entryId: string;
       payload: UpdatePayrollEntryPayload;
     }) => updatePayrollEntry(entryId, payload),
-    onSuccess: () => invalidateRun(queryClient, runId),
+    onMutate: async ({ entryId, payload }) => {
+      await queryClient.cancelQueries({ queryKey: payrollKeys.run(runId), exact: true });
+      const previous = queryClient.getQueryData<PayrollRunDetail>(payrollKeys.run(runId));
+      const current = previous?.entries.find((row) => row.id === entryId);
+      if (current) {
+        let next = current;
+        if (payload.bonusTopUp !== undefined) {
+          next = entryWithTopUp(next, 'taxable', payload.bonusTopUp, payload.bonusTopUpReason ?? null);
+        }
+        if (payload.netTopUp !== undefined) {
+          next = entryWithTopUp(next, 'net', payload.netTopUp, payload.netTopUpReason ?? null);
+        }
+        patchRunEntry(queryClient, runId, next);
+      }
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(payrollKeys.run(runId), context.previous);
+      }
+    },
+    onSuccess: (entry) => {
+      patchRunEntry(queryClient, runId, entry as unknown as PayrollEntryDetail);
+      markRunsListStale(queryClient);
+    },
   });
 }
 
+/** Paid days: the server reprices (contract allowances); patch that entry only. */
 export function useUpdatePayrollEntryDays(runId: string, entryId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdatePayrollEntryDaysPayload) =>
       updatePayrollEntryDays(runId, entryId, payload),
-    onSuccess: () => invalidateRun(queryClient, runId),
+    onSuccess: (entry) => {
+      patchRunEntry(queryClient, runId, {
+        ...(entry as unknown as PayrollEntryDetail),
+        hasOverride: true,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...payrollKeys.run(runId), 'entry', entryId, 'audit'],
+      });
+      // OT is unchanged by days, except a 0-day month; refresh this employee's OT view.
+      void queryClient.invalidateQueries({
+        queryKey: [...payrollKeys.run(runId), 'ot-breakdown'],
+      });
+      markRunsListStale(queryClient);
+    },
   });
 }
 
-/** System vs manual OT for one employee (under the run key, so run refreshes reload it). */
+/** System vs manual OT for one employee. */
 export function usePayrollOtBreakdown(runId: string, employeeId: string, enabled = true) {
   return useQuery({
-    queryKey: [...payrollKeys.run(runId), 'ot-breakdown', employeeId] as const,
+    queryKey: otBreakdownKey(runId, employeeId),
     queryFn: () => getPayrollOtBreakdown(runId, employeeId),
     enabled,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 
-/** Saves a manual OT adjustment; the entry and run totals change, so the run reloads. */
+/** Saves one manual OT adjustment; patches the breakdown and the entry in place. */
 export function useUpsertPayrollOtAdjustment(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpsertPayrollOtAdjustmentPayload) =>
       upsertPayrollOtAdjustment(runId, payload),
-    onSuccess: () => invalidateRun(queryClient, runId),
+    onSuccess: (data, payload) =>
+      applyBreakdownResponse(queryClient, runId, payload.employeeId, data),
   });
 }
 
-/** Replaces all manual OT rows for one employee in a single reprice + refresh. */
+/**
+ * Replaces all manual OT rows for one employee. The new OT, gross and net show
+ * immediately (estimated); the server's figures replace them when it answers,
+ * and everything rolls back if the save fails.
+ */
 export function useReplacePayrollOtAdjustments(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: ReplacePayrollOtAdjustmentsPayload) =>
       replacePayrollOtAdjustments(runId, payload),
-    onSuccess: () => invalidateRun(queryClient, runId),
+    onMutate: async (payload) => {
+      const key = otBreakdownKey(runId, payload.employeeId);
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: key }),
+        queryClient.cancelQueries({ queryKey: payrollKeys.run(runId), exact: true }),
+      ]);
+      const previousBreakdown = queryClient.getQueryData<PayrollOtBreakdown>(key);
+      const previousRun = queryClient.getQueryData<PayrollRunDetail>(payrollKeys.run(runId));
+      if (previousBreakdown) {
+        const hours = Object.fromEntries(
+          payload.items.map((item) => [item.otCategory, item.hours]),
+        );
+        const preview = previewOtBreakdown(previousBreakdown, hours);
+        queryClient.setQueryData(key, preview);
+        const entry = previousRun?.entries.find((row) => row.employeeId === payload.employeeId);
+        if (entry) {
+          patchRunEntry(queryClient, runId, entryWithOt(entry, preview));
+        }
+      }
+      return { previousBreakdown, previousRun };
+    },
+    onError: (_error, payload, context) => {
+      if (context?.previousBreakdown) {
+        queryClient.setQueryData(otBreakdownKey(runId, payload.employeeId), context.previousBreakdown);
+      }
+      if (context?.previousRun) {
+        queryClient.setQueryData(payrollKeys.run(runId), context.previousRun);
+      }
+    },
+    onSuccess: (data, payload) =>
+      applyBreakdownResponse(queryClient, runId, payload.employeeId, data),
   });
 }
 
-export function useDeletePayrollOtAdjustment(runId: string) {
+export function useDeletePayrollOtAdjustment(runId: string, employeeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (adjustmentId: string) => deletePayrollOtAdjustment(runId, adjustmentId),
-    onSuccess: () => invalidateRun(queryClient, runId),
+    onSuccess: (data) => applyBreakdownResponse(queryClient, runId, employeeId, data),
   });
 }
 

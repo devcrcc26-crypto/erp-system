@@ -14,6 +14,7 @@ import type {
 } from '../dtos/payroll.dtos';
 import {
   combineManualOvertime,
+  manualOtHourlyRate,
   OT_CATEGORY_KEYS,
   PAYROLL_OT_CATEGORIES,
   systemOvertimeFromEntry,
@@ -84,7 +85,13 @@ export interface PayrollOtBreakdown {
   categories: PayrollOtCategoryBreakdown[];
   totals: { systemPay: number; manualPay: number; totalPay: number };
   adjustments: PayrollOtAdjustmentView[];
+  /** Pay per manual hour by category (month-end basic x policy), for live previews. */
+  rates: Record<PayrollOtCategory, number>;
+  /** After a change: the repriced entry, so the client can patch it in place. */
+  entry?: Prisma.PayrollEntryGetPayload<object>;
 }
+
+type Policy = Awaited<ReturnType<typeof loadPolicySnapshot>>;
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
@@ -137,12 +144,44 @@ export class PayrollOtAdjustmentService {
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { runId, employeeId, companyId },
     });
-    const rows = await this.prisma.payrollOtAdjustment.findMany({
-      where: { companyId, payrollRunId: runId, employeeId },
-      include: adjustmentInclude,
-      orderBy: { otCategory: 'asc' },
-    });
-    return this.buildBreakdown(run, employeeId, entry, rows);
+    const [rows, policy] = await Promise.all([
+      this.prisma.payrollOtAdjustment.findMany({
+        where: { companyId, payrollRunId: runId, employeeId },
+        include: adjustmentInclude,
+        orderBy: { otCategory: 'asc' },
+      }),
+      this.loadPolicy(run),
+    ]);
+    return this.buildBreakdown(run, employeeId, entry, rows, policy);
+  }
+
+  /** Breakdown right after a save, from what the save already has in hand. */
+  private async breakdownAfterSave(
+    run: Prisma.PayrollRunGetPayload<object>,
+    employeeId: string,
+    saved: { entry: Prisma.PayrollEntryGetPayload<object>; policy: Policy },
+    audit: Promise<unknown>,
+  ): Promise<PayrollOtBreakdown> {
+    const [rows] = await Promise.all([
+      this.prisma.payrollOtAdjustment.findMany({
+        where: { companyId: run.companyId, payrollRunId: run.id, employeeId },
+        include: adjustmentInclude,
+        orderBy: { otCategory: 'asc' },
+      }),
+      audit,
+    ]);
+    return {
+      ...this.buildBreakdown(run, employeeId, saved.entry, rows, saved.policy),
+      entry: saved.entry,
+    };
+  }
+
+  private loadPolicy(run: Prisma.PayrollRunGetPayload<object>): Promise<Policy> {
+    return loadPolicySnapshot(
+      this.prisma,
+      run.companyId,
+      new Date(Date.UTC(run.year, run.month - 1, 1)),
+    );
   }
 
   /** Creates or updates the adjustment for (employee, category) and reprices the entry. */
@@ -212,14 +251,14 @@ export class PayrollOtAdjustmentService {
       });
     });
 
-    await this.audit.create(
+    const audit = this.audit.create(
       this.audit.buildFromRequestContext({
         userId: ctx.userId,
         companyId: ctx.companyId,
         module: 'payroll',
         action: previous ? 'ot_adjustment_updated' : 'ot_adjustment_created',
         recordType: 'PayrollOtAdjustment',
-        recordId: saved?.id ?? previous?.id ?? '',
+        recordId: saved.written?.id ?? previous?.id ?? '',
         recordReference: run.runNumber,
         beforeValue: previous
           ? {
@@ -238,7 +277,7 @@ export class PayrollOtAdjustmentService {
       }),
     );
 
-    return this.breakdown(runId, dto.employeeId, ctx.companyId);
+    return this.breakdownAfterSave(run, dto.employeeId, saved, audit);
   }
 
   /**
@@ -300,7 +339,7 @@ export class PayrollOtAdjustmentService {
       note: row.note,
     }));
 
-    await this.applyAndSave(run, entry, system, next, ctx, async (tx, applied) => {
+    const saved = await this.applyAndSave(run, entry, system, next, ctx, async (tx, applied) => {
       await tx.payrollOtAdjustment.deleteMany({
         where: {
           companyId: ctx.companyId,
@@ -331,7 +370,7 @@ export class PayrollOtAdjustmentService {
       return null;
     });
 
-    await this.audit.create(
+    const audit = this.audit.create(
       this.audit.buildFromRequestContext({
         userId: ctx.userId,
         companyId: ctx.companyId,
@@ -352,7 +391,7 @@ export class PayrollOtAdjustmentService {
       }),
     );
 
-    return this.breakdown(runId, dto.employeeId, ctx.companyId);
+    return this.breakdownAfterSave(run, dto.employeeId, saved, audit);
   }
 
   /** Removes an adjustment and reprices the entry. */
@@ -377,12 +416,12 @@ export class PayrollOtAdjustmentService {
       .filter((row) => row.id !== adjustmentId)
       .map((row) => ({ category: row.otCategory, hours: num(row.hours) }));
 
-    await this.applyAndSave(run, entry, system, next, ctx, async (tx) => {
+    const saved = await this.applyAndSave(run, entry, system, next, ctx, async (tx) => {
       await tx.payrollOtAdjustment.delete({ where: { id: adjustmentId } });
       return null;
     });
 
-    await this.audit.create(
+    const audit = this.audit.create(
       this.audit.buildFromRequestContext({
         userId: ctx.userId,
         companyId: ctx.companyId,
@@ -400,7 +439,7 @@ export class PayrollOtAdjustmentService {
       }),
     );
 
-    return this.breakdown(runId, target.employeeId, ctx.companyId);
+    return this.breakdownAfterSave(run, target.employeeId, saved, audit);
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -491,12 +530,12 @@ export class PayrollOtAdjustmentService {
       tx: Prisma.TransactionClient,
       applied: ReturnType<typeof combineManualOvertime>['applied'],
     ) => Promise<T>,
-  ): Promise<T> {
-    const policy = await loadPolicySnapshot(
-      this.prisma,
-      ctx.companyId,
-      new Date(Date.UTC(run.year, run.month - 1, 1)),
-    );
+  ): Promise<{
+    written: T;
+    entry: Prisma.PayrollEntryGetPayload<object>;
+    policy: Policy;
+  }> {
+    const policy = await this.loadPolicy(run);
     const combined = combineManualOvertime({
       systemHours: system.hours,
       systemPay: system.pay,
@@ -526,15 +565,15 @@ export class PayrollOtAdjustmentService {
           },
         });
       }
-      await tx.payrollEntry.update({
+      const updated = await tx.payrollEntry.update({
         where: { id: entry.id },
         data: { ...entryUpdate, updatedBy: ctx.userId },
       });
-      return written;
+      return { written, entry: updated };
     });
 
     await this.payrollRunService.refreshRunTotals(run.id, ctx);
-    return result;
+    return { ...result, policy };
   }
 
   private buildBreakdown(
@@ -542,7 +581,15 @@ export class PayrollOtAdjustmentService {
     employeeId: string,
     entry: Prisma.PayrollEntryGetPayload<object> | null,
     rows: AdjustmentRow[],
+    policy: Policy,
   ): PayrollOtBreakdown {
+    const basic = num(entry?.basicSalary);
+    const rates = Object.fromEntries(
+      PAYROLL_OT_CATEGORIES.map((category) => [
+        category,
+        manualOtHourlyRate(category, basic, policy),
+      ]),
+    ) as Record<PayrollOtCategory, number>;
     const system = entry
       ? this.systemOt(entry, rows)
       : {
@@ -581,6 +628,7 @@ export class PayrollOtAdjustmentService {
         totalPay: sum((c) => c.totalPay),
       },
       adjustments: rows.map((row) => this.toView(row)),
+      rates,
     };
   }
 

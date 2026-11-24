@@ -3,18 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
-import { Alert, Button, Input, InputNumber, Popconfirm, Tabs } from 'antd';
-import {
-  BankOutlined,
-  CalendarOutlined,
-  ClockCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  FileTextOutlined,
-  GiftOutlined,
-  PlusOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+import { Button, Collapse, Input, InputNumber, Tabs } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
 import PayrollOtAdjustmentsSection from '@/components/modules/hr/payroll/PayrollOtAdjustmentsSection';
 import PayrollPaidDaysPanel from '@/components/modules/hr/payroll/PayrollPaidDaysPanel';
 import { useReportDirty } from '@/components/modules/hr/payroll/payroll-entry-dirty';
@@ -28,20 +18,21 @@ import {
   parsePayrollMoney,
   payrollFlagLabelKey,
 } from '@/lib/utils/payroll-display';
-import {
-  buildOtBreakdownLines,
-  estimateNetIncrease,
-} from '@/lib/utils/payroll-entry-detail';
+import { buildOtBreakdownLines } from '@/lib/utils/payroll-entry-detail';
+import { entryWithTopUp, round2 } from '@/lib/utils/payroll-live';
 
 const KEY = 'hr.payroll.entryPanel';
 
 export type PayrollEntryTab = 'pay' | 'days' | 'overtime' | 'bonus';
 
+function money(value: number | string | null | undefined): string {
+  return formatPayrollMoney(value ?? 0, { emptyZero: false });
+}
+
 /**
- * Body of the payroll entry drawer: a summary strip (flag, department,
- * discipline, bank, links) and four tabs - pay details, paid days (override +
- * history), overtime (system + manual) and bonus / net top-ups - each editable
- * in place where the run allows it.
+ * Body of the payroll entry drawer, in four tabs: the pay statement (with
+ * employee details folded away), paid days, overtime and top-ups. Overtime and
+ * top-ups are spreadsheet-style grids that recalculate as you type.
  */
 export default function PayrollEntryDetailPanel({
   row,
@@ -67,18 +58,9 @@ export default function PayrollEntryDetailPanel({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const runEditable = run.status === 'DRAFT' || run.status === 'REVIEWED';
-  const canEditEntry = canEdit && runEditable;
-
-  const otPay = parsePayrollMoney(row.totalOtPay);
-  const topUps =
-    parsePayrollMoney(row.bonusTopUp) +
-    parsePayrollMoney(row.netTopUp) +
-    parsePayrollMoney(row.contractNetBonus);
 
   return (
     <div className="erp-pe">
-      <SummaryStrip row={row} run={run} />
-
       <Tabs
         size="small"
         activeKey={tab}
@@ -87,46 +69,19 @@ export default function PayrollEntryDetailPanel({
         items={[
           {
             key: 'pay',
-            label: (
-              <span className="erp-pe-tab-label">
-                <FileTextOutlined aria-hidden />
-                {t(`${KEY}.tabPay`)}
-              </span>
-            ),
-            children: <PayDetails row={row} />,
+            label: t(`${KEY}.tabPay`),
+            children: <PayStatement row={row} run={run} />,
           },
           {
             key: 'days',
-            label: (
-              <span className="erp-pe-tab-label">
-                <CalendarOutlined aria-hidden />
-                {t(`${KEY}.tabDays`)}
-                <span className="erp-pe-tab-count">
-                  {parsePayrollMoney(row.payrollDays)}
-                </span>
-              </span>
-            ),
+            label: t(`${KEY}.tabDays`),
             children: (
-              <PayrollPaidDaysPanel
-                runId={run.id}
-                entry={row}
-                canOverride={canOverrideDays}
-              />
+              <PayrollPaidDaysPanel runId={run.id} entry={row} canOverride={canOverrideDays} />
             ),
           },
           {
             key: 'overtime',
-            label: (
-              <span className="erp-pe-tab-label">
-                <ClockCircleOutlined aria-hidden />
-                {t(`${KEY}.tabOvertime`)}
-                {otPay > 0 ? (
-                  <span className="erp-pe-tab-count">
-                    {formatPayrollMoney(otPay, { emptyZero: false })}
-                  </span>
-                ) : null}
-              </span>
-            ),
+            label: t(`${KEY}.tabOvertime`),
             children: canEdit ? (
               <PayrollOtAdjustmentsSection
                 runId={run.id}
@@ -139,20 +94,8 @@ export default function PayrollEntryDetailPanel({
           },
           {
             key: 'bonus',
-            label: (
-              <span className="erp-pe-tab-label">
-                <GiftOutlined aria-hidden />
-                {t(`${KEY}.tabBonus`)}
-                {topUps > 0 ? (
-                  <span className="erp-pe-tab-count">
-                    {formatPayrollMoney(topUps, { emptyZero: false })}
-                  </span>
-                ) : null}
-              </span>
-            ),
-            children: (
-              <BonusTopUps row={row} run={run} canEdit={canEditEntry} />
-            ),
+            label: t(`${KEY}.tabBonus`),
+            children: <TopUpGrid row={row} canEdit={canEdit && runEditable} />,
           },
         ]}
       />
@@ -168,9 +111,9 @@ export default function PayrollEntryDetailPanel({
   );
 }
 
-// ── Summary strip ─────────────────────────────────────────────────────────
+// ── Pay statement ─────────────────────────────────────────────────────────
 
-function SummaryStrip({
+function PayStatement({
   row,
   run,
 }: {
@@ -178,38 +121,149 @@ function SummaryStrip({
   run: PayrollRunDetail;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const transport =
+    parsePayrollMoney(row.taxableTransport) + parsePayrollMoney(row.nonTaxableTransport);
+  const bonus = parsePayrollMoney(row.monthlyBonus) + parsePayrollMoney(row.bonusTopUp);
+  const netBonus = parsePayrollMoney(row.contractNetBonus) + parsePayrollMoney(row.netTopUp);
+  const lines: Array<{
+    key: string;
+    label: string;
+    sub?: string;
+    value: number;
+    kind?: 'deduct' | 'add' | 'total' | 'net';
+  }> = [
+    {
+      key: 'earned',
+      label: t(`${KEY}.earned`),
+      sub: t(`${KEY}.earnedSub`, {
+        basic: money(row.basicSalary),
+        days: parsePayrollMoney(row.payrollDays),
+      }),
+      value: parsePayrollMoney(row.earnedSalary),
+    },
+    { key: 'ot', label: t('hr.payroll.entry.otPay'), value: parsePayrollMoney(row.totalOtPay) },
+    { key: 'transport', label: t('hr.payroll.entry.transport'), value: transport },
+    { key: 'bonus', label: t('hr.payroll.entry.bonus'), value: bonus },
+    {
+      key: 'gross',
+      label: t('hr.payroll.entry.gross'),
+      value: parsePayrollMoney(row.grossIncome),
+      kind: 'total',
+    },
+    {
+      key: 'pension',
+      label: t('hr.payroll.entry.pensionEmp'),
+      value: parsePayrollMoney(row.pensionEmployee),
+      kind: 'deduct',
+    },
+    {
+      key: 'tax',
+      label: t('hr.payroll.entry.tax'),
+      sub: t(`${KEY}.taxableSub`, { amount: money(row.taxableIncome) }),
+      value: parsePayrollMoney(row.incomeTax),
+      kind: 'deduct',
+    },
+    ...(netBonus > 0
+      ? [{ key: 'netBonus', label: t('hr.payroll.entry.netBonus'), value: netBonus, kind: 'add' as const }]
+      : []),
+    { key: 'net', label: t('hr.payroll.entry.net'), value: parsePayrollMoney(row.netPay), kind: 'net' },
+  ];
+
   const bank = row.bankName
     ? `${row.bankName}${row.bankAccountNumber ? ` · ${row.bankAccountNumber}` : ''}`
-    : null;
-  const facts: Array<{ label: string; value: string | null; icon?: React.ReactNode }> = [
-    { label: t('hr.payroll.entry.department'), value: row.employee.department?.name ?? null },
-    {
-      label: t('hr.payroll.entry.discipline'),
-      value: row.employee.engineeringDiscipline?.name ?? null,
-    },
-    { label: t('hr.payroll.entry.bank'), value: bank, icon: <BankOutlined aria-hidden /> },
-    {
-      label: t('hr.payroll.entry.paidDays'),
-      value: String(parsePayrollMoney(row.payrollDays)),
-    },
-  ];
+    : '—';
   const links = [
     row.contractId
       ? { href: `/hr/employee-contract/${row.contractId}`, label: t('hr.payroll.entry.linkContract') }
       : null,
     row.attendanceRecordId
-      ? {
-          href: `/hr/attendance/review/${run.month}/${run.year}`,
-          label: t('hr.payroll.entry.linkAttendance'),
-        }
+      ? { href: `/hr/attendance/review/${run.month}/${run.year}`, label: t('hr.payroll.entry.linkAttendance') }
       : null,
     row.overtimeSheetId
       ? { href: `/hr/overtime/${row.overtimeSheetId}`, label: t('hr.payroll.entry.linkOvertime') }
       : null,
   ].filter((link): link is { href: string; label: string } => link != null);
 
+  const sections = [
+    ...(row.salaryPeriods.length > 0
+      ? [
+          {
+            key: 'periods',
+            label: t('hr.payroll.entry.salaryPeriods'),
+            children: (
+              <ul className="erp-pe-periods">
+                {row.salaryPeriods.map((period) => (
+                  <li key={period.id} className="erp-pe-period">
+                    <div className="min-w-0">
+                      <p className="erp-pe-period-dates">
+                        {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
+                        {dayjs(period.periodEnd).format('YYYY-MM-DD')}
+                      </p>
+                      <p className="erp-pe-muted">
+                        {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')} ·{' '}
+                        {t(`${KEY}.basic`, { amount: money(period.basicSalary) })}
+                      </p>
+                    </div>
+                    <span className="erp-pe-amount">{money(period.earnedSalary)}</span>
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: 'employee',
+      label: t(`${KEY}.employeeDetails`),
+      children: (
+        <div>
+          <dl className="erp-pe-kv">
+            <div>
+              <dt>{t('hr.payroll.entry.department')}</dt>
+              <dd>{row.employee.department?.name ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>{t('hr.payroll.entry.discipline')}</dt>
+              <dd>{row.employee.engineeringDiscipline?.name ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>{t('hr.payroll.entry.bank')}</dt>
+              <dd>{bank}</dd>
+            </div>
+          </dl>
+          {links.length > 0 ? (
+            <nav className="erp-pe-links" aria-label={t(`${KEY}.sources`)}>
+              {links.map((link) => (
+                <Link key={link.href} href={link.href} className="erp-pe-link">
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: 'notes',
+      label: t(`${KEY}.calculationNotes`),
+      children: row.notes ? (
+        <ul className="erp-pe-notes">
+          {row.notes
+            .split(/\.\s+/)
+            .map((part) => part.trim().replace(/\.$/, ''))
+            .filter(Boolean)
+            .map((part) => (
+              <li key={part}>{part}</li>
+            ))}
+        </ul>
+      ) : (
+        <p className="erp-pe-muted">{t(`${KEY}.noNotes`)}</p>
+      ),
+    },
+  ];
+
   return (
-    <div className="erp-pe-summary">
+    <div className="erp-pe-pay">
       {row.flag !== 'NONE' ? (
         <div className="erp-pe-flag" role="note">
           <WarningOutlined aria-hidden />
@@ -219,89 +273,29 @@ function SummaryStrip({
           </div>
         </div>
       ) : null}
-      <div className="erp-pe-summary-row">
-        <dl className="erp-pe-facts">
-          {facts.map((fact) => (
-            <div key={fact.label} className="erp-pe-fact">
-              <dt>{fact.label}</dt>
-              <dd>
-                {fact.icon}
-                <span>{fact.value || '—'}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        {links.length > 0 ? (
-          <nav className="erp-pe-links" aria-label={t(`${KEY}.sources`)}>
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className="erp-pe-link">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 
-// ── Pay details ───────────────────────────────────────────────────────────
+      <dl className="erp-pe-statement">
+        {lines.map((line) => (
+          <div key={line.key} className={line.kind ? `is-${line.kind}` : undefined}>
+            <dt>
+              {line.label}
+              {line.sub ? <small>{line.sub}</small> : null}
+            </dt>
+            <dd>
+              {line.kind === 'deduct' ? '− ' : line.kind === 'add' ? '+ ' : ''}
+              {money(line.value)}
+            </dd>
+          </div>
+        ))}
+      </dl>
 
-function PayDetails({ row }: { row: PayrollEntryDetail }): React.ReactNode {
-  const { t } = useEpcTranslation();
-  return (
-    <div className="erp-pe-grid">
-      <section className="erp-pe-card">
-        <h4 className="erp-pe-card-title">{t('hr.payroll.entry.salaryPeriods')}</h4>
-        {row.salaryPeriods.length === 0 ? (
-          <p className="erp-pe-muted">{t(`${KEY}.singlePeriod`)}</p>
-        ) : (
-          <ul className="erp-pe-periods">
-            {row.salaryPeriods.map((period) => {
-              const periodOt = parsePayrollMoney(period.totalOtPay);
-              return (
-                <li key={period.id} className="erp-pe-period">
-                  <div className="min-w-0">
-                    <p className="erp-pe-period-dates">
-                      {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
-                      {dayjs(period.periodEnd).format('YYYY-MM-DD')}
-                    </p>
-                    <p className="erp-pe-muted">
-                      {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
-                      {' · '}
-                      {t(`${KEY}.basic`, {
-                        amount: formatPayrollMoney(period.basicSalary, { emptyZero: false }),
-                      })}
-                      {periodOt > 0
-                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })}`
-                        : null}
-                    </p>
-                  </div>
-                  <span className="erp-pe-amount">
-                    {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-      <section className="erp-pe-card">
-        <h4 className="erp-pe-card-title">{t(`${KEY}.calculationNotes`)}</h4>
-        {row.notes ? (
-          <ul className="erp-pe-notes">
-            {row.notes
-              .split(/\.\s+/)
-              .map((part) => part.trim().replace(/\.$/, ''))
-              .filter(Boolean)
-              .map((part) => (
-                <li key={part}>{part}</li>
-              ))}
-          </ul>
-        ) : (
-          <p className="erp-pe-muted">{t(`${KEY}.noNotes`)}</p>
-        )}
-      </section>
+      <Collapse
+        ghost
+        size="small"
+        className="erp-pe-more"
+        items={sections}
+        defaultActiveKey={[]}
+      />
     </div>
   );
 }
@@ -311,240 +305,241 @@ function PayDetails({ row }: { row: PayrollEntryDetail }): React.ReactNode {
 function ReadOnlyOvertime({ row }: { row: PayrollEntryDetail }): React.ReactNode {
   const { t } = useEpcTranslation();
   const lines = buildOtBreakdownLines(row);
-  const basic = formatPayrollMoney(row.basicSalary, { emptyZero: false });
+  const basic = money(row.basicSalary);
+  if (lines.length === 0) {
+    return <p className="erp-pe-muted">{t(`${KEY}.noOvertime`)}</p>;
+  }
   return (
-    <section className="erp-pe-card">
-      <h4 className="erp-pe-card-title">{t('hr.payroll.entry.otBreakdown')}</h4>
-      {lines.length === 0 ? (
-        <p className="erp-pe-muted">{t(`${KEY}.noOvertime`)}</p>
-      ) : (
-        <ul className="erp-payroll-ot-lines">
-          {lines.map((line) => (
-            <li key={line.key}>
-              <span>{t(line.labelKey, { hours: line.hours, basic })}</span>
-              <span>{formatPayrollMoney(line.pay, { emptyZero: false })} ETB</span>
-            </li>
-          ))}
-          <li className="erp-payroll-ot-total">
-            <span>{t('hr.payroll.entry.otTotal')}</span>
-            <span>{formatPayrollMoney(row.totalOtPay, { emptyZero: false })} ETB</span>
-          </li>
-        </ul>
-      )}
-    </section>
-  );
-}
-
-// ── Bonus / net top-ups ───────────────────────────────────────────────────
-
-function BonusTopUps({
-  row,
-  run,
-  canEdit,
-}: {
-  row: PayrollEntryDetail;
-  run: PayrollRunDetail;
-  canEdit: boolean;
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const contractNetBonus = parsePayrollMoney(row.contractNetBonus);
-  return (
-    <div className="erp-pe-bonus">
-      {!canEdit && (run.status !== 'DRAFT' && run.status !== 'REVIEWED') ? (
-        <p className="erp-pe-muted">{t(`${KEY}.lockedRun`, { status: run.status })}</p>
-      ) : null}
-      <div className="erp-pe-grid erp-pe-grid--3">
-        <TopUpCard
-          row={row}
-          kind="taxable"
-          canEdit={canEdit}
-        />
-        <TopUpCard
-          row={row}
-          kind="net"
-          canEdit={canEdit}
-        />
-        <section className="erp-pe-card erp-pe-topup">
-          <header className="erp-pe-topup-head">
-            <div>
-              <h4 className="erp-pe-card-title">{t(`${KEY}.contractBonusTitle`)}</h4>
-              <p className="erp-pe-muted">{t(`${KEY}.contractBonusDesc`)}</p>
-            </div>
-          </header>
-          <p className="erp-pe-topup-amount">
-            {contractNetBonus > 0
-              ? `${formatPayrollMoney(contractNetBonus, { emptyZero: false })} ETB`
-              : t(`${KEY}.notSet`)}
-          </p>
-        </section>
+    <dl className="erp-pe-statement">
+      {lines.map((line) => (
+        <div key={line.key}>
+          <dt>{t(line.labelKey, { hours: line.hours, basic })}</dt>
+          <dd>{money(line.pay)}</dd>
+        </div>
+      ))}
+      <div className="is-total">
+        <dt>{t('hr.payroll.entry.otTotal')}</dt>
+        <dd>{money(row.totalOtPay)}</dd>
       </div>
-    </div>
+    </dl>
   );
 }
 
-function TopUpCard({
+// ── Top-ups grid ──────────────────────────────────────────────────────────
+
+interface TopUpDraft {
+  amount: number | null;
+  reason: string;
+}
+
+function TopUpGrid({
   row,
-  kind,
   canEdit,
 }: {
   row: PayrollEntryDetail;
-  kind: 'taxable' | 'net';
   canEdit: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const update = useUpdatePayrollEntry(row.runId);
-  const current =
-    kind === 'taxable' ? parsePayrollMoney(row.bonusTopUp) : parsePayrollMoney(row.netTopUp);
-  const currentReason =
-    (kind === 'taxable' ? row.bonusTopUpReason : row.netTopUpReason)?.trim() ?? '';
-  const [editing, setEditing] = useState(false);
-  const [amount, setAmount] = useState<number | null>(current || null);
-  const [reason, setReason] = useState(currentReason);
-  useReportDirty(
-    `top-up-${kind}`,
-    editing && ((amount ?? 0) !== current || reason.trim() !== currentReason),
-  );
 
-  const value = amount ?? 0;
-  const reasonMissing = value > 0 && !reason.trim();
-  // Preview the change from the current figure (current top-up is already in taxable income).
-  const preview =
-    kind === 'taxable'
-      ? estimateNetIncrease(
-          'taxable',
-          value,
-          parsePayrollMoney(row.taxableIncome) - current,
-        ) - estimateNetIncrease('taxable', current, parsePayrollMoney(row.taxableIncome) - current)
-      : value - current;
+  const savedTaxable: TopUpDraft = {
+    amount: parsePayrollMoney(row.bonusTopUp) || null,
+    reason: row.bonusTopUpReason?.trim() ?? '',
+  };
+  const savedNet: TopUpDraft = {
+    amount: parsePayrollMoney(row.netTopUp) || null,
+    reason: row.netTopUpReason?.trim() ?? '',
+  };
+  const [taxable, setTaxable] = useState<TopUpDraft>(savedTaxable);
+  const [net, setNet] = useState<TopUpDraft>(savedNet);
 
-  function startEdit(): void {
-    setAmount(current || null);
-    setReason(currentReason);
-    setEditing(true);
+  const same = (a: TopUpDraft, b: TopUpDraft): boolean =>
+    (a.amount ?? 0) === (b.amount ?? 0) && a.reason.trim() === b.reason.trim();
+  const taxableChanged = !same(taxable, savedTaxable);
+  const netChanged = !same(net, savedNet);
+  const changed = taxableChanged || netChanged;
+  const missingReason =
+    ((taxable.amount ?? 0) > 0 && !taxable.reason.trim()) ||
+    ((net.amount ?? 0) > 0 && !net.reason.trim());
+  useReportDirty('top-ups', changed);
+
+  // Live effect on net pay (estimated tax for the taxable top-up).
+  const baseNet = parsePayrollMoney(row.netPay);
+  const afterTaxable = entryWithTopUp(row, 'taxable', taxable.amount ?? 0, null);
+  const taxableEffect = round2(parsePayrollMoney(afterTaxable.netPay) - baseNet);
+  const netEffect = round2((net.amount ?? 0) - parsePayrollMoney(row.netTopUp));
+
+  function revert(): void {
+    setTaxable(savedTaxable);
+    setNet(savedNet);
   }
 
-  async function save(next: number, nextReason: string): Promise<void> {
-    const payload =
-      kind === 'taxable'
-        ? { bonusTopUp: next, bonusTopUpReason: nextReason || undefined }
-        : { netTopUp: next, netTopUpReason: nextReason || undefined };
-    try {
-      await update.mutateAsync({ entryId: row.id, payload });
-      messageApi.success(
-        next === 0 ? t(`${KEY}.topUpRemoved`) : t('hr.payroll.entry.bonusSaved'),
-      );
-      setEditing(false);
-    } catch (error) {
-      notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t);
+  function save(): void {
+    if (!changed || missingReason) {
+      if (missingReason) messageApi.error(t('hr.payroll.entry.bonusReasonRequired'));
+      return;
+    }
+    update.mutate(
+      {
+        entryId: row.id,
+        payload: {
+          ...(taxableChanged
+            ? {
+                bonusTopUp: taxable.amount ?? 0,
+                bonusTopUpReason: taxable.reason.trim() || undefined,
+              }
+            : {}),
+          ...(netChanged
+            ? { netTopUp: net.amount ?? 0, netTopUpReason: net.reason.trim() || undefined }
+            : {}),
+        },
+      },
+      {
+        onError: (error: unknown) =>
+          notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t),
+      },
+    );
+  }
+
+  function onKeyDown(event: React.KeyboardEvent): void {
+    if (event.key === 'Enter' && !(event.target instanceof HTMLTextAreaElement)) {
+      event.preventDefault();
+      save();
+    } else if (event.key === 'Escape' && changed) {
+      event.stopPropagation();
+      revert();
     }
   }
 
-  const title = kind === 'taxable' ? t(`${KEY}.taxableTitle`) : t(`${KEY}.netTitle`);
-  const description = kind === 'taxable' ? t(`${KEY}.taxableDesc`) : t(`${KEY}.netDesc`);
+  const rows: Array<{
+    key: 'taxable' | 'net';
+    label: string;
+    sub: string;
+    draft: TopUpDraft;
+    set: (next: TopUpDraft) => void;
+    effect: number;
+  }> = [
+    {
+      key: 'taxable',
+      label: t(`${KEY}.taxableTitle`),
+      sub: t(`${KEY}.taxableDesc`),
+      draft: taxable,
+      set: setTaxable,
+      effect: taxableEffect,
+    },
+    {
+      key: 'net',
+      label: t(`${KEY}.netTitle`),
+      sub: t(`${KEY}.netDesc`),
+      draft: net,
+      set: setNet,
+      effect: netEffect,
+    },
+  ];
 
   return (
-    <section className={`erp-pe-card erp-pe-topup${editing ? ' is-editing' : ''}`}>
-      <header className="erp-pe-topup-head">
-        <div className="min-w-0">
-          <h4 className="erp-pe-card-title">{title}</h4>
-          <p className="erp-pe-muted">{description}</p>
-        </div>
-        {canEdit && !editing ? (
-          <div className="erp-pe-actions">
-            <Button
-              size="small"
-              icon={current > 0 ? <EditOutlined /> : <PlusOutlined />}
-              onClick={startEdit}
-            >
-              {current > 0 ? t(`${KEY}.edit`) : t(`${KEY}.add`)}
-            </Button>
-            {current > 0 ? (
-              <Popconfirm
-                title={t(`${KEY}.removeConfirm`)}
-                okText={t(`${KEY}.remove`)}
-                cancelText={t('common.cancel')}
-                okButtonProps={{ danger: true }}
-                onConfirm={() => save(0, '')}
-              >
-                <Button
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  aria-label={t(`${KEY}.remove`)}
-                />
-              </Popconfirm>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
-
-      {editing ? (
-        <div className="erp-pe-form">
-          <label className="erp-pe-field">
-            <span>
-              {kind === 'taxable'
-                ? t('hr.payroll.entry.bonusTopUpAmount')
-                : t('hr.payroll.entry.netTopUpAmount')}
-            </span>
-            <InputNumber
-              autoFocus
-              min={0}
-              precision={2}
-              value={amount}
-              onChange={(next) => setAmount(typeof next === 'number' ? next : null)}
-              className="w-full"
-            />
-          </label>
-          <label className="erp-pe-field">
-            <span>{t('hr.payroll.entry.bonusTopUpReason')}</span>
-            <Input.TextArea
-              rows={2}
-              maxLength={500}
-              value={reason}
-              status={reasonMissing ? 'error' : undefined}
-              onChange={(event) => setReason(event.target.value)}
-            />
-            {reasonMissing ? (
-              <span className="erp-pe-error">{t('hr.payroll.entry.bonusReasonRequired')}</span>
-            ) : null}
-          </label>
-          {value !== current ? (
-            <Alert
-              type="info"
-              showIcon
-              title={t(`${KEY}.netChange`, {
-                amount: `${preview >= 0 ? '+' : '−'}${formatPayrollMoney(Math.abs(preview), {
-                  emptyZero: false,
-                })}`,
-              })}
-            />
-          ) : null}
-          <div className="erp-pe-form-actions">
-            <Button size="small" onClick={() => setEditing(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              size="small"
-              type="primary"
-              loading={update.isPending}
-              disabled={reasonMissing || (value === current && reason.trim() === currentReason)}
-              onClick={() => void save(value, reason.trim())}
-            >
-              {t('common.save')}
-            </Button>
-          </div>
-        </div>
-      ) : current > 0 ? (
-        <div>
-          <p className="erp-pe-topup-amount">
-            {formatPayrollMoney(current, { emptyZero: false })} ETB
+    <div className="erp-otg" onKeyDown={canEdit ? onKeyDown : undefined}>
+      <p className="erp-otg-hint">
+        {canEdit ? t(`${KEY}.topUpHint`) : t(`${KEY}.topUpLocked`)}
+      </p>
+      <div className="erp-otg-scroll">
+        <table className="erp-otg-table erp-otg-table--topups">
+          <thead>
+            <tr>
+              <th scope="col">{t(`${KEY}.colType`)}</th>
+              <th scope="col" className="is-num">{t(`${KEY}.colAmount`)}</th>
+              <th scope="col">{t(`${KEY}.colReason`)}</th>
+              <th scope="col" className="is-num">{t(`${KEY}.colNetEffect`)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((item) => {
+              const reasonMissing = (item.draft.amount ?? 0) > 0 && !item.draft.reason.trim();
+              return (
+                <tr key={item.key}>
+                  <th scope="row">
+                    {item.label}
+                    <small>{item.sub}</small>
+                  </th>
+                  <td className="is-num">
+                    {canEdit ? (
+                      <InputNumber
+                        size="small"
+                        controls={false}
+                        min={0}
+                        precision={2}
+                        value={item.draft.amount}
+                        placeholder="0"
+                        aria-label={item.label}
+                        className="erp-otg-input erp-otg-input--money"
+                        onChange={(value) =>
+                          item.set({
+                            ...item.draft,
+                            amount: typeof value === 'number' ? value : null,
+                          })
+                        }
+                      />
+                    ) : (
+                      money(item.draft.amount)
+                    )}
+                  </td>
+                  <td>
+                    {canEdit ? (
+                      <Input
+                        size="small"
+                        value={item.draft.reason}
+                        maxLength={500}
+                        status={reasonMissing ? 'error' : undefined}
+                        placeholder={t(`${KEY}.reasonPlaceholder`)}
+                        aria-label={t(`${KEY}.reasonFor`, { type: item.label })}
+                        onChange={(event) =>
+                          item.set({ ...item.draft, reason: event.target.value })
+                        }
+                      />
+                    ) : (
+                      item.draft.reason || '—'
+                    )}
+                  </td>
+                  <td className={`is-num ${item.effect < 0 ? 'erp-otg-neg' : item.effect > 0 ? 'erp-otg-pos' : 'is-muted'}`}>
+                    {item.effect === 0
+                      ? '—'
+                      : `${item.effect > 0 ? '+' : '−'}${money(Math.abs(item.effect))}`}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="is-readonly">
+              <th scope="row">
+                {t(`${KEY}.contractBonusTitle`)}
+                <small>{t(`${KEY}.contractBonusDesc`)}</small>
+              </th>
+              <td className="is-num">{money(row.contractNetBonus)}</td>
+              <td className="is-muted">—</td>
+              <td className="is-num is-muted">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {canEdit && changed ? (
+        <div className="erp-otg-foot">
+          <p className="erp-otg-meta">
+            {missingReason ? (
+              <span className="is-error">{t('hr.payroll.entry.bonusReasonRequired')}</span>
+            ) : (
+              t(`${KEY}.unsaved`)
+            )}
           </p>
-          {currentReason ? <p className="erp-pe-muted">{currentReason}</p> : null}
+          <div className="erp-otg-actions">
+            <Button size="small" onClick={revert}>
+              {t('hr.payroll.otAdjust.revert')}
+            </Button>
+            <Button size="small" type="primary" disabled={missingReason} onClick={save}>
+              {t('hr.payroll.otAdjust.saveEnter')}
+            </Button>
+          </div>
         </div>
-      ) : (
-        <p className="erp-pe-topup-amount erp-pe-topup-amount--empty">{t(`${KEY}.notSet`)}</p>
-      )}
-    </section>
+      ) : null}
+    </div>
   );
 }

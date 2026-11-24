@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
 import { Button, Drawer, Tag, Tooltip } from 'antd';
 import { FilePdfOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import PayrollEntryDetailPanel, {
@@ -55,6 +56,8 @@ export default function PayrollEntryDrawer({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const modal = useAppModal();
+  // Any save in flight (the figures shown are already the instant estimate).
+  const saving = useIsMutating() > 0;
   const [tab, setTab] = useState<PayrollEntryTab>('pay');
   const dirty = useRef(new Set<string>());
 
@@ -152,6 +155,17 @@ export default function PayrollEntryDrawer({
                 onClick={() => next && guard(() => onNavigate(next.id))}
               />
             </Tooltip>
+            {payslipId && onOpenPayslip ? (
+              <Tooltip title={t('hr.payroll.payslips.openPdf')}>
+                <Button
+                  size="small"
+                  icon={<FilePdfOutlined />}
+                  loading={payslipLoading}
+                  aria-label={t('hr.payroll.payslips.openPdf')}
+                  onClick={() => onOpenPayslip(payslipId)}
+                />
+              </Tooltip>
+            ) : null}
           </div>
         ) : null
       }
@@ -159,38 +173,28 @@ export default function PayrollEntryDrawer({
       {entry ? (
         <PayrollEntryDirtyProvider value={reportDirty}>
           <div className="erp-pe-drawer-body">
-            <dl className="erp-pe-headline">
+            <div className="erp-pe-paybar" aria-live="polite">
               <div>
-                <dt>{t('hr.payroll.entry.paidDays')}</dt>
-                <dd>{parsePayrollMoney(entry.payrollDays)}</dd>
+                <span>{t('hr.payroll.entry.gross')}</span>
+                <strong>{formatPayrollMoney(entry.grossIncome, { emptyZero: false })}</strong>
               </div>
+              <span className="erp-pe-paybar-op" aria-hidden>−</span>
               <div>
-                <dt>{t('hr.payroll.entry.gross')}</dt>
-                <dd>{formatPayrollMoney(entry.grossIncome, { emptyZero: false })}</dd>
+                <span>{t(`${KEY}.deductions`)}</span>
+                <strong>{formatPayrollMoney(deductions, { emptyZero: false })}</strong>
               </div>
-              <div>
-                <dt>{t(`${KEY}.deductions`)}</dt>
-                <dd>{formatPayrollMoney(deductions, { emptyZero: false })}</dd>
-              </div>
+              <span className="erp-pe-paybar-op" aria-hidden>=</span>
               <div className="is-net">
-                <dt>{t('hr.payroll.entry.net')}</dt>
-                <dd>
+                <span>
+                  {t('hr.payroll.entry.net')}
+                  {saving ? <em className="erp-pe-paybar-saving">{t(`${KEY}.updating`)}</em> : null}
+                </span>
+                <strong>
                   {formatPayrollMoney(entry.netPay, { emptyZero: false })}
                   <small> ETB</small>
-                </dd>
+                </strong>
               </div>
-            </dl>
-            {payslipId && onOpenPayslip ? (
-              <Button
-                size="small"
-                icon={<FilePdfOutlined />}
-                loading={payslipLoading}
-                onClick={() => onOpenPayslip(payslipId)}
-                className="erp-pe-payslip-btn"
-              >
-                {t('hr.payroll.payslips.openPdf')}
-              </Button>
-            ) : null}
+            </div>
             {/* Remount per employee so open forms never carry over. */}
             <PayrollEntryDetailPanel
               key={entry.id}

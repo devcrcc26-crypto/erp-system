@@ -274,7 +274,20 @@ export interface PayrollRunDetail {
   paidBy: string | null;
   createdAt: string;
   updatedAt: string;
+  /** People on the approval steps (names come with the run). */
+  creator?: PayrollRunPerson | null;
+  submitter?: PayrollRunPerson | null;
+  approver?: PayrollRunPerson | null;
+  gmApprover?: PayrollRunPerson | null;
+  payer?: PayrollRunPerson | null;
   entries: PayrollEntryDetail[];
+}
+
+export interface PayrollRunPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  chineseName: string | null;
 }
 
 export interface CreatePayrollCorrectionPayload {
@@ -405,6 +418,10 @@ export interface PayrollOtBreakdown {
   categories: PayrollOtCategoryBreakdown[];
   totals: { systemPay: number; manualPay: number; totalPay: number };
   adjustments: PayrollOtAdjustment[];
+  /** Pay per manual hour by category, for live previews while typing. */
+  rates?: Record<PayrollOtCategory, number>;
+  /** After a save: the repriced entry (patched into the run without a reload). */
+  entry?: Partial<PayrollEntryDetail> & { id: string };
 }
 
 export interface UpsertPayrollOtAdjustmentPayload {

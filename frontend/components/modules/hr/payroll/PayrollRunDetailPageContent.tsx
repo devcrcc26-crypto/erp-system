@@ -15,6 +15,7 @@ import {
   Modal,
   Popconfirm,
   Select,
+  Skeleton,
   Spin,
   Steps,
   Switch,
@@ -69,6 +70,7 @@ import {
 import type {
   MoneyField,
   PayrollEntryDetail,
+  PayrollRunPerson,
   PayrollEntryFlag,
   PayrollRunStatus,
 } from '@/lib/api/payroll.types';
@@ -92,7 +94,6 @@ import {
   useSubmitPayrollRun,
   useUnlockPayrollRun,
 } from '@/lib/query/payroll';
-import { useFullUsersDirectory } from '@/lib/query/users';
 import {
   countEntryFlags,
   formatPayrollMoney,
@@ -227,18 +228,15 @@ function SplitCell({
 
 const MOBILE_PAGE_SIZE = 20;
 
-function resolveUserLabel(
+/** Name of a person on an approval step (sent with the run). */
+function personLabel(
+  person: PayrollRunPerson | null | undefined,
   userId: string | null | undefined,
-  directory: Map<string, { firstName: string; lastName: string; chineseName: string | null }>,
 ): string {
-  if (!userId) {
-    return '-';
+  if (person) {
+    return formatUserName(person);
   }
-  const user = directory.get(userId);
-  if (!user) {
-    return userId.slice(0, 8);
-  }
-  return formatUserName(user);
+  return userId ? userId.slice(0, 8) : '-';
 }
 
 function StepMeta({ who, when }: { who: string; when: string }): React.ReactNode {
@@ -287,7 +285,6 @@ export default function PayrollRunDetailPageContent({
 
   const detailQuery = usePayrollRun(runId, canAccess);
   const runsQuery = usePayrollRuns(canAccess && canManageCorrections);
-  const usersQuery = useFullUsersDirectory({ enabled: canAccess });
   const screens = Grid.useBreakpoint();
   const isPhone = screens.md === false;
   const recalculateMutation = useRecalculatePayrollRun(runId);
@@ -347,17 +344,6 @@ export default function PayrollRunDetailPageContent({
   const [zipping, setZipping] = useState(false);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [openingPayslipId, setOpeningPayslipId] = useState<string | null>(null);
-
-  const userDirectory = useMemo(() => {
-    const map = new Map<
-      string,
-      { firstName: string; lastName: string; chineseName: string | null }
-    >();
-    for (const user of usersQuery.data ?? []) {
-      map.set(user.id, user);
-    }
-    return map;
-  }, [usersQuery.data]);
 
   const run = detailQuery.data;
 
@@ -1464,10 +1450,24 @@ export default function PayrollRunDetailPageContent({
   }
 
   if (detailQuery.isLoading && !run) {
+    // Page-shaped placeholder so the layout does not jump when data arrives.
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
-        <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-12">
-          <Spin />
+      <div
+        className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2"
+        aria-busy="true"
+      >
+        <div className="erp-payroll-skeleton erp-payroll-skeleton--hero">
+          <Skeleton active title={{ width: '30%' }} paragraph={{ rows: 2, width: ['45%', '60%'] }} />
+        </div>
+        <div className="erp-payroll-skeleton-tiles">
+          {[0, 1, 2, 3, 4].map((index) => (
+            <div key={index} className="erp-payroll-skeleton">
+              <Skeleton active title={false} paragraph={{ rows: 2, width: ['60%', '80%'] }} />
+            </div>
+          ))}
+        </div>
+        <div className="erp-payroll-skeleton">
+          <Skeleton active title={{ width: '20%' }} paragraph={{ rows: 8 }} />
         </div>
       </div>
     );
@@ -1967,7 +1967,7 @@ export default function PayrollRunDetailPageContent({
                 title: t('hr.payroll.steps.submitted'),
                 content: run.submittedAt ? (
                   <StepMeta
-                    who={resolveUserLabel(run.submittedBy, userDirectory)}
+                    who={personLabel(run.submitter, run.submittedBy)}
                     when={run.submittedAt}
                   />
                 ) : undefined,
@@ -1976,7 +1976,7 @@ export default function PayrollRunDetailPageContent({
                 title: t('hr.payroll.steps.hrApproved'),
                 content: run.approvedAt ? (
                   <StepMeta
-                    who={resolveUserLabel(run.approvedBy, userDirectory)}
+                    who={personLabel(run.approver, run.approvedBy)}
                     when={run.approvedAt}
                   />
                 ) : undefined,
@@ -1985,7 +1985,7 @@ export default function PayrollRunDetailPageContent({
                 title: t('hr.payroll.steps.gmApproved'),
                 content: run.gmApprovedAt ? (
                   <StepMeta
-                    who={resolveUserLabel(run.gmApprovedBy, userDirectory)}
+                    who={personLabel(run.gmApprover, run.gmApprovedBy)}
                     when={run.gmApprovedAt}
                   />
                 ) : undefined,
@@ -1994,7 +1994,7 @@ export default function PayrollRunDetailPageContent({
                 title: t('hr.payroll.steps.paid'),
                 content: run.paidAt ? (
                   <StepMeta
-                    who={resolveUserLabel(run.paidBy, userDirectory)}
+                    who={personLabel(run.payer, run.paidBy)}
                     when={run.paidAt}
                   />
                 ) : undefined,

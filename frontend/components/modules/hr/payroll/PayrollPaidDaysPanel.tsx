@@ -72,7 +72,7 @@ export default function PayrollPaidDaysPanel({
   return (
     <div className="erp-pe-days">
       <section className="erp-pe-card">
-        <header className="erp-pe-topup-head">
+        <header className="erp-pe-card-head">
           <div className="min-w-0">
             <h4 className="erp-pe-card-title">
               {t('hr.payroll.entry.paidDays')}

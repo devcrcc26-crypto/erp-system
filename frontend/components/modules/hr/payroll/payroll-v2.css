@@ -673,7 +673,6 @@
   box-shadow: 0 -6px 10px -8px rgba(16, 24, 40, 0.18);
 }
 
-
 .erp-payroll-employee-name {
   margin: 0;
   color: var(--pr-strong);
@@ -1432,7 +1431,6 @@
   font-size: 12px;
 }
 
-
 /* ── Run detail: phone entry cards (table is too wide below 768px) ── */
 
 .erp-payroll-entry-cards {
@@ -1741,11 +1739,6 @@
 }
 
 /* Summary strip: flag, facts, source links. */
-.erp-pe-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
 /* Flag callout: #b54708 on #fffaeb 5.6:1. */
 .erp-pe-flag {
@@ -1773,55 +1766,6 @@
   margin: 2px 0 0;
   color: #93370d;
   font-size: 13px;
-}
-
-.erp-pe-summary-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px 16px;
-}
-
-.erp-pe-facts {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 420px;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-}
-
-.erp-pe-fact {
-  min-width: 0;
-  max-width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--erp-n-200);
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.erp-pe-fact dt {
-  color: var(--erp-n-600);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.erp-pe-fact dd {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 1px 0 0;
-  color: var(--erp-n-900);
-  font-size: 13px;
-  font-weight: 550;
-  overflow-wrap: anywhere;
-}
-
-.erp-pe-fact dd .anticon {
-  color: var(--erp-n-500);
 }
 
 .erp-pe-links {
@@ -1858,33 +1802,7 @@
   margin-bottom: 12px;
 }
 
-.erp-pe-tab-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.erp-pe-tab-count {
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--erp-accent-light);
-  color: var(--erp-accent-hover);
-  font-size: 11px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  line-height: 18px;
-}
-
 /* Cards */
-.erp-pe-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.erp-pe-grid--3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
 
 .erp-pe-card {
   min-width: 0;
@@ -1892,6 +1810,17 @@
   border: 1px solid var(--erp-n-200);
   border-radius: 12px;
   background: #ffffff;
+}
+
+.erp-pe-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.erp-pe-card-head .erp-pe-card-title {
+  margin-bottom: 2px;
 }
 
 .erp-pe-card-title {
@@ -1964,49 +1893,7 @@
 }
 
 /* Top-ups */
-.erp-pe-bonus {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
-.erp-pe-topup {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.erp-pe-topup.is-editing {
-  border-color: var(--erp-accent);
-  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.12);
-}
-
-.erp-pe-topup-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.erp-pe-topup-head .erp-pe-card-title {
-  margin-bottom: 2px;
-}
-
-.erp-pe-topup-amount {
-  margin: 0;
-  color: var(--erp-n-900);
-  font-size: 18px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.erp-pe-topup-amount--empty {
-  color: var(--erp-n-500);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.erp-pe-actions,
 .erp-pe-form-actions {
   display: flex;
   flex-shrink: 0;
@@ -2047,68 +1934,226 @@
   border-top: 1px solid var(--erp-n-150);
 }
 
-/* ── Overtime tab (PayrollOtAdjustmentsSection) ── */
+/* ── Spreadsheet grids: Overtime and Top-ups tabs ── */
 
-.erp-payroll-otadj {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  align-items: start;
-  gap: 12px;
-}
-
-.erp-payroll-otadj--loading {
+.erp-otg {
   display: flex;
-  justify-content: center;
-  padding: 24px 0;
-}
-
-.erp-payroll-otadj-col {
-  display: flex;
-  min-width: 0;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.erp-payroll-otadj-block {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--erp-n-200);
-  border-radius: 12px;
-  background: #ffffff;
-}
-
-/* Manual block is visually distinct from system OT (amber edge). */
-.erp-payroll-otadj-block--manual {
-  border-left: 3px solid #f79009;
-}
-
-.erp-payroll-otadj-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.erp-payroll-otadj-title {
+.erp-otg-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin: 0;
-  color: var(--erp-n-900);
-  font-size: 13px;
-  font-weight: 650;
+  justify-content: space-between;
+  gap: 6px 12px;
 }
 
-.erp-payroll-otadj-sub {
-  margin: 2px 0 0;
+.erp-otg-hint {
+  margin: 0;
   color: var(--erp-n-600);
   font-size: 12px;
-  line-height: 1.45;
 }
 
-/* #b54708 on #fffaeb: 5.6:1. */
+.erp-otg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--erp-accent-hover) !important;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.erp-otg-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.erp-otg-table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.erp-otg-table th,
+.erp-otg-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--erp-n-100);
+  vertical-align: middle;
+}
+
+.erp-otg-table thead th {
+  background: var(--erp-n-50);
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.erp-otg-table tbody th {
+  color: var(--erp-n-900);
+  font-weight: 600;
+  text-align: left;
+}
+
+.erp-otg-table tbody th small {
+  display: block;
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.erp-otg-table tfoot th,
+.erp-otg-table tfoot td {
+  border-bottom: 0;
+  background: var(--erp-n-50);
+  color: var(--erp-n-900);
+  font-weight: 650;
+  text-align: left;
+}
+
+.erp-otg-table .is-num,
+.erp-otg-table tfoot .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.erp-otg-table .is-muted {
+  color: var(--erp-n-500);
+}
+
+.erp-otg-table .is-strong {
+  color: var(--erp-n-900);
+  font-weight: 600;
+}
+
+/* Manual column: the editable one, tinted like a highlighted spreadsheet column. */
+.erp-otg-table .is-manual {
+  background: #fffcf5;
+}
+
+.erp-otg-table thead .is-manual {
+  background: #fef6e7;
+}
+
+.erp-otg-table tr.is-readonly th,
+.erp-otg-table tr.is-readonly td {
+  background: var(--erp-n-25, #fbfcfe);
+}
+
+.erp-otg-tag.ant-tag {
+  margin-left: 6px;
+  font-size: 10px;
+  line-height: 16px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Cell inputs look like spreadsheet cells until focused. */
+.erp-otg-input.ant-input-number {
+  width: 88px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.erp-otg-input--money.ant-input-number {
+  width: 120px;
+}
+
+.erp-otg-input.ant-input-number:hover {
+  border-color: var(--erp-n-300);
+  background: #ffffff;
+}
+
+.erp-otg-input.ant-input-number-focused,
+.erp-otg-input.ant-input-number:focus-within {
+  border-color: var(--erp-accent);
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(var(--erp-accent-rgb), 0.15);
+}
+
+.erp-otg-input .ant-input-number-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-otg-input.is-negative .ant-input-number-input {
+  color: #b42318;
+}
+
+.erp-otg-table td .ant-input {
+  min-width: 160px;
+}
+
+.erp-otg-pos {
+  color: #067647;
+  font-weight: 600;
+}
+
+.erp-otg-neg {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.erp-otg-cap {
+  margin-left: 4px;
+  color: #b54708;
+}
+
+.erp-otg-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.erp-otg-note > span {
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-otg-note small.is-error,
+.erp-otg .is-error {
+  color: #b42318;
+  font-size: 12px;
+}
+
+.erp-otg-saved-note {
+  margin: 0;
+  color: var(--erp-n-800);
+  font-size: 13px;
+}
+
+.erp-otg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.erp-otg-meta {
+  margin: 0;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-otg-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* "Manual adjustment" tag: #b54708 on #fffaeb 5.6:1. */
 .erp-payroll-otadj-tag.ant-tag {
   margin: 0;
   border-color: #fedf89;
@@ -2118,340 +2163,210 @@
   font-weight: 600;
 }
 
-.erp-payroll-otadj-link {
-  display: inline-flex;
-  flex-shrink: 0;
+/* ── Drawer body: pay bar, statement, folded details ── */
+
+.erp-pe-paybar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-  color: var(--erp-accent-hover) !important;
-  font-size: 12px;
-  font-weight: 550;
+  gap: 6px 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 12px;
+  background: #ffffff;
 }
 
-.erp-payroll-otadj-empty {
-  margin: 0 0 8px;
-  color: var(--erp-n-600);
-  font-size: 12px;
+.erp-pe-paybar > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
 }
 
-.erp-payroll-otadj-placeholder {
-  padding: 14px;
-  border: 1px dashed var(--erp-n-200);
-  border-radius: 10px;
-  text-align: center;
-}
-
-.erp-payroll-otadj-placeholder p {
-  margin: 0;
-  color: var(--erp-n-700);
-  font-size: 13px;
-}
-
-.erp-payroll-otadj-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.erp-payroll-otadj-table th {
-  padding: 4px 0;
-  border-bottom: 1px solid var(--erp-n-150);
+.erp-pe-paybar span {
   color: var(--erp-n-600);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  text-align: left;
   text-transform: uppercase;
 }
 
-.erp-payroll-otadj-table td {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--erp-n-100);
-  color: var(--erp-n-800);
+.erp-pe-paybar strong {
+  color: var(--erp-n-900);
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
-.erp-payroll-otadj-table tfoot th,
-.erp-payroll-otadj-table tfoot td {
-  padding-top: 8px;
-  border: 0;
-  color: var(--erp-n-900);
-  font-size: 13px;
-  font-weight: 650;
+.erp-pe-paybar .is-net {
+  margin-left: auto;
+  text-align: right;
+}
+
+.erp-pe-paybar .is-net strong {
+  color: var(--erp-accent-hover);
+  font-size: 20px;
+}
+
+.erp-pe-paybar .is-net small {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.erp-pe-paybar-op {
+  color: var(--erp-n-400) !important;
+  font-size: 16px !important;
+}
+
+.erp-pe-paybar-saving {
+  margin-left: 6px;
+  color: var(--erp-accent-hover);
+  font-style: normal;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
 
-.erp-payroll-otadj-table .is-num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.erp-payroll-otadj-rows {
+.erp-pe-pay {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.erp-pe-statement {
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.erp-payroll-otadj-row {
-  padding: 10px 12px;
-  border: 1px solid var(--erp-n-150);
+  border: 1px solid var(--erp-n-200);
   border-radius: 10px;
-  background: var(--erp-n-25, #fbfcfe);
+  background: #ffffff;
 }
 
-.erp-payroll-otadj-row-main {
+.erp-pe-statement > div {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--erp-n-100);
 }
 
-.erp-payroll-otadj-cat {
+.erp-pe-statement > div:last-child {
+  border-bottom: 0;
+}
+
+.erp-pe-statement dt {
+  min-width: 0;
+  color: var(--erp-n-800);
+  font-size: 13px;
+}
+
+.erp-pe-statement dt small {
+  display: block;
+  color: var(--erp-n-600);
+  font-size: 11px;
+}
+
+.erp-pe-statement dd {
+  margin: 0;
   color: var(--erp-n-900);
   font-size: 13px;
-  font-weight: 650;
-}
-
-.erp-payroll-otadj-hours {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: #ecfdf3;
-  color: #067647;
-  font-size: 12px;
-  font-weight: 650;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.erp-payroll-otadj-hours.is-negative {
-  background: #fef3f2;
+.erp-pe-statement .is-total {
+  background: var(--erp-n-50);
+}
+
+.erp-pe-statement .is-total dt,
+.erp-pe-statement .is-total dd {
+  font-weight: 650;
+}
+
+.erp-pe-statement .is-deduct dd {
   color: #b42318;
 }
 
-.erp-payroll-otadj-amount {
-  margin-left: auto;
-  color: var(--erp-n-900);
+.erp-pe-statement .is-add dd {
+  color: #067647;
+}
+
+.erp-pe-statement .is-net {
+  border-radius: 0 0 10px 10px;
+  background: var(--erp-accent-wash, #f3f7fd);
+}
+
+.erp-pe-statement .is-net dt,
+.erp-pe-statement .is-net dd {
+  color: var(--erp-accent-hover);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.erp-pe-more.ant-collapse .ant-collapse-header {
+  padding: 6px 0 !important;
+  color: var(--erp-n-800);
   font-size: 13px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
-.erp-payroll-otadj-row-actions {
-  display: inline-flex;
+.erp-pe-more.ant-collapse .ant-collapse-content-box {
+  padding: 4px 0 10px !important;
 }
 
-.erp-payroll-otadj-note {
-  margin: 4px 0 0;
-  color: var(--erp-n-800);
+.erp-pe-kv {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.erp-pe-kv dt {
+  color: var(--erp-n-600);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.erp-pe-kv dd {
+  margin: 1px 0 0;
+  color: var(--erp-n-900);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
 
-.erp-payroll-otadj-meta {
-  margin: 4px 0 0;
-  color: var(--erp-n-600);
-  font-size: 12px;
-}
+/* ── Page loading skeleton ── */
 
-.erp-payroll-otadj-head-actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* Spreadsheet-style manual OT hours (one column per category). */
-.erp-payroll-otadj-sheet {
-  min-width: 0;
-}
-
-.erp-payroll-otadj-sheet-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 13px;
-}
-
-.erp-payroll-otadj-sheet-table th {
-  padding: 6px 8px;
+.erp-payroll-skeleton {
+  padding: 18px 20px;
   border: 1px solid var(--erp-n-200);
-  background: var(--erp-n-50, #f8fafc);
-  color: var(--erp-n-700);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-align: center;
-}
-
-.erp-payroll-otadj-sheet-table td {
-  padding: 8px;
-  border: 1px solid var(--erp-n-200);
-  vertical-align: top;
+  border-radius: 16px;
   background: #ffffff;
 }
 
-.erp-payroll-otadj-sheet-table .is-num {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+.erp-payroll-skeleton--hero {
+  background: var(--erp-n-50);
 }
 
-.erp-payroll-otadj-sheet-zero {
-  color: var(--erp-n-400);
-  font-variant-numeric: tabular-nums;
-}
-
-.erp-payroll-otadj-sheet-pay,
-.erp-payroll-otadj-sheet-cap {
-  margin: 4px 0 0;
-  color: var(--erp-n-600);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.erp-payroll-otadj-sheet--edit .erp-payroll-otadj-sheet-table td {
-  padding: 0;
-  background: #ffffff;
-}
-
-.erp-payroll-otadj-sheet-cell {
-  height: 40px;
-}
-
-.erp-payroll-otadj-sheet-input.ant-input-number {
-  width: 100%;
-  height: 40px;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent;
-}
-
-.erp-payroll-otadj-sheet-input.ant-input-number .ant-input-number-input {
-  height: 40px;
-  padding: 0 8px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.erp-payroll-otadj-sheet-input.ant-input-number-focused {
-  outline: 2px solid var(--erp-accent);
-  outline-offset: -2px;
-  z-index: 1;
-}
-
-/* Add / edit form */
-.erp-payroll-otadj-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding: 12px;
-  border: 1px solid var(--erp-accent);
-  border-radius: 10px;
-  background: var(--erp-accent-wash, #f3f7fd);
-  box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.1);
-}
-
-.erp-payroll-otadj-form--sheet {
+.erp-payroll-skeleton-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
-.erp-payroll-otadj-form-row {
-  display: grid;
-  grid-template-columns: minmax(110px, 0.6fr) minmax(0, 2fr);
-  gap: 10px;
-}
-
-.erp-payroll-otadj-field {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-}
-
-.erp-payroll-otadj-field > span:first-child {
-  color: var(--erp-n-600);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.erp-payroll-otadj-field small {
-  color: var(--erp-n-600);
-  font-size: 11px;
-}
-
-.erp-payroll-otadj-field small.is-error {
-  color: #b42318;
-}
-
-.erp-payroll-otadj-field .ant-segmented {
-  align-self: flex-start;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.erp-payroll-otadj-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-/* Summary */
-.erp-payroll-otadj-sumlines {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.erp-payroll-otadj-sumlines li,
-.erp-payroll-otadj-total {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.erp-payroll-otadj-sumcat {
-  margin: 0;
-  color: var(--erp-n-900);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.erp-payroll-otadj-total {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--erp-n-150);
-}
-
-.erp-payroll-otadj-total strong {
-  color: var(--erp-accent-hover);
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 1279px) {
-  .erp-payroll-otadj,
-  .erp-pe-grid--3 {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1023px) {
+  .erp-payroll-skeleton-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 767px) {
-  .erp-pe-grid {
+@media (max-width: 639px) {
+  .erp-pe-kv {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .erp-payroll-otadj-form-row {
-    grid-template-columns: minmax(0, 1fr);
+  .erp-pe-paybar .is-net {
+    margin-left: 0;
+    text-align: left;
   }
 }
 
@@ -2624,57 +2539,6 @@
   gap: 14px;
 }
 
-.erp-pe-headline {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.erp-pe-headline > div {
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--erp-n-200);
-  border-radius: 12px;
-  background: #ffffff;
-}
-
-.erp-pe-headline dt {
-  color: var(--erp-n-600);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.erp-pe-headline dd {
-  margin: 2px 0 0;
-  color: var(--erp-n-900);
-  font-size: 16px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.erp-pe-headline .is-net {
-  border-color: rgba(var(--erp-accent-rgb), 0.35);
-  background: var(--erp-accent-wash, #f3f7fd);
-}
-
-.erp-pe-headline .is-net dd {
-  color: var(--erp-accent-hover);
-}
-
-.erp-pe-headline small {
-  color: var(--erp-n-600);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.erp-pe-payslip-btn.ant-btn {
-  align-self: flex-start;
-}
-
 /* Paid days tab */
 .erp-pe-days {
   display: flex;
@@ -2743,9 +2607,6 @@
 }
 
 @media (max-width: 639px) {
-  .erp-pe-headline {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   .erp-pe-drawer .ant-drawer-body {
     padding: 12px;

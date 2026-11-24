@@ -82,6 +82,18 @@ export function manualOtPay(
 }
 
 /**
+ * Pay for one manual OT hour of a category (4 decimals). Lets the UI price
+ * hours as they are typed; the server still prices the saved hours itself.
+ */
+export function manualOtHourlyRate(
+  category: PayrollOtCategory,
+  basicSalary: number,
+  rates?: OvertimeRatePolicy,
+): number {
+  return Math.round(manualOtPay(category, 100, basicSalary, rates) * 100) / 10_000;
+}
+
+/**
  * System OT plus manual adjustments, per category. `applied` reports what each
  * adjustment contributed so it can be stored on the adjustment and later
  * subtracted exactly.

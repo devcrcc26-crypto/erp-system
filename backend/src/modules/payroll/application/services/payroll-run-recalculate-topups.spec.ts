@@ -55,13 +55,15 @@ function setup(existing: Record<string, unknown>, snapshot?: Record<string, unkn
       update: jest.fn(async () => undefined),
     },
     payrollEntry: {
-      // includedFreelancerIds, existing entries, regenerated entries, then run totals.
+      // includedFreelancerIds, existing entries, regenerated entries.
       findMany: jest
         .fn()
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([existing])
         .mockResolvedValueOnce([regenerated()])
         .mockResolvedValue([]),
+      // Run totals.
+      aggregate: jest.fn(async () => ({ _count: { _all: 1 }, _sum: {} })),
       deleteMany: jest.fn(async () => undefined),
       update,
     },

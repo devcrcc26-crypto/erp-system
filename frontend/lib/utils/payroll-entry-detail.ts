@@ -56,7 +56,7 @@ export function buildOtBreakdownLines(source: {
 }
 
 /** Ethiopian monthly income tax (estimate for previews only). */
-function estimateEthiopianTax(taxableIncome: number): number {
+export function estimateEthiopianTax(taxableIncome: number): number {
   if (taxableIncome <= 2000) return 0;
   if (taxableIncome <= 4000) return taxableIncome * 0.15 - 300;
   if (taxableIncome <= 7000) return taxableIncome * 0.2 - 500;

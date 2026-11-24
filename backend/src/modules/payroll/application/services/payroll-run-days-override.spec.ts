@@ -70,7 +70,12 @@ function setup(entry: Record<string, unknown> | null, policy: object = POLICY_DE
     payrollEntryAudit: { create: jest.fn(async () => undefined) },
   };
   const prisma = {
-    payrollEntry: { findFirst: jest.fn(async () => entry), findMany: jest.fn(async () => []) },
+    payrollEntry: {
+      findFirst: jest.fn(async () => entry),
+      findMany: jest.fn(async () => []),
+      // Run totals.
+      aggregate: jest.fn(async () => ({ _count: { _all: 1 }, _sum: {} })),
+    },
     payrollRun: { update: jest.fn(async () => undefined) },
     employeeContract: {
       findFirst: jest.fn(async () => ({ pensionApplicable: true, taxApplicable: true })),

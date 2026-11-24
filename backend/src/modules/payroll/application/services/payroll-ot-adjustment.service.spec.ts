@@ -55,7 +55,12 @@ describe('PayrollOtAdjustmentService', () => {
         createMany: jest.fn(async () => ({ count: 0 })),
         updateMany: jest.fn(async () => ({ count: 1 })),
       },
-      payrollEntry: { update: jest.fn(async () => ({})) },
+      payrollEntry: {
+        update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => ({
+          ...entry(),
+          ...data,
+        })),
+      },
     };
     prisma = {
       payrollRun: {
@@ -239,6 +244,25 @@ describe('PayrollOtAdjustmentService', () => {
     expect(audit.create).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'ot_adjustment_replaced' }),
     );
+  });
+
+  it('returns the repriced entry and per-hour rates without re-reading the run', async () => {
+    const result = await service.replaceForEmployee(
+      RUN,
+      {
+        employeeId: EMPLOYEE,
+        items: [{ otCategory: 'NORMAL', hours: 2 }],
+        note: 'Paper records - Nov 2026',
+      },
+      ctx,
+    );
+
+    expect(result.entry).toEqual(expect.objectContaining({ id: 'entry-1' }));
+    expect(result.rates.NORMAL).toBeCloseTo(manualOtPay('NORMAL', 1, BASIC), 2);
+    expect(result.rates.HOLIDAY).toBeGreaterThan(result.rates.NORMAL);
+    // Run and entry are read once (the save), not again for the response.
+    expect(prisma.payrollRun.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.payrollEntry.findFirst).toHaveBeenCalledTimes(1);
   });
 
   it('replaceForEmployee with empty items clears all manual OT once', async () => {
