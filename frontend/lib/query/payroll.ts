@@ -421,7 +421,11 @@ export function useReplacePayrollOtAdjustments(runId: string) {
         const hours = Object.fromEntries(
           payload.items.map((item) => [item.otCategory, item.hours]),
         );
-        const preview = previewOtBreakdown(previousBreakdown, hours);
+        const preview = previewOtBreakdown(
+          previousBreakdown,
+          hours,
+          payload.contractId,
+        );
         queryClient.setQueryData(key, preview);
         const entry = previousRun?.entries.find((row) => row.employeeId === payload.employeeId);
         if (entry) {

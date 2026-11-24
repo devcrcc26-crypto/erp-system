@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
-import { Alert, Button, Input, InputNumber, Skeleton, Tag, Tooltip } from 'antd';
+import { Alert, Button, Input, InputNumber, Segmented, Select, Skeleton, Tooltip } from 'antd';
 import { FileSearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -11,6 +11,7 @@ import type {
   PayrollOtAdjustment,
   PayrollOtBreakdown,
   PayrollOtCategory,
+  PayrollOtContractOption,
 } from '@/lib/api/payroll.types';
 import {
   usePayrollOtBreakdown,
@@ -36,12 +37,28 @@ const CATEGORY_LABEL_KEY: Record<PayrollOtCategory, string> = {
 
 type HoursByCategory = Record<PayrollOtCategory, number | null>;
 
-function hoursFromAdjustments(adjustments: readonly PayrollOtAdjustment[]): HoursByCategory {
-  const hours: HoursByCategory = { NORMAL: null, EVENING: null, SUNDAY: null, HOLIDAY: null };
+function emptyHours(): HoursByCategory {
+  return { NORMAL: null, EVENING: null, SUNDAY: null, HOLIDAY: null };
+}
+
+function hoursFromAdjustments(
+  adjustments: readonly PayrollOtAdjustment[],
+  contractId: string,
+): HoursByCategory {
+  const hours = emptyHours();
   for (const row of adjustments) {
-    hours[row.otCategory] = row.hours;
+    if (row.contractId === contractId) {
+      hours[row.otCategory] = row.hours;
+    }
   }
   return hours;
+}
+
+function noteForContract(
+  adjustments: readonly PayrollOtAdjustment[],
+  contractId: string,
+): string {
+  return adjustments.find((row) => row.contractId === contractId)?.note ?? '';
 }
 
 function num(value: number | null | undefined): number {
@@ -52,10 +69,23 @@ function hoursLabel(value: number): string {
   return String(Math.round(value * 100) / 100);
 }
 
+function contractLabel(
+  contract: PayrollOtContractOption,
+  formatMoney: (value: number) => string,
+): string {
+  const number = contract.contractNumber?.trim() || contract.contractId.slice(0, 8);
+  if (contract.periodStart && contract.periodEnd) {
+    const start = dayjs(contract.periodStart).format('D MMM');
+    const end = dayjs(contract.periodEnd).format('D MMM');
+    return `${number} · ${start}–${end}`;
+  }
+  return `${number} · ${formatMoney(contract.basicSalary)}`;
+}
+
 /**
  * Overtime tab: one spreadsheet-style grid. System hours (approved overtime
- * sheets) are fixed; manual hours (paper records) are typed straight into the
- * grid and the totals and pay recalculate as you type. Enter saves, Esc reverts.
+ * sheets) are fixed per salary-period contract; manual hours (paper records)
+ * are typed for the selected contract. Enter saves, Esc reverts.
  */
 export default function PayrollOtAdjustmentsSection({
   runId,
@@ -76,6 +106,17 @@ export default function PayrollOtAdjustmentsSection({
   }
   if (query.isError || !data) {
     return <Alert type="error" showIcon title={t(`${KEY}.loadFailed`)} />;
+  }
+
+  if (data.contracts.length === 0) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        title={t(`${KEY}.noContract`)}
+        description={t(`${KEY}.noContractHint`)}
+      />
+    );
   }
 
   const editable = canEdit && data.editable && data.paidDays > 0;
@@ -106,8 +147,18 @@ function OtGrid({
   const messageApi = useAppMessage();
   const replace = useReplacePayrollOtAdjustments(runId);
 
-  const saved = useMemo(() => hoursFromAdjustments(data.adjustments), [data.adjustments]);
-  const savedNote = data.adjustments[0]?.note ?? '';
+  const initialContractId =
+    data.defaultContractId ?? data.contracts[data.contracts.length - 1]!.contractId;
+  const [contractId, setContractId] = useState(initialContractId);
+
+  const saved = useMemo(
+    () => hoursFromAdjustments(data.adjustments, contractId),
+    [data.adjustments, contractId],
+  );
+  const savedNote = useMemo(
+    () => noteForContract(data.adjustments, contractId),
+    [data.adjustments, contractId],
+  );
   const [hours, setHours] = useState<HoursByCategory>(saved);
   const [note, setNote] = useState(savedNote);
 
@@ -118,15 +169,30 @@ function OtGrid({
   const noteMissing = anyHours && !note.trim();
   useReportDirty('ot-adjustment', changed);
 
-  // Live figures while typing (server figures replace them after a save).
+  // When switching contracts, load that contract's saved cells (block if dirty).
+  function selectContract(nextId: string): void {
+    if (nextId === contractId) return;
+    if (changed) {
+      messageApi.warning(t(`${KEY}.unsavedContract`));
+      return;
+    }
+    setContractId(nextId);
+    setHours(hoursFromAdjustments(data.adjustments, nextId));
+    setNote(noteForContract(data.adjustments, nextId));
+  }
+
   const preview = useMemo(
     () =>
       previewOtBreakdown(
         data,
         Object.fromEntries(CATEGORIES.map((category) => [category, num(hours[category])])),
+        contractId,
       ),
-    [data, hours],
+    [data, hours, contractId],
   );
+
+  const selected = data.contracts.find((c) => c.contractId === contractId) ?? data.contracts[0]!;
+  const showPicker = data.contracts.length > 1;
 
   function revert(): void {
     setHours(saved);
@@ -142,7 +208,12 @@ function OtGrid({
       (category) => ({ otCategory: category, hours: num(hours[category]) }),
     );
     replace.mutate(
-      { employeeId, items, note: items.length > 0 ? note.trim() : undefined },
+      {
+        employeeId,
+        contractId,
+        items,
+        note: items.length > 0 ? note.trim() : undefined,
+      },
       {
         onError: (error: unknown) => notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t),
       },
@@ -150,7 +221,10 @@ function OtGrid({
   }
 
   function onKeyDown(event: React.KeyboardEvent): void {
-    if (event.key === 'Enter') {
+    const inTextArea =
+      event.target instanceof HTMLTextAreaElement ||
+      (event.target instanceof HTMLElement && event.target.closest('textarea') != null);
+    if (event.key === 'Enter' && (!inTextArea || event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       save();
     } else if (event.key === 'Escape' && changed) {
@@ -159,19 +233,35 @@ function OtGrid({
     }
   }
 
-  const latest = data.adjustments.reduce<PayrollOtAdjustment | null>(
-    (current, row) =>
-      !current || dayjs(row.updatedAt).isAfter(dayjs(current.updatedAt)) ? row : current,
-    null,
-  );
+  const latest = data.adjustments
+    .filter((row) => row.contractId === contractId)
+    .reduce<PayrollOtAdjustment | null>(
+      (current, row) =>
+        !current || dayjs(row.updatedAt).isAfter(dayjs(current.updatedAt)) ? row : current,
+      null,
+    );
   const lockedReason = !data.editable
     ? t(`${KEY}.locked`, { status: data.runStatus })
     : data.paidDays === 0
       ? t(`${KEY}.zeroDays`)
       : null;
-  const systemHoursTotal = data.categories.reduce((sum, row) => sum + row.systemHours, 0);
-  const manualHoursTotal = preview.categories.reduce((sum, row) => sum + row.manualHours, 0);
-  const totalHours = preview.categories.reduce((sum, row) => sum + row.totalHours, 0);
+
+  const systemHoursTotal = preview.contractCategories.reduce(
+    (sum, row) => sum + row.systemHours,
+    0,
+  );
+  const manualHoursTotal = preview.contractCategories.reduce(
+    (sum, row) => sum + row.manualHours,
+    0,
+  );
+  const totalHours = preview.contractCategories.reduce((sum, row) => sum + row.totalHours, 0);
+
+  const pickerOptions = data.contracts.map((contract) => ({
+    label: contractLabel(contract, (value) =>
+      formatPayrollMoney(value, { emptyZero: false }),
+    ),
+    value: contract.contractId,
+  }));
 
   return (
     <div className="erp-otg" onKeyDown={editable ? onKeyDown : undefined}>
@@ -187,6 +277,41 @@ function OtGrid({
         ) : null}
       </div>
 
+      {showPicker ? (
+        <div className="erp-otg-contract">
+          <span className="erp-otg-contract-label">{t(`${KEY}.contractLabel`)}</span>
+          {data.contracts.length <= 3 ? (
+            <Segmented
+              size="small"
+              value={contractId}
+              options={pickerOptions}
+              onChange={(value) => selectContract(String(value))}
+            />
+          ) : (
+            <Select
+              size="small"
+              className="erp-otg-contract-select"
+              value={contractId}
+              options={pickerOptions}
+              onChange={selectContract}
+            />
+          )}
+          <p className="erp-otg-contract-hint">
+            {t(`${KEY}.pricedOn`, {
+              contract: selected.contractNumber?.trim() || selected.contractId.slice(0, 8),
+              basic: formatPayrollMoney(selected.basicSalary, { emptyZero: false }),
+            })}
+          </p>
+        </div>
+      ) : (
+        <p className="erp-otg-contract-hint erp-otg-contract-hint--solo">
+          {t(`${KEY}.pricedOn`, {
+            contract: selected.contractNumber?.trim() || selected.contractId.slice(0, 8),
+            basic: formatPayrollMoney(selected.basicSalary, { emptyZero: false }),
+          })}
+        </p>
+      )}
+
       <div className="erp-otg-scroll">
         <table className="erp-otg-table">
           <thead>
@@ -195,14 +320,13 @@ function OtGrid({
               <th scope="col" className="is-num">{t(`${KEY}.colSystem`)}</th>
               <th scope="col" className="is-num is-manual">
                 {t(`${KEY}.colManual`)}
-                <Tag className="erp-payroll-otadj-tag erp-otg-tag">{t(`${KEY}.manualTag`)}</Tag>
               </th>
               <th scope="col" className="is-num">{t(`${KEY}.colTotal`)}</th>
               <th scope="col" className="is-num">{t(`${KEY}.colPay`)}</th>
             </tr>
           </thead>
           <tbody>
-            {preview.categories.map((row) => {
+            {preview.contractCategories.map((row) => {
               const typed = num(hours[row.category]);
               const capped = typed !== 0 && row.manualHours !== typed;
               const label = t(CATEGORY_LABEL_KEY[row.category]);
@@ -258,14 +382,34 @@ function OtGrid({
           </tbody>
           <tfoot>
             <tr>
-              <th scope="row">{t('hr.payroll.entry.otTotal')}</th>
+              <th scope="row">
+                {showPicker ? t(`${KEY}.contractTotal`) : t('hr.payroll.entry.otTotal')}
+              </th>
               <td className="is-num">{hoursLabel(systemHoursTotal)}</td>
               <td className="is-num is-manual">{hoursLabel(manualHoursTotal)}</td>
               <td className="is-num">{hoursLabel(totalHours)}</td>
               <td className="is-num is-strong">
-                {formatPayrollMoney(preview.totals.totalPay, { emptyZero: false })}
+                {formatPayrollMoney(preview.contractTotals.totalPay, { emptyZero: false })}
               </td>
             </tr>
+            {showPicker ? (
+              <tr className="erp-otg-employee-total">
+                <th scope="row">{t(`${KEY}.employeeTotal`)}</th>
+                <td className="is-num" colSpan={3}>
+                  {t(`${KEY}.employeeTotalSplit`, {
+                    system: formatPayrollMoney(preview.totals.systemPay, {
+                      emptyZero: false,
+                    }),
+                    manual: formatPayrollMoney(preview.totals.manualPay, {
+                      emptyZero: false,
+                    }),
+                  })}
+                </td>
+                <td className="is-num is-strong">
+                  {formatPayrollMoney(preview.totals.totalPay, { emptyZero: false })}
+                </td>
+              </tr>
+            ) : null}
           </tfoot>
         </table>
       </div>
@@ -273,9 +417,11 @@ function OtGrid({
       {editable ? (
         <label className="erp-otg-note">
           <span>{t(`${KEY}.colNote`)}</span>
-          <Input
+          <Input.TextArea
             value={note}
             maxLength={500}
+            rows={2}
+            autoSize={{ minRows: 2, maxRows: 4 }}
             placeholder={t(`${KEY}.notePlaceholder`)}
             status={noteMissing ? 'error' : undefined}
             onChange={(event) => setNote(event.target.value)}

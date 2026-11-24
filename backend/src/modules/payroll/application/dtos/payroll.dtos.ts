@@ -261,6 +261,12 @@ export class UpsertPayrollOtAdjustmentDto {
   employeeId!: string;
 
   @ApiProperty({
+    description: 'Salary-period contract these hours are priced on',
+  })
+  @IsUUID()
+  contractId!: string;
+
+  @ApiProperty({
     description: 'OT category (same buckets as the payroll entry)',
     enum: ['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'],
   })
@@ -309,9 +315,8 @@ export class ReplacePayrollOtAdjustmentItemDto {
 }
 
 /**
- * Replaces all manual OT adjustments for one employee in a single reprice.
- * Omit a category (or send hours 0 via UI) by leaving it out of `items`.
- * Empty `items` clears every manual adjustment for that employee.
+ * Replaces manual OT for one salary-period contract on an employee (one reprice).
+ * Other contracts' adjustments are left untouched. Empty `items` clears that contract.
  */
 export class ReplacePayrollOtAdjustmentsDto {
   @ApiProperty({ description: 'Employee (user id) with an entry on this run' })
@@ -319,7 +324,14 @@ export class ReplacePayrollOtAdjustmentsDto {
   employeeId!: string;
 
   @ApiProperty({
-    description: 'Non-zero category hours to keep. Empty array clears all manual OT.',
+    description: 'Salary-period contract these hours are priced on',
+  })
+  @IsUUID()
+  contractId!: string;
+
+  @ApiProperty({
+    description:
+      'Non-zero category hours to keep for this contract. Empty array clears this contract’s manual OT.',
     type: [ReplacePayrollOtAdjustmentItemDto],
   })
   @IsArray()

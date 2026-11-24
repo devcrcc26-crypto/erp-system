@@ -40,16 +40,38 @@ export function previewManualRow(
   return { appliedHours, pay };
 }
 
-/** The OT breakdown as it will look with these manual hours (empty = none). */
+export type OtBreakdownPreview = PayrollOtBreakdown & {
+  /** Selected contract’s live rows (for the spreadsheet grid). */
+  contractCategories: PayrollOtBreakdown['categories'];
+  /** Selected contract’s live pay totals. */
+  contractTotals: PayrollOtBreakdown['totals'];
+};
+
+/**
+ * Live OT figures while typing manual hours for one contract.
+ * `categories` / `totals` are the employee roll-up (for entry patches);
+ * `contractCategories` / `contractTotals` drive the grid for the selected contract.
+ */
 export function previewOtBreakdown(
   breakdown: PayrollOtBreakdown,
   hours: Partial<Record<PayrollOtCategory, number>>,
-): PayrollOtBreakdown {
-  const categories = breakdown.categories.map((row) => {
+  contractId?: string | null,
+): OtBreakdownPreview {
+  const contracts = breakdown.contracts ?? [];
+  const selected =
+    (contractId ? contracts.find((c) => c.contractId === contractId) : null) ??
+    contracts.find((c) => c.contractId === breakdown.defaultContractId) ??
+    contracts[0] ??
+    null;
+
+  const sourceRows = selected?.categories ?? breakdown.categories;
+  const rates = selected?.rates ?? breakdown.rates;
+
+  const contractCategories = sourceRows.map((row) => {
     const manual = previewManualRow(
       row,
       hours[row.category] ?? 0,
-      breakdown.rates?.[row.category] ?? 0,
+      rates?.[row.category] ?? 0,
     );
     return {
       ...row,
@@ -59,16 +81,59 @@ export function previewOtBreakdown(
       totalPay: round2(row.systemPay + manual.pay),
     };
   });
-  const sum = (pick: (c: (typeof categories)[number]) => number): number =>
-    round2(categories.reduce((total, c) => total + pick(c), 0));
+
+  const sum = (
+    rows: typeof contractCategories,
+    pick: (c: (typeof contractCategories)[number]) => number,
+  ): number => round2(rows.reduce((total, c) => total + pick(c), 0));
+
+  const contractTotals = {
+    systemPay: sum(contractCategories, (c) => c.systemPay),
+    manualPay: sum(contractCategories, (c) => c.manualPay),
+    totalPay: sum(contractCategories, (c) => c.totalPay),
+  };
+
+  const otherContracts = contracts.filter((c) => c.contractId !== selected?.contractId);
+  const categories = (['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'] as const).map((category) => {
+    const live = contractCategories.find((row) => row.category === category)!;
+    const other = otherContracts.map(
+      (c) => c.categories.find((row) => row.category === category)!,
+    );
+    const systemHours = round2(
+      live.systemHours + other.reduce((s, row) => s + (row?.systemHours ?? 0), 0),
+    );
+    const systemPay = round2(
+      live.systemPay + other.reduce((s, row) => s + (row?.systemPay ?? 0), 0),
+    );
+    const manualHours = round2(
+      live.manualHours + other.reduce((s, row) => s + (row?.manualHours ?? 0), 0),
+    );
+    const manualPay = round2(
+      live.manualPay + other.reduce((s, row) => s + (row?.manualPay ?? 0), 0),
+    );
+    return {
+      category,
+      systemHours,
+      systemPay,
+      manualHours,
+      manualPay,
+      totalHours: round2(systemHours + manualHours),
+      totalPay: round2(systemPay + manualPay),
+    };
+  });
+
+  const totals = {
+    systemPay: sum(categories, (c) => c.systemPay),
+    manualPay: sum(categories, (c) => c.manualPay),
+    totalPay: sum(categories, (c) => c.totalPay),
+  };
+
   return {
     ...breakdown,
     categories,
-    totals: {
-      systemPay: sum((c) => c.systemPay),
-      manualPay: sum((c) => c.manualPay),
-      totalPay: sum((c) => c.totalPay),
-    },
+    totals,
+    contractCategories,
+    contractTotals,
   };
 }
 

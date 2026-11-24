@@ -11,8 +11,11 @@ jest.mock('../../../../shared/policy/policy-reader.util', () => ({
 const COMPANY = 'company-1';
 const RUN = 'run-1';
 const EMPLOYEE = 'employee-1';
+const CONTRACT_A = 'contract-a';
+const CONTRACT_B = 'contract-b';
 const ctx = { companyId: COMPANY, userId: 'hr-1' };
-const BASIC = 12_000;
+const BASIC_A = 12_000;
+const BASIC_B = 18_000;
 
 function entry(overrides: Record<string, unknown> = {}) {
   return {
@@ -20,12 +23,12 @@ function entry(overrides: Record<string, unknown> = {}) {
     runId: RUN,
     employeeId: EMPLOYEE,
     companyId: COMPANY,
+    contractId: CONTRACT_B,
     overtimeSheetId: 'sheet-1',
     payrollDays: new Decimal(30),
-    basicSalary: new Decimal(BASIC),
+    basicSalary: new Decimal(BASIC_B),
     bonusTopUp: new Decimal(0),
     netTopUp: new Decimal(0),
-    // System OT: 4 normal hours priced at 300.
     normalOtHours: new Decimal(4),
     eveningOtHours: new Decimal(0),
     sundayOtHours: new Decimal(0),
@@ -34,7 +37,38 @@ function entry(overrides: Record<string, unknown> = {}) {
     eveningOtPay: new Decimal(0),
     sundayOtPay: new Decimal(0),
     holidayOtPay: new Decimal(0),
+    salaryPeriods: [],
     ...overrides,
+  };
+}
+
+function period(
+  contractId: string,
+  basic: number,
+  ot: { normalHours?: number; normalPay?: number } = {},
+) {
+  return {
+    id: `period-${contractId}`,
+    entryId: 'entry-1',
+    contractId,
+    periodStart: new Date('2026-11-01'),
+    periodEnd: new Date('2026-11-15'),
+    days: new Decimal(15),
+    basicSalary: new Decimal(basic),
+    earnedSalary: new Decimal(basic / 2),
+    normalOtHours: new Decimal(ot.normalHours ?? 0),
+    eveningOtHours: new Decimal(0),
+    sundayOtHours: new Decimal(0),
+    holidayOtHours: new Decimal(0),
+    normalOtPay: new Decimal(ot.normalPay ?? 0),
+    eveningOtPay: new Decimal(0),
+    sundayOtPay: new Decimal(0),
+    holidayOtPay: new Decimal(0),
+    totalOtPay: new Decimal(ot.normalPay ?? 0),
+    contract: {
+      id: contractId,
+      contractNumber: contractId === CONTRACT_A ? 'CN-A' : 'CN-B',
+    },
   };
 }
 
@@ -44,10 +78,15 @@ describe('PayrollOtAdjustmentService', () => {
   let audit: { create: jest.Mock; buildFromRequestContext: jest.Mock };
   let service: PayrollOtAdjustmentService;
   let stored: Array<Record<string, unknown>>;
+  let tx: {
+    payrollOtAdjustment: Record<string, jest.Mock>;
+    payrollEntry: { update: jest.Mock };
+    payrollSalaryPeriod: { update: jest.Mock };
+  };
 
   beforeEach(() => {
     stored = [];
-    const tx = {
+    tx = {
       payrollOtAdjustment: {
         upsert: jest.fn(async () => ({ id: 'adj-1' })),
         delete: jest.fn(async () => ({})),
@@ -55,12 +94,8 @@ describe('PayrollOtAdjustmentService', () => {
         createMany: jest.fn(async () => ({ count: 0 })),
         updateMany: jest.fn(async () => ({ count: 1 })),
       },
-      payrollEntry: {
-        update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => ({
-          ...entry(),
-          ...data,
-        })),
-      },
+      payrollEntry: { update: jest.fn(async () => entry()) },
+      payrollSalaryPeriod: { update: jest.fn(async () => ({})) },
     };
     prisma = {
       payrollRun: {
@@ -74,7 +109,17 @@ describe('PayrollOtAdjustmentService', () => {
           taxableThreshold: new Decimal(2200),
         })),
       },
-      payrollEntry: { findFirst: jest.fn(async () => entry()) },
+      payrollEntry: {
+        findFirst: jest.fn(async () =>
+          entry({
+            salaryPeriods: [],
+            contractId: CONTRACT_A,
+            basicSalary: new Decimal(BASIC_A),
+            normalOtHours: new Decimal(4),
+            normalOtPay: new Decimal(300),
+          }),
+        ),
+      },
       payrollOtAdjustment: {
         findMany: jest.fn(async () => stored),
         findFirst: jest.fn(async () => stored[0] ?? null),
@@ -100,7 +145,13 @@ describe('PayrollOtAdjustmentService', () => {
   it('adds manual hours on top of system OT and reprices the entry', async () => {
     await service.upsert(
       RUN,
-      { employeeId: EMPLOYEE, otCategory: 'NORMAL', hours: 6, note: 'Paper records - Nov 2026' },
+      {
+        employeeId: EMPLOYEE,
+        contractId: CONTRACT_A,
+        otCategory: 'NORMAL',
+        hours: 6,
+        note: 'Paper records - Nov 2026',
+      },
       ctx,
     );
 
@@ -110,20 +161,34 @@ describe('PayrollOtAdjustmentService', () => {
       { hours: { normalHours: number }; pay: { normalOtPay: number } },
     ];
     expect(ot.hours.normalHours).toBe(10);
-    expect(ot.pay.normalOtPay).toBeCloseTo(300 + manualOtPay('NORMAL', 6, BASIC), 2);
+    expect(ot.pay.normalOtPay).toBeCloseTo(300 + manualOtPay('NORMAL', 6, BASIC_A), 2);
     expect(runService.refreshRunTotals).toHaveBeenCalledWith(RUN, ctx);
     expect(audit.create).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'ot_adjustment_created',
         module: 'payroll',
-        afterValue: expect.objectContaining({ hours: 6, otCategory: 'NORMAL' }),
+        afterValue: expect.objectContaining({
+          hours: 6,
+          otCategory: 'NORMAL',
+          contractId: CONTRACT_A,
+        }),
       }),
     );
   });
 
   it('requires a note', async () => {
     await expect(
-      service.upsert(RUN, { employeeId: EMPLOYEE, otCategory: 'NORMAL', hours: 2, note: '  ' }, ctx),
+      service.upsert(
+        RUN,
+        {
+          employeeId: EMPLOYEE,
+          contractId: CONTRACT_A,
+          otCategory: 'NORMAL',
+          hours: 2,
+          note: '  ',
+        },
+        ctx,
+      ),
     ).rejects.toThrow('A note is required');
   });
 
@@ -131,7 +196,13 @@ describe('PayrollOtAdjustmentService', () => {
     await expect(
       service.upsert(
         RUN,
-        { employeeId: EMPLOYEE, otCategory: 'NORMAL', hours: -5, note: 'Correction' },
+        {
+          employeeId: EMPLOYEE,
+          contractId: CONTRACT_A,
+          otCategory: 'NORMAL',
+          hours: -5,
+          note: 'Correction',
+        },
         ctx,
       ),
     ).rejects.toThrow('below zero');
@@ -139,10 +210,24 @@ describe('PayrollOtAdjustmentService', () => {
 
   it('rejects entries with 0 paid days and locked runs', async () => {
     prisma.payrollEntry.findFirst.mockImplementationOnce(async () =>
-      entry({ payrollDays: new Decimal(0) }),
+      entry({
+        payrollDays: new Decimal(0),
+        contractId: CONTRACT_A,
+        salaryPeriods: [],
+      }),
     );
     await expect(
-      service.upsert(RUN, { employeeId: EMPLOYEE, otCategory: 'SUNDAY', hours: 2, note: 'x' }, ctx),
+      service.upsert(
+        RUN,
+        {
+          employeeId: EMPLOYEE,
+          contractId: CONTRACT_A,
+          otCategory: 'SUNDAY',
+          hours: 2,
+          note: 'x',
+        },
+        ctx,
+      ),
     ).rejects.toThrow('0 paid days');
 
     prisma.payrollRun.findFirst.mockImplementationOnce(async () => ({
@@ -150,17 +235,28 @@ describe('PayrollOtAdjustmentService', () => {
       status: 'APPROVED',
     }));
     await expect(
-      service.upsert(RUN, { employeeId: EMPLOYEE, otCategory: 'SUNDAY', hours: 2, note: 'x' }, ctx),
+      service.upsert(
+        RUN,
+        {
+          employeeId: EMPLOYEE,
+          contractId: CONTRACT_A,
+          otCategory: 'SUNDAY',
+          hours: 2,
+          note: 'x',
+        },
+        ctx,
+      ),
     ).rejects.toThrow('run status: APPROVED');
   });
 
   it('removing an adjustment restores exactly the system OT', async () => {
-    const amount = manualOtPay('NORMAL', 6, BASIC);
+    const amount = manualOtPay('NORMAL', 6, BASIC_A);
     stored = [
       {
         id: 'adj-1',
         payrollRunId: RUN,
         employeeId: EMPLOYEE,
+        contractId: CONTRACT_A,
         otCategory: 'NORMAL',
         hours: new Decimal(6),
         appliedHours: new Decimal(6),
@@ -168,11 +264,13 @@ describe('PayrollOtAdjustmentService', () => {
         note: 'Paper records',
       },
     ];
-    // Entry already includes the manual hours and pay.
     prisma.payrollEntry.findFirst.mockImplementation(async () =>
       entry({
+        contractId: CONTRACT_A,
+        basicSalary: new Decimal(BASIC_A),
         normalOtHours: new Decimal(10),
         normalOtPay: new Decimal(300 + amount),
+        salaryPeriods: [],
       }),
     );
 
@@ -190,11 +288,12 @@ describe('PayrollOtAdjustmentService', () => {
     );
   });
 
-  it('replaceForEmployee writes all categories in one reprice', async () => {
+  it('replaceForEmployee writes categories for one contract in one reprice', async () => {
     await service.replaceForEmployee(
       RUN,
       {
         employeeId: EMPLOYEE,
+        contractId: CONTRACT_A,
         items: [
           { otCategory: 'NORMAL', hours: 2 },
           { otCategory: 'EVENING', hours: 1.5 },
@@ -204,26 +303,28 @@ describe('PayrollOtAdjustmentService', () => {
       ctx,
     );
 
-    const tx = (prisma as { tx: {
-      payrollOtAdjustment: {
-        deleteMany: jest.Mock;
-        createMany: jest.Mock;
-      };
-    } }).tx;
     expect(tx.payrollOtAdjustment.deleteMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           companyId: COMPANY,
           payrollRunId: RUN,
           employeeId: EMPLOYEE,
+          contractId: CONTRACT_A,
         }),
       }),
     );
     expect(tx.payrollOtAdjustment.createMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.arrayContaining([
-          expect.objectContaining({ otCategory: 'NORMAL', hours: expect.any(Decimal) }),
-          expect.objectContaining({ otCategory: 'EVENING', hours: expect.any(Decimal) }),
+          expect.objectContaining({
+            otCategory: 'NORMAL',
+            contractId: CONTRACT_A,
+            hours: expect.any(Decimal),
+          }),
+          expect.objectContaining({
+            otCategory: 'EVENING',
+            contractId: CONTRACT_A,
+          }),
         ]),
       }),
     );
@@ -238,40 +339,93 @@ describe('PayrollOtAdjustmentService', () => {
     ];
     expect(ot.hours.normalHours).toBe(6);
     expect(ot.hours.eveningHours).toBe(1.5);
-    expect(ot.pay.normalOtPay).toBeCloseTo(300 + manualOtPay('NORMAL', 2, BASIC), 2);
-    expect(ot.pay.eveningOtPay).toBeCloseTo(manualOtPay('EVENING', 1.5, BASIC), 2);
+    expect(ot.pay.normalOtPay).toBeCloseTo(300 + manualOtPay('NORMAL', 2, BASIC_A), 2);
+    expect(ot.pay.eveningOtPay).toBeCloseTo(manualOtPay('EVENING', 1.5, BASIC_A), 2);
     expect(runService.refreshRunTotals).toHaveBeenCalledTimes(1);
     expect(audit.create).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'ot_adjustment_replaced' }),
     );
   });
 
-  it('returns the repriced entry and per-hour rates without re-reading the run', async () => {
-    const result = await service.replaceForEmployee(
+  it('replaceForEmployee on contract A does not wipe contract B and uses A basic', async () => {
+    const amountB = manualOtPay('NORMAL', 3, BASIC_B);
+    stored = [
+      {
+        id: 'adj-b',
+        payrollRunId: RUN,
+        employeeId: EMPLOYEE,
+        contractId: CONTRACT_B,
+        otCategory: 'NORMAL',
+        hours: new Decimal(3),
+        appliedHours: new Decimal(3),
+        amount: new Decimal(amountB),
+        note: 'B paper',
+      },
+    ];
+    prisma.payrollEntry.findFirst.mockImplementation(async () =>
+      entry({
+        contractId: CONTRACT_B,
+        basicSalary: new Decimal(BASIC_B),
+        normalOtHours: new Decimal(2 + 4 + 3),
+        normalOtPay: new Decimal(
+          manualOtPay('NORMAL', 2, BASIC_A) +
+            manualOtPay('NORMAL', 4, BASIC_B) +
+            amountB,
+        ),
+        salaryPeriods: [
+          period(CONTRACT_A, BASIC_A, {
+            normalHours: 2,
+            normalPay: manualOtPay('NORMAL', 2, BASIC_A),
+          }),
+          period(CONTRACT_B, BASIC_B, {
+            normalHours: 7,
+            normalPay: manualOtPay('NORMAL', 4, BASIC_B) + amountB,
+          }),
+        ],
+      }),
+    );
+
+    await service.replaceForEmployee(
       RUN,
       {
         employeeId: EMPLOYEE,
-        items: [{ otCategory: 'NORMAL', hours: 2 }],
-        note: 'Paper records - Nov 2026',
+        contractId: CONTRACT_A,
+        items: [{ otCategory: 'NORMAL', hours: 5 }],
+        note: 'A paper',
       },
       ctx,
     );
 
-    expect(result.entry).toEqual(expect.objectContaining({ id: 'entry-1' }));
-    expect(result.rates.NORMAL).toBeCloseTo(manualOtPay('NORMAL', 1, BASIC), 2);
-    expect(result.rates.HOLIDAY).toBeGreaterThan(result.rates.NORMAL);
-    // Run and entry are read once (the save), not again for the response.
-    expect(prisma.payrollRun.findFirst).toHaveBeenCalledTimes(1);
-    expect(prisma.payrollEntry.findFirst).toHaveBeenCalledTimes(1);
+    expect(tx.payrollOtAdjustment.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ contractId: CONTRACT_A }),
+      }),
+    );
+
+    const [, , ot] = runService.entryUpdateForOvertime.mock.calls[0] as [
+      unknown,
+      unknown,
+      { hours: { normalHours: number }; pay: { normalOtPay: number } },
+    ];
+    expect(ot.hours.normalHours).toBe(2 + 5 + 4 + 3);
+    expect(ot.pay.normalOtPay).toBeCloseTo(
+      manualOtPay('NORMAL', 2, BASIC_A) +
+        manualOtPay('NORMAL', 5, BASIC_A) +
+        manualOtPay('NORMAL', 4, BASIC_B) +
+        amountB,
+      2,
+    );
+    expect(tx.payrollSalaryPeriod.update).toHaveBeenCalled();
   });
 
-  it('replaceForEmployee with empty items clears all manual OT once', async () => {
-    const amount = manualOtPay('NORMAL', 6, BASIC);
+  it('replaceForEmployee with empty items clears that contract only', async () => {
+    const amount = manualOtPay('NORMAL', 6, BASIC_A);
     stored = [
       {
         id: 'adj-1',
         payrollRunId: RUN,
         employeeId: EMPLOYEE,
+        contractId: CONTRACT_A,
         otCategory: 'NORMAL',
         hours: new Decimal(6),
         appliedHours: new Decimal(6),
@@ -281,16 +435,20 @@ describe('PayrollOtAdjustmentService', () => {
     ];
     prisma.payrollEntry.findFirst.mockImplementation(async () =>
       entry({
+        contractId: CONTRACT_A,
+        basicSalary: new Decimal(BASIC_A),
         normalOtHours: new Decimal(10),
         normalOtPay: new Decimal(300 + amount),
+        salaryPeriods: [],
       }),
     );
 
-    await service.replaceForEmployee(RUN, { employeeId: EMPLOYEE, items: [] }, ctx);
+    await service.replaceForEmployee(
+      RUN,
+      { employeeId: EMPLOYEE, contractId: CONTRACT_A, items: [] },
+      ctx,
+    );
 
-    const tx = (prisma as { tx: {
-      payrollOtAdjustment: { deleteMany: jest.Mock; createMany: jest.Mock };
-    } }).tx;
     expect(tx.payrollOtAdjustment.deleteMany).toHaveBeenCalled();
     expect(tx.payrollOtAdjustment.createMany).not.toHaveBeenCalled();
 

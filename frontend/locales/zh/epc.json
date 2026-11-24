@@ -6321,7 +6321,7 @@
         "addButton": "添加",
         "summaryTotal": "{{category}} 合计：{{total}} 小时",
         "summarySplit": "系统 {{system}} · 手动 {{manual}}",
-        "gridLiveHint": "在高亮列中输入手动小时数，合计和金额会随输入即时更新。按 Enter 保存，Esc 撤销。",
+        "gridLiveHint": "在高亮列中输入手动小时数，合计和金额会随输入即时更新。按 Enter 保存（备注中用 Ctrl+Enter），Esc 撤销。",
         "readOnlyHint": "该员工的加班（只读）。",
         "colSystem": "系统小时",
         "colManual": "手动小时",
@@ -6329,7 +6329,15 @@
         "manualHoursFor": "{{category}} 的手动小时",
         "saving": "正在保存…",
         "revert": "撤销",
-        "saveEnter": "保存（Enter）"
+        "saveEnter": "保存（Enter）",
+        "contractLabel": "合同",
+        "pricedOn": "手动小时按 {{contract}} 计价（基本工资 {{basic}} 比尔）。",
+        "contractTotal": "本合同",
+        "employeeTotal": "员工合计",
+        "employeeTotalSplit": "系统 {{system}} + 手动 {{manual}}",
+        "noContract": "此条目没有合同",
+        "noContractHint": "手动加班需要按薪资期间合同计价。请检查该员工本月的合同。",
+        "unsavedContract": "切换合同前请先保存或撤销本合同的手动小时。"
       },
       "entry": {
         "employee": "员工",

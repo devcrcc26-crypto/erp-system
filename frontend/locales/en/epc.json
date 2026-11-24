@@ -6322,7 +6322,7 @@
         "addButton": "Add",
         "summaryTotal": "Total {{category}}: {{total}} hrs",
         "summarySplit": "{{system}} from system · {{manual}} manual",
-        "gridLiveHint": "Type manual hours in the highlighted column; totals and pay update as you type. Enter saves, Esc reverts.",
+        "gridLiveHint": "Type manual hours in the highlighted column; totals and pay update as you type. Enter saves (Ctrl+Enter in the note), Esc reverts.",
         "readOnlyHint": "Overtime for this employee (read-only).",
         "colSystem": "System h",
         "colManual": "Manual h",
@@ -6330,7 +6330,15 @@
         "manualHoursFor": "Manual hours for {{category}}",
         "saving": "Saving…",
         "revert": "Revert",
-        "saveEnter": "Save (Enter)"
+        "saveEnter": "Save (Enter)",
+        "contractLabel": "Contract",
+        "pricedOn": "Manual hours priced on {{contract}} (basic {{basic}} ETB).",
+        "contractTotal": "This contract",
+        "employeeTotal": "Employee total",
+        "employeeTotalSplit": "{{system}} system + {{manual}} manual",
+        "noContract": "No contract on this entry",
+        "noContractHint": "Manual OT needs a salary-period contract to price against. Check the employee’s contracts for this month.",
+        "unsavedContract": "Save or revert this contract’s manual hours before switching."
       },
       "entry": {
         "employee": "Employee",

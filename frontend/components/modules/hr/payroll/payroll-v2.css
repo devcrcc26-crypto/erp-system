@@ -1950,6 +1950,39 @@
   gap: 6px 12px;
 }
 
+.erp-otg-contract {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erp-otg-contract-label {
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-otg-contract-select {
+  max-width: 100%;
+  min-width: 200px;
+}
+
+.erp-otg-contract-hint {
+  margin: 0;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-otg-contract-hint--solo {
+  margin-top: -2px;
+}
+
+.erp-otg-employee-total th,
+.erp-otg-employee-total td {
+  border-top: 1px dashed var(--erp-n-200);
+  font-weight: 550;
+}
+
 .erp-otg-hint {
   margin: 0;
   color: var(--erp-n-600);

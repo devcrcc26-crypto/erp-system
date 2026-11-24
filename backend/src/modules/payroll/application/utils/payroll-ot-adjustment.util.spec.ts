@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   combineManualOvertime,
+  combineManualOvertimeByContracts,
   manualOtPay,
   systemOvertimeFromEntry,
 } from './payroll-ot-adjustment.util';
@@ -80,6 +81,43 @@ describe('combineManualOvertime', () => {
     });
     expect(result.hours).toEqual(SYSTEM_HOURS);
     expect(result.applied).toEqual([]);
+  });
+});
+
+describe('combineManualOvertimeByContracts', () => {
+  it('prices each contract on its own basic and sums entry totals', () => {
+    const result = combineManualOvertimeByContracts([
+      {
+        contractId: 'a',
+        basicSalary: BASIC,
+        systemHours: { normalHours: 2, eveningHours: 0, sundayHours: 0, holidayHours: 0 },
+        systemPay: { normalOtPay: manualOtPay('NORMAL', 2, BASIC), eveningOtPay: 0, sundayOtPay: 0, holidayOtPay: 0 },
+        adjustments: [{ category: 'NORMAL', hours: 1 }],
+      },
+      {
+        contractId: 'b',
+        basicSalary: BASIC * 2,
+        systemHours: { normalHours: 4, eveningHours: 0, sundayHours: 0, holidayHours: 0 },
+        systemPay: {
+          normalOtPay: manualOtPay('NORMAL', 4, BASIC * 2),
+          eveningOtPay: 0,
+          sundayOtPay: 0,
+          holidayOtPay: 0,
+        },
+        adjustments: [{ category: 'NORMAL', hours: 3 }],
+      },
+    ]);
+    expect(result.hours.normalHours).toBe(2 + 1 + 4 + 3);
+    expect(result.pay.normalOtPay).toBeCloseTo(
+      manualOtPay('NORMAL', 2, BASIC) +
+        manualOtPay('NORMAL', 1, BASIC) +
+        manualOtPay('NORMAL', 4, BASIC * 2) +
+        manualOtPay('NORMAL', 3, BASIC * 2),
+      2,
+    );
+    expect(result.appliedByContract).toHaveLength(2);
+    expect(result.periodTotals[0]!.hours.normalHours).toBe(3);
+    expect(result.periodTotals[1]!.hours.normalHours).toBe(7);
   });
 });
 

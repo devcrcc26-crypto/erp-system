@@ -6159,6 +6159,7 @@ model EmployeeContract{
   evaluations               EmployeeEvaluation[]
   payrollEntries            PayrollEntry[]
   payrollSalaryPeriods      PayrollSalaryPeriod[]
+  payrollOtAdjustments      PayrollOtAdjustment[]
   leaveBalanceEntries       LeaveBalanceEntry[]
 
   @@unique([companyId, contractNumber], map: "uq_employee_contract_company_number")
@@ -6851,13 +6852,15 @@ model PayrollOtAdjustment {
   companyId    String            @map("company_id")
   payrollRunId String            @map("payroll_run_id")
   employeeId   String            @map("employee_id")
+  /// Contract (salary period) these paper hours are priced on.
+  contractId   String            @map("contract_id")
   otCategory   PayrollOtCategory @map("ot_category")
   /// Hours to add (positive) or subtract (negative).
   hours        Decimal           @db.Decimal(6, 2)
   /// Hours actually added to the entry: equals `hours` unless a negative
   /// adjustment was capped so the category total cannot go below zero.
   appliedHours Decimal           @default(0) @map("applied_hours") @db.Decimal(6, 2)
-  /// OT pay this adjustment added to the entry (month-end basic x policy rate),
+  /// OT pay this adjustment added (that contract's basic x policy rate),
   /// kept so the system part of the entry's OT stays separable.
   amount       Decimal           @default(0) @db.Decimal(14, 2)
   /// Source of the hours, e.g. "Paper records - Nov 2026". Required when hours != 0.
@@ -6867,15 +6870,17 @@ model PayrollOtAdjustment {
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
 
-  company    Company    @relation(fields: [companyId], references: [id])
-  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
-  employee   User       @relation("PayrollOtAdjustmentEmployee", fields: [employeeId], references: [id])
-  creator    User       @relation("PayrollOtAdjustmentCreator", fields: [createdBy], references: [id])
-  updater    User       @relation("PayrollOtAdjustmentUpdater", fields: [updatedBy], references: [id])
+  company    Company           @relation(fields: [companyId], references: [id])
+  payrollRun PayrollRun        @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee   User              @relation("PayrollOtAdjustmentEmployee", fields: [employeeId], references: [id])
+  contract   EmployeeContract  @relation(fields: [contractId], references: [id])
+  creator    User              @relation("PayrollOtAdjustmentCreator", fields: [createdBy], references: [id])
+  updater    User              @relation("PayrollOtAdjustmentUpdater", fields: [updatedBy], references: [id])
 
-  @@unique([payrollRunId, employeeId, otCategory], map: "uq_payroll_ot_adjustment_run_employee_category")
+  @@unique([payrollRunId, employeeId, contractId, otCategory], map: "uq_payroll_ot_adjustment_run_employee_contract_category")
   @@index([companyId], map: "idx_payroll_ot_adjustment_company")
   @@index([employeeId], map: "idx_payroll_ot_adjustment_employee")
+  @@index([contractId], map: "idx_payroll_ot_adjustment_contract")
   @@map("payroll_ot_adjustment")
 }
 

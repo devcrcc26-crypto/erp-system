@@ -81,7 +81,7 @@ import {
   type OvertimeWeekdaySlice,
 } from '../utils/payroll-overtime.util';
 import {
-  combineManualOvertime,
+  combineManualOvertimeByContracts,
   type AppliedManualOt,
   type ManualOtAdjustmentInput,
 } from '../utils/payroll-ot-adjustment.util';
@@ -248,8 +248,10 @@ interface EntryDraft {
    * What each manual (paper-based) OT adjustment of this employee added to the
    * entry; zero when not applied (e.g. 0 paid days). Saved on the adjustments.
    */
-  manualOt?: AppliedManualOt[];
+  manualOt?: Array<AppliedManualOt & { contractId: string }>;
 }
+
+type ManualOtWithContract = ManualOtAdjustmentInput & { contractId: string };
 
 interface DateWindow {
   windowStart: Date;
@@ -2388,19 +2390,29 @@ export class PayrollRunService {
     const policy = await loadPolicySnapshot(this.prisma, ctx.companyId, monthStart);
     const drafts: EntryDraft[] = [];
 
-    // Manual (paper-based) OT entered by HR on this run, added on top of system OT.
+    // Manual (paper-based) OT entered by HR on this run, added on top of system OT
+    // and priced on the salary-period contract they were assigned to.
     const manualOtRows = await this.prisma.payrollOtAdjustment.findMany({
       where: {
         companyId: ctx.companyId,
         payrollRunId: run.id,
         employeeId: { in: employeeIds },
       },
-      select: { employeeId: true, otCategory: true, hours: true },
+      select: {
+        employeeId: true,
+        contractId: true,
+        otCategory: true,
+        hours: true,
+      },
     });
-    const manualOtByEmployee = new Map<string, ManualOtAdjustmentInput[]>();
+    const manualOtByEmployee = new Map<string, ManualOtWithContract[]>();
     for (const row of manualOtRows) {
       const list = manualOtByEmployee.get(row.employeeId) ?? [];
-      list.push({ category: row.otCategory, hours: this.toNumber(row.hours) });
+      list.push({
+        contractId: row.contractId,
+        category: row.otCategory,
+        hours: this.toNumber(row.hours),
+      });
       manualOtByEmployee.set(row.employeeId, list);
     }
 
@@ -2672,7 +2684,7 @@ export class PayrollRunService {
     netTopUpReason: string | null;
     preservedNotes: string | null;
     /** Manual (paper-based) OT adjustments for this employee on this run. */
-    manualOt?: ManualOtAdjustmentInput[];
+    manualOt?: ManualOtWithContract[];
   }): Promise<EntryDraft> {
     const {
       run,
@@ -3108,24 +3120,91 @@ export class PayrollRunService {
           sundayOtPay: assignedOt.totals.sundayOtPay,
           holidayOtPay: assignedOt.totals.holidayOtPay,
         };
-    // System OT (above, unchanged) plus manual paper-based OT, priced on the
-    // month-end basic. A month that pays no OT pays no manual OT either.
-    const manualOtInput = input.manualOt ?? [];
-    const combinedOt = combineManualOvertime({
-      systemHours: overtimeHours,
-      systemPay: systemOtPay,
-      adjustments: zeroOtForUnpaidMonth ? [] : manualOtInput,
-      basicSalary: monthEndBasic,
-      rates: policy,
-    });
-    const manualOt: AppliedManualOt[] = manualOtInput.map(
-      (adjustment) =>
-        combinedOt.applied.find((row) => row.category === adjustment.category) ?? {
-          category: adjustment.category,
-          hours: 0,
-          amount: 0,
-        },
+    // System OT (above) plus manual paper-based OT, priced per salary-period
+    // contract basic. A month that pays no OT pays no manual OT either.
+    const manualOtInput = zeroOtForUnpaidMonth ? [] : (input.manualOt ?? []);
+    const manualByContract = new Map<string, ManualOtAdjustmentInput[]>();
+    for (const row of manualOtInput) {
+      const list = manualByContract.get(row.contractId) ?? [];
+      list.push({ category: row.category, hours: row.hours });
+      manualByContract.set(row.contractId, list);
+    }
+    const contractIdsForOt = new Set<string>([
+      ...otPeriodWindows.map((p) => p.contractId),
+      ...manualByContract.keys(),
+    ]);
+    if (contractIdsForOt.size === 0 && monthEndContract) {
+      contractIdsForOt.add(monthEndContract.id);
+    }
+    const combinedOt = combineManualOvertimeByContracts(
+      [...contractIdsForOt].map((contractId) => {
+        const periodOt = assignedOt.periods.find((p) => p.contractId === contractId);
+        const periodBasic =
+          otPeriodWindows.find((p) => p.contractId === contractId)?.basicSalary ??
+          monthEndBasic;
+        return {
+          contractId,
+          basicSalary: periodBasic,
+          systemHours: zeroOtForUnpaidMonth
+            ? {
+                normalHours: 0,
+                eveningHours: 0,
+                sundayHours: 0,
+                holidayHours: 0,
+              }
+            : {
+                normalHours: periodOt?.normalHours ?? 0,
+                eveningHours: periodOt?.eveningHours ?? 0,
+                sundayHours: periodOt?.sundayHours ?? 0,
+                holidayHours: periodOt?.holidayHours ?? 0,
+              },
+          systemPay: zeroOtForUnpaidMonth
+            ? {
+                normalOtPay: 0,
+                eveningOtPay: 0,
+                sundayOtPay: 0,
+                holidayOtPay: 0,
+              }
+            : {
+                normalOtPay: periodOt?.normalOtPay ?? 0,
+                eveningOtPay: periodOt?.eveningOtPay ?? 0,
+                sundayOtPay: periodOt?.sundayOtPay ?? 0,
+                holidayOtPay: periodOt?.holidayOtPay ?? 0,
+              },
+          adjustments: manualByContract.get(contractId) ?? [],
+        };
+      }),
+      policy,
     );
+    // Single-contract employees with no period windows: fall back to entry-level
+    // system totals so undated sheet OT is not dropped.
+    const useEntryLevelSystem =
+      contractIdsForOt.size <= 1 &&
+      assignedOt.periods.length === 0 &&
+      !zeroOtForUnpaidMonth;
+    const entryCombined = useEntryLevelSystem
+      ? combineManualOvertimeByContracts(
+          [
+            {
+              contractId: monthEndContract?.id ?? [...contractIdsForOt][0] ?? 'none',
+              basicSalary: monthEndBasic,
+              systemHours: overtimeHours,
+              systemPay: systemOtPay,
+              adjustments: manualOtInput.map((row) => ({
+                category: row.category,
+                hours: row.hours,
+              })),
+            },
+          ],
+          policy,
+        )
+      : combinedOt;
+    const manualOt: Array<AppliedManualOt & { contractId: string }> = [];
+    for (const group of entryCombined.appliedByContract) {
+      for (const applied of group.applied) {
+        manualOt.push({ ...applied, contractId: group.contractId });
+      }
+    }
 
     const result = this.calc.calculate({
       basicSalary: monthEndBasic,
@@ -3136,12 +3215,12 @@ export class PayrollRunService {
       netTopUp: effectiveNetTopUp,
       payrollDays,
       earnedSalary: sumEarned,
-      overtimeHours: combinedOt.hours,
+      overtimeHours: entryCombined.hours,
       overtimePay: {
-        normalOtPay: combinedOt.pay.normalOtPay,
-        eveningOtPay: combinedOt.pay.eveningOtPay,
-        sundayOtPay: combinedOt.pay.sundayOtPay,
-        holidayOtPay: combinedOt.pay.holidayOtPay,
+        normalOtPay: entryCombined.pay.normalOtPay,
+        eveningOtPay: entryCombined.pay.eveningOtPay,
+        sundayOtPay: entryCombined.pay.sundayOtPay,
+        holidayOtPay: entryCombined.pay.holidayOtPay,
       },
       taxableThreshold,
       pensionApplicable,
@@ -3155,8 +3234,8 @@ export class PayrollRunService {
     const notesFromGenerate = noteParts.length > 0 ? noteParts.join('. ') : null;
     const notes = preservedNotes ?? notesFromGenerate;
 
-    const otByContractId = new Map(
-      assignedOt.periods.map((p) => [p.contractId, p]),
+    const periodTotalsByContract = new Map(
+      entryCombined.periodTotals.map((p) => [p.contractId, p]),
     );
 
     const salaryPeriods: SalaryPeriodDraft[] = [];
@@ -3166,7 +3245,7 @@ export class PayrollRunService {
         if (!window) {
           continue;
         }
-        const ot = otByContractId.get(period.contract.id);
+        const ot = periodTotalsByContract.get(period.contract.id);
         salaryPeriods.push({
           id: randomUUID(),
           entryId,
@@ -3176,15 +3255,15 @@ export class PayrollRunService {
           days: this.round(period.days * earnedScale),
           basicSalary: period.basicSalary,
           earnedSalary: this.round(period.periodEarned * earnedScale),
-          normalOtHours: ot?.normalHours ?? 0,
-          eveningOtHours: ot?.eveningHours ?? 0,
-          sundayOtHours: ot?.sundayHours ?? 0,
-          holidayOtHours: ot?.holidayHours ?? 0,
-          normalOtPay: ot?.normalOtPay ?? 0,
-          eveningOtPay: ot?.eveningOtPay ?? 0,
-          sundayOtPay: ot?.sundayOtPay ?? 0,
-          holidayOtPay: ot?.holidayOtPay ?? 0,
-          totalOtPay: ot?.totalOtPay ?? 0,
+          normalOtHours: ot?.hours.normalHours ?? 0,
+          eveningOtHours: ot?.hours.eveningHours ?? 0,
+          sundayOtHours: ot?.hours.sundayHours ?? 0,
+          holidayOtHours: ot?.hours.holidayHours ?? 0,
+          normalOtPay: ot?.pay.normalOtPay ?? 0,
+          eveningOtPay: ot?.pay.eveningOtPay ?? 0,
+          sundayOtPay: ot?.pay.sundayOtPay ?? 0,
+          holidayOtPay: ot?.pay.holidayOtPay ?? 0,
+          totalOtPay: ot?.pay.totalOtPay ?? 0,
         });
       }
     }
@@ -3211,10 +3290,10 @@ export class PayrollRunService {
       monthlyBonus: new Decimal(monthlyBonus),
       contractNetBonus: new Decimal(contractNetBonus),
       earnedSalary: new Decimal(result.earnedSalary),
-      normalOtHours: new Decimal(combinedOt.hours.normalHours),
-      eveningOtHours: new Decimal(combinedOt.hours.eveningHours),
-      sundayOtHours: new Decimal(combinedOt.hours.sundayHours),
-      holidayOtHours: new Decimal(combinedOt.hours.holidayHours),
+      normalOtHours: new Decimal(entryCombined.hours.normalHours),
+      eveningOtHours: new Decimal(entryCombined.hours.eveningHours),
+      sundayOtHours: new Decimal(entryCombined.hours.sundayHours),
+      holidayOtHours: new Decimal(entryCombined.hours.holidayHours),
       normalOtPay: new Decimal(result.normalOtPay),
       eveningOtPay: new Decimal(result.eveningOtPay),
       sundayOtPay: new Decimal(result.sundayOtPay),
@@ -3339,6 +3418,7 @@ export class PayrollRunService {
             companyId: ctx.companyId,
             payrollRunId: draft.entry.runId,
             employeeId: draft.entry.employeeId,
+            contractId: applied.contractId,
             otCategory: applied.category,
           },
           data: {

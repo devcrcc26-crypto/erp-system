@@ -10,14 +10,13 @@ import {
  * Manual (paper-based) OT adjustments on a payroll entry.
  *
  * System OT comes from approved overtime sheets and is priced per contract
- * period from dated entries. Manual hours have no dates, so they are priced on
- * the month-end basic with the policy rates (like undated sheet totals) and
- * added on top:
+ * period from dated entries. Manual hours have no dates; HR assigns them to a
+ * salary-period contract and they are priced on that period's basic:
  *
  *   total[category] = system[category] + manual[category]
  *
- * A negative adjustment can at most cancel the system hours of its category,
- * so no bucket goes below zero.
+ * A negative adjustment can at most cancel the system hours of its category
+ * on that same contract, so no bucket goes below zero.
  */
 
 export const PAYROLL_OT_CATEGORIES: readonly PayrollOtCategory[] = [
@@ -160,4 +159,86 @@ export function systemOvertimeFromEntry(input: {
     pay[keys.pay] = round2(pay[keys.pay] - row.amount);
   }
   return { hours, pay };
+}
+
+/** One contract's system OT + basic + the manual rows for that contract. */
+export interface ContractManualOtGroup {
+  contractId: string;
+  basicSalary: number;
+  systemHours: OvertimeHoursBuckets;
+  systemPay: Omit<OvertimePayAmounts, 'totalOtPay'>;
+  adjustments: readonly ManualOtAdjustmentInput[];
+}
+
+export interface CombinedContractOvertime {
+  hours: OvertimeHoursBuckets;
+  pay: OvertimePayAmounts;
+  /** What each contract's manual rows contributed (for storage / period updates). */
+  appliedByContract: Array<{ contractId: string; applied: AppliedManualOt[] }>;
+  /** System + manual totals per contract (for PayrollSalaryPeriod columns). */
+  periodTotals: Array<{
+    contractId: string;
+    hours: OvertimeHoursBuckets;
+    pay: OvertimePayAmounts;
+  }>;
+}
+
+function emptyHours(): OvertimeHoursBuckets {
+  return { normalHours: 0, eveningHours: 0, sundayHours: 0, holidayHours: 0 };
+}
+
+function emptyPay(): Omit<OvertimePayAmounts, 'totalOtPay'> {
+  return { normalOtPay: 0, eveningOtPay: 0, sundayOtPay: 0, holidayOtPay: 0 };
+}
+
+/**
+ * Prices manual OT per contract (each on its own basic), then sums into entry
+ * totals. Period totals are system + that contract's manual.
+ */
+export function combineManualOvertimeByContracts(
+  groups: readonly ContractManualOtGroup[],
+  rates?: OvertimeRatePolicy,
+): CombinedContractOvertime {
+  const hours = emptyHours();
+  const pay = emptyPay();
+  const appliedByContract: CombinedContractOvertime['appliedByContract'] = [];
+  const periodTotals: CombinedContractOvertime['periodTotals'] = [];
+
+  for (const group of groups) {
+    const combined = combineManualOvertime({
+      systemHours: group.systemHours,
+      systemPay: group.systemPay,
+      adjustments: group.adjustments,
+      basicSalary: group.basicSalary,
+      rates,
+    });
+    for (const key of Object.keys(hours) as Array<keyof OvertimeHoursBuckets>) {
+      hours[key] = round2(hours[key] + combined.hours[key]);
+    }
+    pay.normalOtPay = round2(pay.normalOtPay + combined.pay.normalOtPay);
+    pay.eveningOtPay = round2(pay.eveningOtPay + combined.pay.eveningOtPay);
+    pay.sundayOtPay = round2(pay.sundayOtPay + combined.pay.sundayOtPay);
+    pay.holidayOtPay = round2(pay.holidayOtPay + combined.pay.holidayOtPay);
+    appliedByContract.push({
+      contractId: group.contractId,
+      applied: combined.applied,
+    });
+    periodTotals.push({
+      contractId: group.contractId,
+      hours: combined.hours,
+      pay: combined.pay,
+    });
+  }
+
+  return {
+    hours,
+    pay: {
+      ...pay,
+      totalOtPay: round2(
+        pay.normalOtPay + pay.eveningOtPay + pay.sundayOtPay + pay.holidayOtPay,
+      ),
+    },
+    appliedByContract,
+    periodTotals,
+  };
 }

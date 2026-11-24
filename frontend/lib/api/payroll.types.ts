@@ -376,11 +376,12 @@ interface PayrollOtPerson {
   lastName: string;
 }
 
-/** Manual (paper-based) OT hours on a run for one employee and category. */
+/** Manual (paper-based) OT hours on a run for one employee, contract and category. */
 export interface PayrollOtAdjustment {
   id: string;
   payrollRunId: string;
   employeeId: string;
+  contractId: string;
   employee: PayrollOtPerson & { employeeId: string | null };
   otCategory: PayrollOtCategory;
   /** Hours HR entered (negative subtracts). */
@@ -406,6 +407,17 @@ export interface PayrollOtCategoryBreakdown {
   totalPay: number;
 }
 
+/** One salary-period contract that can receive paper OT. */
+export interface PayrollOtContractOption {
+  contractId: string;
+  contractNumber: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  basicSalary: number;
+  categories: PayrollOtCategoryBreakdown[];
+  rates: Record<PayrollOtCategory, number>;
+}
+
 /** System OT vs manual OT for one employee on one run. */
 export interface PayrollOtBreakdown {
   runId: string;
@@ -415,10 +427,14 @@ export interface PayrollOtBreakdown {
   entryId: string | null;
   overtimeSheetId: string | null;
   paidDays: number;
+  /** Month-end / last period — default selection in the UI. */
+  defaultContractId: string | null;
+  contracts: PayrollOtContractOption[];
+  /** Employee-level roll-up across all contracts. */
   categories: PayrollOtCategoryBreakdown[];
   totals: { systemPay: number; manualPay: number; totalPay: number };
   adjustments: PayrollOtAdjustment[];
-  /** Pay per manual hour by category, for live previews while typing. */
+  /** Rates for the default contract (live preview fallback). */
   rates?: Record<PayrollOtCategory, number>;
   /** After a save: the repriced entry (patched into the run without a reload). */
   entry?: Partial<PayrollEntryDetail> & { id: string };
@@ -426,15 +442,17 @@ export interface PayrollOtBreakdown {
 
 export interface UpsertPayrollOtAdjustmentPayload {
   employeeId: string;
+  contractId: string;
   otCategory: PayrollOtCategory;
   hours: number;
   note: string;
 }
 
-/** Bulk replace of all manual OT rows for one employee (one reprice). */
+/** Bulk replace of manual OT for one contract on an employee (one reprice). */
 export interface ReplacePayrollOtAdjustmentsPayload {
   employeeId: string;
-  /** Non-zero categories only; empty clears all. */
+  contractId: string;
+  /** Non-zero categories only; empty clears this contract’s manual OT. */
   items: Array<{ otCategory: PayrollOtCategory; hours: number }>;
   note?: string;
 }
