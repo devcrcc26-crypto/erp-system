@@ -400,7 +400,9 @@ describe('active link resolution', () => {
       'work-from-home',
     );
     expect(resolveActiveLink('/organization/vehicles/3', links)?.folderId).toBe('operations');
-    expect(resolveActiveLink('/seniority-levels', links)?.link.id).toBe('positions');
+    expect(resolveActiveLink('/seniority-levels', links)?.link.id).toBe(
+      'seniority-levels',
+    );
   });
 
   it('highlights New Request on the picker and every form, Approvals elsewhere', () => {
@@ -446,10 +448,10 @@ describe('module search', () => {
     expect(searchSidebar(links, '   ', identity)).toEqual([]);
   });
 
-  it('finds Positions (home of Seniority levels) by seniority keywords', () => {
+  it('finds Seniority levels by seniority keywords', () => {
     expect(
       searchSidebar(links, 'junior', identity).map((entry) => entry.link.id),
-    ).toEqual(['positions']);
+    ).toEqual(['seniority-levels']);
   });
 });
 

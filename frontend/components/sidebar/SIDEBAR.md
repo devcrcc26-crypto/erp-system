@@ -86,7 +86,8 @@ The rail is read top to bottom as *daily work → modules → account/system*. K
 | --- | --- | --- |
 | Top | Dashboard, New Request | Where every user starts. |
 | Inboxes | Approvals (badge), Evaluation Inbox (non-HR leads only; HR users have it under People › Performance), Announcements (everyone; unread badge; also covers What's new) | Things waiting on *me*. Direct links, never folders. |
-| People | Employees, Contracts · Performance (inbox, evaluations, cycles, templates) · Company Structure (departments, positions, disciplines) · Reports | Who works here and how they're doing. |
+| People | Employees, Contracts · Performance (inbox, evaluations, cycles, templates) · Reports | Who works here and how they're doing. |
+| Organization | Structure (departments, positions, seniority, disciplines) | Company org chart. |
 | Time & Attendance | Leave (requests, policy, public holidays) · Attendance (attendance, field movement, work from home, site assignments) · Schedules & Overtime | When people work. |
 | Pay & Travel | Payroll, Expense Claims · Travel (flights, business trips, per diem, per-diem rates) | Money paid to people. |
 | Operations | Procurement · Fleet & Assets (vehicle requests, refueling, inspection & repair, company vehicles, company assets) · Administration (seals, exit permits, Manage announcements for `announcements.manage`) | Company resources — not HR. |
