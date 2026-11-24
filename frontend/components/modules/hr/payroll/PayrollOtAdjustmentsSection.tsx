@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
-import { Alert, Button, Input, InputNumber, Popconfirm, Segmented, Spin, Tag } from 'antd';
+import { Alert, Button, Input, InputNumber, Popconfirm, Spin, Tag } from 'antd';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -29,7 +29,12 @@ import { useReportDirty } from '@/components/modules/hr/payroll/payroll-entry-di
 
 const KEY = 'hr.payroll.otAdjust';
 
-const CATEGORIES: readonly PayrollOtCategory[] = ['NORMAL', 'EVENING', 'SUNDAY', 'HOLIDAY'];
+const CATEGORIES: readonly PayrollOtCategory[] = [
+  'NORMAL',
+  'EVENING',
+  'SUNDAY',
+  'HOLIDAY',
+];
 
 /** Same labels as the overtime module (Normal OT, Evening OT, Weekend, Holiday). */
 const CATEGORY_LABEL_KEY: Record<PayrollOtCategory, string> = {
@@ -39,6 +44,22 @@ const CATEGORY_LABEL_KEY: Record<PayrollOtCategory, string> = {
   HOLIDAY: 'hr.overtimeCategory.holiday',
 };
 
+type HoursByCategory = Record<PayrollOtCategory, number | null>;
+
+function emptyHours(): HoursByCategory {
+  return { NORMAL: null, EVENING: null, SUNDAY: null, HOLIDAY: null };
+}
+
+function hoursFromAdjustments(
+  adjustments: readonly PayrollOtAdjustment[],
+): HoursByCategory {
+  const hours = emptyHours();
+  for (const row of adjustments) {
+    hours[row.otCategory] = row.hours;
+  }
+  return hours;
+}
+
 function hoursLabel(value: number): string {
   return String(Math.round(value * 100) / 100);
 }
@@ -47,11 +68,14 @@ function signedHours(value: number): string {
   return `${value > 0 ? '+' : value < 0 ? '−' : ''}${hoursLabel(Math.abs(value))}`;
 }
 
+function coerceHours(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
 /**
  * Overtime tab of a payroll entry: system OT (approved overtime sheets) and
- * manual adjustments for paper-based records, kept apart, plus the combined
- * totals. Manual rows are added / edited one at a time and saved per row
- * (each save is audited and reprices the entry).
+ * manual adjustments for paper-based records. Manual hours are edited as an
+ * Excel-style row (one cell per OT category); empty cells count as 0.
  */
 export default function PayrollOtAdjustmentsSection({
   runId,
@@ -121,8 +145,12 @@ function SystemOtTable({ data }: { data: PayrollOtBreakdown }): React.ReactNode 
           <thead>
             <tr>
               <th scope="col">{t(`${KEY}.colCategory`)}</th>
-              <th scope="col" className="is-num">{t(`${KEY}.colHours`)}</th>
-              <th scope="col" className="is-num">{t(`${KEY}.colPay`)}</th>
+              <th scope="col" className="is-num">
+                {t(`${KEY}.colHours`)}
+              </th>
+              <th scope="col" className="is-num">
+                {t(`${KEY}.colPay`)}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -153,11 +181,8 @@ function SystemOtTable({ data }: { data: PayrollOtBreakdown }): React.ReactNode 
   );
 }
 
-interface FormState {
-  /** Adjustment being edited, or 'new'. */
-  target: string;
-  category: PayrollOtCategory;
-  hours: number | null;
+interface GridFormState {
+  hours: HoursByCategory;
   note: string;
 }
 
@@ -176,58 +201,101 @@ function ManualOtEditor({
   const messageApi = useAppMessage();
   const upsert = useUpsertPayrollOtAdjustment(runId);
   const remove = useDeletePayrollOtAdjustment(runId);
-  const [form, setForm] = useState<FormState | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  useReportDirty(
-    'ot-adjustment',
-    form != null && (form.hours != null || form.note.trim() !== ''),
+  const [form, setForm] = useState<GridFormState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const baselineHours = useMemo(
+    () => hoursFromAdjustments(data.adjustments),
+    [data.adjustments],
   );
+  const sharedNote = data.adjustments[0]?.note ?? '';
 
-  const used = new Set(data.adjustments.map((row) => row.otCategory));
-  const freeCategories = CATEGORIES.filter((category) => !used.has(category));
+  const dirty = useMemo(() => {
+    if (!form) return false;
+    if (form.note.trim() !== (sharedNote ?? '').trim()) return true;
+    return CATEGORIES.some(
+      (category) =>
+        coerceHours(form.hours[category]) !== coerceHours(baselineHours[category]),
+    );
+  }, [form, baselineHours, sharedNote]);
 
-  function startAdd(): void {
-    const category = freeCategories[0];
-    if (category) {
-      setForm({ target: 'new', category, hours: null, note: '' });
-    }
-  }
+  useReportDirty('ot-adjustment', dirty);
 
-  function startEdit(adjustment: PayrollOtAdjustment): void {
+  const hasManual = data.adjustments.length > 0;
+  const nonZeroDraftCount = form
+    ? CATEGORIES.filter((category) => coerceHours(form.hours[category]) !== 0)
+        .length
+    : 0;
+
+  function startEdit(): void {
     setForm({
-      target: adjustment.id,
-      category: adjustment.otCategory,
-      hours: adjustment.hours,
-      note: adjustment.note ?? '',
+      hours: hoursFromAdjustments(data.adjustments),
+      note: sharedNote,
     });
   }
 
+  function startAdd(): void {
+    setForm({ hours: emptyHours(), note: '' });
+  }
+
   async function save(): Promise<void> {
-    if (!form || form.hours == null || form.hours === 0 || !form.note.trim()) return;
+    if (!form) return;
+
+    const toUpsert = CATEGORIES.filter(
+      (category) => coerceHours(form.hours[category]) !== 0,
+    );
+    const toDelete = data.adjustments.filter(
+      (row) => coerceHours(form.hours[row.otCategory]) === 0,
+    );
+
+    if (toUpsert.length === 0 && toDelete.length === 0) {
+      messageApi.error(t(`${KEY}.hoursRequired`));
+      return;
+    }
+
+    const note = form.note.trim();
+    if (toUpsert.length > 0 && !note) {
+      messageApi.error(t(`${KEY}.noteRequired`));
+      return;
+    }
+
+    setSaving(true);
     try {
-      await upsert.mutateAsync({
-        employeeId,
-        otCategory: form.category,
-        hours: form.hours,
-        note: form.note.trim(),
-      });
+      // Sequential so each reprice sees the previous categories.
+      for (const row of toDelete) {
+        await remove.mutateAsync(row.id);
+      }
+      for (const category of toUpsert) {
+        await upsert.mutateAsync({
+          employeeId,
+          otCategory: category,
+          hours: coerceHours(form.hours[category]),
+          note,
+        });
+      }
       messageApi.success(t(`${KEY}.saved`));
       setForm(null);
     } catch (error: unknown) {
       notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t);
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function deleteAdjustment(adjustment: PayrollOtAdjustment): Promise<void> {
-    setDeletingId(adjustment.id);
+  async function clearAll(): Promise<void> {
+    if (data.adjustments.length === 0) return;
+    setClearing(true);
     try {
-      await remove.mutateAsync(adjustment.id);
+      for (const row of data.adjustments) {
+        await remove.mutateAsync(row.id);
+      }
       messageApi.success(t(`${KEY}.deleted`));
-      if (form?.target === adjustment.id) setForm(null);
+      setForm(null);
     } catch (error: unknown) {
       notifyApiError(error, t(`${KEY}.deleteFailed`), messageApi, t);
     } finally {
-      setDeletingId(null);
+      setClearing(false);
     }
   }
 
@@ -236,6 +304,14 @@ function ManualOtEditor({
     : data.paidDays === 0
       ? t(`${KEY}.zeroDays`)
       : null;
+
+  const latestMeta = data.adjustments.reduce<PayrollOtAdjustment | null>(
+    (latest, row) => {
+      if (!latest) return row;
+      return dayjs(row.updatedAt).isAfter(dayjs(latest.updatedAt)) ? row : latest;
+    },
+    null,
+  );
 
   return (
     <section className="erp-payroll-otadj-block erp-payroll-otadj-block--manual">
@@ -248,227 +324,276 @@ function ManualOtEditor({
           <p className="erp-payroll-otadj-sub">{t(`${KEY}.manualSub`)}</p>
         </div>
         {canEdit && !form ? (
-          <Button
-            size="small"
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={startAdd}
-            disabled={freeCategories.length === 0}
-            title={freeCategories.length === 0 ? t(`${KEY}.allCategoriesUsed`) : undefined}
-          >
-            {t(`${KEY}.addAdjustment`)}
-          </Button>
+          <div className="erp-payroll-otadj-head-actions">
+            {hasManual ? (
+              <>
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={startEdit}
+                >
+                  {t(`${KEY}.edit`)}
+                </Button>
+                <Popconfirm
+                  title={t(`${KEY}.clearConfirm`)}
+                  okText={t('common.delete')}
+                  cancelText={t('common.cancel')}
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => void clearAll()}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={clearing}
+                  >
+                    {t(`${KEY}.clearAll`)}
+                  </Button>
+                </Popconfirm>
+              </>
+            ) : (
+              <Button
+                size="small"
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={startAdd}
+              >
+                {t(`${KEY}.addAdjustment`)}
+              </Button>
+            )}
+          </div>
         ) : null}
       </header>
 
       {lockedReason ? <p className="erp-payroll-otadj-empty">{lockedReason}</p> : null}
 
-      {form?.target === 'new' ? (
-        <AdjustmentForm
+      {form ? (
+        <ManualOtGridForm
           form={form}
-          categories={freeCategories}
-          saving={upsert.isPending}
+          saving={saving}
+          canSave={
+            nonZeroDraftCount > 0 ||
+            toDeleteCount(data.adjustments, form) > 0
+          }
+          requiresNote={nonZeroDraftCount > 0}
           onChange={setForm}
           onSave={() => void save()}
           onCancel={() => setForm(null)}
         />
-      ) : null}
-
-      {data.adjustments.length === 0 && form?.target !== 'new' ? (
+      ) : !hasManual ? (
         <div className="erp-payroll-otadj-placeholder">
           <p>{t(`${KEY}.noManual`)}</p>
-          {canEdit ? <p className="erp-payroll-otadj-sub">{t(`${KEY}.noManualHint`)}</p> : null}
+          {canEdit ? (
+            <p className="erp-payroll-otadj-sub">{t(`${KEY}.noManualHint`)}</p>
+          ) : null}
         </div>
       ) : (
-        <ul className="erp-payroll-otadj-rows">
-          {data.adjustments.map((adjustment) =>
-            form?.target === adjustment.id ? (
-              <li key={adjustment.id}>
-                <AdjustmentForm
-                  form={form}
-                  categories={[adjustment.otCategory]}
-                  saving={upsert.isPending}
-                  onChange={setForm}
-                  onSave={() => void save()}
-                  onCancel={() => setForm(null)}
-                />
-              </li>
-            ) : (
-              <AdjustmentRow
-                key={adjustment.id}
-                adjustment={adjustment}
-                canEdit={canEdit && !form}
-                deleting={deletingId === adjustment.id}
-                onEdit={() => startEdit(adjustment)}
-                onDelete={() => deleteAdjustment(adjustment)}
-              />
-            ),
-          )}
-        </ul>
+        <ManualOtHoursTable
+          hours={baselineHours}
+          amounts={Object.fromEntries(
+            data.adjustments.map((row) => [row.otCategory, row.amount]),
+          ) as Partial<Record<PayrollOtCategory, number>>}
+          applied={Object.fromEntries(
+            data.adjustments.map((row) => [row.otCategory, row.appliedHours]),
+          ) as Partial<Record<PayrollOtCategory, number>>}
+          note={sharedNote}
+          meta={
+            latestMeta
+              ? latestMeta.updatedAt !== latestMeta.createdAt
+                ? t(`${KEY}.updatedBy`, {
+                    name: formatUserName(latestMeta.updatedBy),
+                    date: dayjs(latestMeta.updatedAt).format('YYYY-MM-DD HH:mm'),
+                  })
+                : t(`${KEY}.addedBy`, {
+                    name: formatUserName(latestMeta.createdBy),
+                    date: dayjs(latestMeta.createdAt).format('YYYY-MM-DD HH:mm'),
+                  })
+              : null
+          }
+        />
       )}
     </section>
   );
 }
 
-function AdjustmentRow({
-  adjustment,
-  canEdit,
-  deleting,
-  onEdit,
-  onDelete,
+function toDeleteCount(
+  adjustments: readonly PayrollOtAdjustment[],
+  form: GridFormState,
+): number {
+  return adjustments.filter(
+    (row) => coerceHours(form.hours[row.otCategory]) === 0,
+  ).length;
+}
+
+function ManualOtHoursTable({
+  hours,
+  amounts,
+  applied,
+  note,
+  meta,
 }: {
-  adjustment: PayrollOtAdjustment;
-  canEdit: boolean;
-  deleting: boolean;
-  onEdit: () => void;
-  onDelete: () => Promise<void>;
+  hours: HoursByCategory;
+  amounts: Partial<Record<PayrollOtCategory, number>>;
+  applied: Partial<Record<PayrollOtCategory, number>>;
+  note: string;
+  meta: string | null;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const capped = adjustment.appliedHours !== adjustment.hours;
-  const edited = adjustment.updatedAt !== adjustment.createdAt;
   return (
-    <li className="erp-payroll-otadj-row">
-      <div className="erp-payroll-otadj-row-main">
-        <span className="erp-payroll-otadj-cat">{t(CATEGORY_LABEL_KEY[adjustment.otCategory])}</span>
-        <span
-          className={`erp-payroll-otadj-hours${adjustment.hours < 0 ? ' is-negative' : ''}`}
-        >
-          {t(`${KEY}.hoursValue`, { hours: signedHours(adjustment.hours) })}
-        </span>
-        <span className="erp-payroll-otadj-amount">
-          {formatPayrollMoney(adjustment.amount, { emptyZero: false })} ETB
-        </span>
-        {canEdit ? (
-          <span className="erp-payroll-otadj-row-actions">
-            <Button
-              size="small"
-              type="text"
-              icon={<EditOutlined />}
-              onClick={onEdit}
-              aria-label={t(`${KEY}.edit`)}
-            />
-            <Popconfirm
-              title={t(`${KEY}.deleteConfirm`)}
-              okText={t('common.delete')}
-              cancelText={t('common.cancel')}
-              okButtonProps={{ danger: true }}
-              onConfirm={onDelete}
-            >
-              <Button
-                size="small"
-                type="text"
-                danger
-                loading={deleting}
-                icon={<DeleteOutlined />}
-                aria-label={t('common.delete')}
-              />
-            </Popconfirm>
-          </span>
-        ) : null}
-      </div>
-      <p className="erp-payroll-otadj-note">{adjustment.note || '—'}</p>
-      <p className="erp-payroll-otadj-meta">
-        {edited
-          ? t(`${KEY}.updatedBy`, {
-              name: formatUserName(adjustment.updatedBy),
-              date: dayjs(adjustment.updatedAt).format('YYYY-MM-DD HH:mm'),
-            })
-          : t(`${KEY}.addedBy`, {
-              name: formatUserName(adjustment.createdBy),
-              date: dayjs(adjustment.createdAt).format('YYYY-MM-DD HH:mm'),
+    <div className="erp-payroll-otadj-sheet">
+      <table className="erp-payroll-otadj-sheet-table">
+        <thead>
+          <tr>
+            {CATEGORIES.map((category) => (
+              <th key={category} scope="col" className="is-num">
+                {t(CATEGORY_LABEL_KEY[category])}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {CATEGORIES.map((category) => {
+              const value = coerceHours(hours[category]);
+              const appliedHours = applied[category];
+              const capped =
+                appliedHours != null && appliedHours !== value && value !== 0;
+              return (
+                <td key={category} className="is-num">
+                  {value === 0 ? (
+                    <span className="erp-payroll-otadj-sheet-zero">0</span>
+                  ) : (
+                    <span
+                      className={`erp-payroll-otadj-hours${
+                        value < 0 ? ' is-negative' : ''
+                      }`}
+                    >
+                      {signedHours(value)}
+                    </span>
+                  )}
+                  {amounts[category] != null && value !== 0 ? (
+                    <p className="erp-payroll-otadj-sheet-pay">
+                      {formatPayrollMoney(amounts[category]!, {
+                        emptyZero: false,
+                      })}{' '}
+                      ETB
+                    </p>
+                  ) : null}
+                  {capped ? (
+                    <p className="erp-payroll-otadj-sheet-cap">
+                      {t(`${KEY}.cappedHint`, {
+                        applied: hoursLabel(appliedHours!),
+                      })}
+                    </p>
+                  ) : null}
+                </td>
+              );
             })}
-        {capped
-          ? ` · ${t(`${KEY}.cappedHint`, { applied: hoursLabel(adjustment.appliedHours) })}`
-          : null}
-      </p>
-    </li>
+          </tr>
+        </tbody>
+      </table>
+      {note ? <p className="erp-payroll-otadj-note">{note}</p> : null}
+      {meta ? <p className="erp-payroll-otadj-meta">{meta}</p> : null}
+    </div>
   );
 }
 
-function AdjustmentForm({
+function ManualOtGridForm({
   form,
-  categories,
   saving,
+  canSave,
+  requiresNote,
   onChange,
   onSave,
   onCancel,
 }: {
-  form: FormState;
-  /** Categories that can be chosen (one when editing). */
-  categories: readonly PayrollOtCategory[];
+  form: GridFormState;
   saving: boolean;
-  onChange: (next: FormState) => void;
+  canSave: boolean;
+  requiresNote: boolean;
+  onChange: (next: GridFormState) => void;
   onSave: () => void;
   onCancel: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const hoursMissing = form.hours == null || form.hours === 0;
-  const noteMissing = !form.note.trim();
-  const isNew = form.target === 'new';
+  const noteMissing = requiresNote && !form.note.trim();
+
   return (
-    <div className="erp-payroll-otadj-form" role="group" aria-label={t(`${KEY}.formLabel`)}>
-      <div className="erp-payroll-otadj-field">
-        <span>{t(`${KEY}.colCategory`)}</span>
-        {isNew && categories.length > 1 ? (
-          <Segmented
-            size="small"
-            value={form.category}
-            options={categories.map((category) => ({
-              value: category,
-              label: t(CATEGORY_LABEL_KEY[category]),
-            }))}
-            onChange={(value) => onChange({ ...form, category: value as PayrollOtCategory })}
-          />
-        ) : (
-          <strong>{t(CATEGORY_LABEL_KEY[form.category])}</strong>
-        )}
+    <div
+      className="erp-payroll-otadj-form erp-payroll-otadj-form--sheet"
+      role="group"
+      aria-label={t(`${KEY}.formLabel`)}
+    >
+      <p className="erp-payroll-otadj-sub m-0">{t(`${KEY}.gridHint`)}</p>
+      <div className="erp-payroll-otadj-sheet erp-payroll-otadj-sheet--edit">
+        <table className="erp-payroll-otadj-sheet-table">
+          <thead>
+            <tr>
+              {CATEGORIES.map((category) => (
+                <th key={category} scope="col" className="is-num">
+                  {t(CATEGORY_LABEL_KEY[category])}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {CATEGORIES.map((category, index) => (
+                <td key={category} className="is-num erp-payroll-otadj-sheet-cell">
+                  <InputNumber
+                    autoFocus={index === 0}
+                    controls={false}
+                    step={0.5}
+                    min={-744}
+                    max={744}
+                    precision={2}
+                    value={form.hours[category]}
+                    placeholder="0"
+                    className="erp-payroll-otadj-sheet-input"
+                    onChange={(value) =>
+                      onChange({
+                        ...form,
+                        hours: {
+                          ...form.hours,
+                          [category]:
+                            typeof value === 'number' ? value : null,
+                        },
+                      })
+                    }
+                    onPressEnter={onSave}
+                  />
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div className="erp-payroll-otadj-form-row">
-        <label className="erp-payroll-otadj-field erp-payroll-otadj-field--hours">
-          <span>{t(`${KEY}.colHours`)}</span>
-          <InputNumber
-            autoFocus
-            step={0.5}
-            min={-744}
-            max={744}
-            precision={2}
-            value={form.hours}
-            placeholder="0"
-            onChange={(value) =>
-              onChange({ ...form, hours: typeof value === 'number' ? value : null })
-            }
-            onPressEnter={onSave}
-            className="w-full"
-          />
-          <small>{t(`${KEY}.hoursHint`)}</small>
-        </label>
-        <label className="erp-payroll-otadj-field erp-payroll-otadj-field--note">
-          <span>{t(`${KEY}.colNote`)}</span>
-          <Input
-            value={form.note}
-            maxLength={500}
-            placeholder={t(`${KEY}.notePlaceholder`)}
-            status={!hoursMissing && noteMissing ? 'error' : undefined}
-            onChange={(event) => onChange({ ...form, note: event.target.value })}
-            onPressEnter={onSave}
-          />
-          <small className={!hoursMissing && noteMissing ? 'is-error' : undefined}>
-            {t(`${KEY}.noteRequired`)}
-          </small>
-        </label>
-      </div>
+      <label className="erp-payroll-otadj-field erp-payroll-otadj-field--note">
+        <span>{t(`${KEY}.colNote`)}</span>
+        <Input
+          value={form.note}
+          maxLength={500}
+          placeholder={t(`${KEY}.notePlaceholder`)}
+          status={noteMissing ? 'error' : undefined}
+          onChange={(event) => onChange({ ...form, note: event.target.value })}
+          onPressEnter={onSave}
+        />
+        <small className={noteMissing ? 'is-error' : undefined}>
+          {t(`${KEY}.noteRequired`)}
+        </small>
+      </label>
       <div className="erp-payroll-otadj-form-actions">
-        <Button size="small" onClick={onCancel}>
+        <Button size="small" onClick={onCancel} disabled={saving}>
           {t('common.cancel')}
         </Button>
         <Button
           size="small"
           type="primary"
           loading={saving}
-          disabled={hoursMissing || noteMissing}
+          disabled={!canSave || noteMissing}
           onClick={onSave}
         >
-          {isNew ? t(`${KEY}.addButton`) : t('common.save')}
+          {t('common.save')}
         </Button>
       </div>
     </div>
@@ -514,12 +639,18 @@ function OtSummary({ data }: { data: PayrollOtBreakdown }): React.ReactNode {
           <p className="erp-payroll-otadj-sumcat">{t(`${KEY}.totalPay`)}</p>
           <p className="erp-payroll-otadj-sub">
             {t(`${KEY}.totalPaySplit`, {
-              system: formatPayrollMoney(data.totals.systemPay, { emptyZero: false }),
-              manual: formatPayrollMoney(data.totals.manualPay, { emptyZero: false }),
+              system: formatPayrollMoney(data.totals.systemPay, {
+                emptyZero: false,
+              }),
+              manual: formatPayrollMoney(data.totals.manualPay, {
+                emptyZero: false,
+              }),
             })}
           </p>
         </div>
-        <strong>{formatPayrollMoney(data.totals.totalPay, { emptyZero: false })} ETB</strong>
+        <strong>
+          {formatPayrollMoney(data.totals.totalPay, { emptyZero: false })} ETB
+        </strong>
       </div>
     </section>
   );

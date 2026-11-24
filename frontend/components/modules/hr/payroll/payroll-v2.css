@@ -2255,6 +2255,92 @@
   font-size: 12px;
 }
 
+.erp-payroll-otadj-head-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Spreadsheet-style manual OT hours (one column per category). */
+.erp-payroll-otadj-sheet {
+  min-width: 0;
+}
+
+.erp-payroll-otadj-sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.erp-payroll-otadj-sheet-table th {
+  padding: 6px 8px;
+  border: 1px solid var(--erp-n-200);
+  background: var(--erp-n-50, #f8fafc);
+  color: var(--erp-n-700);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.erp-payroll-otadj-sheet-table td {
+  padding: 8px;
+  border: 1px solid var(--erp-n-200);
+  vertical-align: top;
+  background: #ffffff;
+}
+
+.erp-payroll-otadj-sheet-table .is-num {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-otadj-sheet-zero {
+  color: var(--erp-n-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-otadj-sheet-pay,
+.erp-payroll-otadj-sheet-cap {
+  margin: 4px 0 0;
+  color: var(--erp-n-600);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.erp-payroll-otadj-sheet--edit .erp-payroll-otadj-sheet-table td {
+  padding: 0;
+  background: #ffffff;
+}
+
+.erp-payroll-otadj-sheet-cell {
+  height: 40px;
+}
+
+.erp-payroll-otadj-sheet-input.ant-input-number {
+  width: 100%;
+  height: 40px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent;
+}
+
+.erp-payroll-otadj-sheet-input.ant-input-number .ant-input-number-input {
+  height: 40px;
+  padding: 0 8px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.erp-payroll-otadj-sheet-input.ant-input-number-focused {
+  outline: 2px solid var(--erp-accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
 /* Add / edit form */
 .erp-payroll-otadj-form {
   display: flex;
@@ -2266,6 +2352,10 @@
   border-radius: 10px;
   background: var(--erp-accent-wash, #f3f7fd);
   box-shadow: 0 0 0 3px rgba(var(--erp-accent-rgb), 0.1);
+}
+
+.erp-payroll-otadj-form--sheet {
+  gap: 12px;
 }
 
 .erp-payroll-otadj-form-row {
