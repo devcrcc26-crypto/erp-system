@@ -65,7 +65,10 @@ import {
 } from '@/lib/query/profile';
 import { downloadUserIdCard } from '@/lib/query/users';
 import type { UserProfile } from '@/lib/api/types';
-import { formatUserName } from '@/lib/utils/user-display';
+import {
+  formatUserLatinName,
+  formatUserName,
+} from '@/lib/utils/user-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -286,6 +289,8 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
   const fullName = formatUserName(profile);
+  /** Hero title: Latin only — Chinese is shown in the alt span beside it. */
+  const heroName = formatUserLatinName(profile) || fullName;
   const department = localizedName(
     locale,
     profile.departmentName,
@@ -861,7 +866,9 @@ export default function ProfilePageContent(): React.ReactNode {
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
-              <h2 className="erp-users-name erp-employee-hero-name m-0">{fullName}</h2>
+              <h2 className="erp-users-name erp-employee-hero-name m-0">
+                {heroName}
+              </h2>
               {profile.chineseName ? (
                 <span className="erp-users-name-alt">{profile.chineseName}</span>
               ) : null}

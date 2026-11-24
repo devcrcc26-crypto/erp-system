@@ -92,7 +92,10 @@ import {
   useUser,
 } from '@/lib/query/users';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import {
+  formatUserLatinName,
+  formatUserName,
+} from '@/lib/utils/user-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
   userStatusLabel,
@@ -472,6 +475,8 @@ export default function EmployeeDetailPageContent({
   }
 
   const fullName = formatUserName(user);
+  /** Hero title: Latin only — Chinese is shown in the alt span beside it. */
+  const heroName = formatUserLatinName(user) || fullName;
   // Employment actions: users.edit or hr.edit (HR and above), never protected accounts.
   const canManageEmployment = Boolean(
     (canEditUsers || canEditHr) &&
@@ -682,7 +687,7 @@ export default function EmployeeDetailPageContent({
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
               <h2 className="erp-users-name erp-employee-hero-name m-0">
-                {fullName}
+                {heroName}
               </h2>
               {user.chineseName ? (
                 <span className="erp-users-name-alt">{user.chineseName}</span>

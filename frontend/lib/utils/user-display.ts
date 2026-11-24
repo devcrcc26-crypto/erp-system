@@ -27,22 +27,32 @@ export function displayUserLabel(
   return 'Unknown user';
 }
 
-/**
- * Full display name including the Chinese name when present, e.g. "Wei Zhang (张伟)".
- * Falls back to the Chinese name alone, then email, then "Unknown user".
- */
-export function formatUserName(user: {
+type UserNameParts = {
   firstName?: string | null;
   middleName?: string | null;
   lastName?: string | null;
   chineseName?: string | null;
   email?: string | null;
-}): string {
-  const english = [user.firstName, user.middleName, user.lastName]
+};
+
+/**
+ * Latin/English name parts only (no Chinese). Use in heroes that already
+ * render `chineseName` beside the title so it is not shown twice.
+ */
+export function formatUserLatinName(user: UserNameParts): string {
+  return [user.firstName, user.middleName, user.lastName]
     .filter((part) => Boolean(part && String(part).trim()))
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Full display name including the Chinese name when present, e.g. "Wei Zhang (张伟)".
+ * Falls back to the Chinese name alone, then email, then "Unknown user".
+ */
+export function formatUserName(user: UserNameParts): string {
+  const english = formatUserLatinName(user);
   const chinese = user.chineseName?.trim();
 
   if (english && chinese) {
