@@ -279,6 +279,84 @@ async function main(): Promise<void> {
           canExport: false,
         });
       }
+
+      // Revoke stale grants (upsert-only seeds leave prior RolePermission rows).
+      const expectedPermissionIds = new Set<string>();
+      const markExpected = (module: string, action: string): void => {
+        const perm = byKey.get(`${module}:${action}`);
+        if (perm) {
+          expectedPermissionIds.add(perm.id);
+        }
+      };
+      if (PAYROLL_VIEW_ROLES.includes(role.name as (typeof PAYROLL_VIEW_ROLES)[number])) {
+        markExpected('payroll', 'view');
+      }
+      if (
+        PAYROLL_CREATE_EDIT_ROLES.includes(
+          role.name as (typeof PAYROLL_CREATE_EDIT_ROLES)[number],
+        )
+      ) {
+        markExpected('payroll', 'create');
+        markExpected('payroll', 'edit');
+      }
+      if (
+        PAYROLL_APPROVE_ROLES.includes(role.name as (typeof PAYROLL_APPROVE_ROLES)[number])
+      ) {
+        markExpected('payroll', 'approve');
+      }
+      if (
+        PAYROLL_EXPORT_ROLES.includes(role.name as (typeof PAYROLL_EXPORT_ROLES)[number])
+      ) {
+        markExpected('payroll', 'export');
+      }
+      if (
+        PAYROLL_OVERSIGHT_ROLES.includes(
+          role.name as (typeof PAYROLL_OVERSIGHT_ROLES)[number],
+        )
+      ) {
+        markExpected('payroll-oversight', 'view');
+      }
+      if (
+        COMPANY_SETTINGS_VIEW_ROLES.includes(
+          role.name as (typeof COMPANY_SETTINGS_VIEW_ROLES)[number],
+        )
+      ) {
+        markExpected('company_settings', 'view');
+      }
+      if (
+        COMPANY_SETTINGS_EDIT_ROLES.includes(
+          role.name as (typeof COMPANY_SETTINGS_EDIT_ROLES)[number],
+        )
+      ) {
+        markExpected('company_settings', 'edit');
+      }
+
+      const managedPermissionIds = permissions.map((p) => p.id);
+      const existingGrants = await prisma.rolePermission.findMany({
+        where: {
+          roleId: role.id,
+          permissionId: { in: managedPermissionIds },
+        },
+        select: {
+          id: true,
+          permissionId: true,
+          permission: { select: { module: true, action: true } },
+        },
+      });
+      const staleRows = existingGrants.filter(
+        (row) => !expectedPermissionIds.has(row.permissionId),
+      );
+
+      if (staleRows.length > 0) {
+        await prisma.rolePermission.deleteMany({
+          where: { id: { in: staleRows.map((row) => row.id) } },
+        });
+        console.log(
+          `Revoked stale grants for ${role.name}: ${staleRows
+            .map((row) => `${row.permission.module}.${row.permission.action}`)
+            .join(', ')}`,
+        );
+      }
     }
 
     console.log(
