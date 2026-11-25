@@ -43,10 +43,25 @@ export function useCanViewDepartmentsNav(): boolean {
 }
 
 /**
- * True when the session may edit departments (System Administrator only).
+ * True when the session may create/edit/delete departments, positions and
+ * seniority levels. System Administrator / Project Administrator, HR Manager,
+ * and Local HR Manager (API: departments.create / edit / delete).
  */
 export function useCanManageDepartments(): boolean {
-  return useAuthStore((state) => state.capabilities.isSystemAdministrator);
+  const isSystemAdministrator = useAuthStore(
+    (state) => state.capabilities.isSystemAdministrator,
+  );
+  const profileQuery = useCurrentUser();
+  return useMemo(() => {
+    if (isSystemAdministrator) {
+      return true;
+    }
+    const roles = profileQuery.data?.roles ?? [];
+    return roles.some(
+      (role) =>
+        role.name === 'HR Manager' || role.name === 'Local HR Manager',
+    );
+  }, [isSystemAdministrator, profileQuery.data?.roles]);
 }
 
 /**
