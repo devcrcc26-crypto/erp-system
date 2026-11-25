@@ -191,6 +191,7 @@ describe('PayrollRunService.overrideEntryDays', () => {
   it('rescales each contract period in a multi-contract month', async () => {
     const period = (id: string, days: number, basic: number, earned: number) => ({
       id,
+      contractId: id === 'p-1' ? 'c-1' : 'c-2',
       days: new Decimal(days),
       basicSalary: new Decimal(basic),
       earnedSalary: new Decimal(earned),
@@ -221,6 +222,115 @@ describe('PayrollRunService.overrideEntryDays', () => {
       ['p-1', 10, 6000],
       ['p-2', 20, 20000],
     ]);
+  });
+
+  it('overrides paid days on one salary period without rescaling the other', async () => {
+    const period = (
+      id: string,
+      days: number,
+      basic: number,
+      earned: number,
+      startDay: number,
+      endDay: number,
+    ) => ({
+      id,
+      contractId: id === 'p-1' ? 'c-1' : 'c-2',
+      days: new Decimal(days),
+      basicSalary: new Decimal(basic),
+      earnedSalary: new Decimal(earned),
+      periodStart: new Date(Date.UTC(2026, 9, startDay)),
+      periodEnd: new Date(Date.UTC(2026, 9, endDay)),
+      contract: {
+        ...contract,
+        contractNumber: id === 'p-1' ? 'CN-A' : 'CN-B',
+      },
+    });
+    // Oct: contract A days 1–10 (10 employed), B days 11–31 (20 employed).
+    // Currently paid 5 + 10 = 15. Raise only period A to 8 → total 18.
+    const { service, tx } = setup(
+      makeEntry({
+        payrollDays: new Decimal(15),
+        earnedSalary: new Decimal(13000),
+        transportAllowance: new Decimal(1500),
+        monthlyBonus: new Decimal(3000),
+        salaryPeriods: [
+          period('p-1', 5, 18000, 3000, 1, 10),
+          period('p-2', 10, 30000, 10000, 11, 31),
+        ],
+      }),
+      { ...POLICY_DEFAULTS, allowancesReducedByAbsence: true },
+    );
+
+    await service.overrideEntryDays(
+      'run-1',
+      'entry-1',
+      { payrollDays: 8, periodId: 'p-1', reason: 'Site days' },
+      ctx,
+    );
+
+    const { data } = tx.payrollEntry.update.mock.calls[0][0];
+    expect(Number(data.payrollDays)).toBe(18);
+    // Earned: 18000/30×8 + 30000/30×10 = 4800 + 10000 = 14800
+    expect(Number(data.earnedSalary)).toBe(14800);
+    // Allowances use each period's paid days: 3000×8/30 + 3000×10/30 transport, etc.
+    expect(Number(data.transportAllowance)).toBe(1800);
+    expect(Number(data.monthlyBonus)).toBe(3600);
+
+    const calls = tx.payrollSalaryPeriod.update.mock.calls as unknown as Array<
+      [{ where: { id: string }; data: { days: Decimal; earnedSalary: Decimal } }]
+    >;
+    const byId = Object.fromEntries(
+      calls.map(([arg]) => [
+        arg.where.id,
+        [Number(arg.data.days), Number(arg.data.earnedSalary)],
+      ]),
+    );
+    expect(byId['p-1']).toEqual([8, 4800]);
+    expect(byId['p-2']).toEqual([10, 10000]);
+
+    const audit = tx.payrollEntryAudit.create.mock.calls[0][0].data;
+    expect(audit.oldValue).toBe('5');
+    expect(audit.newValue).toBe('8');
+    expect(audit.reason).toContain('CN-A');
+    expect(audit.reason).toContain('Site days');
+  });
+
+  it('rejects a periodId that is not on the entry', async () => {
+    const { service, prisma } = setup(
+      makeEntry({
+        salaryPeriods: [
+          {
+            id: 'p-1',
+            contractId: 'c-1',
+            days: new Decimal(15),
+            basicSalary: new Decimal(30000),
+            earnedSalary: new Decimal(15000),
+            periodStart: new Date(Date.UTC(2026, 9, 1)),
+            periodEnd: new Date(Date.UTC(2026, 9, 15)),
+            contract,
+          },
+          {
+            id: 'p-2',
+            contractId: 'c-2',
+            days: new Decimal(15),
+            basicSalary: new Decimal(30000),
+            earnedSalary: new Decimal(15000),
+            periodStart: new Date(Date.UTC(2026, 9, 16)),
+            periodEnd: new Date(Date.UTC(2026, 9, 31)),
+            contract,
+          },
+        ],
+      }),
+    );
+    await expect(
+      service.overrideEntryDays(
+        'run-1',
+        'entry-1',
+        { payrollDays: 10, periodId: 'missing' },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('pays nothing at 0 days, then restores everything when the days are raised again', async () => {

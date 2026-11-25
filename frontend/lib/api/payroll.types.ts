@@ -159,6 +159,8 @@ export interface PayrollEntryDetail {
 
 export interface UpdatePayrollEntryDaysPayload {
   payrollDays: number;
+  /** When set, overrides paid days for this salary period only (multi-contract months). */
+  periodId?: string;
   reason?: string;
 }
 

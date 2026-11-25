@@ -244,7 +244,7 @@ export class PayrollController {
   @RequireAnyPermission({ module: 'payroll', action: 'edit' })
   @ApiOperation({
     summary:
-      'Override paid days on an entry in a DRAFT or REVIEWED run and recalculate its figures (HR only, audited)',
+      'Override paid days on an entry in a DRAFT or REVIEWED run and recalculate its figures (HR only, audited). Optional periodId sets days for one salary period in a multi-contract month.',
   })
   overrideEntryDays(
     @Param('id') id: string,

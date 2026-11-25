@@ -1656,15 +1656,21 @@ export class PayrollRunService {
    * Overtime is left as stored: it does not depend on paid days. The exception is
    * 0 days, which pays nothing like a generated zero-day entry; raising the days
    * again restores what that cleared.
+   *
+   * When `periodId` is set (multi-contract month), only that salary period's paid
+   * days are changed; other periods keep theirs and the entry total is their sum.
+   * Omit `periodId` to scale every period from a new entry total (single-period /
+   * whole-entry override).
    */
   async overrideEntryDays(
     runId: string,
     entryId: string,
-    dto: { payrollDays: number; reason?: string },
+    dto: { payrollDays: number; periodId?: string; reason?: string },
     ctx: ServiceContext,
   ): Promise<PayrollEntry> {
     const contractSelect = {
       startDate: true,
+      contractNumber: true,
       transportationAllowance: true,
       monthlyBonus: true,
     } satisfies Prisma.EmployeeContractSelect;
@@ -1688,9 +1694,25 @@ export class PayrollRunService {
       );
     }
 
-    const oldDays = this.toNumber(entry.payrollDays);
-    const newDays = dto.payrollDays;
-    if (oldDays === newDays) {
+    const oldTotalDays = this.toNumber(entry.payrollDays);
+    const periodId = dto.periodId?.trim() || undefined;
+    const targetPeriod = periodId
+      ? entry.salaryPeriods.find((period) => period.id === periodId)
+      : undefined;
+    if (periodId && !targetPeriod) {
+      throw new BadRequestException(
+        'Salary period not found on this entry. Use a period from this multi-contract month',
+      );
+    }
+    if (periodId && entry.salaryPeriods.length < 2) {
+      throw new BadRequestException(
+        'Per-period paid days can only be set when the entry has more than one contract period',
+      );
+    }
+
+    const oldPeriodDays = targetPeriod ? this.toNumber(targetPeriod.days) : oldTotalDays;
+    const requestedDays = dto.payrollDays;
+    if (oldPeriodDays === requestedDays) {
       return entry;
     }
 
@@ -1703,9 +1725,9 @@ export class PayrollRunService {
     // Generation zeroes overtime, allowances and top-ups for these entries, so the
     // snapshot cannot be repriced. Recalculating from attendance restores all of them.
     const zeroSnapshot =
-      oldDays === 0 ? await this.latestZeroDaysSnapshot(entryId, ctx.companyId) : null;
+      oldTotalDays === 0 ? await this.latestZeroDaysSnapshot(entryId, ctx.companyId) : null;
     const generatedAsFullyAbsent =
-      (oldDays === 0 && !zeroSnapshot) ||
+      (oldTotalDays === 0 && !zeroSnapshot) ||
       (Boolean(entry.notes?.includes(FULLY_ABSENT_NO_PAY_NOTE)) &&
         this.toNumber(entry.transportAllowance) === 0 &&
         this.toNumber(entry.monthlyBonus) === 0);
@@ -1715,40 +1737,140 @@ export class PayrollRunService {
       );
     }
 
-    // Stored period days are already scaled by absence: recover the contract split.
-    const oldScale = oldDays / employedDays;
-    const newScale = newDays / employedDays;
-    let allocatedSoFar = 0;
-    const slices =
-      entry.salaryPeriods.length > 0
-        ? entry.salaryPeriods.map((period, index) => {
-            const allocatedDays =
-              index === entry.salaryPeriods.length - 1
-                ? employedDays - allocatedSoFar
-                : zeroSnapshot
-                  ? (zeroSnapshot.allocatedDays[period.id] ?? 0)
-                  : Math.round(this.toNumber(period.days) / oldScale);
-            allocatedSoFar += allocatedDays;
-            return {
-              periodId: period.id as string | null,
-              basic: this.toNumber(period.basicSalary),
-              contract: period.contract,
-              allocatedDays,
-            };
-          })
-        : [
-            {
-              periodId: null as string | null,
-              basic: this.toNumber(entry.basicSalary),
-              contract: entry.contract,
-              allocatedDays: employedDays,
-            },
-          ];
+    type DaysSlice = {
+      periodId: string | null;
+      basic: number;
+      contract: NonNullable<typeof entry.contract>;
+      /** Employed days for this contract window (before absence). */
+      allocatedDays: number;
+      /** Paid days after this override. */
+      paidDays: number;
+      label: string | null;
+    };
 
-    const periodEarned = (slice: { basic: number; allocatedDays: number }): number =>
-      this.round((slice.basic / PAYROLL_MONTH_DAYS) * slice.allocatedDays);
+    const periodLabel = (
+      period: (typeof entry.salaryPeriods)[number],
+    ): string => {
+      const number =
+        period.contract.contractNumber?.trim() || period.contractId.slice(0, 8);
+      if (!period.periodStart || !period.periodEnd) {
+        return number;
+      }
+      const start = period.periodStart.toISOString().slice(0, 10);
+      const end = period.periodEnd.toISOString().slice(0, 10);
+      return `${number} · ${start}–${end}`;
+    };
+
+    const allocatedForPeriod = (
+      period: (typeof entry.salaryPeriods)[number],
+      index: number,
+      allocatedSoFar: number,
+      oldScale: number,
+    ): number => {
+      if (zeroSnapshot) {
+        return zeroSnapshot.allocatedDays[period.id] ?? 0;
+      }
+      // Prefer the payroll-calendar window (survives non-uniform per-period edits).
+      if (period.periodStart && period.periodEnd) {
+        const fromDates = employedPayrollDays(
+          entry.run.month,
+          entry.run.year,
+          period.periodStart,
+          period.periodEnd,
+        ).days;
+        if (fromDates > 0) {
+          return fromDates;
+        }
+      }
+      // Fallback: invert the uniform absence scale from stored paid days.
+      if (index === entry.salaryPeriods.length - 1) {
+        return Math.max(0, employedDays - allocatedSoFar);
+      }
+      return oldScale > 0
+        ? Math.round(this.toNumber(period.days) / oldScale)
+        : 0;
+    };
+
+    let slices: DaysSlice[];
+    let newTotalDays: number;
+    let auditOldValue: string;
+    let auditNewValue: string;
+    let periodAuditLabel: string | null = null;
+
+    if (targetPeriod) {
+      // Per-period: set this period's paid days; keep the others as stored.
+      let allocatedSoFar = 0;
+      const oldScale = oldTotalDays > 0 ? oldTotalDays / employedDays : 0;
+      slices = entry.salaryPeriods.map((period, index) => {
+        const allocatedDays = allocatedForPeriod(period, index, allocatedSoFar, oldScale);
+        allocatedSoFar += allocatedDays;
+        const paidDays =
+          period.id === targetPeriod.id
+            ? requestedDays
+            : oldTotalDays === 0
+              ? 0
+              : this.toNumber(period.days);
+        return {
+          periodId: period.id,
+          basic: this.toNumber(period.basicSalary),
+          contract: period.contract,
+          allocatedDays,
+          paidDays,
+          label: periodLabel(period),
+        };
+      });
+      newTotalDays = this.round(slices.reduce((sum, slice) => sum + slice.paidDays, 0));
+      if (newTotalDays > PAYROLL_MONTH_DAYS) {
+        throw new BadRequestException(
+          `Paid days across periods cannot exceed ${PAYROLL_MONTH_DAYS}`,
+        );
+      }
+      auditOldValue = String(oldPeriodDays);
+      auditNewValue = String(requestedDays);
+      periodAuditLabel = periodLabel(targetPeriod);
+    } else {
+      // Whole-entry: scale every period by newTotal / employed (existing behaviour).
+      newTotalDays = requestedDays;
+      const oldScale = oldTotalDays / employedDays;
+      const newScale = newTotalDays / employedDays;
+      let allocatedSoFar = 0;
+      slices =
+        entry.salaryPeriods.length > 0
+          ? entry.salaryPeriods.map((period, index) => {
+              const allocatedDays = allocatedForPeriod(
+                period,
+                index,
+                allocatedSoFar,
+                oldScale,
+              );
+              allocatedSoFar += allocatedDays;
+              return {
+                periodId: period.id as string | null,
+                basic: this.toNumber(period.basicSalary),
+                contract: period.contract,
+                allocatedDays,
+                paidDays: this.round(allocatedDays * newScale),
+                label: periodLabel(period),
+              };
+            })
+          : [
+              {
+                periodId: null as string | null,
+                basic: this.toNumber(entry.basicSalary),
+                contract: entry.contract,
+                allocatedDays: employedDays,
+                paidDays: newTotalDays,
+                label: null,
+              },
+            ];
+      auditOldValue = String(oldTotalDays);
+      auditNewValue = String(newTotalDays);
+    }
+
+    const periodEarned = (basic: number, days: number): number =>
+      this.round((basic / PAYROLL_MONTH_DAYS) * days);
     const earnedSalary = this.round(
-      slices.reduce((sum, slice) => sum + periodEarned(slice) * newScale, 0),
+      slices.reduce((sum, slice) => sum + periodEarned(slice.basic, slice.paidDays), 0),
     );
 
     const monthStart = new Date(Date.UTC(entry.run.year, entry.run.month - 1, 1));
@@ -1758,23 +1880,34 @@ export class PayrollRunService {
         slice.contract.startDate.getTime() < min.getTime() ? slice.contract.startDate : min,
       slices[0].contract.startDate,
     );
+    // Per-period paid days: when absences reduce allowances, each contract
+    // contributes amount × its own paid days / 30 (not a uniform scale).
+    const allowanceSlices = slices.map((slice) => ({
+      transportationAllowance: this.toNumber(slice.contract.transportationAllowance),
+      monthlyBonus: this.toNumber(slice.contract.monthlyBonus),
+      allocatedDays:
+        policy.allowancesReducedByAbsence && targetPeriod
+          ? slice.paidDays
+          : slice.allocatedDays,
+    }));
+    const allowanceEmployed =
+      policy.allowancesReducedByAbsence && targetPeriod
+        ? Math.max(newTotalDays, 0.0001)
+        : employedDays;
     const allowances =
-      newDays === 0
+      newTotalDays === 0
         ? { transport: 0, monthlyBonus: 0 }
         : computeContractAllowances(
-            slices.map((slice) => ({
-              transportationAllowance: this.toNumber(slice.contract.transportationAllowance),
-              monthlyBonus: this.toNumber(slice.contract.monthlyBonus),
-              allocatedDays: slice.allocatedDays,
-            })),
-            employedDays,
-            newDays,
+            allowanceSlices,
+            allowanceEmployed,
+            newTotalDays,
             employedPayrollDays(entry.run.month, entry.run.year, employmentStart, null).days,
             policy.leaverAllowanceMode,
-            policy.allowancesReducedByAbsence,
+            // Already applied per-period paid days as allocated when editing one period.
+            targetPeriod ? false : policy.allowancesReducedByAbsence,
           );
 
-    const zeroDayFields = newDays === 0 ? this.zeroDaysEntryFields() : null;
+    const zeroDayFields = newTotalDays === 0 ? this.zeroDaysEntryFields() : null;
     const restoredFields = zeroSnapshot ? this.entryFieldsFromSnapshot(zeroSnapshot) : null;
     const clearedOrRestored: Partial<NonNullable<typeof zeroDayFields>> =
       zeroDayFields ?? restoredFields ?? {};
@@ -1783,7 +1916,7 @@ export class PayrollRunService {
       {
         ...entry,
         ...clearedOrRestored,
-        payrollDays: new Decimal(newDays),
+        payrollDays: new Decimal(newTotalDays),
         earnedSalary: new Decimal(earnedSalary),
         transportAllowance: new Decimal(allowances.transport),
         monthlyBonus: new Decimal(allowances.monthlyBonus),
@@ -1795,9 +1928,16 @@ export class PayrollRunService {
       },
     );
 
-    const reason = dto.reason?.trim() || null;
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const saved = await tx.payrollEntry.update({
+    const userReason = dto.reason?.trim() || null;
+    const reason =
+      periodAuditLabel == null
+        ? userReason
+        : userReason
+          ? `${periodAuditLabel}: ${userReason}`
+          : periodAuditLabel;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payrollEntry.update({
         where: { id: entryId },
         data: {
           ...this.calculationToEntryUpdate(result),
@@ -1814,8 +1954,8 @@ export class PayrollRunService {
         await tx.payrollSalaryPeriod.update({
           where: { id: slice.periodId },
           data: {
-            days: new Decimal(this.round(slice.allocatedDays * newScale)),
-            earnedSalary: new Decimal(this.round(periodEarned(slice) * newScale)),
+            days: new Decimal(this.round(slice.paidDays)),
+            earnedSalary: new Decimal(periodEarned(slice.basic, slice.paidDays)),
             updatedBy: ctx.userId,
           },
         });
@@ -1824,14 +1964,14 @@ export class PayrollRunService {
         data: {
           payrollEntryId: entryId,
           field: PAYROLL_DAYS_AUDIT_FIELD,
-          oldValue: String(oldDays),
-          newValue: String(newDays),
+          oldValue: auditOldValue,
+          newValue: auditNewValue,
           reason,
           changedById: ctx.userId,
           companyId: ctx.companyId,
         },
       });
-      if (newDays === 0) {
+      if (newTotalDays === 0) {
         const snapshot: ZeroDaysSnapshot = {
           contractNetBonus: this.toNumber(entry.contractNetBonus),
           bonusTopUp: this.toNumber(entry.bonusTopUp),
@@ -1863,7 +2003,6 @@ export class PayrollRunService {
           },
         });
       }
-      return saved;
     });
 
     await this.updateRunTotals(runId, ctx);
@@ -1877,11 +2016,39 @@ export class PayrollRunService {
         recordType: 'PayrollEntry',
         recordId: entryId,
         recordReference: entry.run.runNumber,
-        beforeValue: { employeeId: entry.employeeId, payrollDays: oldDays },
-        afterValue: { employeeId: entry.employeeId, payrollDays: newDays, reason },
+        beforeValue: {
+          employeeId: entry.employeeId,
+          payrollDays: oldTotalDays,
+          ...(periodId ? { periodId, periodDays: oldPeriodDays } : {}),
+        },
+        afterValue: {
+          employeeId: entry.employeeId,
+          payrollDays: newTotalDays,
+          reason,
+          ...(periodId ? { periodId, periodDays: requestedDays } : {}),
+        },
       }),
     );
-    return updated;
+
+    // Re-read with salary periods so the client can patch the run cache.
+    const reloaded = await this.prisma.payrollEntry.findFirst({
+      where: { id: entryId, companyId: ctx.companyId },
+      include: {
+        salaryPeriods: {
+          orderBy: { periodStart: 'asc' },
+          include: {
+            contract: {
+              select: {
+                contractNumber: true,
+                transportationAllowance: true,
+                monthlyBonus: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return reloaded ?? entry;
   }
 
   /**

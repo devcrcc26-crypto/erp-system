@@ -6352,6 +6352,13 @@
         "daysOverride": {
           "action": "Override paid days",
           "daysLabel": "Paid days (30-day month)",
+          "periodDaysLabel": "Paid days for {{period}}",
+          "periodLabel": "Contract period",
+          "periodPaid": "{{days}} paid days · basic {{basic}}",
+          "periodEarned": "Earned {{amount}}",
+          "multiPeriodHint": "This month has more than one contract. Pick a period to change its paid days; the entry total is the sum.",
+          "totalPreview": "Entry total will be {{total}} paid days.",
+          "unsavedPeriod": "Save or cancel the paid days change before switching periods.",
           "reasonPlaceholder": "Reason (optional)",
           "save": "Save",
           "cancel": "Cancel",

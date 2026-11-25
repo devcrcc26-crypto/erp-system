@@ -2579,6 +2579,72 @@
   gap: 12px;
 }
 
+.erp-pe-days-contract {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 4px 0 2px;
+}
+
+.erp-pe-days-contract-label {
+  color: var(--erp-n-600);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.erp-pe-days-contract-select {
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.erp-pe-days-contract-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--erp-n-600);
+  font-size: 12px;
+}
+
+.erp-pe-days-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-pe-days-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 8px;
+  background: var(--erp-n-0, #fff);
+}
+
+.erp-pe-days-period.is-active {
+  border-color: var(--erp-accent);
+  background: var(--erp-accent-wash, #f3f7fd);
+}
+
+.erp-pe-days-period-title {
+  margin: 0;
+  color: var(--erp-n-900);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-pe-days-period-days {
+  flex-shrink: 0;
+  color: var(--erp-n-900);
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
 .erp-pe-daycounts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

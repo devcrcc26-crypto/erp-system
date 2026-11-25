@@ -153,7 +153,7 @@ export class UpdatePayrollEntryDto {
 export class UpdatePayrollEntryDaysDto {
   @ApiProperty({
     description:
-      'Paid days on the 30-day payroll month. Half days are allowed. 0 means no pay for the month.',
+      'Paid days on the 30-day payroll month. Half days are allowed. 0 means no pay for the month. When periodId is set, this is the paid days for that salary period only; the entry total becomes the sum of all periods.',
     minimum: 0,
     maximum: 30,
   })
@@ -161,6 +161,14 @@ export class UpdatePayrollEntryDaysDto {
   @Min(0)
   @Max(30)
   payrollDays!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Salary period to override when the entry has multiple contract periods in the month. Omit to scale all periods from the entry total (single-period / whole-entry override).',
+  })
+  @IsOptional()
+  @IsUUID()
+  periodId?: string;
 
   @ApiPropertyOptional({ description: 'Why HR changed the paid days' })
   @IsOptional()

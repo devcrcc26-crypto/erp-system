@@ -6351,6 +6351,13 @@
         "daysOverride": {
           "action": "调整计薪天数",
           "daysLabel": "计薪天数（按每月 30 天）",
+          "periodDaysLabel": "{{period}} 的计薪天数",
+          "periodLabel": "合同期间",
+          "periodPaid": "计薪 {{days}} 天 · 基本工资 {{basic}}",
+          "periodEarned": "应得 {{amount}}",
+          "multiPeriodHint": "本月有多份合同。请选择一个期间单独调整计薪天数；合计为各期间之和。",
+          "totalPreview": "条目合计将为 {{total}} 计薪天。",
+          "unsavedPeriod": "切换期间前请先保存或取消当前计薪天数修改。",
           "reasonPlaceholder": "原因（选填）",
           "save": "保存",
           "cancel": "取消",
