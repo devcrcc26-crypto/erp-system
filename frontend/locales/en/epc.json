@@ -6469,6 +6469,8 @@
       "editLeaveRequest": "Edit Request",
       "saveLeaveRequest": "Save Changes",
       "deleteLeaveRequest": "Delete Request",
+      "attachDocument": "Attach Document",
+      "attachDocuments": "Attach Documents",
       "back": "Back",
       "next": "Next",
       "reset": "Reset",

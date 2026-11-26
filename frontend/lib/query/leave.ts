@@ -395,6 +395,30 @@ export function useCancelLeaveRequest(id: string) {
 }
 
 /**
+ * HR attaches supporting documents to a leave request (any status).
+ */
+export function useAttachLeaveDocuments(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (files: File[]) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<LeaveRequestDetail>(
+        `${LEAVE_PATH}/${id}/documents`,
+        formData,
+      );
+    },
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
+      void queryClient.setQueryData(leaveKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
  * Updates a draft or returned leave request.
  */
 export function useUpdateLeaveRequest(id: string) {

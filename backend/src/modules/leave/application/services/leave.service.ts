@@ -1354,6 +1354,30 @@ export class LeaveService
   }
 
   /**
+   * Attaches one or more files to a leave request in any status (HR).
+   * Reuses the same storage / LeaveRequestDocument path as submit.
+   */
+  async attachDocuments(
+    leaveRequestId: string,
+    companyId: string,
+    userId: string,
+    files: UploadedFile[],
+  ): Promise<Record<string, unknown>> {
+    if (!files?.length) {
+      throw new BadRequestException('At least one file is required');
+    }
+    const leave = await this.prisma.leaveRequest.findFirst({
+      where: activeOnly({ id: leaveRequestId, companyId }),
+      select: { id: true },
+    });
+    if (!leave) {
+      throw new NotFoundException('Leave request not found');
+    }
+    await this.attachFiles(leaveRequestId, companyId, userId, files);
+    return this.getRequest(leaveRequestId, companyId, userId);
+  }
+
+  /**
    * Creates attachment folder (if needed) and uploads files to erp-hr.
    */
   private async attachFiles(
@@ -1390,7 +1414,7 @@ export class LeaveService
 
       const documentId = randomUUID();
       const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const fileKey = `${companyId}/hr/leave/${leaveRequestId}/attachments/${safeName}`;
+      const fileKey = `${companyId}/hr/leave/${leaveRequestId}/attachments/${documentId}_${safeName}`;
 
       await this.storage.upload({
         bucket: STORAGE_BUCKETS.HR,

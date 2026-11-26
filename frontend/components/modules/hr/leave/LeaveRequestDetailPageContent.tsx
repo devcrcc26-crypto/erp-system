@@ -25,6 +25,7 @@ import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationL
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -32,6 +33,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
+  useAttachLeaveDocuments,
   useCancelLeaveRequest,
   useDeleteLeaveRequest,
   useLeaveRequest,
@@ -84,11 +86,13 @@ export default function LeaveRequestDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  /** HR company-wide leave manage (leave.manage → canEdit on leave module). */
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const cancelMutation = useCancelLeaveRequest(requestId);
   const deleteMutation = useDeleteLeaveRequest();
+  const attachDocumentsMutation = useAttachLeaveDocuments(requestId);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -203,6 +207,22 @@ export default function LeaveRequestDetailPageContent({
       notifyApiError(
         error,
         t('hr.messages.failedToDeleteLeaveRequest'),
+        messageApi,
+      );
+    }
+  }
+
+  async function handleAttachDocuments(files: File[]): Promise<void> {
+    if (files.length === 0) {
+      return;
+    }
+    try {
+      await attachDocumentsMutation.mutateAsync(files);
+      messageApi.success(t('hr.messages.attachmentsUploaded'));
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToUploadAttachments'),
         messageApi,
       );
     }
@@ -592,11 +612,32 @@ export default function LeaveRequestDetailPageContent({
             </DetailSection>
           ) : null}
 
-          {(request.documents?.length ?? 0) > 0 ? (
-            <DetailSection title={t('hr.section.attachments')}>
+          <DetailSection title={t('hr.section.attachments')}>
+            {(request.documents?.length ?? 0) > 0 ? (
               <AttachmentDownloadList documents={request.documents} />
-            </DetailSection>
-          ) : null}
+            ) : (
+              <p className="erp-users-cell-sub m-0">
+                {t('hr.empty.noAttachments')}
+              </p>
+            )}
+            {canManage ? (
+              <div className="mt-3">
+                <FileUploadInput
+                  files={[]}
+                  onChange={(files) => void handleAttachDocuments(files)}
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  multiple
+                  disabled={attachDocumentsMutation.isPending}
+                  compact
+                  placeholder={
+                    attachDocumentsMutation.isPending
+                      ? `${t('hr.buttons.attachDocument')}…`
+                      : t('hr.buttons.attachDocument')
+                  }
+                />
+              </div>
+            ) : null}
+          </DetailSection>
         </div>
 
         <aside className="erp-leave-detail-aside lg:sticky lg:top-4">

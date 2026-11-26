@@ -4265,6 +4265,8 @@ model LeaveRequest {
   days               Decimal?           @db.Decimal(4, 1)
   reason             String?
   status             LeaveRequestStatus @default(DRAFT)
+  /// Origin of the row when not created via the in-app workflow (e.g. PAPER_IMPORT).
+  source             String?
   approvalRequestId  String?            @unique @map("approval_request_id")
   attachmentFolderId String?            @map("attachment_folder_id")
   submittedAt        DateTime?          @map("submitted_at")

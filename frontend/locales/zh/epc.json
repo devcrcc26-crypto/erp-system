@@ -6468,6 +6468,8 @@
       "editLeaveRequest": "编辑申请",
       "saveLeaveRequest": "保存更改",
       "deleteLeaveRequest": "删除申请",
+      "attachDocument": "上传附件",
+      "attachDocuments": "上传附件",
       "back": "上一步",
       "next": "下一步",
       "reset": "重置",

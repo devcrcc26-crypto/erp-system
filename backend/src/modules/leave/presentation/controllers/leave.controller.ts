@@ -364,6 +364,42 @@ export class LeaveController {
     });
   }
 
+  @Post(':id/documents')
+  @RequireAnyPermission({ module: 'leave', action: 'manage' })
+  @ApiOperation({
+    summary:
+      'Attach supporting document(s) to a leave request in any status (HR)',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['files'],
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
+  attachDocuments(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ): Promise<unknown> {
+    return this.leaveService.attachDocuments(
+      id,
+      companyId,
+      user.userId,
+      files ?? [],
+    );
+  }
+
   @Get(':id')
   @RequireAnyPermission({ module: 'leave', action: 'view' })
   @DelegatePermissionCheck()
