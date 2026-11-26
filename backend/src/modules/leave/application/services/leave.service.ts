@@ -981,7 +981,11 @@ export class LeaveService
       : null;
 
     const periodRows = Array.isArray(leave.periods)
-      ? (leave.periods as Array<{ startDate: Date; endDate: Date }>)
+      ? (leave.periods as Array<{
+          startDate: Date;
+          endDate: Date;
+          dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
+        }>)
       : [];
     const breakdown: Array<{
       date: string;
@@ -995,6 +999,7 @@ export class LeaveService
         companyId,
         period.startDate,
         period.endDate,
+        period.dayPortion ?? 'FULL',
       );
       for (const row of result.breakdown) {
         breakdown.push({

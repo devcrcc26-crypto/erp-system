@@ -39,6 +39,13 @@ const prisma = new PrismaClient();
 /** Marker stored on LeaveRequest.source for paper-backed imports. */
 const PAPER_IMPORT_SOURCE = 'PAPER_IMPORT';
 
+type PaperLeavePeriodSeed = {
+  startDate: string;
+  endDate: string;
+  days: number;
+  dayPortion?: LeaveDayPortion;
+};
+
 interface PaperApprovedLeaveSeed {
   /** User UUID (LeaveRequest.employeeId). Prefer this when known. */
   employeeId?: string;
@@ -51,6 +58,11 @@ interface PaperApprovedLeaveSeed {
   endDate: string;
   days: number;
   /**
+   * Optional multi-segment / half-day periods. When omitted, one period is
+   * derived from start/end/days (0.5 single-day → MORNING).
+   */
+  periods?: PaperLeavePeriodSeed[];
+  /**
    * Optional override. When omitted, tiers are resolved at seed time:
    * direct supervisor (User.reportsToUserId), then an HR Manager.
    */
@@ -59,6 +71,25 @@ interface PaperApprovedLeaveSeed {
   approvalDate: string;
   /** Optional free-text reason (defaults to a paper-import note). */
   reason?: string;
+}
+
+function resolveSeedPeriods(row: PaperApprovedLeaveSeed): PaperLeavePeriodSeed[] {
+  if (row.periods?.length) {
+    return row.periods;
+  }
+  const singleDay = row.startDate === row.endDate;
+  const dayPortion =
+    singleDay && row.days === 0.5
+      ? LeaveDayPortion.MORNING
+      : LeaveDayPortion.FULL;
+  return [
+    {
+      startDate: row.startDate,
+      endDate: row.endDate,
+      days: row.days,
+      dayPortion,
+    },
+  ];
 }
 
 type ApprovalTierDraft = {
@@ -90,9 +121,31 @@ const PAPER_APPROVED_LEAVES: PaperApprovedLeaveSeed[] = [
   { employeeNo: 'CC-0059', leaveType: LeaveType.SICK, startDate: '2026-11-12', endDate: '2026-11-14', days: 2.5, approvalDate: '2026-11-12' },
   { employeeNo: 'CC-0061', leaveType: LeaveType.ANNUAL, startDate: '2026-11-19', endDate: '2026-11-21', days: 2.5, approvalDate: '2026-11-18' },
   { employeeNo: 'CC-0066', leaveType: LeaveType.ANNUAL, startDate: '2026-11-23', endDate: '2026-11-23', days: 1, approvalDate: '2026-11-23' },
-  { employeeNo: 'CC-0068', leaveType: LeaveType.UNPAID, startDate: '2026-11-20', endDate: '2026-11-23', days: 2, approvalDate: '2026-11-18' },
-  { employeeNo: 'CC-0072', leaveType: LeaveType.ANNUAL, startDate: '2026-11-04', endDate: '2026-11-04', days: 1, approvalDate: '2026-11-03' },
-  { employeeNo: 'CC-0072', leaveType: LeaveType.ANNUAL, startDate: '2026-11-16', endDate: '2026-11-26', days: 10, approvalDate: '2026-11-10' },
+  {
+    employeeNo: 'CC-0068',
+    leaveType: LeaveType.UNPAID,
+    startDate: '2026-11-20',
+    endDate: '2026-11-23',
+    days: 2,
+    approvalDate: '2026-11-18',
+    periods: [
+      { startDate: '2026-11-20', endDate: '2026-11-20', days: 1, dayPortion: LeaveDayPortion.FULL },
+      { startDate: '2026-11-23', endDate: '2026-11-23', days: 1, dayPortion: LeaveDayPortion.FULL },
+    ],
+  },
+  { employeeNo: 'CC-0072', leaveType: LeaveType.COMPASSIONATE, startDate: '2026-11-04', endDate: '2026-11-04', days: 1, approvalDate: '2026-11-03' },
+  {
+    employeeNo: 'CC-0072',
+    leaveType: LeaveType.ANNUAL,
+    startDate: '2026-11-16',
+    endDate: '2026-11-27',
+    days: 10.5,
+    approvalDate: '2026-11-10',
+    periods: [
+      { startDate: '2026-11-16', endDate: '2026-11-26', days: 10, dayPortion: LeaveDayPortion.FULL },
+      { startDate: '2026-11-27', endDate: '2026-11-27', days: 0.5, dayPortion: LeaveDayPortion.MORNING },
+    ],
+  },
   { employeeNo: 'CC-0080', leaveType: LeaveType.ANNUAL, startDate: '2026-11-13', endDate: '2026-11-14', days: 1.5, approvalDate: '2026-11-12' },
   { employeeNo: 'CC-0129', leaveType: LeaveType.SICK, startDate: '2026-11-05', endDate: '2026-11-05', days: 0.5, approvalDate: '2026-11-05' },
   { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-10-22', endDate: '2026-10-22', days: 1, approvalDate: '2026-10-22' },
@@ -489,6 +542,7 @@ async function seedOne(
     });
 
     const leaveRequestId = randomUUID();
+    const seedPeriods = resolveSeedPeriods(row);
     await tx.leaveRequest.create({
       data: {
         id: leaveRequestId,
@@ -510,15 +564,13 @@ async function seedOne(
         createdBy: employee.id,
         updatedBy: employee.id,
         periods: {
-          create: [
-            {
-              id: randomUUID(),
-              startDate,
-              endDate,
-              days: new Prisma.Decimal(row.days),
-              dayPortion: LeaveDayPortion.FULL,
-            },
-          ],
+          create: seedPeriods.map((period) => ({
+            id: randomUUID(),
+            startDate: parseDateOnlyKey(period.startDate),
+            endDate: parseDateOnlyKey(period.endDate),
+            days: new Prisma.Decimal(period.days),
+            dayPortion: period.dayPortion ?? LeaveDayPortion.FULL,
+          })),
         },
       },
     });
