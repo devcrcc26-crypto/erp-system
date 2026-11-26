@@ -994,19 +994,23 @@ export class LeaveService
       weight: number;
     }> = [];
     for (const period of periodRows) {
+      const dayPortion = period.dayPortion ?? 'FULL';
       const result = await this.workScheduleService.calculateWorkingDays(
         leave.employeeId,
         companyId,
         period.startDate,
         period.endDate,
-        period.dayPortion ?? 'FULL',
+        dayPortion,
       );
+      const forceHalf =
+        dayPortion === 'MORNING' || dayPortion === 'AFTERNOON';
       for (const row of result.breakdown) {
+        const isCharged = row.weight > 0;
         breakdown.push({
           date: formatDateOnly(row.date),
-          type: row.type,
+          type: forceHalf && isCharged ? 'half' : row.type,
           holidayName: row.holidayName,
-          weight: row.weight,
+          weight: forceHalf && isCharged ? 0.5 : row.weight,
         });
       }
     }
