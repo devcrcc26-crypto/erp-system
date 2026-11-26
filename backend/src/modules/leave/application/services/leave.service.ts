@@ -1362,7 +1362,7 @@ export class LeaveService
     companyId: string,
     userId: string,
     files: UploadedFile[],
-  ): Promise<Record<string, unknown>> {
+  ): Promise<unknown> {
     if (!files?.length) {
       throw new BadRequestException('At least one file is required');
     }

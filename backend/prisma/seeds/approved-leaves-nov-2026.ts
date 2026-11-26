@@ -50,42 +50,56 @@ interface PaperApprovedLeaveSeed {
   /** YYYY-MM-DD */
   endDate: string;
   days: number;
-  /** Approver user UUIDs in tier order (1..n). */
-  approverIds: string[];
+  /**
+   * Optional override. When omitted, tiers are resolved at seed time:
+   * direct supervisor (User.reportsToUserId), then an HR Manager.
+   */
+  approverIds?: string[];
   /** YYYY-MM-DD — submittedAt / completedAt / tier decidedAt. */
   approvalDate: string;
   /** Optional free-text reason (defaults to a paper-import note). */
   reason?: string;
 }
 
+type ApprovalTierDraft = {
+  tierOrder: number;
+  label: string;
+  approverId: string;
+  resolver: string;
+};
+
 /**
- * Fill this array with the paper forms. Leave empty until you have the data —
- * running with an empty list is a no-op that prints 0 inserted / 0 skipped.
+ * Fill this array with the paper forms. Approver IDs are resolved from the DB
+ * (supervisor → HR Manager) unless `approverIds` is set on a row.
  */
 const PAPER_APPROVED_LEAVES: PaperApprovedLeaveSeed[] = [
-  const PAPER_APPROVED_LEAVES = [
-    { employeeNo: 'CC-0010', leaveType: 'ANNUAL',  startDate: '2026-11-03', endDate: '2026-11-05', days: 3,   approvalDate: '2026-11-02' },
-    { employeeNo: 'CC-0010', leaveType: 'ANNUAL',  startDate: '2026-11-11', endDate: '2026-11-11', days: 1,   approvalDate: '2026-11-11' },
-    { employeeNo: 'CC-0022', leaveType: 'ANNUAL',  startDate: '2026-11-24', endDate: '2026-11-26', days: 3,   approvalDate: '2026-11-23' },
-    { employeeNo: 'CC-0042', leaveType: 'ANNUAL',  startDate: '2026-11-21', endDate: '2026-11-21', days: 0.5, approvalDate: '2026-11-20' },
-    { employeeNo: 'CC-0043', leaveType: 'ANNUAL',  startDate: '2026-11-03', endDate: '2026-11-06', days: 4,   approvalDate: '2026-11-02' },
-    { employeeNo: 'CC-0044', leaveType: 'ANNUAL',  startDate: '2026-11-25', endDate: '2026-11-25', days: 1,   approvalDate: '2026-11-24' },
-    { employeeNo: 'CC-0044', leaveType: 'ANNUAL',  startDate: '2026-11-07', endDate: '2026-11-07', days: 0.5, approvalDate: '2026-11-06' },
-    { employeeNo: 'CC-0044', leaveType: 'ANNUAL',  startDate: '2026-11-14', endDate: '2026-11-14', days: 0.5, approvalDate: '2026-11-13' },
-    { employeeNo: 'CC-0048', leaveType: 'ANNUAL',  startDate: '2026-11-25', endDate: '2026-11-25', days: 1,   approvalDate: '2026-11-26' },
-    { employeeNo: 'CC-0048', leaveType: 'SICK',    startDate: '2026-11-05', endDate: '2026-11-05', days: 1,   approvalDate: '2026-11-06' },
-    { employeeNo: 'CC-0055', leaveType: 'ANNUAL',  startDate: '2026-11-18', endDate: '2026-11-18', days: 0.5, approvalDate: '2026-11-17' },
-    { employeeNo: 'CC-0055', leaveType: 'ANNUAL',  startDate: '2026-11-04', endDate: '2026-11-04', days: 1,   approvalDate: '2026-11-04' },
-    { employeeNo: 'CC-0055', leaveType: 'ANNUAL',  startDate: '2026-11-10', endDate: '2026-11-10', days: 0.5, approvalDate: '2026-11-10' },
-    { employeeNo: 'CC-0056', leaveType: 'ANNUAL',  startDate: '2026-11-21', endDate: '2026-11-21', days: 0.5, approvalDate: '2026-11-20' },
-    { employeeNo: 'CC-0059', leaveType: 'SICK',    startDate: '2026-11-12', endDate: '2026-11-14', days: 2.5, approvalDate: '2026-11-12' },
-    { employeeNo: 'CC-0061', leaveType: 'ANNUAL',  startDate: '2026-11-19', endDate: '2026-11-21', days: 2.5, approvalDate: '2026-11-18' },
-    { employeeNo: 'CC-0066', leaveType: 'ANNUAL',  startDate: '2026-11-23', endDate: '2026-11-23', days: 1,   approvalDate: '2026-11-23' },
-    { employeeNo: 'CC-0068', leaveType: 'UNPAID',  startDate: '2026-11-20', endDate: '2026-11-23', days: 2,   approvalDate: '2026-11-18' },
-    { employeeNo: 'CC-0072', leaveType: 'ANNUAL',  startDate: '2026-11-04', endDate: '2026-11-04', days: 1,   approvalDate: '2026-11-03' },
-    { employeeNo: 'CC-0072', leaveType: 'ANNUAL',  startDate: '2026-11-16', endDate: '2026-11-26', days: 10,  approvalDate: '2026-11-10' },
-    { employeeNo: 'CC-0080', leaveType: 'ANNUAL',  startDate: '2026-11-13', endDate: '2026-11-14', days: 1.5, approvalDate: '2026-11-12' },
-  ];
+  { employeeNo: 'CC-0010', leaveType: LeaveType.ANNUAL, startDate: '2026-11-03', endDate: '2026-11-05', days: 3, approvalDate: '2026-11-02' },
+  { employeeNo: 'CC-0010', leaveType: LeaveType.ANNUAL, startDate: '2026-11-11', endDate: '2026-11-11', days: 1, approvalDate: '2026-11-11' },
+  { employeeNo: 'CC-0022', leaveType: LeaveType.ANNUAL, startDate: '2026-11-24', endDate: '2026-11-26', days: 3, approvalDate: '2026-11-23' },
+  { employeeNo: 'CC-0042', leaveType: LeaveType.ANNUAL, startDate: '2026-11-21', endDate: '2026-11-21', days: 0.5, approvalDate: '2026-11-20' },
+  { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-11-03', endDate: '2026-11-06', days: 4, approvalDate: '2026-11-02' },
+  { employeeNo: 'CC-0044', leaveType: LeaveType.ANNUAL, startDate: '2026-11-25', endDate: '2026-11-25', days: 1, approvalDate: '2026-11-24' },
+  { employeeNo: 'CC-0044', leaveType: LeaveType.ANNUAL, startDate: '2026-11-07', endDate: '2026-11-07', days: 0.5, approvalDate: '2026-11-06' },
+  { employeeNo: 'CC-0044', leaveType: LeaveType.ANNUAL, startDate: '2026-11-14', endDate: '2026-11-14', days: 0.5, approvalDate: '2026-11-13' },
+  { employeeNo: 'CC-0048', leaveType: LeaveType.ANNUAL, startDate: '2026-11-25', endDate: '2026-11-25', days: 1, approvalDate: '2026-11-26' },
+  { employeeNo: 'CC-0048', leaveType: LeaveType.SICK, startDate: '2026-11-05', endDate: '2026-11-05', days: 1, approvalDate: '2026-11-06' },
+  { employeeNo: 'CC-0055', leaveType: LeaveType.ANNUAL, startDate: '2026-11-18', endDate: '2026-11-18', days: 0.5, approvalDate: '2026-11-17' },
+  { employeeNo: 'CC-0055', leaveType: LeaveType.ANNUAL, startDate: '2026-11-04', endDate: '2026-11-04', days: 1, approvalDate: '2026-11-04' },
+  { employeeNo: 'CC-0055', leaveType: LeaveType.ANNUAL, startDate: '2026-11-10', endDate: '2026-11-10', days: 0.5, approvalDate: '2026-11-10' },
+  { employeeNo: 'CC-0056', leaveType: LeaveType.ANNUAL, startDate: '2026-11-21', endDate: '2026-11-21', days: 0.5, approvalDate: '2026-11-20' },
+  { employeeNo: 'CC-0059', leaveType: LeaveType.SICK, startDate: '2026-11-12', endDate: '2026-11-14', days: 2.5, approvalDate: '2026-11-12' },
+  { employeeNo: 'CC-0061', leaveType: LeaveType.ANNUAL, startDate: '2026-11-19', endDate: '2026-11-21', days: 2.5, approvalDate: '2026-11-18' },
+  { employeeNo: 'CC-0066', leaveType: LeaveType.ANNUAL, startDate: '2026-11-23', endDate: '2026-11-23', days: 1, approvalDate: '2026-11-23' },
+  { employeeNo: 'CC-0068', leaveType: LeaveType.UNPAID, startDate: '2026-11-20', endDate: '2026-11-23', days: 2, approvalDate: '2026-11-18' },
+  { employeeNo: 'CC-0072', leaveType: LeaveType.ANNUAL, startDate: '2026-11-04', endDate: '2026-11-04', days: 1, approvalDate: '2026-11-03' },
+  { employeeNo: 'CC-0072', leaveType: LeaveType.ANNUAL, startDate: '2026-11-16', endDate: '2026-11-26', days: 10, approvalDate: '2026-11-10' },
+  { employeeNo: 'CC-0080', leaveType: LeaveType.ANNUAL, startDate: '2026-11-13', endDate: '2026-11-14', days: 1.5, approvalDate: '2026-11-12' },
+  { employeeNo: 'CC-0129', leaveType: LeaveType.SICK, startDate: '2026-11-05', endDate: '2026-11-05', days: 0.5, approvalDate: '2026-11-05' },
+  { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-10-22', endDate: '2026-10-22', days: 1, approvalDate: '2026-10-22' },
+  { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-11-11', endDate: '2026-11-11', days: 0.5, approvalDate: '2026-11-11' },
+  { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-11-17', endDate: '2026-11-17', days: 1, approvalDate: '2026-11-17' },
+  { employeeNo: 'CC-0043', leaveType: LeaveType.ANNUAL, startDate: '2026-11-19', endDate: '2026-11-19', days: 0.5, approvalDate: '2026-11-19' },
+  { employeeNo: 'CC-0003', leaveType: LeaveType.ANNUAL, startDate: '2026-11-17', endDate: '2026-11-17', days: 1, approvalDate: '2026-11-16' },
 ];
 
 type ResolvedEmployee = {
@@ -93,20 +107,26 @@ type ResolvedEmployee = {
   companyId: string;
   employmentDate: Date | null;
   employeeId: string | null;
+  reportsToUserId: string | null;
 };
+
+const HR_MANAGER_ROLE_NAMES = ['HR Manager', 'Local HR Manager'] as const;
 
 async function resolveEmployee(
   row: PaperApprovedLeaveSeed,
 ): Promise<ResolvedEmployee> {
+  const select = {
+    id: true,
+    companyId: true,
+    employmentDate: true,
+    employeeId: true,
+    reportsToUserId: true,
+  } as const;
+
   if (row.employeeId) {
     const byId = await prisma.user.findFirst({
       where: { id: row.employeeId, deletedAt: null },
-      select: {
-        id: true,
-        companyId: true,
-        employmentDate: true,
-        employeeId: true,
-      },
+      select,
     });
     if (byId) {
       return byId;
@@ -115,12 +135,7 @@ async function resolveEmployee(
   if (row.employeeNo) {
     const byNo = await prisma.user.findFirst({
       where: { employeeId: row.employeeNo, deletedAt: null },
-      select: {
-        id: true,
-        companyId: true,
-        employmentDate: true,
-        employeeId: true,
-      },
+      select,
     });
     if (byNo) {
       return byNo;
@@ -129,6 +144,115 @@ async function resolveEmployee(
   throw new Error(
     `Employee not found (employeeId=${row.employeeId ?? '-'}, employeeNo=${row.employeeNo ?? '-'})`,
   );
+}
+
+/**
+ * Builds approval tiers: optional override → else supervisor then HR Manager.
+ * Missing people are warned and skipped; empty result means the row should be skipped.
+ */
+async function resolveApprovalTiers(
+  employee: ResolvedEmployee,
+  row: PaperApprovedLeaveSeed,
+  rowLabel: string,
+): Promise<ApprovalTierDraft[]> {
+  if (row.approverIds?.length) {
+    const tiers: ApprovalTierDraft[] = [];
+    for (let i = 0; i < row.approverIds.length; i += 1) {
+      const approverId = row.approverIds[i]!;
+      const approver = await prisma.user.findFirst({
+        where: {
+          id: approverId,
+          companyId: employee.companyId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!approver) {
+        console.warn(
+          `  warn  ${rowLabel}: approver ${approverId} not found — skipping tier`,
+        );
+        continue;
+      }
+      tiers.push({
+        tierOrder: tiers.length + 1,
+        label: `Approver ${tiers.length + 1}`,
+        approverId: approver.id,
+        resolver: 'PAPER_IMPORT',
+      });
+    }
+    return tiers;
+  }
+
+  const tiers: ApprovalTierDraft[] = [];
+  const seen = new Set<string>();
+
+  if (employee.reportsToUserId) {
+    const supervisor = await prisma.user.findFirst({
+      where: {
+        id: employee.reportsToUserId,
+        companyId: employee.companyId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (supervisor) {
+      tiers.push({
+        tierOrder: 1,
+        label: 'Direct Supervisor',
+        approverId: supervisor.id,
+        resolver: 'REPORTS_TO',
+      });
+      seen.add(supervisor.id);
+    } else {
+      console.warn(
+        `  warn  ${rowLabel}: reportsToUserId ${employee.reportsToUserId} not found — skipping supervisor tier`,
+      );
+    }
+  } else {
+    console.warn(
+      `  warn  ${rowLabel}: no reportsToUserId — supervisor tier omitted`,
+    );
+  }
+
+  const hrManager = await prisma.user.findFirst({
+    where: {
+      companyId: employee.companyId,
+      deletedAt: null,
+      isActive: true,
+      userRoles: {
+        some: {
+          deletedAt: null,
+          role: {
+            deletedAt: null,
+            isActive: true,
+            companyId: employee.companyId,
+            name: { in: [...HR_MANAGER_ROLE_NAMES] },
+          },
+        },
+      },
+    },
+    select: { id: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (!hrManager) {
+    console.warn(
+      `  warn  ${rowLabel}: no HR Manager / Local HR Manager found — HR tier omitted`,
+    );
+  } else if (seen.has(hrManager.id)) {
+    console.warn(
+      `  warn  ${rowLabel}: HR Manager is the same as supervisor — single tier only`,
+    );
+  } else {
+    tiers.push({
+      tierOrder: tiers.length + 1,
+      label: 'HR Manager',
+      approverId: hrManager.id,
+      resolver: 'ROLE:HR Manager',
+    });
+  }
+
+  return tiers;
 }
 
 async function nextApprovalRequestNumber(
@@ -151,6 +275,29 @@ async function nextApprovalRequestNumber(
     Number(seq[0]?.nextval ?? 1),
   ).padStart(4, '0')}`;
   return { categoryId: category.id, requestNumber };
+}
+
+/**
+ * Advances leave_request_number_seq past any existing LR-#### rows so seed
+ * inserts do not collide with numbers issued outside the sequence.
+ */
+async function syncLeaveRequestNumberSeq(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    SELECT setval(
+      'leave_request_number_seq',
+      GREATEST(
+        (SELECT COALESCE(MAX(
+          CASE
+            WHEN request_number ~ '^LR-[0-9]+$'
+            THEN CAST(SUBSTRING(request_number FROM 4) AS BIGINT)
+            ELSE 0
+          END
+        ), 0) FROM leave_request),
+        (SELECT last_value FROM leave_request_number_seq)
+      ),
+      true
+    )
+  `);
 }
 
 async function nextLeaveRequestNumber(
@@ -260,14 +407,12 @@ async function seedOne(
   if (!row.employeeId && !row.employeeNo) {
     throw new Error(`Row ${index + 1}: employeeId or employeeNo is required`);
   }
-  if (!row.approverIds?.length) {
-    throw new Error(`Row ${index + 1}: approverIds must not be empty`);
-  }
   if (!(row.days > 0)) {
     throw new Error(`Row ${index + 1}: days must be > 0`);
   }
 
   const employee = await resolveEmployee(row);
+  const rowLabel = `${employee.employeeId ?? employee.id} ${row.leaveType} ${row.startDate}`;
   const startDate = parseDateOnlyKey(row.startDate);
   const endDate = parseDateOnlyKey(row.endDate);
   const approvalDate = parseDateOnlyKey(row.approvalDate);
@@ -284,21 +429,17 @@ async function seedOne(
   });
   if (duplicate) {
     console.log(
-      `  skip  ${employee.employeeId ?? employee.id} ${row.leaveType} ${row.startDate} (exists ${duplicate.requestNumber})`,
+      `  skip  ${rowLabel} (exists ${duplicate.requestNumber})`,
     );
     return 'skipped';
   }
 
-  for (const approverId of row.approverIds) {
-    const approver = await prisma.user.findFirst({
-      where: { id: approverId, companyId: employee.companyId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!approver) {
-      throw new Error(
-        `Row ${index + 1}: approver ${approverId} not found in company ${employee.companyId}`,
-      );
-    }
+  const tiers = await resolveApprovalTiers(employee, row, rowLabel);
+  if (tiers.length === 0) {
+    console.warn(
+      `  skip  ${rowLabel}: no approvers resolved (supervisor / HR Manager)`,
+    );
+    return 'skipped';
   }
 
   const calendar = await loadLeaveCalendar(employee.id, employee.companyId);
@@ -325,7 +466,7 @@ async function seedOne(
         },
         requestedBy: employee.id,
         status: ApprovalRequestStatus.APPROVED,
-        currentTier: row.approverIds.length,
+        currentTier: tiers.length,
         matchedRuleName: 'PAPER_IMPORT',
         submittedAt: approvalDate,
         completedAt: approvalDate,
@@ -333,12 +474,12 @@ async function seedOne(
         createdBy: employee.id,
         updatedBy: employee.id,
         tiers: {
-          create: row.approverIds.map((approverId, tierIndex) => ({
+          create: tiers.map((tier) => ({
             id: randomUUID(),
-            tierOrder: tierIndex + 1,
-            label: `Approver ${tierIndex + 1}`,
-            approverId,
-            resolver: 'PAPER_IMPORT',
+            tierOrder: tier.tierOrder,
+            label: tier.label,
+            approverId: tier.approverId,
+            resolver: tier.resolver,
             decision: ApprovalTierDecision.APPROVED,
             comment: 'Approved on paper (imported).',
             decidedAt: approvalDate,
@@ -403,6 +544,7 @@ async function seedOne(
 async function main(): Promise<void> {
   console.log('Paper-approved leave seed (Nov 2026)…');
   console.log(`Records configured: ${PAPER_APPROVED_LEAVES.length}`);
+  await syncLeaveRequestNumberSeq();
 
   let inserted = 0;
   let skipped = 0;
