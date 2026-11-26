@@ -1,7 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, InputNumber, Select, Skeleton, Spin } from 'antd';
+import {
+  Alert,
+  Button,
+  InputNumber,
+  Select,
+  Skeleton,
+  Spin,
+  type TableProps,
+} from 'antd';
 import { ArrowLeft, CalendarDays, Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
@@ -13,6 +21,10 @@ import {
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   LeaveBalance,
@@ -20,6 +32,7 @@ import type {
   LeaveRequestStatus,
   LeaveType,
 } from '@/lib/api/leave.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   useLeaveBalances,
   useLeaveRequestsAll,
@@ -42,6 +55,7 @@ import {
   myLeaveHistoryPath,
 } from '@/lib/utils/leave-history-path';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { sortLeaveRequests } from '@/lib/utils/table-sort';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -158,7 +172,12 @@ export default function LeaveHistoryPageContent({
   const currentUserQuery = useCurrentUser();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const [historyPage, setHistoryPage] = useState(1);
+  const { params, resetPage, bindMeta, handleTableChange, sortBy, sortOrder } =
+    useTablePagination({
+      initialPageSize: HISTORY_PAGE_SIZE,
+      initialSortBy: 'createdAt',
+      initialSortOrder: 'desc',
+    });
   const [statusFilter, setStatusFilter] = useState<
     LeaveRequestStatus | undefined
   >();
@@ -282,13 +301,10 @@ export default function LeaveHistoryPageContent({
     balancesQuery.data,
   ]);
 
-  const allHistory = useMemo(() => {
-    const rows = historyQuery.data ?? [];
-    return [...rows].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }, [historyQuery.data]);
+  const allHistory = useMemo(
+    () => historyQuery.data ?? [],
+    [historyQuery.data],
+  );
 
   const filteredHistory = useMemo(() => {
     return allHistory.filter((row) => {
@@ -302,17 +318,27 @@ export default function LeaveHistoryPageContent({
     });
   }, [allHistory, statusFilter, leaveTypeFilter]);
 
-  const historyMeta = useMemo(() => {
-    const total = filteredHistory.length;
-    const pages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE) || 1);
-    const page = Math.min(historyPage, pages);
-    return { total, page, limit: HISTORY_PAGE_SIZE, pages };
-  }, [filteredHistory.length, historyPage]);
+  const sortedHistory = useMemo(
+    () => sortLeaveRequests(filteredHistory, sortBy, sortOrder),
+    [filteredHistory, sortBy, sortOrder],
+  );
+
+  const historyMeta: PaginationMeta = useMemo(() => {
+    const total = sortedHistory.length;
+    const limit = params.limit ?? HISTORY_PAGE_SIZE;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [sortedHistory.length, params.limit, params.page]);
 
   const historyRows = useMemo(() => {
     const start = (historyMeta.page - 1) * historyMeta.limit;
-    return filteredHistory.slice(start, start + historyMeta.limit);
-  }, [filteredHistory, historyMeta.page, historyMeta.limit]);
+    return sortedHistory.slice(start, start + historyMeta.limit);
+  }, [sortedHistory, historyMeta.page, historyMeta.limit]);
 
   const leaveTypeOptions = useMemo(
     () =>
@@ -355,64 +381,75 @@ export default function LeaveHistoryPageContent({
   );
 
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
-    () => [
-      {
-        title: t('hr.table.requestNumber'),
-        dataIndex: 'requestNumber',
-        key: 'requestNumber',
-        width: 140,
-        render: (value: string) => (
-          <span className="font-medium tabular-nums">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.table.leaveType'),
-        dataIndex: 'leaveType',
-        key: 'leaveType',
-        width: 130,
-        render: (value: LeaveType) => (
-          <StatusBadge
-            label={formatLeaveType(value, t)}
-            variant={leaveTypeVariant(value)}
-          />
-        ),
-      },
-      {
-        title: t('hr.table.startDate'),
-        dataIndex: 'startDate',
-        key: 'startDate',
-        width: 120,
-        render: (value: string) => formatProjectDate(value),
-      },
-      {
-        title: t('hr.table.endDate'),
-        dataIndex: 'endDate',
-        key: 'endDate',
-        width: 120,
-        responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
-      },
-      {
-        title: t('hr.table.days'),
-        dataIndex: 'days',
-        key: 'days',
-        width: 72,
-        align: 'right',
-      },
-      {
-        title: t('common.status'),
-        dataIndex: 'status',
-        key: 'status',
-        width: 120,
-        render: (value: string) => (
-          <StatusBadge
-            label={formatLeaveStatus(value, t)}
-            variant={leaveStatusVariant(value)}
-          />
-        ),
-      },
-    ],
-    [t],
+    () =>
+      withControlledSort<LeaveRequestListItem>(
+        [
+          {
+            title: t('hr.table.requestNumber'),
+            dataIndex: 'requestNumber',
+            key: 'requestNumber',
+            width: 140,
+            sorter: true,
+            render: (value: string) => (
+              <span className="font-medium tabular-nums">{value}</span>
+            ),
+          },
+          {
+            title: t('hr.table.leaveType'),
+            dataIndex: 'leaveType',
+            key: 'leaveType',
+            width: 130,
+            sorter: true,
+            render: (value: LeaveType) => (
+              <StatusBadge
+                label={formatLeaveType(value, t)}
+                variant={leaveTypeVariant(value)}
+              />
+            ),
+          },
+          {
+            title: t('hr.table.startDate'),
+            dataIndex: 'startDate',
+            key: 'startDate',
+            width: 120,
+            sorter: true,
+            render: (value: string) => formatProjectDate(value),
+          },
+          {
+            title: t('hr.table.endDate'),
+            dataIndex: 'endDate',
+            key: 'endDate',
+            width: 120,
+            responsive: ['md'],
+            sorter: true,
+            render: (value: string) => formatProjectDate(value),
+          },
+          {
+            title: t('hr.table.days'),
+            dataIndex: 'days',
+            key: 'days',
+            width: 72,
+            align: 'right',
+            sorter: true,
+          },
+          {
+            title: t('common.status'),
+            dataIndex: 'status',
+            key: 'status',
+            width: 120,
+            sorter: true,
+            render: (value: string) => (
+              <StatusBadge
+                label={formatLeaveStatus(value, t)}
+                variant={leaveStatusVariant(value)}
+              />
+            ),
+          },
+        ],
+        sortBy,
+        sortOrder,
+      ) ?? [],
+    [sortBy, sortOrder, t],
   );
 
   function errorMessage(error: unknown): string {
@@ -598,7 +635,7 @@ export default function LeaveHistoryPageContent({
             value={leaveTypeFilter}
             onChange={(value) => {
               setLeaveTypeFilter(value);
-              setHistoryPage(1);
+              resetPage();
             }}
           />
           <Select
@@ -609,7 +646,7 @@ export default function LeaveHistoryPageContent({
             value={statusFilter}
             onChange={(value) => {
               setStatusFilter(value);
-              setHistoryPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -631,6 +668,9 @@ export default function LeaveHistoryPageContent({
               loading={historyQuery.isLoading}
               columns={columns}
               dataSource={historyRows}
+              onChange={
+                handleTableChange as TableProps<LeaveRequestListItem>['onChange']
+              }
               onRow={(record) => ({
                 onClick: () =>
                   router.push(
@@ -639,11 +679,8 @@ export default function LeaveHistoryPageContent({
                 style: { cursor: 'pointer' },
               })}
               pagination={{
-                current: historyMeta.page,
-                pageSize: historyMeta.limit,
-                total: historyMeta.total,
+                ...bindMeta(historyMeta),
                 showSizeChanger: false,
-                onChange: (page) => setHistoryPage(page),
               }}
               locale={{
                 emptyText: (

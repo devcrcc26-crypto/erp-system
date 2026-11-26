@@ -12,6 +12,7 @@ import {
   Spin,
   Tooltip,
   type MenuProps,
+  type TableProps,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -36,7 +37,10 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import type { LeavePolicy } from '@/lib/api/leave-policy.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
@@ -50,6 +54,7 @@ import {
 } from '@/lib/utils/leave-policy-list-filter';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { sortLeavePolicies } from '@/lib/utils/table-sort';
 
 const LIST_PATH = '/hr/leave-policy';
 const NEW_PATH = '/hr/leave-policy/new';
@@ -68,7 +73,12 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const [importOpen, setImportOpen] = useState(false);
   const listQuery = useLeavePolicyList(canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
-  const { params, resetPage, bindMeta } = useTablePagination(10);
+  const { params, resetPage, bindMeta, handleTableChange, sortBy, sortOrder } =
+    useTablePagination({
+      initialPageSize: 10,
+      initialSortBy: 'name',
+      initialSortOrder: 'asc',
+    });
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -102,8 +112,13 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     [allRows, appliedSearch, statusMode],
   );
 
+  const sorted = useMemo(
+    () => sortLeavePolicies(filtered, sortBy, sortOrder),
+    [filtered, sortBy, sortOrder],
+  );
+
   const meta: PaginationMeta = useMemo(() => {
-    const total = filtered.length;
+    const total = sorted.length;
     const limit = params.limit ?? 10;
     const page = params.page ?? 1;
     return {
@@ -112,12 +127,12 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       limit,
       pages: Math.max(1, Math.ceil(total / limit) || 1),
     };
-  }, [filtered.length, params.limit, params.page]);
+  }, [sorted.length, params.limit, params.page]);
 
   const pageRows = useMemo(() => {
     const start = (meta.page - 1) * meta.limit;
-    return filtered.slice(start, start + meta.limit);
-  }, [filtered, meta.page, meta.limit]);
+    return sorted.slice(start, start + meta.limit);
+  }, [sorted, meta.page, meta.limit]);
 
   async function handleDelete(): Promise<void> {
     if (!deleteId) {
@@ -171,99 +186,109 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const hasFilters = Boolean(appliedSearch.trim()) || statusMode !== 'all';
 
   const columns: ColumnsType<LeavePolicy> = useMemo(
-    () => [
-      {
-        title: t('hr.leavePolicy.name'),
-        dataIndex: 'name',
-        key: 'name',
-        render: (_: unknown, row: LeavePolicy) => (
-          <div className="erp-leave-policy-person">
-            <span className="erp-leave-policy-icon" aria-hidden>
-              <FileTextOutlined />
-            </span>
-            <div className="min-w-0">
-              <p className="erp-users-name m-0 truncate">{row.name}</p>
-              {row.description ? (
-                <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
-                  {row.description}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        ),
-      },
-      {
-        title: t('hr.leavePolicy.governedBy'),
-        dataIndex: 'governedBy',
-        key: 'governedBy',
-        ellipsis: true,
-        responsive: ['lg'],
-        render: (value: string | null) => (
-          <span className="erp-users-cell-sub">{value || '-'}</span>
-        ),
-      },
-      {
-        title: t('hr.leavePolicy.rules'),
-        dataIndex: 'ruleCount',
-        key: 'ruleCount',
-        width: 100,
-        align: 'right',
-        responsive: ['md'],
-        render: (value: number) => (
-          <span className="erp-users-cell-strong tabular-nums">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.leavePolicy.employees'),
-        dataIndex: 'employeeCount',
-        key: 'employeeCount',
-        width: 120,
-        align: 'right',
-        responsive: ['md'],
-        render: (value: number) => (
-          <span className="erp-users-cell-strong tabular-nums">{value}</span>
-        ),
-      },
-      {
-        title: t('common.status'),
-        dataIndex: 'isActive',
-        key: 'isActive',
-        width: isNarrow ? 100 : 110,
-        render: (value: boolean) => (
-          <StatusBadge
-            label={value ? t('common.active') : t('common.inactive')}
-            variant={value ? 'success' : 'default'}
-          />
-        ),
-      },
-      {
-        title: '',
-        key: 'actions',
-        width: 52,
-        align: 'right',
-        render: (_: unknown, row: LeavePolicy) => (
-          <div
-            className="erp-table-row-actions flex items-center justify-end"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <Dropdown
-              menu={{ items: buildActionMenu(row) }}
-              trigger={['click']}
-              rootClassName="erp-row-actions-menu"
-            >
-              <Button
-                size="small"
-                type="text"
-                icon={<MoreOutlined />}
-                aria-label={t('common.actions')}
+    () =>
+      withControlledSort<LeavePolicy>(
+        [
+          {
+            title: t('hr.leavePolicy.name'),
+            dataIndex: 'name',
+            key: 'name',
+            sorter: true,
+            render: (_: unknown, row: LeavePolicy) => (
+              <div className="erp-leave-policy-person">
+                <span className="erp-leave-policy-icon" aria-hidden>
+                  <FileTextOutlined />
+                </span>
+                <div className="min-w-0">
+                  <p className="erp-users-name m-0 truncate">{row.name}</p>
+                  {row.description ? (
+                    <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+                      {row.description}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ),
+          },
+          {
+            title: t('hr.leavePolicy.governedBy'),
+            dataIndex: 'governedBy',
+            key: 'governedBy',
+            ellipsis: true,
+            responsive: ['lg'],
+            sorter: true,
+            render: (value: string | null) => (
+              <span className="erp-users-cell-sub">{value || '-'}</span>
+            ),
+          },
+          {
+            title: t('hr.leavePolicy.rules'),
+            dataIndex: 'ruleCount',
+            key: 'ruleCount',
+            width: 100,
+            align: 'right',
+            responsive: ['md'],
+            sorter: true,
+            render: (value: number) => (
+              <span className="erp-users-cell-strong tabular-nums">{value}</span>
+            ),
+          },
+          {
+            title: t('hr.leavePolicy.employees'),
+            dataIndex: 'employeeCount',
+            key: 'employeeCount',
+            width: 120,
+            align: 'right',
+            responsive: ['md'],
+            sorter: true,
+            render: (value: number) => (
+              <span className="erp-users-cell-strong tabular-nums">{value}</span>
+            ),
+          },
+          {
+            title: t('common.status'),
+            dataIndex: 'isActive',
+            key: 'isActive',
+            width: isNarrow ? 100 : 110,
+            sorter: true,
+            render: (value: boolean) => (
+              <StatusBadge
+                label={value ? t('common.active') : t('common.inactive')}
+                variant={value ? 'success' : 'default'}
               />
-            </Dropdown>
-          </div>
-        ),
-      },
-    ],
-    [isNarrow, router, t],
+            ),
+          },
+          {
+            title: '',
+            key: 'actions',
+            width: 52,
+            align: 'right',
+            render: (_: unknown, row: LeavePolicy) => (
+              <div
+                className="erp-table-row-actions flex items-center justify-end"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <Dropdown
+                  menu={{ items: buildActionMenu(row) }}
+                  trigger={['click']}
+                  rootClassName="erp-row-actions-menu"
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+              </div>
+            ),
+          },
+        ],
+        sortBy,
+        sortOrder,
+      ) ?? [],
+    [isNarrow, router, sortBy, sortOrder, t],
   );
 
   if (!canViewHr) {
@@ -451,6 +476,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
             dataSource={pageRows}
             loading={listQuery.isFetching && pageRows.length === 0}
             scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 960 }}
+            onChange={handleTableChange as TableProps<LeavePolicy>['onChange']}
             onRow={(record) => ({
               onClick: () => router.push(`${LIST_PATH}/${record.id}`),
               className: 'cursor-pointer',

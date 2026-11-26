@@ -1,8 +1,8 @@
 'use client';
 import { accent } from '@/lib/theme/accent';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Spin } from 'antd';
+import { useEffect, useMemo } from 'react';
+import { Alert, Button, Spin, type TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { CalendarDays } from 'lucide-react';
@@ -13,12 +13,17 @@ import ProfileContractPeriodSelect from '@/components/modules/profile/ProfileCon
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   LeaveBalance,
   LeaveRequestListItem,
   LeaveType,
 } from '@/lib/api/leave.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   useLeaveRequestsAll,
   useMyLeaveBalances,
@@ -38,6 +43,7 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { sortLeaveRequests } from '@/lib/utils/table-sort';
 
 const HISTORY_PAGE_SIZE = 10;
 const LOW_BALANCE_THRESHOLD = 5;
@@ -184,7 +190,12 @@ export default function EmployeeLeaveProfileSection({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
-  const [historyPage, setHistoryPage] = useState(1);
+  const { params, resetPage, bindMeta, handleTableChange, sortBy, sortOrder } =
+    useTablePagination({
+      initialPageSize: HISTORY_PAGE_SIZE,
+      initialSortBy: 'createdAt',
+      initialSortOrder: 'desc',
+    });
 
   const isSelf = mode === 'self';
   const targetEmployeeId = isSelf ? undefined : employeeId;
@@ -293,16 +304,10 @@ export default function EmployeeLeaveProfileSection({
                 requestOverlapsContractPeriod(row, selectedPeriod),
             )
         : rows.map((row) => ({ row, daysInPeriod: row.days }));
-    return filtered
-      .sort(
-        (a, b) =>
-          new Date(b.row.createdAt).getTime() -
-          new Date(a.row.createdAt).getTime(),
-      )
-      .map(({ row, daysInPeriod }) => ({
-        ...row,
-        days: daysInPeriod,
-      }));
+    return filtered.map(({ row, daysInPeriod }) => ({
+      ...row,
+      days: daysInPeriod,
+    }));
   }, [
     isSelf,
     myHistoryQuery.data,
@@ -311,87 +316,112 @@ export default function EmployeeLeaveProfileSection({
   ]);
 
   useEffect(() => {
-    setHistoryPage(1);
-  }, [selectedPeriod?.id]);
+    resetPage();
+  }, [selectedPeriod?.id, resetPage]);
 
-  const historyMeta = useMemo(() => {
-    const total = allHistory.length;
-    const pages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE) || 1);
-    const page = Math.min(historyPage, pages);
-    return { total, page, limit: HISTORY_PAGE_SIZE, pages };
-  }, [allHistory.length, historyPage]);
+  const sortedHistory = useMemo(
+    () => sortLeaveRequests(allHistory, sortBy, sortOrder),
+    [allHistory, sortBy, sortOrder],
+  );
+
+  const historyMeta: PaginationMeta = useMemo(() => {
+    const total = sortedHistory.length;
+    const limit = params.limit ?? HISTORY_PAGE_SIZE;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [sortedHistory.length, params.limit, params.page]);
 
   const historyRows = useMemo(() => {
     const start = (historyMeta.page - 1) * historyMeta.limit;
-    return allHistory.slice(start, start + historyMeta.limit);
-  }, [allHistory, historyMeta.page, historyMeta.limit]);
+    return sortedHistory.slice(start, start + historyMeta.limit);
+  }, [sortedHistory, historyMeta.page, historyMeta.limit]);
 
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
-    () => [
-      {
-        title: t('hr.table.requestNumber'),
-        dataIndex: 'requestNumber',
-        key: 'requestNumber',
-        width: 140,
-        render: (value: string) => (
-          <span className="erp-users-id-chip">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.table.leaveType'),
-        dataIndex: 'leaveType',
-        key: 'leaveType',
-        width: 130,
-        render: (value: LeaveType) => (
-          <StatusBadge
-            label={formatLeaveType(value, t)}
-            variant={leaveTypeVariant(value)}
-          />
-        ),
-      },
-      {
-        title: t('hr.table.startDate'),
-        dataIndex: 'startDate',
-        key: 'startDate',
-        width: 120,
-        render: (value: string) => (
-          <span className="erp-users-cell-strong">{formatProjectDate(value)}</span>
-        ),
-      },
-      {
-        title: t('hr.table.endDate'),
-        dataIndex: 'endDate',
-        key: 'endDate',
-        width: 120,
-        responsive: ['md'],
-        render: (value: string) => (
-          <span className="erp-users-cell-sub">{formatProjectDate(value)}</span>
-        ),
-      },
-      {
-        title: t('hr.table.days'),
-        dataIndex: 'days',
-        key: 'days',
-        width: 72,
-        align: 'right',
-        render: (value: number) => (
-          <span className="erp-users-cell-strong tabular-nums">{value}</span>
-        ),
-      },
-      {
-        title: t('common.status'),
-        dataIndex: 'status',
-        key: 'status',
-        width: 120,
-        render: (value: string) => (
-          <StatusBadge
-            label={formatLeaveStatus(value, t)}
-            variant={leaveStatusVariant(value)}
-          />
-        ),
-      },
-    ],
-    [t],
+    () =>
+      withControlledSort<LeaveRequestListItem>(
+        [
+          {
+            title: t('hr.table.requestNumber'),
+            dataIndex: 'requestNumber',
+            key: 'requestNumber',
+            width: 140,
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-users-id-chip">{value}</span>
+            ),
+          },
+          {
+            title: t('hr.table.leaveType'),
+            dataIndex: 'leaveType',
+            key: 'leaveType',
+            width: 130,
+            sorter: true,
+            render: (value: LeaveType) => (
+              <StatusBadge
+                label={formatLeaveType(value, t)}
+                variant={leaveTypeVariant(value)}
+              />
+            ),
+          },
+          {
+            title: t('hr.table.startDate'),
+            dataIndex: 'startDate',
+            key: 'startDate',
+            width: 120,
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-users-cell-strong">
+                {formatProjectDate(value)}
+              </span>
+            ),
+          },
+          {
+            title: t('hr.table.endDate'),
+            dataIndex: 'endDate',
+            key: 'endDate',
+            width: 120,
+            responsive: ['md'],
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-users-cell-sub">
+                {formatProjectDate(value)}
+              </span>
+            ),
+          },
+          {
+            title: t('hr.table.days'),
+            dataIndex: 'days',
+            key: 'days',
+            width: 72,
+            align: 'right',
+            sorter: true,
+            render: (value: number) => (
+              <span className="erp-users-cell-strong tabular-nums">{value}</span>
+            ),
+          },
+          {
+            title: t('common.status'),
+            dataIndex: 'status',
+            key: 'status',
+            width: 120,
+            sorter: true,
+            render: (value: string) => (
+              <StatusBadge
+                label={formatLeaveStatus(value, t)}
+                variant={leaveStatusVariant(value)}
+              />
+            ),
+          },
+        ],
+        sortBy,
+        sortOrder,
+      ) ?? [],
+    [sortBy, sortOrder, t],
   );
 
   function errorMessage(error: unknown): string {
@@ -511,6 +541,9 @@ export default function EmployeeLeaveProfileSection({
             loading={historyLoading}
             columns={columns}
             dataSource={historyRows}
+            onChange={
+              handleTableChange as TableProps<LeaveRequestListItem>['onChange']
+            }
             onRow={(record) => ({
               onClick: () =>
                 router.push(
@@ -519,11 +552,8 @@ export default function EmployeeLeaveProfileSection({
               style: { cursor: 'pointer' },
             })}
             pagination={{
-              current: historyMeta.page,
-              pageSize: historyMeta.limit,
-              total: historyMeta.total,
+              ...bindMeta(historyMeta),
               showSizeChanger: false,
-              onChange: (page) => setHistoryPage(page),
             }}
             locale={{
               emptyText: (

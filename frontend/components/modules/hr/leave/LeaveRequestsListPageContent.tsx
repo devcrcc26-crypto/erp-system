@@ -15,6 +15,7 @@ import {
   Spin,
   Tooltip,
   type MenuProps,
+  type TableProps,
 } from 'antd';
 import {
   CalendarOutlined,
@@ -49,7 +50,10 @@ import {
   useCanViewTeam,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   LeaveRequestListItem,
@@ -81,6 +85,7 @@ import {
 } from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { sortLeaveRequests } from '@/lib/utils/table-sort';
 import { formatUserName, teamEmployeeOptions } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildLeaveRequestExportSheets } from '@/lib/utils/leave-export';
@@ -103,7 +108,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const canManage = canViewHr;
   const canCreate = useCanCreateLeave();
   const messageApi = useAppMessage();
-  const { params, resetPage, bindMeta } = useTablePagination(10);
+  const { params, resetPage, bindMeta, handleTableChange, sortBy, sortOrder } =
+    useTablePagination({
+      initialPageSize: 10,
+      initialSortBy: 'createdAt',
+      initialSortOrder: 'desc',
+    });
   const deleteMutation = useDeleteLeaveRequest();
   const importPreview = useLeaveRequestImportPreview();
   const importCommit = useLeaveRequestImport();
@@ -232,8 +242,13 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     ],
   );
 
+  const sorted = useMemo(
+    () => sortLeaveRequests(filtered, sortBy, sortOrder),
+    [filtered, sortBy, sortOrder],
+  );
+
   const meta: PaginationMeta = useMemo(() => {
-    const total = filtered.length;
+    const total = sorted.length;
     const limit = params.limit ?? 10;
     const page = params.page ?? 1;
     return {
@@ -242,12 +257,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       limit,
       pages: Math.max(1, Math.ceil(total / limit) || 1),
     };
-  }, [filtered.length, params.limit, params.page]);
+  }, [sorted.length, params.limit, params.page]);
 
   const rows = useMemo(() => {
     const start = (meta.page - 1) * meta.limit;
-    return filtered.slice(start, start + meta.limit);
-  }, [filtered, meta.page, meta.limit]);
+    return sorted.slice(start, start + meta.limit);
+  }, [sorted, meta.page, meta.limit]);
 
   const pageTitle = canViewTeam
     ? t('pages.hr.leave.listTitle')
@@ -324,133 +339,145 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   }
 
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
-    () => [
-      {
-        title: t('hr.table.requestNumber'),
-        dataIndex: 'requestNumber',
-        key: 'requestNumber',
-        width: 130,
-        render: (value: string) => (
-          <span className="erp-users-id-chip">{value}</span>
-        ),
-      },
-      ...(canViewTeam
-        ? [
-            {
-              title: t('hr.table.employee'),
-              key: 'employee',
-              width: isCompact ? 200 : 240,
-              responsive: ['md'] as const,
-              render: (_: unknown, row: LeaveRequestListItem) => {
-                const employee = row.employee;
-                if (!employee) {
-                  return <span className="erp-users-cell-sub">-</span>;
-                }
-                return (
-                  <div className="erp-leave-person">
-                    <EvaluationListAvatar
-                      firstName={employee.firstName}
-                      lastName={employee.lastName}
-                      userId={employee.id}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="erp-users-name m-0 truncate">
-                        {formatLeaveEmployeeName(employee)}
-                      </p>
-                      {employee.email ? (
-                        <p className="erp-users-email m-0 mt-0.5 truncate">
-                          {employee.email}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              },
-            } satisfies ColumnsType<LeaveRequestListItem>[number],
-          ]
-        : []),
-      {
-        title: t('hr.table.leaveType'),
-        dataIndex: 'leaveType',
-        key: 'leaveType',
-        width: 140,
-        render: (value: LeaveType) => (
-          <StatusBadge
-            label={formatLeaveType(value, t)}
-            variant={leaveTypeVariant(value)}
-          />
-        ),
-      },
-      {
-        title: t('hr.table.startDate'),
-        dataIndex: 'startDate',
-        key: 'startDate',
-        width: 120,
-        render: (value: string) => (
-          <span className="erp-leave-date erp-leave-date--strong">
-            {formatProjectDate(value)}
-          </span>
-        ),
-      },
-      {
-        title: t('hr.table.endDate'),
-        dataIndex: 'endDate',
-        key: 'endDate',
-        width: 120,
-        responsive: ['md'],
-        render: (value: string) => (
-          <span className="erp-leave-date">{formatProjectDate(value)}</span>
-        ),
-      },
-      {
-        title: t('hr.table.days'),
-        dataIndex: 'days',
-        key: 'days',
-        width: 80,
-        render: (value: number) => (
-          <span className="erp-leave-days">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.table.status'),
-        dataIndex: 'status',
-        key: 'status',
-        width: 130,
-        render: (value: LeaveRequestStatus) => (
-          <StatusBadge
-            label={formatLeaveStatus(value, t)}
-            variant={leaveStatusVariant(value)}
-          />
-        ),
-      },
-      {
-        title: '',
-        key: 'actions',
-        width: 52,
-        align: 'right' as const,
-        render: (_: unknown, record: LeaveRequestListItem) => (
-          <div
-            className="erp-table-row-actions flex items-center justify-end"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <Dropdown
-              menu={{ items: buildActionMenu(record) }}
-              trigger={['click']}
-              rootClassName="erp-row-actions-menu"
-            >
-              <Button
-                size="small"
-                type="text"
-                icon={<MoreOutlined />}
-                aria-label={t('common.actions')}
+    () =>
+      withControlledSort<LeaveRequestListItem>(
+        [
+          {
+            title: t('hr.table.requestNumber'),
+            dataIndex: 'requestNumber',
+            key: 'requestNumber',
+            width: 130,
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-users-id-chip">{value}</span>
+            ),
+          },
+          ...(canViewTeam
+            ? [
+                {
+                  title: t('hr.table.employee'),
+                  key: 'employee',
+                  width: isCompact ? 200 : 240,
+                  responsive: ['md'] as const,
+                  sorter: true,
+                  render: (_: unknown, row: LeaveRequestListItem) => {
+                    const employee = row.employee;
+                    if (!employee) {
+                      return <span className="erp-users-cell-sub">-</span>;
+                    }
+                    return (
+                      <div className="erp-leave-person">
+                        <EvaluationListAvatar
+                          firstName={employee.firstName}
+                          lastName={employee.lastName}
+                          userId={employee.id}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="erp-users-name m-0 truncate">
+                            {formatLeaveEmployeeName(employee)}
+                          </p>
+                          {employee.email ? (
+                            <p className="erp-users-email m-0 mt-0.5 truncate">
+                              {employee.email}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  },
+                } satisfies ColumnsType<LeaveRequestListItem>[number],
+              ]
+            : []),
+          {
+            title: t('hr.table.leaveType'),
+            dataIndex: 'leaveType',
+            key: 'leaveType',
+            width: 140,
+            sorter: true,
+            render: (value: LeaveType) => (
+              <StatusBadge
+                label={formatLeaveType(value, t)}
+                variant={leaveTypeVariant(value)}
               />
-            </Dropdown>
-          </div>
-        ),
-      },
-    ],
-    [canManage, canViewHr, canViewTeam, isCompact, router, t],
+            ),
+          },
+          {
+            title: t('hr.table.startDate'),
+            dataIndex: 'startDate',
+            key: 'startDate',
+            width: 120,
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-leave-date erp-leave-date--strong">
+                {formatProjectDate(value)}
+              </span>
+            ),
+          },
+          {
+            title: t('hr.table.endDate'),
+            dataIndex: 'endDate',
+            key: 'endDate',
+            width: 120,
+            responsive: ['md'],
+            sorter: true,
+            render: (value: string) => (
+              <span className="erp-leave-date">{formatProjectDate(value)}</span>
+            ),
+          },
+          {
+            title: t('hr.table.days'),
+            dataIndex: 'days',
+            key: 'days',
+            width: 80,
+            sorter: true,
+            render: (value: number) => (
+              <span className="erp-leave-days">{value}</span>
+            ),
+          },
+          {
+            title: t('hr.table.status'),
+            dataIndex: 'status',
+            key: 'status',
+            width: 130,
+            sorter: true,
+            render: (value: LeaveRequestStatus) => (
+              <StatusBadge
+                label={formatLeaveStatus(value, t)}
+                variant={leaveStatusVariant(value)}
+              />
+            ),
+          },
+          {
+            title: '',
+            key: 'actions',
+            width: 52,
+            align: 'right' as const,
+            render: (_: unknown, record: LeaveRequestListItem) => (
+              <div
+                className="erp-table-row-actions flex items-center justify-end"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <Dropdown
+                  menu={{ items: buildActionMenu(record) }}
+                  trigger={['click']}
+                  rootClassName="erp-row-actions-menu"
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+              </div>
+            ),
+          },
+        ],
+        sortBy,
+        sortOrder,
+      ) ?? [],
+    [canManage, canViewHr, canViewTeam, isCompact, router, sortBy, sortOrder, t],
   );
 
   const hasFilters =
@@ -688,6 +715,9 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             scroll={{ x: isCompact ? 640 : 980 }}
+            onChange={
+              handleTableChange as TableProps<LeaveRequestListItem>['onChange']
+            }
             onRow={(record) => ({
               onClick: () => router.push(`/hr/leave-requests/${record.id}`),
               className: 'cursor-pointer',

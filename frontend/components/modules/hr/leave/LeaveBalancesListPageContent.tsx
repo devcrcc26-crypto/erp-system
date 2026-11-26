@@ -10,6 +10,7 @@ import {
   InputNumber,
   Spin,
   Tooltip,
+  type TableProps,
 } from 'antd';
 import {
   CalendarOutlined,
@@ -32,7 +33,10 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanEditLeaveBalances } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useTablePagination } from '@/hooks/use-table-pagination';
+import {
+  useTablePagination,
+  withControlledSort,
+} from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   EmployeeLeaveBalanceSummary,
@@ -54,6 +58,7 @@ import {
 import { buildLeaveBalanceExportSheets } from '@/lib/utils/leave-export';
 import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
+import { sortLeaveBalances } from '@/lib/utils/table-sort';
 
 type Translate = ReturnType<typeof useEpcTranslation>['t'];
 
@@ -194,7 +199,12 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const canEditBalances = useCanEditLeaveBalances();
-  const { params, resetPage, bindMeta } = useTablePagination(10);
+  const { params, resetPage, bindMeta, handleTableChange, sortBy, sortOrder } =
+    useTablePagination({
+      initialPageSize: 10,
+      initialSortBy: 'employee',
+      initialSortOrder: 'asc',
+    });
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
@@ -213,8 +223,13 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     [allRows, appliedSearch],
   );
 
+  const sorted = useMemo(
+    () => sortLeaveBalances(filtered, sortBy, sortOrder),
+    [filtered, sortBy, sortOrder],
+  );
+
   const meta: PaginationMeta = useMemo(() => {
-    const total = filtered.length;
+    const total = sorted.length;
     const limit = params.limit ?? 10;
     const page = params.page ?? 1;
     return {
@@ -223,12 +238,12 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       limit,
       pages: Math.max(1, Math.ceil(total / limit) || 1),
     };
-  }, [filtered.length, params.limit, params.page]);
+  }, [sorted.length, params.limit, params.page]);
 
   const rows = useMemo(() => {
     const start = (meta.page - 1) * meta.limit;
-    return filtered.slice(start, start + meta.limit);
-  }, [filtered, meta.page, meta.limit]);
+    return sorted.slice(start, start + meta.limit);
+  }, [sorted, meta.page, meta.limit]);
 
   const pageStats = useMemo(() => summarizeLeaveBalanceStats(filtered), [filtered]);
 
@@ -238,6 +253,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         title: t('hr.table.employee'),
         key: 'employee',
         width: isCompact ? 190 : 260,
+        sorter: true,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
           <div className="erp-leave-person">
             <EvaluationListAvatar
@@ -263,6 +279,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         key: 'employeeCode',
         width: 130,
         responsive: ['md'],
+        sorter: true,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           row.employee.employeeCode ? (
             <span className="erp-users-id-chip">{row.employee.employeeCode}</span>
@@ -274,6 +291,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         title: formatLeaveType('ANNUAL', t),
         key: 'annual',
         width: 120,
+        sorter: true,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
           <BalanceCell balance={row.annual} t={t} />
         ),
@@ -282,6 +300,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         title: t(`${TABLE_KEY}.parental`),
         key: 'parental',
         width: 150,
+        sorter: true,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) => {
           const parental = parentalBalanceFor(row);
           return (
@@ -320,8 +339,11 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       });
     }
 
-    return cols;
-  }, [canEditBalances, isCompact, t]);
+    return (
+      withControlledSort<EmployeeLeaveBalanceSummary>(cols, sortBy, sortOrder) ??
+      cols
+    );
+  }, [canEditBalances, isCompact, sortBy, sortOrder, t]);
 
   function handleResetFilters(): void {
     setSearch('');
@@ -489,6 +511,9 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             scroll={{ x: isCompact ? 640 : 900 }}
+            onChange={
+              handleTableChange as TableProps<EmployeeLeaveBalanceSummary>['onChange']
+            }
             expandable={{
               expandRowByClick: true,
               expandedRowRender: (record) => (
