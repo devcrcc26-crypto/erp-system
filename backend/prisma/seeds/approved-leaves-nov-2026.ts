@@ -501,7 +501,7 @@ async function seedOne(
         days: new Prisma.Decimal(row.days),
         reason:
           row.reason?.trim() ||
-          'Paper leave form — imported as already approved.',
+          'Paper leave form,imported as already approved.',
         status: LeaveRequestStatus.APPROVED,
         source: PAPER_IMPORT_SOURCE,
         approvalRequestId,
@@ -533,6 +533,10 @@ async function seedOne(
       days: row.days,
       calendar,
     });
+  }, {
+    // Production latency can exceed Prisma's 5s interactive default.
+    maxWait: 20_000,
+    timeout: 60_000,
   });
 
   console.log(

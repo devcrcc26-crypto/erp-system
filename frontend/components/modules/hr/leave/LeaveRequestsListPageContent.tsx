@@ -386,6 +386,21 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                     );
                   },
                 } satisfies ColumnsType<LeaveRequestListItem>[number],
+                {
+                  title: t('users.form.employeeId'),
+                  key: 'employeeCode',
+                  width: 130,
+                  responsive: ['md'] as const,
+                  sorter: true,
+                  render: (_: unknown, row: LeaveRequestListItem) =>
+                    row.employee?.employeeCode ? (
+                      <span className="erp-users-id-chip">
+                        {row.employee.employeeCode}
+                      </span>
+                    ) : (
+                      <span className="erp-users-cell-sub">—</span>
+                    ),
+                } satisfies ColumnsType<LeaveRequestListItem>[number],
               ]
             : []),
           {

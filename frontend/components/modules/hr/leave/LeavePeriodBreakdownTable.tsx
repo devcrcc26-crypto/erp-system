@@ -59,10 +59,13 @@ export default function LeavePeriodBreakdownTable({
   breakdown,
   totalDays,
   showTotal = false,
+  showHeading = true,
 }: {
   breakdown: DayBreakdownItem[];
   totalDays?: number;
   showTotal?: boolean;
+  /** When false, omit the internal "Day breakdown" caption (parent already titled the block). */
+  showHeading?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -121,7 +124,9 @@ export default function LeavePeriodBreakdownTable({
           <span className="tabular-nums">{totalDays}</span>
         </p>
       ) : null}
-      <p className="erp-users-cell-sub mb-2">{t('hr.form.periodPreview')}</p>
+      {showHeading ? (
+        <p className="erp-users-cell-sub mb-2">{t('hr.form.periodPreview')}</p>
+      ) : null}
       <DataTable<DayBreakdownItem>
         rowKey="date"
         size="small"

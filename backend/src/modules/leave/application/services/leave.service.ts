@@ -88,7 +88,29 @@ const USER_SELECT = {
   lastName: true,
   email: true,
   chineseName: true,
+  /** Badge / HR employee number (User.employeeId). Mapped to employeeCode in responses. */
+  employeeId: true,
+  gender: true,
 } as const;
+
+/**
+ * Maps a Prisma user select to the LeaveUserSummary shape (employeeId → employeeCode).
+ */
+function mapLeaveUser(
+  user: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  if (!user) {
+    return null;
+  }
+  const { employeeId: employeeCode, ...rest } = user;
+  return {
+    ...rest,
+    employeeCode:
+      typeof employeeCode === 'string' && employeeCode.trim().length > 0
+        ? employeeCode
+        : null,
+  };
+}
 
 const DOCUMENT_SELECT = {
   id: true,
@@ -1345,11 +1367,47 @@ export class LeaveService
               : Number(period.days),
         }))
       : [];
+    const approvalRequest = row.approvalRequest as
+      | (Record<string, unknown> & {
+          tiers?: Array<Record<string, unknown>>;
+        })
+      | null
+      | undefined;
+    const mappedApproval = approvalRequest
+      ? {
+          ...approvalRequest,
+          tiers: Array.isArray(approvalRequest.tiers)
+            ? approvalRequest.tiers.map((tier) => ({
+                ...tier,
+                approver: mapLeaveUser(
+                  tier.approver as Record<string, unknown> | null | undefined,
+                ),
+              }))
+            : approvalRequest.tiers,
+        }
+      : approvalRequest;
     return {
       ...row,
       days: days instanceof Prisma.Decimal ? Number(days) : Number(days ?? 0),
       documents,
       periods,
+      ...(row.employee !== undefined
+        ? {
+            employee: mapLeaveUser(
+              row.employee as Record<string, unknown> | null,
+            ),
+          }
+        : {}),
+      ...(row.creator !== undefined
+        ? {
+            creator: mapLeaveUser(
+              row.creator as Record<string, unknown> | null,
+            ),
+          }
+        : {}),
+      ...(row.approvalRequest !== undefined
+        ? { approvalRequest: mappedApproval }
+        : {}),
     };
   }
 

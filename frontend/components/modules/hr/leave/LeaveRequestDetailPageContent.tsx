@@ -15,8 +15,6 @@ import {
   CalendarRange,
   Clock3,
   FileText,
-  Hash,
-  UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -276,6 +274,11 @@ export default function LeaveRequestDetailPageContent({
   const employee = request.employee;
   const employeeName = formatLeaveEmployeeName(employee);
   const leaveTypeLabel = formatLeaveType(request.leaveType, t);
+  const periods = request.periods ?? [];
+  const showPeriods = periods.length > 1;
+  const showBreakdown = Boolean(request.breakdown && request.breakdown.length > 0);
+  const showReason = Boolean(request.reason?.trim());
+  const showRequestDetails = showPeriods || showBreakdown || showReason;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page erp-leave-v2">
@@ -309,20 +312,24 @@ export default function LeaveRequestDetailPageContent({
                     variant={leaveTypeVariant(request.leaveType)}
                   />
                 </div>
+                {employee?.email ? (
+                  <p className="erp-leave-detail-meta erp-leave-detail-meta--email">
+                    <span className="truncate">{employee.email}</span>
+                  </p>
+                ) : null}
                 <p className="erp-leave-detail-meta">
                   <span>
                     <CalendarDays size={14} strokeWidth={2} aria-hidden />
                     {formatProjectDate(request.startDate)} –{' '}
                     {formatProjectDate(request.endDate)}
+                    {showPeriods
+                      ? ` · ${periods.length} ${t('hr.form.periods').toLowerCase()}`
+                      : null}
                   </span>
                   <span>
                     <Clock3 size={14} strokeWidth={2} aria-hidden />
                     <strong>{request.days}</strong>{' '}
                     {t('hr.labels.days').toLowerCase()}
-                  </span>
-                  <span>
-                    <Hash size={14} strokeWidth={2} aria-hidden />
-                    {leaveTypeLabel}
                   </span>
                 </p>
               </div>
@@ -414,158 +421,67 @@ export default function LeaveRequestDetailPageContent({
 
       <div className="erp-leave-detail-layout">
         <div className="erp-leave-detail-main">
-          <DetailSection title={t('hr.section.requestDetails')}>
-            <div className="erp-leave-details">
-              <div className="erp-leave-details-grid">
-                <div className="erp-leave-field erp-leave-field--wide">
-                  <span className="erp-leave-field-icon" aria-hidden>
-                    <UserRound size={16} strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="erp-leave-field-label">
-                      {t('hr.labels.employee')}
-                    </p>
-                    <div className="erp-leave-field-person">
-                      {employee ? (
-                        <EvaluationListAvatar
-                          firstName={employee.firstName}
-                          lastName={employee.lastName}
-                          userId={employee.id}
-                        />
-                      ) : null}
-                      <div className="min-w-0">
-                        <p className="erp-leave-field-value truncate">
-                          {employeeName}
-                        </p>
-                        {employee?.email ? (
-                          <p className="erp-leave-field-hint truncate">
-                            {employee.email}
-                          </p>
-                        ) : null}
-                      </div>
+          {showRequestDetails ? (
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="erp-leave-details">
+                {showPeriods ? (
+                  <div className="erp-leave-details-block">
+                    <div className="erp-leave-details-block-head">
+                      <CalendarRange size={15} strokeWidth={2} aria-hidden />
+                      <span>{t('hr.form.periods')}</span>
                     </div>
+                    <ul className="erp-leave-period-cards">
+                      {periods.map((period, index) => (
+                        <li
+                          key={`${period.startDate}-${period.endDate}-${index}`}
+                          className="erp-leave-period-card"
+                        >
+                          <span className="erp-leave-period-index">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="erp-leave-period-range">
+                              {formatProjectDate(period.startDate)}
+                              <span aria-hidden> → </span>
+                              {formatProjectDate(period.endDate)}
+                            </p>
+                            <p className="erp-leave-period-days">
+                              {period.days} {t('hr.labels.days').toLowerCase()}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
+                ) : null}
 
-                <div className="erp-leave-field">
-                  <span className="erp-leave-field-icon" aria-hidden>
-                    <Hash size={16} strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="erp-leave-field-label">
-                      {t('hr.labels.leaveType')}
-                    </p>
-                    <div className="erp-leave-field-value-row">
-                      <StatusBadge
-                        label={leaveTypeLabel}
-                        variant={leaveTypeVariant(request.leaveType)}
+                {showBreakdown && request.breakdown ? (
+                  <div className="erp-leave-details-block">
+                    <div className="erp-leave-details-block-head">
+                      <CalendarDays size={15} strokeWidth={2} aria-hidden />
+                      <span>{t('hr.form.periodPreview')}</span>
+                    </div>
+                    <div className="erp-leave-breakdown-wrap">
+                      <LeavePeriodBreakdownTable
+                        breakdown={request.breakdown}
+                        showHeading={false}
                       />
                     </div>
                   </div>
-                </div>
+                ) : null}
 
-                <div className="erp-leave-field">
-                  <span className="erp-leave-field-icon" aria-hidden>
-                    <Clock3 size={16} strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="erp-leave-field-label">
-                      {t('hr.labels.days')}
-                    </p>
-                    <p className="erp-leave-field-value erp-leave-field-value--num">
-                      {request.days}
-                      <span className="erp-leave-field-unit">
-                        {t('hr.labels.days').toLowerCase()}
-                      </span>
-                    </p>
+                {showReason ? (
+                  <div className="erp-leave-reason-panel">
+                    <div className="erp-leave-details-block-head">
+                      <FileText size={15} strokeWidth={2} aria-hidden />
+                      <span>{t('hr.labels.reason')}</span>
+                    </div>
+                    <p className="erp-leave-reason">{request.reason}</p>
                   </div>
-                </div>
-
-                <div className="erp-leave-field">
-                  <span className="erp-leave-field-icon" aria-hidden>
-                    <CalendarDays size={16} strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="erp-leave-field-label">
-                      {t('hr.labels.startDate')}
-                    </p>
-                    <p className="erp-leave-field-value">
-                      {formatProjectDate(request.startDate)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="erp-leave-field">
-                  <span className="erp-leave-field-icon" aria-hidden>
-                    <CalendarDays size={16} strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="erp-leave-field-label">
-                      {t('hr.labels.endDate')}
-                    </p>
-                    <p className="erp-leave-field-value">
-                      {formatProjectDate(request.endDate)}
-                    </p>
-                  </div>
-                </div>
+                ) : null}
               </div>
-
-              {request.periods && request.periods.length > 0 ? (
-                <div className="erp-leave-details-block">
-                  <div className="erp-leave-details-block-head">
-                    <CalendarRange size={15} strokeWidth={2} aria-hidden />
-                    <span>{t('hr.form.periods')}</span>
-                  </div>
-                  <ul className="erp-leave-period-cards">
-                    {request.periods.map((period, index) => (
-                      <li
-                        key={`${period.startDate}-${period.endDate}`}
-                        className="erp-leave-period-card"
-                      >
-                        <span className="erp-leave-period-index">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="erp-leave-period-range">
-                            {formatProjectDate(period.startDate)}
-                            <span aria-hidden> → </span>
-                            {formatProjectDate(period.endDate)}
-                          </p>
-                          <p className="erp-leave-period-days">
-                            {period.days} {t('hr.labels.days').toLowerCase()}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {request.breakdown && request.breakdown.length > 0 ? (
-                <div className="erp-leave-details-block">
-                  <div className="erp-leave-details-block-head">
-                    <CalendarDays size={15} strokeWidth={2} aria-hidden />
-                    <span>{t('hr.form.periodPreview')}</span>
-                  </div>
-                  <div className="erp-leave-breakdown-wrap">
-                    <LeavePeriodBreakdownTable
-                      breakdown={request.breakdown}
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {request.reason?.trim() ? (
-                <div className="erp-leave-reason-panel">
-                  <div className="erp-leave-details-block-head">
-                    <FileText size={15} strokeWidth={2} aria-hidden />
-                    <span>{t('hr.labels.reason')}</span>
-                  </div>
-                  <p className="erp-leave-reason">{request.reason}</p>
-                </div>
-              ) : null}
-            </div>
-          </DetailSection>
+            </DetailSection>
+          ) : null}
 
           {request.balance ? (
             <DetailSection title={t('hr.section.leaveBalance')}>

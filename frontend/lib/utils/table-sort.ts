@@ -74,6 +74,11 @@ export function compareLeaveRequest(
         formatLeaveEmployeeName(a.employee),
         formatLeaveEmployeeName(b.employee),
       );
+    case 'employeeCode':
+      return compareText(
+        a.employee?.employeeCode?.trim() ?? '',
+        b.employee?.employeeCode?.trim() ?? '',
+      );
     case 'leaveType':
       return compareText(a.leaveType, b.leaveType);
     case 'startDate':
