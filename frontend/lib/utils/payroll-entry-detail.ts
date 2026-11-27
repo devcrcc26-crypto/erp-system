@@ -85,3 +85,25 @@ export function estimateNetIncrease(
   const taxAfter = estimateEthiopianTax(taxableIncome + value);
   return Math.round((value - (taxAfter - taxBefore)) * 100) / 100;
 }
+
+/** The entry fields that carry after-tax adjustments (all optional on the wire). */
+export interface EntryNetAdjustmentSource {
+  contractNetBonus: MoneyField;
+  netTopUp: MoneyField;
+  adjustmentNonTaxable?: MoneyField;
+  adjustmentDeductions?: MoneyField;
+}
+
+/**
+ * Signed total of everything applied after tax: net bonuses and after-tax
+ * adjustment earnings (+) less adjustment deductions (-). Taxable adjustments
+ * are already inside gross, so net = gross - tax - pension + this.
+ */
+export function entryNetAdjustments(source: EntryNetAdjustmentSource): number {
+  const total =
+    parsePayrollMoney(source.contractNetBonus) +
+    parsePayrollMoney(source.netTopUp) +
+    parsePayrollMoney(source.adjustmentNonTaxable ?? 0) -
+    parsePayrollMoney(source.adjustmentDeductions ?? 0);
+  return Math.round(total * 100) / 100;
+}

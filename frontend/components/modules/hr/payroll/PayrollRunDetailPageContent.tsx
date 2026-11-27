@@ -98,7 +98,9 @@ import {
   useRecalculatePayrollRun,
   useUpdatePayrollRun,
   useReleasePayslips,
+  useReturnPayrollRunToDraft,
   useSubmitPayrollRun,
+  useWithdrawPayrollRun,
 } from '@/lib/query/payroll';
 import {
   usePayrollRunHistory,
@@ -117,6 +119,7 @@ import {
 } from '@/lib/utils/payroll-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useAuthStore } from '@/stores/auth.store';
 
 type ConfirmAction =
   | 'recalculate'
@@ -125,6 +128,7 @@ type ConfirmAction =
   | 'approve'
   | 'gmApprove'
   | 'markPaid'
+  | 'withdraw'
   | 'cancel';
 
 function MoneyCell({
@@ -314,6 +318,7 @@ export default function PayrollRunDetailPageContent({
   const canApprove = useCanApprovePayroll();
   const canExport = useCanExportPayroll();
   const isSysAdmin = useIsSystemAdmin();
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
   const canManageCorrections = useCanManagePayrollCorrections();
 
   const detailQuery = usePayrollRun(runId, canAccess);
@@ -330,6 +335,8 @@ export default function PayrollRunDetailPageContent({
   const cancelMutation = useCancelPayrollRun(runId);
   const createCorrectionMutation = useCreatePayrollCorrection(runId);
   const reopenMutation = useReopenPayrollRun(runId);
+  const returnToDraftMutation = useReturnPayrollRunToDraft(runId);
+  const withdrawMutation = useWithdrawPayrollRun(runId);
   const generatePayslipsMutation = useGeneratePayslips(runId);
   const releasePayslipsMutation = useReleasePayslips(runId);
   const addFreelancersMutation = useAddPayrollFreelancers(runId);
@@ -347,6 +354,8 @@ export default function PayrollRunDetailPageContent({
   const [correctionNote, setCorrectionNote] = useState('');
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
   const [activeTab, setActiveTab] = useState<PayrollRunTab>('summary');
   const warningsQuery = usePayrollRunWarnings(runId, canAccess && (canCreate || canEdit || canApprove));
   const historyQuery = usePayrollRunHistory(runId, canAccess);
@@ -577,6 +586,10 @@ export default function PayrollRunDetailPageContent({
           await markPaidMutation.mutateAsync();
           messageApi.success(t('hr.payroll.actions.markPaidSuccess'));
           break;
+        case 'withdraw':
+          await withdrawMutation.mutateAsync();
+          messageApi.success(t('hr.payroll.actions.withdrawSuccess'));
+          break;
         case 'cancel':
           await cancelMutation.mutateAsync();
           messageApi.success(t('hr.payroll.actions.cancelSuccess'));
@@ -758,6 +771,16 @@ export default function PayrollRunDetailPageContent({
               {row.employee.employeeType === 'FREELANCER' ? (
                 <span className="erp-payroll-split-pill erp-payroll-freelancer-pill">
                   {t('hr.payroll.freelancers.tag')}
+                </span>
+              ) : null}
+              {row.settlementOnly ? (
+                <span className="erp-payroll-split-pill">
+                  {t('hr.payroll.settlementOnly.tag')}
+                </span>
+              ) : null}
+              {row.settlementOnly && parsePayrollMoney(row.netPay) < -0.005 ? (
+                <span className="erp-payroll-split-pill erp-payroll-freelancer-pill">
+                  {t('hr.payroll.settlementOnly.collect')}
                 </span>
               ) : null}
               {lines ? (
@@ -1006,6 +1029,14 @@ export default function PayrollRunDetailPageContent({
               {formatUserName(entry.employee)}
             </p>
             <p className="erp-payroll-employee-id">{entry.employee.employeeId ?? '-'}</p>
+            {entry.settlementOnly ? (
+              <span className="erp-payroll-split-pill">{t('hr.payroll.settlementOnly.tag')}</span>
+            ) : null}
+            {entry.settlementOnly && parsePayrollMoney(entry.netPay) < -0.005 ? (
+              <span className="erp-payroll-split-pill erp-payroll-freelancer-pill">
+                {t('hr.payroll.settlementOnly.collect')}
+              </span>
+            ) : null}
           </div>
           {entry.flag !== 'NONE' ? (
             <Tag variant="filled" className="erp-payroll-flag">
@@ -1158,6 +1189,11 @@ export default function PayrollRunDetailPageContent({
           title: t('hr.payroll.confirm.markPaidTitle'),
           description: t('hr.payroll.confirm.markPaidDescription'),
         };
+      case 'withdraw':
+        return {
+          title: t('hr.payroll.confirm.withdrawTitle'),
+          description: t('hr.payroll.confirm.withdrawDescription'),
+        };
       case 'cancel':
         return {
           title: t('hr.payroll.confirm.cancelTitle'),
@@ -1240,6 +1276,14 @@ export default function PayrollRunDetailPageContent({
               setBankLetterLoading(true);
               try {
                 const preview = await previewPayrollBankLetter(run.id);
+                if ((preview.collectFromEmployees?.length ?? 0) > 0) {
+                  // Recoveries on settlement-only rows can't be paid: they are collected, then Record receipt.
+                  messageApi.info(
+                    t('hr.payroll.settlementOnly.bankLetterCollect', {
+                      names: (preview.collectFromEmployees ?? []).map((e) => e.name).join(', '),
+                    }),
+                  );
+                }
                 if (preview.excludedEmployees.length > 0) {
                   setBankLetterWarn({
                     excludedNames: preview.excludedEmployees.map((e) => e.name),
@@ -1309,6 +1353,28 @@ export default function PayrollRunDetailPageContent({
         </Button>,
       );
     }
+    if (
+      status === 'SUBMITTED' &&
+      canCreate &&
+      currentUserId !== null &&
+      run?.submittedBy === currentUserId
+    ) {
+      add('withdraw', t('hr.payroll.actions.withdraw'), 'withdraw');
+    }
+    if (status === 'SUBMITTED' && canApprove) {
+      buttons.push(
+        <Button
+          key="returnToDraft"
+          onClick={() => {
+            setReturnReason('');
+            setReturnModalOpen(true);
+          }}
+          loading={returnToDraftMutation.isPending}
+        >
+          {t('hr.payroll.actions.returnToDraft')}
+        </Button>,
+      );
+    }
     if (status === 'SUBMITTED' && (canApprove || isSysAdmin)) {
       add('approve', t('hr.payroll.actions.approve'), 'approve', 'primary');
     }
@@ -1352,6 +1418,7 @@ export default function PayrollRunDetailPageContent({
     approveMutation.isPending ||
     gmApproveMutation.isPending ||
     markPaidMutation.isPending ||
+    withdrawMutation.isPending ||
     cancelMutation.isPending;
 
   if (!canAccess) {
@@ -1414,6 +1481,7 @@ export default function PayrollRunDetailPageContent({
     (warnings &&
       (warnings.pendingOvertime.length > 0 ||
         warnings.overtimeNotIncluded.length > 0 ||
+        warnings.overtimeChangedSinceCalculation.length > 0 ||
         warnings.deductionsOverCap.length > 0)) ||
     run.attendanceSnapshotStale ||
     run.policyReviewRequired ? (
@@ -1461,6 +1529,26 @@ export default function PayrollRunDetailPageContent({
             <p className="erp-payroll-muted-note">{t('hr.payroll.warnings.notIncludedHint')}</p>
             <ul className="erp-payroll-followup-list">
               {warnings.overtimeNotIncluded.map((row) => (
+                <li key={row.sheetId}>
+                  <span className="truncate">
+                    {row.employeeName}
+                    {row.employeeCode ? ` · ${row.employeeCode}` : ''}
+                  </span>
+                  <span className="erp-payroll-muted-note">
+                    {row.sheetNumber} ·{' '}
+                    {t('hr.payroll.warnings.entriesHours', { entries: row.entries, hours: row.hours })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {warnings && warnings.overtimeChangedSinceCalculation.length > 0 ? (
+          <div className="erp-payroll-followup-group">
+            <h4 className="erp-payroll-followup-title">{t('hr.payroll.warnings.overtimeChangedTitle')}</h4>
+            <p className="erp-payroll-muted-note">{t('hr.payroll.warnings.overtimeChangedHint')}</p>
+            <ul className="erp-payroll-followup-list">
+              {warnings.overtimeChangedSinceCalculation.map((row) => (
                 <li key={row.sheetId}>
                   <span className="truncate">
                     {row.employeeName}
@@ -1701,6 +1789,49 @@ export default function PayrollRunDetailPageContent({
               value={reopenReason}
               onChange={(event) => setReopenReason(event.target.value)}
               placeholder={t('hr.payroll.reopen.reasonPlaceholder')}
+              maxLength={1000}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={t('hr.payroll.returnToDraft.title', { runNumber: run.runNumber })}
+        open={returnModalOpen}
+        onCancel={() => setReturnModalOpen(false)}
+        okText={t('hr.payroll.returnToDraft.confirm')}
+        okButtonProps={{ disabled: returnReason.trim().length < 5 }}
+        confirmLoading={returnToDraftMutation.isPending}
+        onOk={() => {
+          void (async () => {
+            try {
+              await returnToDraftMutation.mutateAsync(returnReason.trim());
+              messageApi.success(t('hr.payroll.returnToDraft.success'));
+              setReturnModalOpen(false);
+            } catch (error) {
+              notifyApiError(error, t('hr.payroll.actions.returnToDraft'), messageApi, t);
+            }
+          })();
+        }}
+        destroyOnHidden
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">{t('hr.payroll.returnToDraft.hint')}</p>
+        <Form layout="vertical">
+          <Form.Item
+            label={t('hr.payroll.returnToDraft.reasonLabel')}
+            required
+            help={
+              returnReason.length > 0 && returnReason.trim().length < 5
+                ? t('hr.payroll.returnToDraft.reasonRequired')
+                : undefined
+            }
+          >
+            <Input.TextArea
+              rows={3}
+              value={returnReason}
+              onChange={(event) => setReturnReason(event.target.value)}
+              placeholder={t('hr.payroll.returnToDraft.reasonPlaceholder')}
               maxLength={1000}
             />
           </Form.Item>
@@ -2221,7 +2352,9 @@ export default function PayrollRunDetailPageContent({
                     </div>
                     {canChangeRun ? (
                       <Button onClick={() => setFreelancerModalOpen(true)}>
-                        {t('hr.payroll.freelancers.add')}
+                        {isCorrectionRun
+                          ? t('hr.payroll.freelancers.addPerson')
+                          : t('hr.payroll.freelancers.add')}
                       </Button>
                     ) : null}
                   </div>
@@ -2393,6 +2526,11 @@ export default function PayrollRunDetailPageContent({
           correctionEntryId
             ? (run.entries.find((row) => row.id === correctionEntryId) ?? null)
             : null
+        }
+        editable={
+          canEdit &&
+          isCorrectionRun &&
+          (run.status === 'DRAFT' || run.status === 'REVIEWED' || run.status === 'SUBMITTED')
         }
         onClose={() => setCorrectionEntryId(null)}
       />

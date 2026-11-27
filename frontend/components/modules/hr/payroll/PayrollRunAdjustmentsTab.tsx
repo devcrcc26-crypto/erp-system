@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Table, Tag } from 'antd';
+import { Button, DatePicker, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Table, Tag } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -18,6 +19,7 @@ import {
   usePayrollAdjustmentLines,
   usePayrollAdjustmentTypes,
   usePayrollSettlementSuggestion,
+  useRecordPayrollReconciliationReceipt,
   useRemovePayrollAdjustmentLine,
   useUnwaivePayrollReconciliation,
   useWaivePayrollReconciliation,
@@ -38,6 +40,13 @@ interface LineForm {
   amount: number | null;
   note: string;
   capOverrideReason?: string;
+}
+
+interface ReceiptForm {
+  amount: number | null;
+  receivedOn: Dayjs | null;
+  reference: string;
+  note?: string;
 }
 
 /** Same rule as the API: deductions above one third of the earned salary need a reason. */
@@ -64,8 +73,11 @@ export default function PayrollRunAdjustmentsTab({
   const removeMutation = useRemovePayrollAdjustmentLine(run.id);
   const waiveMutation = useWaivePayrollReconciliation();
   const unwaiveMutation = useUnwaivePayrollReconciliation();
+  const receiptMutation = useRecordPayrollReconciliationReceipt();
 
   const [form] = Form.useForm<LineForm>();
+  const [receiptForm] = Form.useForm<ReceiptForm>();
+  const [receiving, setReceiving] = useState<PayrollReconciliation | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settling, setSettling] = useState<PayrollReconciliation | null>(null);
   const [waiving, setWaiving] = useState<PayrollReconciliation | null>(null);
@@ -99,7 +111,14 @@ export default function PayrollRunAdjustmentsTab({
     selectedEntry && selectedType?.kind === 'DEDUCTION'
       ? parsePayrollMoney(selectedEntry.adjustmentDeductions ?? 0) + (watchedAmount ?? 0)
       : 0;
-  const overCap = selectedType?.kind === 'DEDUCTION' && deductionsAfter > deductionCap(wage) + 0.005;
+  // A settlement-only row has no pay to protect: the one-third limit does not apply.
+  const overCap =
+    !selectedEntry?.settlementOnly &&
+    selectedType?.kind === 'DEDUCTION' &&
+    deductionsAfter > deductionCap(wage) + 0.005;
+  const settlingSettlementOnly = Boolean(
+    settling && entriesByEmployee.get(settling.employeeId)?.settlementOnly,
+  );
 
   function openAdd(): void {
     setSettling(null);
@@ -173,6 +192,37 @@ export default function PayrollRunAdjustmentsTab({
     }
   }
 
+  function openReceipt(item: PayrollReconciliation): void {
+    receiptForm.resetFields();
+    receiptForm.setFieldsValue({ amount: item.remaining > 0 ? item.remaining : null, receivedOn: dayjs() });
+    setReceiving(item);
+  }
+
+  async function recordReceipt(): Promise<void> {
+    if (!receiving) {
+      return;
+    }
+    try {
+      const values = await receiptForm.validateFields();
+      await receiptMutation.mutateAsync({
+        id: receiving.id,
+        payload: {
+          amount: values.amount ?? 0,
+          receivedOn: (values.receivedOn ?? dayjs()).format('YYYY-MM-DD'),
+          reference: values.reference.trim(),
+          note: values.note?.trim() || undefined,
+        },
+      });
+      messageApi.success(t(`${REC}.receiptRecorded`));
+      setReceiving(null);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+      notifyApiError(error, t(`${REC}.recordReceipt`), messageApi, t);
+    }
+  }
+
   async function unwaive(item: PayrollReconciliation): Promise<void> {
     try {
       await unwaiveMutation.mutateAsync(item.id);
@@ -190,6 +240,11 @@ export default function PayrollRunAdjustmentsTab({
         <div className="min-w-0">
           <p className="erp-payroll-employee-name truncate">{item.employeeName}</p>
           <p className="erp-payroll-employee-id">{item.employeeCode ?? '-'}</p>
+          {entriesByEmployee.get(item.employeeId)?.settlementOnly ? (
+            <Tag className="erp-payroll-rec-tag erp-payroll-adj-builtin">
+              {t('hr.payroll.settlementOnly.tag')}
+            </Tag>
+          ) : null}
         </div>
       ),
     },
@@ -264,13 +319,22 @@ export default function PayrollRunAdjustmentsTab({
           {item.status === 'WAIVED' && item.waivedReason ? (
             <p className="erp-payroll-muted-note">{item.waivedReason}</p>
           ) : null}
+          {item.receipts.map((receipt) => (
+            <p key={receipt.id} className="erp-payroll-muted-note">
+              {t(`${REC}.receiptLine`, {
+                amount: formatPayrollMoney(receipt.amount, { emptyZero: false }),
+                date: receipt.receivedOn,
+                reference: receipt.reference,
+              })}
+            </p>
+          ))}
         </div>
       ),
     },
     {
       title: <span className="sr-only">{t(`${REC}.settle`)}</span>,
       key: 'actions',
-      width: 190,
+      width: 300,
       align: 'right',
       render: (_, item) => {
         if (item.direction === 'STATUTORY_ONLY') {
@@ -301,6 +365,17 @@ export default function PayrollRunAdjustmentsTab({
                 onClick={() => openSettle(item)}
               >
                 {t(`${REC}.settle`)}
+              </Button>
+            ) : null}
+            {canWaive && item.direction === 'OWED_TO_COMPANY' ? (
+              <Button
+                size="small"
+                type="primary"
+                ghost
+                disabled={item.remaining <= 0 || item.pendingAmount > 0}
+                onClick={() => openReceipt(item)}
+              >
+                {t(`${REC}.recordReceipt`)}
               </Button>
             ) : null}
             {canWaive ? (
@@ -405,6 +480,11 @@ export default function PayrollRunAdjustmentsTab({
     if (!settling || !suggestion) {
       return null;
     }
+    if (suggestion.settlementOnly) {
+      return t(`${REC}.suggestionSettlementOnly`, {
+        amount: formatPayrollMoney(suggestion.remaining, { emptyZero: false }),
+      });
+    }
     if (suggestion.recovery) {
       if (suggestion.amount <= 0) {
         return t(`${REC}.suggestionCapUsed`);
@@ -503,7 +583,10 @@ export default function PayrollRunAdjustmentsTab({
               disabled={Boolean(settling)}
               optionFilterProp="label"
               placeholder={t(`${KEY}.employeePlaceholder`)}
-              options={run.entries.map((entry) => ({
+              options={run.entries
+                // Settlement-only rows only take lines that settle their own items.
+                .filter((entry) => settling || !entry.settlementOnly)
+                .map((entry) => ({
                 value: entry.employeeId,
                 label: `${formatUserName(entry.employee)}${entry.employee.employeeId ? ` · ${entry.employee.employeeId}` : ''}`,
               }))}
@@ -520,7 +603,9 @@ export default function PayrollRunAdjustmentsTab({
               options={activeTypes
                 .filter((type) =>
                   settling
-                    ? type.kind === (settling.direction === 'OWED_TO_COMPANY' ? 'DEDUCTION' : 'EARNING')
+                    ? type.kind === (settling.direction === 'OWED_TO_COMPANY' ? 'DEDUCTION' : 'EARNING') &&
+                      // No pay, tax or pension of its own: settle with an after-tax type.
+                      !(settlingSettlementOnly && type.kind === 'EARNING' && type.taxable)
                     : true,
                 )
                 .map((type) => ({
@@ -540,19 +625,29 @@ export default function PayrollRunAdjustmentsTab({
             label={t(`${KEY}.amount`)}
             rules={[
               {
-                validator: (_, value: number | null) =>
-                  value != null && value > 0
-                    ? Promise.resolve()
-                    : Promise.reject(new Error(t(`${KEY}.amountRequired`))),
+                validator: (_, value: number | null) => {
+                  if (value == null || value <= 0) {
+                    return Promise.reject(new Error(t(`${KEY}.amountRequired`)));
+                  }
+                  // Not clamped while typing: the user sees the error instead of a silently changed amount.
+                  if (settling) {
+                    const remaining = suggestion?.remaining ?? settling.remaining;
+                    if (value > remaining + 0.005) {
+                      return Promise.reject(
+                        new Error(
+                          t(`${REC}.exceedsRemaining`, {
+                            amount: formatPayrollMoney(remaining, { emptyZero: false }),
+                          }),
+                        ),
+                      );
+                    }
+                  }
+                  return Promise.resolve();
+                },
               },
             ]}
           >
-            <InputNumber
-              className="w-full"
-              min={0.01}
-              precision={2}
-              max={settling ? suggestion?.remaining : undefined}
-            />
+            <InputNumber className="w-full" min={0.01} precision={2} />
           </Form.Item>
           <Form.Item
             name="note"
@@ -582,6 +677,72 @@ export default function PayrollRunAdjustmentsTab({
           ) : null}
         </Form>
       </Drawer>
+
+      <Modal
+        open={receiving !== null}
+        title={t(`${REC}.receiptTitle`)}
+        onCancel={() => setReceiving(null)}
+        onOk={() => void recordReceipt()}
+        okText={t(`${REC}.recordReceipt`)}
+        confirmLoading={receiptMutation.isPending}
+        destroyOnHidden
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">{t(`${REC}.receiptHint`)}</p>
+        {receiving ? (
+          <p className="m-0 mb-3">
+            {receiving.employeeName} · {formatPayrollPeriod(receiving.forMonth, receiving.forYear)} ·{' '}
+            {t(`${REC}.receiptRemaining`, {
+              amount: formatPayrollMoney(receiving.remaining, { emptyZero: false }),
+            })}
+          </p>
+        ) : null}
+        <Form form={receiptForm} layout="vertical" requiredMark="optional">
+          <Form.Item
+            name="amount"
+            label={t(`${REC}.receiptAmount`)}
+            rules={[
+              {
+                validator: (_, value: number | null) => {
+                  if (value == null || value <= 0) {
+                    return Promise.reject(new Error(t(`${KEY}.amountRequired`)));
+                  }
+                  const remaining = receiving?.remaining ?? 0;
+                  if (value > remaining + 0.005) {
+                    return Promise.reject(
+                      new Error(
+                        t(`${REC}.exceedsRemaining`, {
+                          amount: formatPayrollMoney(remaining, { emptyZero: false }),
+                        }),
+                      ),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <InputNumber className="w-full" min={0.01} precision={2} />
+          </Form.Item>
+          <Form.Item
+            name="receivedOn"
+            label={t(`${REC}.receiptDate`)}
+            rules={[{ required: true, message: t(`${REC}.receiptDateRequired`) }]}
+          >
+            <DatePicker className="w-full" format="YYYY-MM-DD" allowClear={false} />
+          </Form.Item>
+          <Form.Item
+            name="reference"
+            label={t(`${REC}.receiptReference`)}
+            rules={[{ required: true, whitespace: true, message: t(`${REC}.receiptReferenceRequired`) }]}
+          >
+            <Input maxLength={120} placeholder={t(`${REC}.receiptReferencePlaceholder`)} />
+          </Form.Item>
+          <Form.Item name="note" label={t(`${KEY}.note`)}>
+            <Input.TextArea rows={2} maxLength={500} />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         open={waiving !== null}

@@ -388,6 +388,7 @@ model Company {
   payrollReconciliations     PayrollReconciliation[]
   payrollCorrectionLines     PayrollCorrectionLine[]
   payrollStatutoryAdjustments PayrollStatutoryAdjustment[]
+  payrollReconciliationReceipts PayrollReconciliationReceipt[]
   payrollPayslips            PayrollPayslip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -6988,6 +6989,13 @@ model PayrollAdjustmentLine {
   capOverrideReason String?  @map("cap_override_reason") @db.VarChar(500)
   /// Line this one was copied from (reopened version, or the run a correction corrects).
   sourceLineId      String?  @map("source_line_id")
+  /// Manual correction line (CORRECTION runs): direction and tax treatment are chosen
+  /// per line, so they can differ from the type's own kind / taxable flag.
+  /// null = use the type's value.
+  kindOverride      PayrollAdjustmentKind? @map("kind_override")
+  taxableOverride   Boolean? @map("taxable_override")
+  /// True for lines HR added to a correction run (and copies of them in later corrections).
+  isCorrectionLine  Boolean  @default(false) @map("is_correction_line")
   createdBy         String   @map("created_by")
   updatedBy         String   @map("updated_by")
   createdAt         DateTime @default(now()) @map("created_at")
@@ -7039,11 +7047,33 @@ model PayrollReconciliation {
   correctionRun PayrollRun              @relation(fields: [correctionRunId], references: [id])
   lines         PayrollAdjustmentLine[]
   statutoryCarry PayrollStatutoryAdjustment?
+  receipts      PayrollReconciliationReceipt[]
 
   @@index([companyId, status], map: "idx_payroll_reconciliation_company_status")
   @@index([employeeId], map: "idx_payroll_reconciliation_employee")
   @@index([correctionRunId], map: "idx_payroll_reconciliation_correction_run")
   @@map("payroll_reconciliation")
+}
+
+/// Money collected from (or paid to) an employee outside payroll against a
+/// reconciliation item (e.g. a recovery from a leaver). Settles the item.
+model PayrollReconciliationReceipt {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  reconciliationId String   @map("reconciliation_id")
+  amount           Decimal  @db.Decimal(14, 2)
+  receivedOn       DateTime @map("received_on") @db.Date
+  reference        String   @db.VarChar(120)
+  note             String?  @db.VarChar(500)
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  company        Company               @relation(fields: [companyId], references: [id])
+  reconciliation PayrollReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([reconciliationId], map: "idx_payroll_reconciliation_receipt_item")
+  @@index([companyId], map: "idx_payroll_reconciliation_receipt_company")
+  @@map("payroll_reconciliation_receipt")
 }
 
 /// Tax and pension differences of a correction, remitted with the run that
@@ -7186,6 +7216,12 @@ model PayrollEntry {
 
   /// Overtime entry ids priced into this entry; claimed when the run is approved.
   includedOtEntryIds       String[]            @default([]) @map("included_ot_entry_ids")
+
+  /// Regular run only: employee / freelancer who is not otherwise in the run but has
+  /// open reconciliation or statutory items. No salary, OT, allowances, tax or pension
+  /// of its own: only settlement lines and statutory carry. The one-third deduction
+  /// limit does not apply.
+  settlementOnly           Boolean             @default(false) @map("settlement_only")
 
 
   // Flags and overrides 

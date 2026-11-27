@@ -10,8 +10,10 @@ import PayrollPaidDaysPanel from '@/components/modules/hr/payroll/PayrollPaidDay
 import { useReportDirty } from '@/components/modules/hr/payroll/payroll-entry-dirty';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import type { PayrollAdjustmentLine } from '@/lib/api/payroll-adjustments';
 import type { PayrollEntryDetail, PayrollRunDetail } from '@/lib/api/payroll.types';
 import { useUpdatePayrollEntry } from '@/lib/query/payroll';
+import { usePayrollAdjustmentLines } from '@/lib/query/payroll-adjustments';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
   formatPayrollMoney,
@@ -125,6 +127,68 @@ function PayStatement({
     parsePayrollMoney(row.taxableTransport) + parsePayrollMoney(row.nonTaxableTransport);
   const bonus = parsePayrollMoney(row.monthlyBonus) + parsePayrollMoney(row.bonusTopUp);
   const netBonus = parsePayrollMoney(row.contractNetBonus) + parsePayrollMoney(row.netTopUp);
+
+  // Adjustment lines of this employee (regular runs). The built-in taxable / net
+  // bonus lines already sit in the bonus rows, so only the others are listed.
+  const adjustmentLinesQuery = usePayrollAdjustmentLines(run.id, run.type !== 'CORRECTION');
+  const ownLines = (adjustmentLinesQuery.data ?? []).filter(
+    (line) => line.employeeId === row.employeeId && line.systemField === null,
+  );
+  const taxableLines = ownLines.filter((line) => line.kind === 'EARNING' && line.taxable);
+  const afterTaxLines = ownLines.filter((line) => line.kind === 'EARNING' && !line.taxable);
+  const deductionLines = ownLines.filter((line) => line.kind === 'DEDUCTION');
+  const sumLines = (list: readonly PayrollAdjustmentLine[]): number =>
+    round2(list.reduce((total, line) => total + line.amount, 0));
+  const taxableTotal = parsePayrollMoney(row.adjustmentTaxable ?? 0);
+  const afterTaxTotal = parsePayrollMoney(row.adjustmentNonTaxable ?? 0);
+  const deductionTotal = parsePayrollMoney(row.adjustmentDeductions ?? 0);
+  // Lines are shown one by one only when they add up to the entry's figures;
+  // otherwise (not loaded, or changed since) the entry totals are shown instead.
+  const linesMatchEntry =
+    adjustmentLinesQuery.isSuccess &&
+    Math.abs(sumLines(taxableLines) - taxableTotal) < 0.01 &&
+    Math.abs(sumLines(afterTaxLines) - afterTaxTotal) < 0.01 &&
+    Math.abs(sumLines(deductionLines) - deductionTotal) < 0.01;
+  const lineRow = (
+    line: PayrollAdjustmentLine,
+    kind: 'add' | 'deduct' | undefined,
+  ): { key: string; label: string; sub?: string; value: number; kind?: 'add' | 'deduct' } => ({
+    key: `adj-${line.id}`,
+    label: line.label,
+    sub: line.note || undefined,
+    value: line.amount,
+    kind,
+  });
+  const taxableRows = linesMatchEntry
+    ? taxableLines.map((line) => lineRow(line, undefined))
+    : taxableTotal > 0
+      ? [{ key: 'adj-taxable', label: t(`${KEY}.adjustmentsTaxable`), value: taxableTotal }]
+      : [];
+  const afterTaxRows = linesMatchEntry
+    ? afterTaxLines.map((line) => lineRow(line, 'add'))
+    : afterTaxTotal > 0
+      ? [
+          {
+            key: 'adj-after-tax',
+            label: t(`${KEY}.adjustmentsAfterTax`),
+            value: afterTaxTotal,
+            kind: 'add' as const,
+          },
+        ]
+      : [];
+  const deductionRows = linesMatchEntry
+    ? deductionLines.map((line) => lineRow(line, 'deduct'))
+    : deductionTotal > 0
+      ? [
+          {
+            key: 'adj-deductions',
+            label: t(`${KEY}.adjustmentsDeductions`),
+            value: deductionTotal,
+            kind: 'deduct' as const,
+          },
+        ]
+      : [];
+
   const lines: Array<{
     key: string;
     label: string;
@@ -144,6 +208,7 @@ function PayStatement({
     { key: 'ot', label: t('hr.payroll.entry.otPay'), value: parsePayrollMoney(row.totalOtPay) },
     { key: 'transport', label: t('hr.payroll.entry.transport'), value: transport },
     { key: 'bonus', label: t('hr.payroll.entry.bonus'), value: bonus },
+    ...taxableRows,
     {
       key: 'gross',
       label: t('hr.payroll.entry.gross'),
@@ -171,6 +236,8 @@ function PayStatement({
     ...(netBonus > 0
       ? [{ key: 'netBonus', label: t('hr.payroll.entry.netBonus'), value: netBonus, kind: 'add' as const }]
       : []),
+    ...afterTaxRows,
+    ...deductionRows,
     { key: 'net', label: t('hr.payroll.entry.net'), value: parsePayrollMoney(row.netPay), kind: 'net' },
   ];
 

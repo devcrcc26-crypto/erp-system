@@ -25,6 +25,7 @@ interface RunFixture {
   entries: Array<{
     employeeId: string;
     netPay: Decimal;
+    settlementOnly?: boolean;
     bankAccountNumber: string | null;
     employee: {
       firstName: string;
@@ -177,6 +178,37 @@ describe('PayrollBankLetterService', () => {
     expect(result.refNo).toBe('CRIECC-FZY-2026-001');
     expect(sequenceCalls).toHaveLength(0);
     expect(savedRefs).toHaveLength(0);
+  });
+
+  it('pays a settlement-only row owed to the employee and flags a recovery to collect', async () => {
+    const run = makeRun();
+    run.entries = [
+      {
+        employeeId: 'ada',
+        netPay: new Decimal(2500),
+        settlementOnly: true,
+        bankAccountNumber: '1000222233334',
+        employee: { firstName: 'Ada', lastName: 'Mensah', bankAccountNumber: '1000222233334' },
+      },
+      {
+        employeeId: 'kofi',
+        netPay: new Decimal(-1800.5),
+        settlementOnly: true,
+        bankAccountNumber: '1000444455556',
+        employee: { firstName: 'Kofi', lastName: 'Boateng', bankAccountNumber: '1000444455556' },
+      },
+    ];
+    const { service } = makeService(run);
+
+    const preview = await service.preview(RUN_ID, COMPANY_ID);
+    // Ada is paid; Kofi's negative net can never be transferred, so he is not in the letter.
+    expect(preview.includedCount).toBe(1);
+    expect(preview.totalNet).toBe(2500);
+    expect(preview.collectFromEmployees).toEqual([
+      { id: 'kofi', name: 'Kofi Boateng', amount: 1800.5 },
+    ]);
+    const result = await service.generate(RUN_ID, COMPANY_ID, USER_ID);
+    expect(result.buffer.subarray(0, 2).toString('latin1')).toBe('PK');
   });
 
   it('refuses to generate when nobody is payable', async () => {

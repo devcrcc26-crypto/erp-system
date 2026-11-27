@@ -43,6 +43,8 @@ export interface PayrollAdjustmentLine {
   typeCode: string;
   typeNameEn: string;
   typeNameZh: string | null;
+  /** BONUS_TOP_UP / NET_TOP_UP: built-in bonus types kept in the entry's bonus fields. */
+  systemField: string | null;
   kind: PayrollAdjustmentKind;
   taxable: boolean;
   pensionable: boolean;
@@ -54,7 +56,43 @@ export interface PayrollAdjustmentLine {
   capOverrideReason: string | null;
   /** e.g. "Recovery / deduction – October 2026 correction (1 of 3)". */
   label: string;
+  /** Manual correction line: direction and treatment were chosen on the line itself. */
+  isCorrectionLine: boolean;
+  direction: PayrollCorrectionDirection;
+  treatment: PayrollCorrectionTreatment;
   createdAt: string;
+}
+
+/** OWED_TO_EMPLOYEE = earning, OWED_TO_COMPANY = deduction. */
+export type PayrollCorrectionDirection = 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+/** Taxable changes tax and pension; Net changes the corrected net pay only. */
+export type PayrollCorrectionTreatment = 'TAXABLE' | 'NET';
+
+export interface AddPayrollCorrectionLinePayload {
+  employeeId: string;
+  adjustmentTypeId: string;
+  direction: PayrollCorrectionDirection;
+  treatment: PayrollCorrectionTreatment;
+  amount: number;
+  note: string;
+}
+
+export interface PayrollReconciliationReceipt {
+  id: string;
+  amount: number;
+  /** YYYY-MM-DD. */
+  receivedOn: string;
+  reference: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface RecordPayrollReceiptPayload {
+  amount: number;
+  /** YYYY-MM-DD. */
+  receivedOn: string;
+  reference: string;
+  note?: string;
 }
 
 export interface AddPayrollAdjustmentLinePayload {
@@ -88,6 +126,8 @@ export interface PayrollReconciliation {
   status: PayrollReconciliationStatus;
   waivedReason: string | null;
   waivedAt: string | null;
+  /** Money collected outside payroll (Record receipt). */
+  receipts: PayrollReconciliationReceipt[];
   createdAt: string;
 }
 
@@ -105,6 +145,8 @@ export interface PayrollSettlementSuggestion {
     monthlyWage: number;
   } | null;
   instalmentNumber: number;
+  /** The employee's row is settlement only: no one-third limit, the full balance is suggested. */
+  settlementOnly: boolean;
 }
 
 interface WarningEmployee {
@@ -133,6 +175,16 @@ export interface PayrollRunWarnings {
       hours: number;
     }
   >;
+  /** OT entries this run priced that changed after calculation (not claimed on approve). */
+  overtimeChangedSinceCalculation: Array<
+    WarningEmployee & {
+      sheetId: string;
+      sheetNumber: string;
+      sheetStatus: string;
+      entries: number;
+      hours: number;
+    }
+  >;
   openReconciliations: Array<
     WarningEmployee & {
       id: string;
@@ -141,10 +193,13 @@ export interface PayrollRunWarnings {
       remaining: number;
       forMonth: number;
       forYear: number;
+      /** The employee is on a "Settlement only" row of this run. */
+      settlementOnly: boolean;
     }
   >;
   deductionsOverCap: Array<WarningEmployee & { deductions: number; cap: number }>;
-  negativeNetPay: Array<WarningEmployee & { netPay: number }>;
+  /** A settlement-only row with a negative net is money to collect, not an error. */
+  negativeNetPay: Array<WarningEmployee & { netPay: number; settlementOnly: boolean }>;
 }
 
 export interface PayrollRunHistoryItem {
@@ -175,6 +230,8 @@ export interface PayrollRemittanceLine {
   label: string;
   amount: number;
   detail: string | null;
+  /** Employee number of the carried item (null for the run's own figure). */
+  employeeCode?: string | null;
   reconciliationId: string | null;
   /** True until the run is approved (preview). */
   pending: boolean;
@@ -238,6 +295,14 @@ export function addPayrollAdjustmentLine(
   return apiPost<PayrollAdjustmentLine[]>(`${BASE}/runs/${runId}/adjustments`, payload);
 }
 
+/** Adds a manual correction line (missed bonus, severance, arrears, other) on a correction run. */
+export function addPayrollCorrectionLine(
+  runId: string,
+  payload: AddPayrollCorrectionLinePayload,
+): Promise<PayrollAdjustmentLine[]> {
+  return apiPost<PayrollAdjustmentLine[]>(`${BASE}/runs/${runId}/correction-adjustments`, payload);
+}
+
 export function removePayrollAdjustmentLine(
   runId: string,
   lineId: string,
@@ -272,6 +337,14 @@ export function waivePayrollReconciliation(
   reason: string,
 ): Promise<PayrollReconciliation> {
   return apiPost<PayrollReconciliation>(`${BASE}/reconciliations/${id}/waive`, { reason });
+}
+
+/** Records money received from the employee against an item owed to the company. */
+export function recordPayrollReconciliationReceipt(
+  id: string,
+  payload: RecordPayrollReceiptPayload,
+): Promise<PayrollReconciliation> {
+  return apiPost<PayrollReconciliation>(`${BASE}/reconciliations/${id}/receipt`, payload);
 }
 
 export function unwaivePayrollReconciliation(id: string): Promise<PayrollReconciliation> {

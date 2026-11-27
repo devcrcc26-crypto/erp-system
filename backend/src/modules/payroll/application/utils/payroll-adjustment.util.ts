@@ -17,7 +17,20 @@ export const ADJUSTMENT_TYPE_CODE = {
   SALARY_ARREARS: 'SALARY_ARREARS',
   RECOVERY: 'RECOVERY',
   OTHER: 'OTHER',
+  /** Seeded by migration 20261127150000 for manual correction lines. */
+  MISSED_BONUS: 'MISSED_BONUS',
 } as const;
+
+/**
+ * Types offered for manual correction lines (missed bonus, severance pay,
+ * salary arrears, other). Direction and tax treatment are chosen per line.
+ */
+export const CORRECTION_LINE_TYPE_CODES: readonly string[] = [
+  ADJUSTMENT_TYPE_CODE.MISSED_BONUS,
+  ADJUSTMENT_TYPE_CODE.SEVERANCE_PAY,
+  ADJUSTMENT_TYPE_CODE.SALARY_ARREARS,
+  ADJUSTMENT_TYPE_CODE.OTHER,
+];
 
 export interface AdjustmentLineForTotals {
   amount: number;
@@ -25,6 +38,56 @@ export interface AdjustmentLineForTotals {
   taxable: boolean;
   pensionable: boolean;
   systemField: string | null;
+  /**
+   * A manual correction line owed to the company with Taxable treatment: it is
+   * subtracted from gross and taxable income (and the pension base when
+   * pensionable) instead of being taken off net pay.
+   */
+  taxableDeduction?: boolean;
+}
+
+export type AdjustmentKindValue = 'EARNING' | 'DEDUCTION';
+
+/** What a line really does once its per-line overrides are applied to the type. */
+export interface EffectiveLineTreatment {
+  kind: AdjustmentKindValue;
+  taxable: boolean;
+  pensionable: boolean;
+  /** Deduction that reduces taxable income (manual correction line, Taxable). */
+  taxableDeduction: boolean;
+}
+
+/**
+ * Applies a manual correction line's overrides to its type's flags.
+ * - Direction (kind) and treatment (taxable) fall back to the type's when null.
+ * - Net treatment is never pensionable (tax and pension stay unchanged).
+ * - Built-in system types (taxable / net bonus) ignore overrides.
+ */
+export function effectiveLineTreatment(input: {
+  typeKind: AdjustmentKindValue;
+  typeTaxable: boolean;
+  typePensionable: boolean;
+  systemField: string | null;
+  kindOverride: AdjustmentKindValue | null;
+  taxableOverride: boolean | null;
+}): EffectiveLineTreatment {
+  if (input.systemField) {
+    return {
+      kind: input.typeKind,
+      taxable: input.typeTaxable,
+      pensionable: input.typePensionable,
+      taxableDeduction: false,
+    };
+  }
+  const kind = input.kindOverride ?? input.typeKind;
+  const taxable = input.taxableOverride ?? input.typeTaxable;
+  const pensionable = input.taxableOverride === false ? false : input.typePensionable;
+  return {
+    kind,
+    taxable,
+    pensionable,
+    taxableDeduction: kind === 'DEDUCTION' && input.taxableOverride === true,
+  };
 }
 
 export interface AdjustmentLineTotals {
@@ -42,7 +105,9 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
  * Splits an employee's adjustment lines into the inputs the payroll
  * calculation takes. Taxable / net bonus lines keep using the existing
  * bonusTopUp / netTopUp fields so their calculation is unchanged. A deduction
- * is always taken off net pay after tax, whatever its flags say.
+ * is taken off net pay after tax, whatever its flags say, except a manual
+ * correction line marked `taxableDeduction`: that one is subtracted from the
+ * taxable totals, so `taxableEarnings` / `pensionableEarnings` can be negative.
  */
 export function adjustmentTotalsFromLines(
   lines: readonly AdjustmentLineForTotals[],
@@ -65,7 +130,16 @@ export function adjustmentTotalsFromLines(
       continue;
     }
     if (line.kind === 'DEDUCTION') {
-      deductions += amount;
+      if (line.taxableDeduction) {
+        // Owed to the company, taxable: reduces gross / taxable income (and
+        // the pension base when pensionable); tax and pension are recalculated.
+        taxableEarnings -= amount;
+        if (line.pensionable) {
+          pensionableEarnings -= amount;
+        }
+      } else {
+        deductions += amount;
+      }
       continue;
     }
     if (line.taxable) {

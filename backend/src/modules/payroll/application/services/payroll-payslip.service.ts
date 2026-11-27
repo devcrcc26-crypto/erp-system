@@ -21,7 +21,7 @@ import {
   type PayslipPdfModel,
 } from './payroll-payslip-pdf.layout';
 import { PayrollPayslipPdfService } from './payroll-payslip-pdf.service';
-import { adjustmentLineLabel } from '../utils/payroll-adjustment.util';
+import { adjustmentLineLabel, effectiveLineTreatment } from '../utils/payroll-adjustment.util';
 import type { PayslipAdjustmentLine } from './payroll-payslip-pdf.layout';
 
 interface ServiceContext {
@@ -148,6 +148,7 @@ type PayslipWithRelations = {
     incomeTax: Decimal;
     totalDeductions: Decimal;
     netPay: Decimal;
+    settlementOnly: boolean;
     originalAmount: Decimal | null;
     correctedAmount: Decimal | null;
     deltaAmount: Decimal | null;
@@ -191,10 +192,15 @@ export class PayrollPayslipService {
         payrollDays: true,
         netPay: true,
         deltaAmount: true,
+        settlementOnly: true,
       },
     });
 
     const eligible = entries.filter((entry) => {
+      // A settlement-only row with nothing to pay (owed to the company) has no payslip.
+      if (entry.settlementOnly && this.toNumber(entry.netPay) <= 0) {
+        return false;
+      }
       if (
         this.toNumber(entry.payrollDays) === 0 &&
         this.toNumber(entry.netPay) === 0
@@ -568,26 +574,42 @@ export class PayrollPayslipService {
       where: { payrollRunId: runId, employeeId },
       include: {
         adjustmentType: {
-          select: { nameEn: true, kind: true, taxable: true, systemField: true },
+          select: {
+            nameEn: true,
+            kind: true,
+            taxable: true,
+            pensionable: true,
+            systemField: true,
+          },
         },
         reconciliation: { select: { forMonth: true, forYear: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
-    return rows.map((row) => ({
-      label: adjustmentLineLabel({
-        typeName: row.adjustmentType.nameEn,
-        forMonth: row.reconciliation?.forMonth ?? null,
-        forYear: row.reconciliation?.forYear ?? null,
-        instalmentNumber: row.instalmentNumber,
-        instalmentCount: row.instalmentCount,
-      }),
-      amount: this.toNumber(row.amount),
-      kind: row.adjustmentType.kind,
-      taxable: row.adjustmentType.taxable,
-      systemField: row.adjustmentType.systemField,
-      settlement: row.reconciliationId != null,
-    }));
+    return rows.map((row) => {
+      const treatment = effectiveLineTreatment({
+        typeKind: row.adjustmentType.kind,
+        typeTaxable: row.adjustmentType.taxable,
+        typePensionable: row.adjustmentType.pensionable,
+        systemField: row.adjustmentType.systemField,
+        kindOverride: row.kindOverride ?? null,
+        taxableOverride: row.taxableOverride ?? null,
+      });
+      return {
+        label: adjustmentLineLabel({
+          typeName: row.adjustmentType.nameEn,
+          forMonth: row.reconciliation?.forMonth ?? null,
+          forYear: row.reconciliation?.forYear ?? null,
+          instalmentNumber: row.instalmentNumber,
+          instalmentCount: row.instalmentCount,
+        }),
+        amount: this.toNumber(row.amount),
+        kind: treatment.kind,
+        taxable: treatment.taxable,
+        systemField: row.adjustmentType.systemField,
+        settlement: row.reconciliationId != null,
+      };
+    });
   }
 
   private toPdfModel(
@@ -648,6 +670,7 @@ export class PayrollPayslipService {
       attendanceConsidered: payslip.run.considerAttendance,
       correction,
       adjustmentLines,
+      settlementOnly: entry.settlementOnly,
     };
   }
 

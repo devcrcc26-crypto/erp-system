@@ -17,6 +17,8 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { PayrollRunService } from './payroll-run.service';
 import {
   adjustmentLineLabel,
+  CORRECTION_LINE_TYPE_CODES,
+  effectiveLineTreatment,
   deductionCap,
   exceedsDeductionCap,
   reconciliationRemaining,
@@ -57,6 +59,8 @@ export interface PayrollAdjustmentLineDto {
   typeCode: string;
   typeNameEn: string;
   typeNameZh: string | null;
+  /** BONUS_TOP_UP / NET_TOP_UP for the built-in bonus types (kept in the entry's bonus fields), else null. */
+  systemField: string | null;
   kind: PayrollAdjustmentKind;
   taxable: boolean;
   pensionable: boolean;
@@ -68,7 +72,42 @@ export interface PayrollAdjustmentLineDto {
   capOverrideReason: string | null;
   /** e.g. "Recovery - October 2026 correction (1 of 3)". */
   label: string;
+  /** Manual correction line (CORRECTION runs): direction and treatment were chosen on the line. */
+  isCorrectionLine: boolean;
+  /** Who owes whom: EARNING = owed to the employee, DEDUCTION = owed to the company. */
+  direction: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+  /** Taxable lines change tax and pension; net lines are added or taken off net pay only. */
+  treatment: 'TAXABLE' | 'NET';
   createdAt: Date;
+}
+
+/** Input of a manual correction line. */
+export interface CorrectionLineInput {
+  employeeId: string;
+  adjustmentTypeId: string;
+  direction: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+  treatment: 'TAXABLE' | 'NET';
+  amount: number;
+  note: string;
+}
+
+/** Receipt recorded against an item owed to the company. */
+export interface PayrollReconciliationReceiptDto {
+  id: string;
+  amount: number;
+  /** Calendar date as YYYY-MM-DD. */
+  receivedOn: string;
+  reference: string;
+  note: string | null;
+  createdAt: Date;
+}
+
+export interface ReceiptInput {
+  amount: number;
+  /** Calendar date as YYYY-MM-DD. */
+  receivedOn: string;
+  reference: string;
+  note?: string | null;
 }
 
 export interface PayrollReconciliationDto {
@@ -96,6 +135,8 @@ export interface PayrollReconciliationDto {
   status: PayrollReconciliationStatus;
   waivedReason: string | null;
   waivedAt: Date | null;
+  /** Money collected outside payroll (Record receipt). */
+  receipts: PayrollReconciliationReceiptDto[];
   createdAt: Date;
 }
 
@@ -109,6 +150,8 @@ export interface SettlementSuggestionDto {
   /** Owed to the company only: the one-third-of-wage check. */
   recovery: (RecoveryInstalmentSuggestion & { monthlyWage: number }) | null;
   instalmentNumber: number;
+  /** The employee's row is settlement only: no one-third limit, the full balance is suggested. */
+  settlementOnly: boolean;
 }
 
 /**
@@ -249,33 +292,47 @@ export class PayrollAdjustmentService {
       },
       orderBy: [{ createdAt: 'asc' }],
     });
-    return rows.map((row) => ({
-      id: row.id,
-      employeeId: row.employeeId,
-      employeeName: `${row.employee.firstName} ${row.employee.lastName}`.trim(),
-      employeeCode: row.employee.employeeId,
-      adjustmentTypeId: row.adjustmentTypeId,
-      typeCode: row.adjustmentType.code,
-      typeNameEn: row.adjustmentType.nameEn,
-      typeNameZh: row.adjustmentType.nameZh,
-      kind: row.adjustmentType.kind,
-      taxable: row.adjustmentType.taxable,
-      pensionable: row.adjustmentType.pensionable,
-      amount: Number(row.amount),
-      note: row.note,
-      reconciliationId: row.reconciliationId,
-      instalmentNumber: row.instalmentNumber,
-      instalmentCount: row.instalmentCount,
-      capOverrideReason: row.capOverrideReason,
-      label: adjustmentLineLabel({
-        typeName: row.adjustmentType.nameEn,
-        forMonth: row.reconciliation?.forMonth ?? null,
-        forYear: row.reconciliation?.forYear ?? null,
+    return rows.map((row) => {
+      const treatment = effectiveLineTreatment({
+        typeKind: row.adjustmentType.kind,
+        typeTaxable: row.adjustmentType.taxable,
+        typePensionable: row.adjustmentType.pensionable,
+        systemField: row.adjustmentType.systemField,
+        kindOverride: row.kindOverride ?? null,
+        taxableOverride: row.taxableOverride ?? null,
+      });
+      return {
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: `${row.employee.firstName} ${row.employee.lastName}`.trim(),
+        employeeCode: row.employee.employeeId,
+        adjustmentTypeId: row.adjustmentTypeId,
+        typeCode: row.adjustmentType.code,
+        typeNameEn: row.adjustmentType.nameEn,
+        typeNameZh: row.adjustmentType.nameZh,
+        systemField: row.adjustmentType.systemField,
+        kind: treatment.kind,
+        taxable: treatment.taxable,
+        pensionable: treatment.pensionable,
+        amount: Number(row.amount),
+        note: row.note,
+        reconciliationId: row.reconciliationId,
         instalmentNumber: row.instalmentNumber,
         instalmentCount: row.instalmentCount,
-      }),
-      createdAt: row.createdAt,
-    }));
+        capOverrideReason: row.capOverrideReason,
+        label: adjustmentLineLabel({
+          typeName: row.adjustmentType.nameEn,
+          forMonth: row.reconciliation?.forMonth ?? null,
+          forYear: row.reconciliation?.forYear ?? null,
+          instalmentNumber: row.instalmentNumber,
+          instalmentCount: row.instalmentCount,
+        }),
+        isCorrectionLine: Boolean(row.isCorrectionLine),
+        direction: treatment.kind === 'DEDUCTION' ? 'OWED_TO_COMPANY' : 'OWED_TO_EMPLOYEE',
+        treatment: treatment.taxable ? 'TAXABLE' : 'NET',
+        createdAt: row.createdAt,
+      };
+    });
   }
 
   /**
@@ -308,7 +365,7 @@ export class PayrollAdjustmentService {
     }
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { runId, employeeId: dto.employeeId, companyId: ctx.companyId },
-      select: { id: true, earnedSalary: true, adjustmentDeductions: true },
+      select: { id: true, earnedSalary: true, adjustmentDeductions: true, settlementOnly: true },
     });
     if (!entry) {
       throw new BadRequestException('This employee has no entry in the payroll run');
@@ -318,6 +375,19 @@ export class PayrollAdjustmentService {
     });
     if (!type || !type.active) {
       throw new BadRequestException('Choose an active adjustment type');
+    }
+    if (entry.settlementOnly) {
+      // No earned pay and no tax / pension of its own: only settlements of open items.
+      if (!dto.reconciliationId) {
+        throw new BadRequestException(
+          'This is a settlement-only row: it can only hold lines that settle a reconciliation item',
+        );
+      }
+      if (type.kind === 'EARNING' && type.taxable) {
+        throw new BadRequestException(
+          'A settlement-only row pays no tax or pension of its own: settle with a net (after-tax) type',
+        );
+      }
     }
 
     let instalmentNumber: number | null = null;
@@ -349,7 +419,7 @@ export class PayrollAdjustmentService {
       const remaining = item.remaining;
       if (amount > remaining + 0.005) {
         throw new BadRequestException(
-          `Only ${remaining.toFixed(2)} ETB is still owed on this item (after lines waiting in unapproved runs)`,
+          `Amount exceeds the remaining balance of ${remaining.toFixed(2)} ETB.`,
         );
       }
       instalmentNumber = item.settledLineCount + item.pendingLineCount + 1;
@@ -358,7 +428,8 @@ export class PayrollAdjustmentService {
     }
 
     const capOverrideReason = dto.capOverrideReason?.trim() || null;
-    if (type.kind === 'DEDUCTION') {
+    // The one-third limit protects pay; a settlement-only row has none.
+    if (type.kind === 'DEDUCTION' && !entry.settlementOnly) {
       // One third of the salary earned this month (prorated basic).
       const wage = Number(entry.earnedSalary);
       const total = Number(entry.adjustmentDeductions) + amount;
@@ -396,6 +467,88 @@ export class PayrollAdjustmentService {
       note,
       reconciliationId: dto.reconciliationId ?? null,
       capOverrideReason,
+    });
+    return this.listRunLines(runId, ctx.companyId);
+  }
+
+  /**
+   * Adds a manual correction line to an employee of a CORRECTION run, for a
+   * missed bonus, severance pay, salary arrears or another amount.
+   *
+   * - Direction: owed to the employee (earning) or owed to the company (deduction).
+   * - Treatment: Taxable changes gross, taxable income (and the pension base
+   *   when the type is pensionable), so tax and pension are recalculated; Net
+   *   only adds to / takes off net pay and leaves tax and pension unchanged.
+   *
+   * The line is stored as a PayrollAdjustmentLine with per-line overrides, then
+   * the employee's entry, net difference and component lines are repriced.
+   */
+  async addCorrectionLine(
+    runId: string,
+    dto: CorrectionLineInput,
+    ctx: ServiceContext,
+  ): Promise<PayrollAdjustmentLineDto[]> {
+    const run = await this.requireRun(runId, ctx.companyId);
+    if (run.type !== 'CORRECTION') {
+      throw new BadRequestException('Correction lines can only be added to a correction run');
+    }
+    this.assertEditable(run.status, run.type);
+    const amount = Math.round(dto.amount * 100) / 100;
+    if (!(amount > 0)) {
+      throw new BadRequestException('Amount must be greater than 0');
+    }
+    const note = dto.note?.trim() ?? '';
+    if (!note) {
+      throw new BadRequestException('A note is required');
+    }
+    const entry = await this.prisma.payrollEntry.findFirst({
+      where: { runId, employeeId: dto.employeeId, companyId: ctx.companyId },
+      select: { id: true },
+    });
+    if (!entry) {
+      throw new BadRequestException('This employee has no entry in the correction run');
+    }
+    const type = await this.prisma.payrollAdjustmentType.findFirst({
+      where: { id: dto.adjustmentTypeId, companyId: ctx.companyId },
+    });
+    if (
+      !type ||
+      !type.active ||
+      type.systemField ||
+      !CORRECTION_LINE_TYPE_CODES.includes(type.code)
+    ) {
+      throw new BadRequestException(
+        'Choose a type: Missed bonus, Severance pay, Salary arrears or Other',
+      );
+    }
+
+    const kind: PayrollAdjustmentKind =
+      dto.direction === 'OWED_TO_COMPANY' ? 'DEDUCTION' : 'EARNING';
+    const taxable = dto.treatment === 'TAXABLE';
+    const line = await this.prisma.payrollAdjustmentLine.create({
+      data: {
+        companyId: ctx.companyId,
+        payrollRunId: runId,
+        employeeId: dto.employeeId,
+        adjustmentTypeId: type.id,
+        amount: new Decimal(amount),
+        note: note.slice(0, 500),
+        kindOverride: kind,
+        taxableOverride: taxable,
+        isCorrectionLine: true,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+    await this.runs.applyAdjustmentLinesToEntry(runId, dto.employeeId, ctx);
+    await this.backToDraftIfSubmitted(run, ctx);
+    await this.auditChange(ctx, 'adjustment_line_added', line.id, run.runNumber, null, {
+      employeeId: dto.employeeId,
+      type: type.code,
+      direction: dto.direction,
+      treatment: dto.treatment,
+      amount,
+      note,
     });
     return this.listRunLines(runId, ctx.companyId);
   }
@@ -454,6 +607,7 @@ export class PayrollAdjustmentService {
         lines: {
           select: { amount: true, payrollRun: { select: { status: true } } },
         },
+        receipts: { orderBy: { receivedOn: 'asc' } },
       },
       orderBy: [{ forYear: 'asc' }, { forMonth: 'asc' }, { createdAt: 'asc' }],
     });
@@ -485,9 +639,111 @@ export class PayrollAdjustmentService {
         status: row.status,
         waivedReason: row.waivedReason,
         waivedAt: row.waivedAt,
+        receipts: (row.receipts ?? []).map((receipt) => ({
+          id: receipt.id,
+          amount: Number(receipt.amount),
+          receivedOn: receipt.receivedOn.toISOString().slice(0, 10),
+          reference: receipt.reference,
+          note: receipt.note,
+          createdAt: receipt.createdAt,
+        })),
         createdAt: row.createdAt,
       };
     });
+  }
+
+  /**
+   * Records money collected from the employee outside payroll against an item
+   * owed to the company (e.g. a leaver repaying a recovery). It settles the
+   * item like a settlement line would, without a payroll run. The correction's
+   * tax / pension differences are declared once by the next approved regular
+   * run. Payroll approvers only; amount may not exceed what is still owed.
+   */
+  async recordReceipt(
+    reconciliationId: string,
+    dto: ReceiptInput,
+    ctx: ServiceContext,
+  ): Promise<PayrollReconciliationDto> {
+    const allowed = await this.permissions.hasPermission(
+      ctx.userId,
+      ctx.companyId,
+      'payroll',
+      'approve',
+    );
+    if (!allowed) {
+      throw new ForbiddenException('Missing permission: payroll.approve');
+    }
+    const amount = Math.round(dto.amount * 100) / 100;
+    if (!(amount > 0)) {
+      throw new BadRequestException('Amount must be greater than 0');
+    }
+    const reference = dto.reference?.trim() ?? '';
+    if (!reference) {
+      throw new BadRequestException('A receipt reference is required');
+    }
+    const receivedOn = new Date(`${dto.receivedOn}T00:00:00.000Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dto.receivedOn) || Number.isNaN(receivedOn.getTime())) {
+      throw new BadRequestException('Receipt date must be a valid date (YYYY-MM-DD)');
+    }
+    const item = await this.loadReconciliation(reconciliationId, ctx.companyId);
+    if (item.direction !== 'OWED_TO_COMPANY') {
+      throw new BadRequestException(
+        'A receipt can only be recorded against money owed to the company',
+      );
+    }
+    if (item.status === 'SETTLED' || item.status === 'WAIVED') {
+      throw new BadRequestException(`This item is already ${item.status.toLowerCase()}`);
+    }
+    if (item.pendingLineCount > 0) {
+      throw new BadRequestException(
+        'A payroll run that is not yet approved settles part of this item. Remove that line first',
+      );
+    }
+    if (amount > item.remaining + 0.005) {
+      throw new BadRequestException(
+        `Amount exceeds the remaining balance of ${item.remaining.toFixed(2)} ETB.`,
+      );
+    }
+
+    const stored = await this.prisma.payrollReconciliation.findFirst({
+      where: { id: reconciliationId, companyId: ctx.companyId },
+      select: { amount: true, settledAmount: true },
+    });
+    if (!stored) {
+      throw new NotFoundException('Reconciliation item not found');
+    }
+    const total = Number(stored.amount);
+    const nextSettled = Math.round((Number(stored.settledAmount) + amount) * 100) / 100;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payrollReconciliationReceipt.create({
+        data: {
+          companyId: ctx.companyId,
+          reconciliationId,
+          amount: new Decimal(amount),
+          receivedOn,
+          reference: reference.slice(0, 120),
+          note: dto.note?.trim() ? dto.note.trim().slice(0, 500) : null,
+          createdBy: ctx.userId,
+        },
+      });
+      await tx.payrollReconciliation.update({
+        where: { id: reconciliationId },
+        data: {
+          settledAmount: new Decimal(nextSettled),
+          status: reconciliationStatusFor(total, nextSettled),
+        },
+      });
+    });
+    await this.auditChange(
+      ctx,
+      'reconciliation_receipt_recorded',
+      reconciliationId,
+      reference,
+      { settledAmount: Number(stored.settledAmount), status: item.status },
+      { receipt: { amount, receivedOn: dto.receivedOn, reference }, settledAmount: nextSettled },
+    );
+    await this.runs.syncSettlementOnlyRows(ctx);
+    return this.getReconciliationDto(reconciliationId, ctx.companyId, item.employeeId);
   }
 
   /**
@@ -504,11 +760,12 @@ export class PayrollAdjustmentService {
     const item = await this.loadReconciliation(reconciliationId, companyId);
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { runId, employeeId: item.employeeId, companyId },
-      select: { earnedSalary: true, adjustmentDeductions: true },
+      select: { earnedSalary: true, adjustmentDeductions: true, settlementOnly: true },
     });
     if (!entry) {
       throw new BadRequestException('This employee has no entry in the payroll run');
     }
+    const settlementOnly = Boolean(entry.settlementOnly);
     const types = await this.prisma.payrollAdjustmentType.findMany({
       where: { companyId, active: true, code: { in: ['RECOVERY', 'NET_BONUS'] } },
       select: { id: true, code: true },
@@ -517,6 +774,19 @@ export class PayrollAdjustmentService {
       throw new BadRequestException('A statutory-only item has nothing to settle');
     }
     const instalmentNumber = item.settledLineCount + item.pendingLineCount + 1;
+    if (item.direction === 'OWED_TO_COMPANY' && settlementOnly) {
+      // No pay to protect: the whole balance, with no one-third limit.
+      return {
+        reconciliationId,
+        direction: item.direction,
+        remaining: item.remaining,
+        amount: item.remaining,
+        suggestedTypeId: types.find((type) => type.code === 'RECOVERY')?.id ?? null,
+        recovery: null,
+        instalmentNumber,
+        settlementOnly,
+      };
+    }
     if (item.direction === 'OWED_TO_COMPANY') {
       const monthlyWage = Number(entry.earnedSalary);
       const recovery = suggestRecoveryInstalment({
@@ -532,6 +802,7 @@ export class PayrollAdjustmentService {
         suggestedTypeId: types.find((type) => type.code === 'RECOVERY')?.id ?? null,
         recovery: { ...recovery, monthlyWage },
         instalmentNumber,
+        settlementOnly,
       };
     }
     // Owed to the employee: the correction already accounts for tax, so the
@@ -544,6 +815,7 @@ export class PayrollAdjustmentService {
       suggestedTypeId: types.find((type) => type.code === 'NET_BONUS')?.id ?? null,
       recovery: null,
       instalmentNumber,
+      settlementOnly,
     };
   }
 
@@ -592,6 +864,8 @@ export class PayrollAdjustmentService {
     await this.auditChange(ctx, 'reconciliation_waived', reconciliationId, null, {
       status: item.status,
     }, { status: 'WAIVED', reason: trimmed });
+    // Nothing left to settle: the employee's settlement-only row (if any) goes.
+    await this.runs.syncSettlementOnlyRows(ctx);
     return this.getReconciliationDto(reconciliationId, ctx.companyId, item.employeeId);
   }
 
@@ -644,6 +918,8 @@ export class PayrollAdjustmentService {
       { status: 'WAIVED' },
       { status: nextStatus },
     );
+    // Open again: draft runs get the employee's settlement-only row back.
+    await this.runs.syncSettlementOnlyRows(ctx);
     return this.getReconciliationDto(reconciliationId, ctx.companyId, row.employeeId);
   }
 

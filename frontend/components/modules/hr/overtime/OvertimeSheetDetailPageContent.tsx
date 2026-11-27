@@ -419,6 +419,11 @@ export default function OvertimeSheetDetailPageContent({
     [sheet?.entries],
   );
 
+  const hasPaidEntries = useMemo(
+    () => (sheet?.entries ?? []).some((entry) => entry.paidByPayroll === true),
+    [sheet?.entries],
+  );
+
   const columns: ColumnsType<OvertimeDayGroup> = useMemo(
     () => [
       {
@@ -569,7 +574,8 @@ export default function OvertimeSheetDetailPageContent({
           );
         },
       },
-      ...(canEdit
+      // The lock icon shows even when the sheet itself is read-only (e.g. a paid sheet).
+      ...(canEdit || hasPaidEntries
         ? [
             {
               title: '',
@@ -578,19 +584,26 @@ export default function OvertimeSheetDetailPageContent({
               fixed: 'right' as const,
               render: (_: unknown, row: OvertimeDayGroup) => {
                 // Paid overtime is locked for good; new entries can still be added.
-                if (row.entries.some((entry) => entry.paidByPayroll)) {
+                const lockedEntry = row.entries.find((entry) => entry.paidByPayroll);
+                if (lockedEntry) {
+                  const lockedLabel = t('pages.hr.overtime.paidLocked', {
+                    runNumber: lockedEntry.claimedByRunNumber ?? '—',
+                  });
                   return (
-                    <Tooltip title={t('pages.hr.overtime.paidLocked')}>
+                    <Tooltip title={lockedLabel}>
                       <span
                         className="erp-ot-paid-lock"
                         role="img"
-                        aria-label={t('pages.hr.overtime.paidLocked')}
+                        aria-label={lockedLabel}
                         tabIndex={0}
                       >
                         <LockOutlined />
                       </span>
                     </Tooltip>
                   );
+                }
+                if (!canEdit) {
+                  return null;
                 }
                 const items: MenuProps['items'] = [
                   {
@@ -628,7 +641,7 @@ export default function OvertimeSheetDetailPageContent({
           ]
         : []),
     ],
-    [canEdit, t],
+    [canEdit, hasPaidEntries, t],
   );
 
   if (detailQuery.isLoading) {

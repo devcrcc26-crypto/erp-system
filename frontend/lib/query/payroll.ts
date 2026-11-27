@@ -23,6 +23,8 @@ import {
   markPayrollRunReviewed,
   recalculatePayrollRun,
   releasePayslips,
+  returnPayrollRunToDraft,
+  withdrawPayrollRun,
   submitPayrollRun,
   unlockPayrollRun,
   updatePayrollCompanySettings,
@@ -214,6 +216,24 @@ export function useApprovePayrollRun(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: ApprovePayrollRunPayload = {}) => approvePayrollRun(runId, payload),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** Approver sends a SUBMITTED run back to DRAFT with a reason. */
+export function useReturnPayrollRunToDraft(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => returnPayrollRunToDraft(runId, reason),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** Submitter withdraws their SUBMITTED run back to DRAFT. */
+export function useWithdrawPayrollRun(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => withdrawPayrollRun(runId),
     onSuccess: () => invalidateRun(queryClient, runId),
   });
 }

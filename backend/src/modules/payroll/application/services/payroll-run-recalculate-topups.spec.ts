@@ -89,6 +89,7 @@ function setup(stored: Record<string, unknown>, lines: Array<{ amount: number; n
       update,
     },
     payrollSalaryPeriod: { deleteMany: jest.fn(async () => undefined) },
+    payrollReconciliation: { findMany: jest.fn(async () => []) },
     payrollAdjustmentLine: {
       findMany: jest.fn(async () =>
         lines.map((line) => ({

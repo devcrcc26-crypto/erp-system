@@ -42,7 +42,7 @@ import {
   totalDeductionFormula,
   totalOtFormula,
 } from './payroll-excel-export.formulas';
-import { adjustmentLineLabel } from '../utils/payroll-adjustment.util';
+import { adjustmentLineLabel, effectiveLineTreatment } from '../utils/payroll-adjustment.util';
 import { loadRunRemittance } from '../utils/payroll-remittance.loader';
 import type { PayrollRunRemittance } from '../utils/payroll-remittance.util';
 import { PayrollCompanySettingsService } from './payroll-company-settings.service';
@@ -229,6 +229,8 @@ export interface PayrollExportSalaryPeriod {
 }
 
 export interface PayrollExportEntry {
+  /** The employee had no pay in this run: only settlements and statutory carries. */
+  settlementOnly?: boolean;
   flag: PayrollEntryFlag;
   flagNote: string | null;
   notes: string | null;
@@ -613,7 +615,7 @@ export class PayrollExcelExportService {
         const current =
           rows.get(id) ??
           ({
-            label: `${line.label.replace(/^[^–]+– /, 'Correction adjustment – ')}${line.detail ? ` (${line.detail})` : ''}`,
+            label: `${line.label.replace(/^[^–]+– /, 'Correction adjustment – ')}${line.detail ? ` – ${line.detail}` : ''}`,
             tax: 0,
             emp: 0,
             emr: 0,
@@ -744,6 +746,14 @@ export class PayrollExcelExportService {
     sheet.getRow(1).font = { bold: true };
     for (const line of lines) {
       const amount = toNumber(line.amount);
+      const treatment = effectiveLineTreatment({
+        typeKind: line.adjustmentType.kind,
+        typeTaxable: line.adjustmentType.taxable,
+        typePensionable: line.adjustmentType.pensionable,
+        systemField: null,
+        kindOverride: line.kindOverride ?? null,
+        taxableOverride: line.taxableOverride ?? null,
+      });
       sheet
         .addRow({
           employee: [line.employee.firstName, line.employee.middleName, line.employee.lastName]
@@ -757,10 +767,10 @@ export class PayrollExcelExportService {
             instalmentNumber: line.instalmentNumber,
             instalmentCount: line.instalmentCount,
           }),
-          kind: line.adjustmentType.kind === 'DEDUCTION' ? 'Deduction' : 'Earning',
-          taxable: line.adjustmentType.taxable ? 'Yes' : 'No',
-          pensionable: line.adjustmentType.pensionable ? 'Yes' : 'No',
-          amount: line.adjustmentType.kind === 'DEDUCTION' ? -amount : amount,
+          kind: treatment.kind === 'DEDUCTION' ? 'Deduction' : 'Earning',
+          taxable: treatment.taxable ? 'Yes' : 'No',
+          pensionable: treatment.pensionable ? 'Yes' : 'No',
+          amount: treatment.kind === 'DEDUCTION' ? -amount : amount,
           note: line.note,
         })
         .commit();
@@ -814,6 +824,7 @@ export class PayrollExcelExportService {
   private async loadEntriesByIds(ids: string[]): Promise<
     Array<{
       id: string;
+      settlementOnly?: boolean;
       flag: PayrollEntryFlag;
       flagNote: string | null;
       notes: string | null;
@@ -901,6 +912,7 @@ export class PayrollExcelExportService {
   }
 
   private mapEntry(raw: {
+    settlementOnly?: boolean;
     flag: PayrollEntryFlag;
     flagNote: string | null;
     notes: string | null;
@@ -955,6 +967,7 @@ export class PayrollExcelExportService {
     >;
   }): PayrollExportEntry {
     return {
+      settlementOnly: raw.settlementOnly ?? false,
       flag: raw.flag,
       flagNote: raw.flagNote,
       notes: raw.notes,
@@ -1181,7 +1194,7 @@ export class PayrollExcelExportService {
 
     if (isFirst) {
       setValue(COL.sn, serial);
-      setValue(COL.name, fullName(entry.employee));
+      setValue(COL.name, exportName(entry));
       setValue(COL.position, entry.employee.position?.title ?? null);
       setValue(
         COL.employDate,
@@ -1392,7 +1405,7 @@ export class PayrollExcelExportService {
 
     sheet.getCell(row, PCOL.sn).value = serial;
     sheet.getCell(row, PCOL.tin).value = entry.employee.tin?.trim() || null;
-    sheet.getCell(row, PCOL.name).value = fullName(entry.employee);
+    sheet.getCell(row, PCOL.name).value = exportName(entry);
     sheet.getCell(row, PCOL.employDate).value = entry.contract?.startDate
       ? formatDdMmYyyy(entry.contract.startDate)
       : null;
@@ -1676,6 +1689,12 @@ function styleTotalsRow(
 
 function fullName(person: PersonName): string {
   return formatEnglishName(person);
+}
+
+/** Name cell of an entry; settlement-only rows are tagged so they are not mistaken for salary rows. */
+function exportName(entry: Pick<PayrollExportEntry, 'employee' | 'settlementOnly'>): string {
+  const name = fullName(entry.employee);
+  return entry.settlementOnly ? `${name} (Settlement only)` : name;
 }
 
 function toNumber(value: Numeric | null | undefined): number {

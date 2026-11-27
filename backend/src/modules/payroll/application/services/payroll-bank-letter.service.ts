@@ -77,6 +77,18 @@ export interface PayrollBankLetterPreview {
   excludedEmployees: BankLetterExcludedEmployee[];
   /** Human-readable reason when `allowed` is false. */
   reason: string | null;
+  /**
+   * Settlement-only rows with a negative net: the employee owes the company.
+   * Never in the letter (nothing can be paid); collect the money and use Record receipt.
+   */
+  collectFromEmployees: BankLetterCollectFromEmployee[];
+}
+
+export interface BankLetterCollectFromEmployee {
+  id: string;
+  name: string;
+  /** Positive amount to collect, in ETB. */
+  amount: number;
 }
 
 interface LetterLine {
@@ -88,6 +100,7 @@ interface LetterLine {
 interface LetterSelection {
   lines: LetterLine[];
   excluded: BankLetterExcludedEmployee[];
+  collectFromEmployees: BankLetterCollectFromEmployee[];
   totalNet: number;
 }
 
@@ -105,6 +118,7 @@ interface LetterRun {
   entries: Array<{
     employeeId: string;
     netPay: { toString(): string } | number;
+    settlementOnly?: boolean;
     bankAccountNumber: string | null;
     employee: {
       firstName: string;
@@ -160,6 +174,7 @@ export class PayrollBankLetterService {
       reason: hasLines
         ? null
         : 'No employees with a positive net pay',
+      collectFromEmployees: selection.collectFromEmployees,
     };
   }
 
@@ -219,6 +234,7 @@ export class PayrollBankLetterService {
           select: {
             employeeId: true,
             netPay: true,
+            settlementOnly: true,
             bankAccountNumber: true,
             employee: {
               select: {
@@ -257,11 +273,19 @@ export class PayrollBankLetterService {
   private selectLines(run: LetterRun): LetterSelection {
     const lines: LetterLine[] = [];
     const excluded: BankLetterExcludedEmployee[] = [];
+    const collectFromEmployees: BankLetterCollectFromEmployee[] = [];
     let totalCents = 0;
 
     for (const entry of run.entries) {
       const net = Number(entry.netPay.toString());
       if (!(net > 0)) {
+        if (entry.settlementOnly && net < 0) {
+          collectFromEmployees.push({
+            id: entry.employeeId,
+            name: formatEnglishName(entry.employee),
+            amount: Math.round(Math.abs(net) * CENTS_FACTOR) / CENTS_FACTOR,
+          });
+        }
         continue;
       }
       const name = formatEnglishName(entry.employee);
@@ -278,8 +302,9 @@ export class PayrollBankLetterService {
       a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     lines.sort(byName);
     excluded.sort(byName);
+    collectFromEmployees.sort(byName);
 
-    return { lines, excluded, totalNet: totalCents / CENTS_FACTOR };
+    return { lines, excluded, collectFromEmployees, totalNet: totalCents / CENTS_FACTOR };
   }
 
   /**

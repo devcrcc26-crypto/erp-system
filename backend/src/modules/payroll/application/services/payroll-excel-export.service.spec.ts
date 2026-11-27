@@ -434,6 +434,39 @@ describe('PayrollExcelExportService - streaming writer + formulas', () => {
     );
   });
 
+  it('lists a settlement-only row for an ended contract, tagged on Data and Payroll', async () => {
+    const settlementOnly = makeEntry({
+      settlementOnly: true,
+      employee: { firstName: 'Ada', middleName: null, lastName: 'Mensah', tin: null },
+      contract: null,
+      basicSalary: dec(0),
+      payrollDays: dec(0),
+      earnedSalary: dec(0),
+      transportAllowance: dec(0),
+      pensionEmployer: dec(0),
+      pensionEmployee: dec(0),
+      taxableIncome: dec(0),
+      incomeTax: dec(0),
+      totalDeductions: dec(0),
+      netTopUp: dec(3000),
+      netTopUpReason: 'Settlement',
+      netPay: dec(3000),
+    });
+    const { workbook } = await exportFixture([...makeFixtureEntries(), settlementOnly]);
+    const data = workbook.getWorksheet('Data')!;
+    const payroll = workbook.getWorksheet('Payroll')!;
+
+    const row = findDataRowByName(data, 'Ada Mensah (Settlement only)');
+    expect(cellResult(data, row, DATA_COL.netPay)).toBe(3000);
+    expect(cellResult(data, row, DATA_COL.incomeTax)).toBe(0);
+
+    const names: string[] = [];
+    for (let r = PAYROLL_FIRST_ROW; r < PAYROLL_FIRST_ROW + 20; r += 1) {
+      names.push(String(payroll.getCell(r, 3).value ?? ''));
+    }
+    expect(names).toContain('Ada Mensah (Settlement only)');
+  });
+
   it('uses the document layout and sizes columns so no number shows #####', async () => {
     const { workbook } = await exportFixture(makeFixtureEntries());
     for (const name of ['Data', 'Payroll']) {

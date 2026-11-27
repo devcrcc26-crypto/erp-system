@@ -74,6 +74,8 @@ export interface OvertimeEntry {
   siteReviewFlaggedAt?: string | null;
   /** Paid by an approved payroll run: locked (cannot be edited or deleted). */
   paidByPayroll?: boolean;
+  /** Number of the payroll run that locked the entry (when paidByPayroll). */
+  claimedByRunNumber?: string | null;
   createdAt: string;
   updatedAt: string;
   documents?: OvertimeAttachmentDocument[];

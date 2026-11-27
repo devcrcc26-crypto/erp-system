@@ -35,6 +35,7 @@ export async function loadRunRemittance(
   };
   const employeeName = (employee: { firstName: string; lastName: string }): string =>
     `${employee.firstName} ${employee.lastName}`.trim();
+  const employeeSelect = { select: { firstName: true, lastName: true, employeeId: true } } as const;
 
   // Instalments planned for each item settled here (from its first line in this run).
   const instalments = new Map<string, number | null>();
@@ -57,9 +58,10 @@ export async function loadRunRemittance(
         ? []
         : await db.payrollReconciliation.findMany({
             where: { id: { in: [...instalments.keys()] } },
-            include: { employee: { select: { firstName: true, lastName: true } } },
+            include: { employee: employeeSelect },
           });
-    // A regular run's approval also declares open statutory-only items.
+    // A regular run's approval also declares open statutory-only items, and
+    // items settled by a recorded receipt (money collected outside payroll).
     const statutoryOnly =
       run.type === 'REGULAR'
         ? await db.payrollReconciliation.findMany({
@@ -69,10 +71,22 @@ export async function loadRunRemittance(
               status: 'OPEN',
               statutoryRunId: null,
             },
-            include: { employee: { select: { firstName: true, lastName: true } } },
+            include: { employee: employeeSelect },
           })
         : [];
-    const items = [...settled, ...statutoryOnly];
+    const receiptSettled =
+      run.type === 'REGULAR'
+        ? await db.payrollReconciliation.findMany({
+            where: {
+              companyId: run.companyId,
+              direction: { not: 'STATUTORY_ONLY' },
+              statutoryRunId: null,
+              receipts: { some: {} },
+            },
+            include: { employee: employeeSelect },
+          })
+        : [];
+    const items = [...settled, ...statutoryOnly, ...receiptSettled];
     carries = itemsToCarry(
       items.map((item) => ({
         ...item,
@@ -84,6 +98,7 @@ export async function loadRunRemittance(
       reconciliationId: item.id,
       employeeId: item.employeeId,
       employeeName: employeeName(item.employee),
+      employeeCode: item.employee.employeeId,
       forMonth: item.forMonth,
       forYear: item.forYear,
       incomeTax: item.incomeTaxDifference,
@@ -96,7 +111,7 @@ export async function loadRunRemittance(
     const rows = await db.payrollStatutoryAdjustment.findMany({
       where: { payrollRunId: run.id },
       include: {
-        reconciliation: { select: { employee: { select: { firstName: true, lastName: true } } } },
+        reconciliation: { select: { employee: employeeSelect } },
       },
       orderBy: [{ forYear: 'asc' }, { forMonth: 'asc' }],
     });
@@ -104,6 +119,7 @@ export async function loadRunRemittance(
       reconciliationId: row.reconciliationId,
       employeeId: row.employeeId,
       employeeName: employeeName(row.reconciliation.employee),
+      employeeCode: row.reconciliation.employee.employeeId,
       forMonth: row.forMonth,
       forYear: row.forYear,
       incomeTax: num(row.incomeTax),

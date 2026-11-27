@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   addPayrollAdjustmentLine,
+  addPayrollCorrectionLine,
   createPayrollAdjustmentType,
   getPayrollCorrectionLines,
   getPayrollRunHistory,
@@ -12,13 +13,16 @@ import {
   listPayrollAdjustmentLines,
   listPayrollAdjustmentTypes,
   listPayrollReconciliations,
+  recordPayrollReconciliationReceipt,
   removePayrollAdjustmentLine,
   reopenPayrollRun,
   unwaivePayrollReconciliation,
   updatePayrollAdjustmentType,
   waivePayrollReconciliation,
   type AddPayrollAdjustmentLinePayload,
+  type AddPayrollCorrectionLinePayload,
   type PayrollAdjustmentTypePayload,
+  type RecordPayrollReceiptPayload,
 } from '@/lib/api/payroll-adjustments';
 import { payrollKeys } from '@/lib/query/payroll';
 
@@ -94,12 +98,31 @@ export function useAddPayrollAdjustmentLine(runId: string) {
   });
 }
 
+/** Adds a manual correction line; the entry, net difference and component lines are repriced. */
+export function useAddPayrollCorrectionLine(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AddPayrollCorrectionLinePayload) =>
+      addPayrollCorrectionLine(runId, payload),
+    onSuccess: (lines) => {
+      queryClient.setQueryData(payrollAdjustmentKeys.lines(runId), lines);
+      void queryClient.invalidateQueries({
+        queryKey: [...payrollKeys.run(runId), 'correction-lines'],
+      });
+      invalidateRunAdjustments(queryClient, runId);
+    },
+  });
+}
+
 export function useRemovePayrollAdjustmentLine(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (lineId: string) => removePayrollAdjustmentLine(runId, lineId),
     onSuccess: (lines) => {
       queryClient.setQueryData(payrollAdjustmentKeys.lines(runId), lines);
+      void queryClient.invalidateQueries({
+        queryKey: [...payrollKeys.run(runId), 'correction-lines'],
+      });
       invalidateRunAdjustments(queryClient, runId);
     },
   });
@@ -133,6 +156,20 @@ export function useWaivePayrollReconciliation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'reconciliations'] });
       void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'run'] });
+    },
+  });
+}
+
+/** Record receipt: settles an item owed to the company; settlement-only rows and totals move. */
+export function useRecordPayrollReconciliationReceipt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: RecordPayrollReceiptPayload }) =>
+      recordPayrollReconciliationReceipt(id, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'reconciliations'] });
+      void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'run'] });
+      void queryClient.invalidateQueries({ queryKey: payrollKeys.runs() });
     },
   });
 }

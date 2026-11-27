@@ -53,6 +53,15 @@ export default function PayrollRunWarningsBar({
       tab: 'summary',
     });
   }
+  if (warnings && warnings.overtimeChangedSinceCalculation.length > 0) {
+    items.push({
+      key: 'overtimeChanged',
+      label: t(`${KEY}.overtimeChanged`, {
+        count: warnings.overtimeChangedSinceCalculation.reduce((sum, row) => sum + row.entries, 0),
+      }),
+      tab: 'summary',
+    });
+  }
   if (warnings && warnings.openReconciliations.length > 0) {
     items.push({
       key: 'openReconciliations',
@@ -67,11 +76,21 @@ export default function PayrollRunWarningsBar({
       tab: 'adjustments',
     });
   }
-  if (warnings && warnings.negativeNetPay.length > 0) {
+  const negativeNet = warnings?.negativeNetPay.filter((row) => !row.settlementOnly) ?? [];
+  // A settlement-only recovery cannot be paid out: the money is collected from the employee.
+  const collectFromEmployees = warnings?.negativeNetPay.filter((row) => row.settlementOnly) ?? [];
+  if (negativeNet.length > 0) {
     items.push({
       key: 'negativeNet',
-      label: t(`${KEY}.negativeNet`, { count: warnings.negativeNetPay.length }),
+      label: t(`${KEY}.negativeNet`, { count: negativeNet.length }),
       tab: 'employees',
+    });
+  }
+  if (collectFromEmployees.length > 0) {
+    items.push({
+      key: 'collectFromEmployee',
+      label: t(`${KEY}.collectFromEmployee`, { count: collectFromEmployees.length }),
+      tab: 'adjustments',
     });
   }
   if (flaggedCount > 0) {

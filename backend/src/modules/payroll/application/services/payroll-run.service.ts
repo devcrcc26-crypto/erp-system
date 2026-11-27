@@ -36,6 +36,7 @@ import {
 } from './payroll-calculation.service';
 import {
   adjustmentTotalsFromLines,
+  effectiveLineTreatment,
   deductionCap,
   exceedsDeductionCap,
   reconciliationRemaining,
@@ -43,6 +44,10 @@ import {
   type AdjustmentLineTotals,
 } from '../utils/payroll-adjustment.util';
 import { itemsToCarry, type PayrollRunRemittance } from '../utils/payroll-remittance.util';
+import {
+  employeeIdsNeedingSettlementRow,
+  planSettlementOnlyRows,
+} from '../utils/payroll-settlement-only.util';
 import { loadRunRemittance } from '../utils/payroll-remittance.loader';
 import {
   buildCorrectionLines,
@@ -207,6 +212,19 @@ export interface PayrollRunWarnings {
       hours: number;
     }
   >;
+  /**
+   * OT entries this run priced that changed (or were re-approved) after
+   * calculation — not claimed on approve, and still flagged after approval.
+   */
+  overtimeChangedSinceCalculation: Array<
+    PayrollRunWarningEmployee & {
+      sheetId: string;
+      sheetNumber: string;
+      sheetStatus: string;
+      entries: number;
+      hours: number;
+    }
+  >;
   /** Open / partly settled reconciliation items for employees in this run. */
   openReconciliations: Array<
     PayrollRunWarningEmployee & {
@@ -216,11 +234,19 @@ export interface PayrollRunWarnings {
       remaining: number;
       forMonth: number;
       forYear: number;
+      /** The employee is only in this run to settle items (no pay of their own). */
+      settlementOnly: boolean;
     }
   >;
-  /** Deductions above one third of the monthly wage. */
+  /** Deductions above one third of the monthly wage (never for settlement-only rows). */
   deductionsOverCap: Array<PayrollRunWarningEmployee & { deductions: number; cap: number }>;
-  negativeNetPay: Array<PayrollRunWarningEmployee & { netPay: number }>;
+  /**
+   * Negative net pay. A negative settlement-only row is money to collect from
+   * the employee (`settlementOnly`), not an error in the run.
+   */
+  negativeNetPay: Array<
+    PayrollRunWarningEmployee & { netPay: number; settlementOnly: boolean }
+  >;
 }
 
 export interface PayrollRunHistoryItem {
@@ -611,6 +637,7 @@ export class PayrollRunService {
       includeFreelancerIds,
     });
     await this.persistEntryDrafts(drafts, ctx);
+    await this.syncSettlementOnlyEntries(run, ctx);
     await this.updateRunTotals(runId, ctx);
     await this.reopenIfInApproval(run, ctx);
 
@@ -739,6 +766,7 @@ export class PayrollRunService {
       includeFreelancerIds,
     });
     await this.persistEntryDrafts(drafts, ctx);
+    await this.syncSettlementOnlyEntries(run, ctx);
     await this.updateRunTotals(runId, ctx);
 
     await this.prisma.payrollRun.update({
@@ -784,7 +812,8 @@ export class PayrollRunService {
         includeInPayroll: true,
         deletedAt: null,
         employeeType: 'FREELANCER' as EmployeeType,
-        payrollEntriesAsEmplyee: { none: { runId } },
+        // A settlement-only row does not count: adding the freelancer replaces it.
+        payrollEntriesAsEmplyee: { none: { runId, settlementOnly: false } },
       }),
       select: {
         id: true,
@@ -819,11 +848,28 @@ export class PayrollRunService {
       );
     }
 
+    if (run.type === 'CORRECTION') {
+      // Newly added people were never paid in the original run: the rebuild
+      // gives them paid = 0 so the whole corrected amount is the difference.
+      await this.rebuildCorrectionEntries(run, ctx, ids);
+      await this.reopenIfInApproval(run, ctx);
+      this.logger.log(
+        `[PayrollRun] Added ${ids.length} person(s) to correction ${run.runNumber}`,
+      );
+      return this.getRun(runId, ctx.companyId);
+    }
+
+    // A freelancer shown as "settlement only" becomes a normal row; the
+    // settlement lines stay on the run and are priced into the new entry.
+    await this.prisma.payrollEntry.deleteMany({
+      where: { runId, companyId: ctx.companyId, settlementOnly: true, employeeId: { in: ids } },
+    });
     const drafts = await this.buildEntryDrafts(run, ctx, new Map(), {
       includeFreelancerIds: new Set(ids),
       onlyEmployeeIds: ids,
     });
     await this.persistEntryDrafts(drafts, ctx);
+    await this.syncSettlementOnlyEntries(run, ctx);
     await this.updateRunTotals(runId, ctx);
     await this.reopenIfInApproval(run, ctx);
 
@@ -847,16 +893,32 @@ export class PayrollRunService {
 
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { id: entryId, runId, companyId: ctx.companyId },
-      select: { id: true, employee: { select: { employeeType: true } } },
+      select: {
+        id: true,
+        employeeId: true,
+        settlementOnly: true,
+        employee: { select: { employeeType: true } },
+      },
     });
     if (!entry) {
       throw new NotFoundException('Payroll entry not found');
+    }
+    if (entry.settlementOnly) {
+      throw new BadRequestException(
+        'A settlement-only row is removed automatically once its reconciliation items are settled or waived',
+      );
     }
     if (entry.employee.employeeType !== 'FREELANCER') {
       throw new BadRequestException('Only freelancer entries can be removed from a run');
     }
 
     await this.prisma.payrollEntry.delete({ where: { id: entryId } });
+    if (run.type === 'CORRECTION') {
+      // Component lines of a person removed from the correction go with the entry.
+      await this.prisma.payrollCorrectionLine.deleteMany({
+        where: { correctionRunId: runId, employeeId: entry.employeeId },
+      });
+    }
     await this.updateRunTotals(runId, ctx);
     await this.reopenIfInApproval(run, ctx);
     return this.getRun(runId, ctx.companyId);
@@ -877,8 +939,9 @@ export class PayrollRunService {
   }
 
   private async includedFreelancerIds(runId: string): Promise<Set<string>> {
+    // A settlement-only row is not "HR added this freelancer to the run".
     const rows = await this.prisma.payrollEntry.findMany({
-      where: { runId, employee: { employeeType: 'FREELANCER' } },
+      where: { runId, settlementOnly: false, employee: { employeeType: 'FREELANCER' } },
       select: { employeeId: true },
     });
     return new Set(rows.map((r) => r.employeeId));
@@ -1221,7 +1284,9 @@ export class PayrollRunService {
       'approve',
       options?.confirmEmploymentReview,
     );
-    const claimableOtIds = await this.assertOvertimeUnchangedSinceCalculation(run);
+    // Claim only OT still matching what this run priced. Changed or later-approved
+    // entries stay unclaimed (Needs attention) — they do not block approval.
+    const otPlan = await this.resolveOvertimeClaimPlan(run);
 
     // Approval consumes the run's inputs: OT entries are claimed, linked
     // reconciliation items are settled, and a correction run records what is
@@ -1236,10 +1301,11 @@ export class PayrollRunService {
           updatedBy: ctx.userId,
         },
       });
-      await this.claimOvertimeEntries(tx, run.id, claimableOtIds);
+      await this.claimOvertimeEntries(tx, run.id, otPlan.claimableIds);
       await this.applyReconciliationSettlements(tx, run.id, 1);
       await this.carryStatutoryDifferences(tx, run.id, ctx);
       await this.carryStatutoryOnlyItems(tx, run, ctx);
+      await this.carryReceiptSettledItems(tx, run, ctx);
       if (run.type === 'CORRECTION') {
         await this.createReconciliationItems(tx, run, ctx);
       }
@@ -1254,7 +1320,10 @@ export class PayrollRunService {
         recordType: 'PayrollRun',
         recordId: run.id,
         recordReference: run.runNumber,
-        afterValue: { claimedOvertimeEntries: claimableOtIds.length },
+        afterValue: {
+          claimedOvertimeEntries: otPlan.claimableIds.length,
+          skippedChangedOvertimeEntries: otPlan.changedIds.length,
+        },
       }),
     );
 
@@ -1350,6 +1419,110 @@ export class PayrollRunService {
         updatedBy: ctx.userId,
       },
     });
+  }
+
+  /**
+   * Approver returns a SUBMITTED run to DRAFT (reason required; shown in History).
+   * Same for correction runs.
+   */
+  async returnToDraft(
+    runId: string,
+    reason: string,
+    ctx: ServiceContext,
+  ): Promise<PayrollRun> {
+    await this.assertPayrollApprove(ctx);
+    const trimmed = reason?.trim() ?? '';
+    if (trimmed.length < 5) {
+      throw new BadRequestException('A reason (at least 5 characters) is required');
+    }
+    const run = await this.requireRun(runId, ctx.companyId);
+    if (run.status !== 'SUBMITTED') {
+      throw new BadRequestException('Only a submitted run can be returned to draft');
+    }
+    const updated = await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        reopenReason: trimmed.slice(0, 1000),
+        reopenedAt: new Date(),
+        reopenedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'run_returned_to_draft',
+        recordType: 'PayrollRun',
+        recordId: run.id,
+        recordReference: run.runNumber,
+        beforeValue: { status: 'SUBMITTED' },
+        afterValue: { status: 'DRAFT', reason: trimmed },
+      }),
+    );
+    if (run.submittedBy && run.submittedBy !== ctx.userId) {
+      await this.notifyMany(
+        ctx,
+        [run.submittedBy],
+        'payroll.run_returned',
+        `Payroll ${run.runNumber} returned to draft`,
+        `Payroll run ${run.runNumber} was returned to draft: ${trimmed}`,
+        `/payroll/runs/${runId}`,
+      );
+    }
+    return updated;
+  }
+
+  /**
+   * Submitter withdraws a SUBMITTED run back to DRAFT (payroll.create).
+   * Same for correction runs.
+   */
+  async withdrawRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
+    const run = await this.requireRun(runId, ctx.companyId);
+    if (run.status !== 'SUBMITTED') {
+      throw new BadRequestException('Only a submitted run can be withdrawn');
+    }
+    if (run.submittedBy !== ctx.userId) {
+      const allowed = await this.permissions.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'payroll',
+        'approve',
+      );
+      if (!allowed) {
+        throw new ForbiddenException('Only the submitter can withdraw this run');
+      }
+    }
+    const updated = await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        reopenReason: 'Withdrawn by submitter',
+        reopenedAt: new Date(),
+        reopenedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'run_withdrawn',
+        recordType: 'PayrollRun',
+        recordId: run.id,
+        recordReference: run.runNumber,
+        beforeValue: { status: 'SUBMITTED' },
+        afterValue: { status: 'DRAFT' },
+      }),
+    );
+    return updated;
   }
 
   /**
@@ -1482,6 +1655,7 @@ export class PayrollRunService {
     await this.prisma.$transaction(async (tx) => {
       await this.copyRunInputs(tx, baselineId, correctionRunId, ctx, {
         keepReconciliationLinks: false,
+        skipSettlementOnly: true,
       });
     });
 
@@ -1535,6 +1709,7 @@ export class PayrollRunService {
         `Cannot edit entry in run status: ${entry.run.status}`,
       );
     }
+    this.assertNotSettlementOnly(entry);
 
     const bonusTopUp = dto.bonusTopUp ?? this.toNumber(entry.bonusTopUp);
     if (bonusTopUp < 0) {
@@ -1638,6 +1813,7 @@ export class PayrollRunService {
         `Cannot edit entry in run status: ${entry.run.status}`,
       );
     }
+    this.assertNotSettlementOnly(entry);
 
     const oldTotalDays = this.toNumber(entry.payrollDays);
     const periodId = dto.periodId?.trim() || undefined;
@@ -3835,6 +4011,8 @@ export class PayrollRunService {
         employeeId: true,
         amount: true,
         note: true,
+        kindOverride: true,
+        taxableOverride: true,
         adjustmentType: {
           select: { kind: true, taxable: true, pensionable: true, systemField: true },
         },
@@ -3861,13 +4039,25 @@ export class PayrollRunService {
     for (const [employeeId, list] of grouped) {
       result.set(employeeId, {
         totals: adjustmentTotalsFromLines(
-          list.map((line) => ({
-            amount: this.toNumber(line.amount),
-            kind: line.adjustmentType.kind,
-            taxable: line.adjustmentType.taxable,
-            pensionable: line.adjustmentType.pensionable,
-            systemField: line.adjustmentType.systemField,
-          })),
+          list.map((line) => {
+            // Manual correction lines pick direction and tax treatment per line.
+            const treatment = effectiveLineTreatment({
+              typeKind: line.adjustmentType.kind,
+              typeTaxable: line.adjustmentType.taxable,
+              typePensionable: line.adjustmentType.pensionable,
+              systemField: line.adjustmentType.systemField,
+              kindOverride: line.kindOverride ?? null,
+              taxableOverride: line.taxableOverride ?? null,
+            });
+            return {
+              amount: this.toNumber(line.amount),
+              kind: treatment.kind,
+              taxable: treatment.taxable,
+              pensionable: treatment.pensionable,
+              taxableDeduction: treatment.taxableDeduction,
+              systemField: line.adjustmentType.systemField,
+            };
+          }),
         ),
         bonusTopUpReason: reasons(list, 'BONUS_TOP_UP'),
         netTopUpReason: reasons(list, 'NET_TOP_UP'),
@@ -3901,8 +4091,9 @@ export class PayrollRunService {
       netTopUp: 0,
       adjustments: ZERO_ADJUSTMENTS,
     };
-    // Same rule as generation: a month with 0 paid days pays no bonuses.
-    const zeroDays = this.toNumber(entry.payrollDays) === 0;
+    // Same rule as generation: a month with 0 paid days pays no bonuses. A
+    // settlement-only row always has 0 days and pays its settlement lines.
+    const zeroDays = !entry.settlementOnly && this.toNumber(entry.payrollDays) === 0;
     const bonusTopUp = zeroDays ? 0 : totals.bonusTopUp;
     const netTopUp = zeroDays ? 0 : totals.netTopUp;
     const withAdjustments: PayrollEntry = {
@@ -3927,8 +4118,70 @@ export class PayrollRunService {
         updatedBy: ctx.userId,
       },
     });
+    if (entry.run.type === 'CORRECTION') {
+      // Paid-vs-corrected lines and the net difference follow the repriced entry.
+      await this.refreshCorrectionEntry(entry.run, employeeId, ctx);
+    }
     await this.updateRunTotals(runId, ctx);
     return updated;
+  }
+
+  /**
+   * After one employee's entry in a CORRECTION run was repriced (adjustment
+   * line added / removed): updates original / corrected / delta net pay and
+   * replaces that employee's component lines, as a full rebuild would.
+   */
+  private async refreshCorrectionEntry(
+    run: PayrollRun,
+    employeeId: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const baselineId = await this.resolveCorrectionBaselineId(run);
+    const [entry, paid, baselineManual, correctedManual] = await Promise.all([
+      this.prisma.payrollEntry.findFirst({
+        where: { runId: run.id, employeeId, companyId: ctx.companyId },
+      }),
+      this.prisma.payrollEntry.findFirst({
+        where: { runId: baselineId, employeeId, companyId: ctx.companyId, settlementOnly: false },
+      }),
+      this.manualOtPayByEmployee(baselineId),
+      this.manualOtPayByEmployee(run.id),
+    ]);
+    if (!entry) {
+      return;
+    }
+    const correctedNet = this.toNumber(entry.netPay);
+    const originalNet = paid ? this.toNumber(paid.netPay) : 0;
+    await this.prisma.payrollEntry.update({
+      where: { id: entry.id },
+      data: {
+        originalAmount: new Decimal(originalNet),
+        correctedAmount: new Decimal(correctedNet),
+        deltaAmount: new Decimal(this.round(correctedNet - originalNet)),
+      },
+    });
+    const lines = buildCorrectionLines(
+      correctionComponentAmounts(paid, baselineManual.get(employeeId) ?? ZERO_MANUAL_OT),
+      correctionComponentAmounts(
+        entry as unknown as CorrectionEntrySnapshot,
+        correctedManual.get(employeeId) ?? ZERO_MANUAL_OT,
+      ),
+    );
+    await this.prisma.payrollCorrectionLine.deleteMany({
+      where: { correctionRunId: run.id, employeeId },
+    });
+    await this.prisma.payrollCorrectionLine.createMany({
+      data: lines.map((line) => ({
+        companyId: ctx.companyId,
+        correctionRunId: run.id,
+        employeeId,
+        component: line.component,
+        sortOrder: line.sortOrder,
+        paidAmount: new Decimal(line.paidAmount),
+        correctedAmount: new Decimal(line.correctedAmount),
+        difference: new Decimal(line.difference),
+      })),
+    });
   }
 
   /**
@@ -3981,16 +4234,135 @@ export class PayrollRunService {
     });
   }
 
+  // ── Settlement-only rows ────────────────────────────────────────────────
+
+  /** A settlement-only row has no salary figures: only its settlement lines can change. */
+  private assertNotSettlementOnly(entry: { settlementOnly?: boolean | null }): void {
+    if (entry.settlementOnly) {
+      throw new BadRequestException(
+        'This is a settlement-only row: it has no salary to edit. Add or remove its settlement lines instead',
+      );
+    }
+  }
+
+  /**
+   * Keeps a REGULAR run's "Settlement only" rows in step with the company's
+   * reconciliation items: adds a zero-pay row for every employee / freelancer
+   * who is not otherwise in the run but has OPEN / PARTIALLY_SETTLED items or
+   * an undeclared STATUTORY_ONLY item, and removes a settlement-only row (with
+   * its lines) once nothing is left to settle. Rows are priced from their
+   * settlement lines only. Returns true when rows were added or removed.
+   * The caller refreshes run totals when it changed anything else too.
+   */
+  async syncSettlementOnlyEntries(
+    run: Pick<PayrollRun, 'id' | 'companyId' | 'type' | 'status'>,
+    ctx: ServiceContext,
+  ): Promise<boolean> {
+    if (run.type !== 'REGULAR' || !EDITABLE_RUN_STATUSES.includes(run.status)) {
+      return false;
+    }
+    const items = await this.prisma.payrollReconciliation.findMany({
+      where: { companyId: run.companyId, status: { in: ['OPEN', 'PARTIALLY_SETTLED'] } },
+      select: { employeeId: true, direction: true, status: true, statutoryRunId: true },
+    });
+    const entries = await this.prisma.payrollEntry.findMany({
+      where: { runId: run.id },
+      select: { id: true, employeeId: true, settlementOnly: true },
+    });
+    const plan = planSettlementOnlyRows(
+      employeeIdsNeedingSettlementRow(items),
+      entries.map((entry) => ({
+        id: entry.id,
+        employeeId: entry.employeeId,
+        settlementOnly: Boolean(entry.settlementOnly),
+      })),
+    );
+    if (plan.add.length === 0 && plan.remove.length === 0) {
+      return false;
+    }
+
+    if (plan.remove.length > 0) {
+      // Nothing left to settle: the row goes, and so do any lines copied onto it.
+      await this.prisma.$transaction(async (tx) => {
+        await tx.payrollAdjustmentLine.deleteMany({
+          where: {
+            payrollRunId: run.id,
+            companyId: run.companyId,
+            employeeId: { in: plan.remove.map((row) => row.employeeId) },
+          },
+        });
+        await tx.payrollEntry.deleteMany({
+          where: { id: { in: plan.remove.map((row) => row.id) } },
+        });
+      });
+    }
+
+    if (plan.add.length > 0) {
+      const people = await this.prisma.user.findMany({
+        where: { id: { in: plan.add }, companyId: run.companyId },
+        select: {
+          id: true,
+          employeeType: true,
+          bankName: true,
+          bankAccountNumber: true,
+        },
+      });
+      for (const person of people) {
+        const data: Prisma.PayrollEntryUncheckedCreateInput = {
+          id: randomUUID(),
+          companyId: run.companyId,
+          runId: run.id,
+          employeeId: person.id,
+          flag: 'NONE',
+          bankName: person.bankName,
+          bankAccountNumber: person.bankAccountNumber,
+          employeeCategory: person.employeeType,
+          settlementOnly: true,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        };
+        await this.prisma.payrollEntry.create({ data });
+        // Settlement lines already on the run (kept across a recalculation) price the row.
+        await this.applyAdjustmentLinesToEntry(run.id, person.id, ctx);
+      }
+    }
+    await this.updateRunTotals(run.id, ctx);
+    return true;
+  }
+
+  /**
+   * After a reconciliation item changes outside a run (waived, un-waived,
+   * receipt recorded), brings every editable regular run's settlement-only
+   * rows up to date. A submitted run that changes goes back to DRAFT.
+   */
+  async syncSettlementOnlyRows(ctx: ServiceContext): Promise<void> {
+    const runs = await this.prisma.payrollRun.findMany({
+      where: {
+        companyId: ctx.companyId,
+        type: 'REGULAR',
+        deletedAt: null,
+        status: { in: EDITABLE_RUN_STATUSES },
+      },
+    });
+    for (const run of runs) {
+      const changed = await this.syncSettlementOnlyEntries(run, ctx);
+      if (changed) {
+        await this.reopenIfInApproval(run, ctx);
+      }
+    }
+  }
+
   // ── Approval: claims and settlements ────────────────────────────────────
 
   /**
-   * The OT entries this run priced must still be exactly what it priced.
-   * Returns the ids approval will claim (for a correction, those not already
-   * claimed by an earlier run for the period).
+   * Splits priced OT into claimable (unchanged since this run calculated) and
+   * changed (edited, deleted, sheet no longer approved, or claimed elsewhere on
+   * a regular run). Approval claims only claimable ids — changed ones stay open
+   * for a later recalculation or correction.
    */
-  private async assertOvertimeUnchangedSinceCalculation(
+  private async resolveOvertimeClaimPlan(
     run: Pick<PayrollRun, 'id' | 'type'>,
-  ): Promise<string[]> {
+  ): Promise<{ claimableIds: string[]; changedIds: string[] }> {
     const entries = await this.prisma.payrollEntry.findMany({
       where: { runId: run.id },
       select: { includedOtEntryIds: true, createdAt: true },
@@ -4002,7 +4374,7 @@ export class PayrollRunService {
       }
     }
     if (calculatedAt.size === 0) {
-      return [];
+      return { claimableIds: [], changedIds: [] };
     }
     const rows = await this.prisma.overtimeEntry.findMany({
       where: { id: { in: [...calculatedAt.keys()] } },
@@ -4014,18 +4386,18 @@ export class PayrollRunService {
       },
     });
     const byId = new Map(rows.map((row) => [row.id, row]));
-    const claimable: string[] = [];
-    let changed = 0;
+    const claimableIds: string[] = [];
+    const changedIds: string[] = [];
     for (const [id, at] of calculatedAt) {
       const row = byId.get(id);
       if (!row) {
-        changed += 1;
+        changedIds.push(id);
         continue;
       }
       if (row.claimedByRunId) {
         // Corrections re-price OT an earlier run already paid; it stays claimed by it.
         if (run.type !== 'CORRECTION') {
-          changed += 1;
+          changedIds.push(id);
         }
         continue;
       }
@@ -4034,19 +4406,12 @@ export class PayrollRunService {
         row.sheet.deletedAt ||
         row.updatedAt.getTime() > at.getTime()
       ) {
-        changed += 1;
+        changedIds.push(id);
         continue;
       }
-      claimable.push(id);
+      claimableIds.push(id);
     }
-    if (changed > 0) {
-      throw new BadRequestException({
-        message: `${changed} overtime entr${changed === 1 ? 'y has' : 'ies have'} changed since this run was calculated. Recalculate the run before approving`,
-        error: 'OVERTIME_CHANGED_SINCE_CALCULATION',
-        details: { changedEntries: changed },
-      });
-    }
-    return claimable;
+    return { claimableIds, changedIds };
   }
 
   private async claimOvertimeEntries(
@@ -4099,9 +4464,10 @@ export class PayrollRunService {
             `Reconciliation item for ${item.forMonth}/${item.forYear} is already ${item.status.toLowerCase()}. Remove its line before approving`,
           );
         }
-        if (sum > reconciliationRemaining(amount, settled) + 0.005) {
+        const remaining = reconciliationRemaining(amount, settled);
+        if (sum > remaining + 0.005) {
           throw new BadRequestException(
-            `Lines settle ${sum.toFixed(2)} ETB but only ${reconciliationRemaining(amount, settled).toFixed(2)} ETB is still owed on a reconciliation item`,
+            `Amount exceeds the remaining balance of ${remaining.toFixed(2)} ETB.`,
           );
         }
       }
@@ -4235,6 +4601,31 @@ export class PayrollRunService {
       },
     });
     await this.writeStatutoryCarries(tx, run.id, items, ctx, true);
+  }
+
+  /**
+   * Items settled (fully or in part) by a receipt recorded outside payroll
+   * have no payroll line to carry their tax / pension differences. A regular
+   * run's approval declares them once, in full, like a statutory-only item;
+   * the item itself keeps the status the receipt gave it.
+   */
+  private async carryReceiptSettledItems(
+    tx: Prisma.TransactionClient,
+    run: Pick<PayrollRun, 'id' | 'companyId' | 'type'>,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    if (run.type !== 'REGULAR') {
+      return;
+    }
+    const items = await tx.payrollReconciliation.findMany({
+      where: {
+        companyId: run.companyId,
+        direction: { not: 'STATUTORY_ONLY' },
+        statutoryRunId: null,
+        receipts: { some: {} },
+      },
+    });
+    await this.writeStatutoryCarries(tx, run.id, items, ctx, false);
   }
 
   private async writeStatutoryCarries(
@@ -4450,6 +4841,7 @@ export class PayrollRunService {
         { includeFreelancerIds },
       );
       await this.persistEntryDrafts(drafts, ctx);
+      await this.syncSettlementOnlyEntries(fresh, ctx);
       await this.updateRunTotals(newRunId, ctx);
     }
 
@@ -4492,7 +4884,14 @@ export class PayrollRunService {
     fromRunId: string,
     toRunId: string,
     ctx: ServiceContext,
-    options: { keepReconciliationLinks: boolean },
+    options: {
+      keepReconciliationLinks: boolean;
+      /**
+       * Corrections compare the period's pay: settlement-only rows (and their
+       * lines) are payments of earlier corrections, not part of it.
+       */
+      skipSettlementOnly?: boolean;
+    },
   ): Promise<void> {
     const manualOt = await tx.payrollOtAdjustment.findMany({ where: { payrollRunId: fromRunId } });
     if (manualOt.length > 0) {
@@ -4514,7 +4913,19 @@ export class PayrollRunService {
       });
     }
 
-    const lines = await tx.payrollAdjustmentLine.findMany({ where: { payrollRunId: fromRunId } });
+    const settlementOnlyEmployeeIds = options.skipSettlementOnly
+      ? new Set(
+          (
+            await tx.payrollEntry.findMany({
+              where: { runId: fromRunId, settlementOnly: true },
+              select: { employeeId: true },
+            })
+          ).map((entry) => entry.employeeId),
+        )
+      : new Set<string>();
+    const lines = (
+      await tx.payrollAdjustmentLine.findMany({ where: { payrollRunId: fromRunId } })
+    ).filter((line) => !settlementOnlyEmployeeIds.has(line.employeeId));
     if (lines.length > 0) {
       await tx.payrollAdjustmentLine.createMany({
         data: lines.map((line) => ({
@@ -4530,6 +4941,9 @@ export class PayrollRunService {
           instalmentCount: options.keepReconciliationLinks ? line.instalmentCount : null,
           capOverrideReason: line.capOverrideReason,
           sourceLineId: line.id,
+          kindOverride: line.kindOverride,
+          taxableOverride: line.taxableOverride,
+          isCorrectionLine: line.isCorrectionLine,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
         })),
@@ -4626,21 +5040,30 @@ export class PayrollRunService {
    * stores corrected entries with original / corrected / delta net pay, and a
    * paid-vs-corrected line for every payroll component.
    */
-  private async rebuildCorrectionEntries(run: PayrollRun, ctx: ServiceContext): Promise<void> {
+  private async rebuildCorrectionEntries(
+    run: PayrollRun,
+    ctx: ServiceContext,
+    addedFreelancerIds: readonly string[] = [],
+  ): Promise<void> {
     const baselineId = await this.resolveCorrectionBaselineId(run);
+    // Freelancers HR added to this correction (missed payment) survive a rebuild.
+    const ownFreelancerIds = await this.includedFreelancerIds(run.id);
 
     await this.prisma.payrollCorrectionLine.deleteMany({ where: { correctionRunId: run.id } });
     await this.prisma.payrollSalaryPeriod.deleteMany({ where: { entry: { runId: run.id } } });
     await this.prisma.payrollEntry.deleteMany({ where: { runId: run.id } });
 
+    // Settlement-only rows pay earlier corrections, not the period's salary.
     const baselineEntries = await this.prisma.payrollEntry.findMany({
-      where: { runId: baselineId, companyId: ctx.companyId },
+      where: { runId: baselineId, companyId: ctx.companyId, settlementOnly: false },
     });
     const baselineByEmployee = new Map(baselineEntries.map((entry) => [entry.employeeId, entry]));
     const baselineManualOt = await this.manualOtPayByEmployee(baselineId);
 
     const includeFreelancerIds = new Set<string>([
       ...(await this.includedFreelancerIds(baselineId)),
+      ...ownFreelancerIds,
+      ...addedFreelancerIds,
       ...baselineEntries.map((entry) => entry.employeeId),
     ]);
     const drafts = await this.buildEntryDrafts(run, ctx, new Map(), { includeFreelancerIds });
@@ -4822,9 +5245,13 @@ export class PayrollRunService {
         adjustmentDeductions: true,
         netPay: true,
         includedOtEntryIds: true,
+        settlementOnly: true,
         employee: { select: { firstName: true, lastName: true, employeeId: true } },
       },
     });
+    const settlementOnlyIds = new Set(
+      entries.filter((entry) => entry.settlementOnly).map((entry) => entry.employeeId),
+    );
     const name = (employee: { firstName: string; lastName: string }): string =>
       `${employee.firstName} ${employee.lastName}`.trim();
     const employeeIds = entries.map((entry) => entry.employeeId);
@@ -4886,6 +5313,96 @@ export class PayrollRunService {
       }
     }
 
+    // Priced OT that no longer matches the calculation (or was not claimed).
+    const otPlan = await this.resolveOvertimeClaimPlan(run);
+    const changedIdSet = new Set(otPlan.changedIds);
+    // After approval, also treat priced entries this run never claimed as changed.
+    if (
+      run.status === 'APPROVED' ||
+      run.status === 'GM_APPROVED' ||
+      run.status === 'PAID'
+    ) {
+      const claimed = await this.prisma.overtimeEntry.findMany({
+        where: { claimedByRunId: run.id },
+        select: { id: true },
+      });
+      const claimedSet = new Set(claimed.map((row) => row.id));
+      for (const id of included) {
+        if (!claimedSet.has(id)) {
+          changedIdSet.add(id);
+        }
+      }
+    }
+    const overtimeChangedSinceCalculation: PayrollRunWarnings['overtimeChangedSinceCalculation'] =
+      [];
+    if (changedIdSet.size > 0) {
+      const changedRows = await this.prisma.overtimeEntry.findMany({
+        where: { id: { in: [...changedIdSet] } },
+        select: {
+          id: true,
+          totalHours: true,
+          sheet: {
+            select: {
+              id: true,
+              sheetNumber: true,
+              status: true,
+              employeeId: true,
+              employee: { select: { firstName: true, lastName: true, employeeId: true } },
+            },
+          },
+        },
+      });
+      const bySheet = new Map<
+        string,
+        {
+          sheetId: string;
+          sheetNumber: string;
+          sheetStatus: string;
+          employeeId: string;
+          employeeName: string;
+          employeeCode: string | null;
+          entries: number;
+          hours: number;
+        }
+      >();
+      for (const row of changedRows) {
+        const sheet = row.sheet;
+        const existing = bySheet.get(sheet.id);
+        const hours = this.toNumber(row.totalHours);
+        if (existing) {
+          existing.entries += 1;
+          existing.hours = this.round(existing.hours + hours);
+          continue;
+        }
+        bySheet.set(sheet.id, {
+          sheetId: sheet.id,
+          sheetNumber: sheet.sheetNumber,
+          sheetStatus: sheet.status,
+          employeeId: sheet.employeeId,
+          employeeName: name(sheet.employee),
+          employeeCode: sheet.employee.employeeId,
+          entries: 1,
+          hours: this.round(hours),
+        });
+      }
+      // Missing priced ids (deleted) still count toward the bar total via a synthetic row.
+      const foundIds = new Set(changedRows.map((row) => row.id));
+      const missing = [...changedIdSet].filter((id) => !foundIds.has(id)).length;
+      overtimeChangedSinceCalculation.push(...bySheet.values());
+      if (missing > 0) {
+        overtimeChangedSinceCalculation.push({
+          employeeId: '',
+          employeeName: 'Removed overtime',
+          employeeCode: null,
+          sheetId: 'removed',
+          sheetNumber: '-',
+          sheetStatus: 'REMOVED',
+          entries: missing,
+          hours: 0,
+        });
+      }
+    }
+
     const items =
       employeeIds.length === 0
         ? []
@@ -4914,7 +5431,7 @@ export class PayrollRunService {
       // One third of the salary earned this month (prorated basic).
       const wage = this.toNumber(entry.earnedSalary);
       const deductions = this.toNumber(entry.adjustmentDeductions);
-      if (deductions > 0 && exceedsDeductionCap(wage, deductions)) {
+      if (!entry.settlementOnly && deductions > 0 && exceedsDeductionCap(wage, deductions)) {
         deductionsOverCap.push({
           employeeId: entry.employeeId,
           employeeName: name(entry.employee),
@@ -4929,6 +5446,7 @@ export class PayrollRunService {
           employeeName: name(entry.employee),
           employeeCode: entry.employee.employeeId,
           netPay: this.toNumber(entry.netPay),
+          settlementOnly: Boolean(entry.settlementOnly),
         });
       }
     }
@@ -4937,6 +5455,7 @@ export class PayrollRunService {
       runId,
       pendingOvertime,
       overtimeNotIncluded,
+      overtimeChangedSinceCalculation,
       openReconciliations: items.map((item) => ({
         id: item.id,
         employeeId: item.employeeId,
@@ -4950,6 +5469,7 @@ export class PayrollRunService {
         ),
         forMonth: item.forMonth,
         forYear: item.forYear,
+        settlementOnly: settlementOnlyIds.has(item.employeeId),
       })),
       deductionsOverCap,
       negativeNetPay,

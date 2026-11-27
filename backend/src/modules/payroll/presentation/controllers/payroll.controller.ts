@@ -37,6 +37,8 @@ import {
   ReplacePayrollOtAdjustmentsDto,
   UpsertPayrollOtAdjustmentDto,
   CreatePayrollAdjustmentLineDto,
+  CreatePayrollCorrectionLineDto,
+  RecordPayrollReceiptDto,
   CreatePayrollAdjustmentTypeDto,
   ReopenPayrollRunDto,
   UpdatePayrollAdjustmentTypeDto,
@@ -420,6 +422,32 @@ export class PayrollController {
     return this.payrollRunService.markPaid(id, this.ctx(user));
   }
 
+  @Post('runs/:id/return-to-draft')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary:
+      'Return a SUBMITTED run (regular or correction) to DRAFT with a reason shown in History',
+  })
+  returnToDraft(
+    @Param('id') id: string,
+    @Body() dto: ReopenPayrollRunDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.returnToDraft(id, dto.reason, this.ctx(user));
+  }
+
+  @Post('runs/:id/withdraw')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary: 'Submitter withdraws a SUBMITTED run (regular or correction) back to DRAFT',
+  })
+  withdrawRun(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.withdrawRun(id, this.ctx(user));
+  }
+
   @Post('runs/:id/cancel')
   @RequireAnyPermission({ module: 'payroll', action: 'create' })
   @ApiOperation({ summary: 'Cancel a run (reusable month)' })
@@ -558,6 +586,20 @@ export class PayrollController {
     return this.payrollAdjustmentService.addLine(id, dto, this.ctx(user));
   }
 
+  @Post('runs/:id/correction-adjustments')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Add a manual correction line (missed bonus, severance, arrears, other) to an employee of a correction run; taxable lines reprice tax and pension (DRAFT / REVIEWED / SUBMITTED, audited)',
+  })
+  addCorrectionLine(
+    @Param('id') id: string,
+    @Body() dto: CreatePayrollCorrectionLineDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.addCorrectionLine(id, dto, this.ctx(user));
+  }
+
   @Delete('runs/:id/adjustments/:lineId')
   @RequireAnyPermission({ module: 'payroll', action: 'edit' })
   @ApiOperation({ summary: 'Remove an adjustment line and reprice the entry (audited)' })
@@ -615,6 +657,20 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollAdjustmentService.waive(id, dto.reason, this.ctx(user));
+  }
+
+  @Post('reconciliations/:id/receipt')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary:
+      'Record money received from an employee against an item owed to the company (amount, date, reference); settles the item',
+  })
+  recordReconciliationReceipt(
+    @Param('id') id: string,
+    @Body() dto: RecordPayrollReceiptDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.recordReceipt(id, dto, this.ctx(user));
   }
 
   @Post('reconciliations/:id/unwaive')

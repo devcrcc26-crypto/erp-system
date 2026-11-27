@@ -160,6 +160,8 @@ export interface PayrollEntryDetail {
   payslip?: PayrollEntryPayslip | null;
   /** Only returned to HR (payroll.edit). */
   hasOverride?: boolean;
+  /** Employee not otherwise in the run: only settlement lines and statutory carries, no salary. */
+  settlementOnly?: boolean;
 }
 
 export interface UpdatePayrollEntryDaysPayload {

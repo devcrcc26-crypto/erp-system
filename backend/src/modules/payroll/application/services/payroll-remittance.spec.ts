@@ -33,7 +33,11 @@ function store() {
 
   const withEmployee = (row: Row) => ({
     ...row,
-    employee: { firstName: 'Abebe', lastName: 'Kebede' },
+    employee: {
+      firstName: row.employeeFirstName ?? 'Abebe',
+      lastName: row.employeeLastName ?? 'Kebede',
+      employeeId: row.employeeNumber,
+    },
   });
 
   const prisma: Row = {
@@ -81,7 +85,12 @@ function store() {
           .filter((row) =>
             where.id
               ? where.id.in.includes(row.id)
-              : row.companyId === where.companyId &&
+              : where.receipts
+                ? row.companyId === where.companyId &&
+                  row.direction !== where.direction.not &&
+                  row.statutoryRunId === where.statutoryRunId &&
+                  (row.receipts?.length ?? 0) > 0
+                : row.companyId === where.companyId &&
                 row.direction === where.direction &&
                 row.status === where.status &&
                 row.statutoryRunId === where.statutoryRunId,
@@ -114,7 +123,11 @@ function store() {
           .filter((row) => row.payrollRunId === where.payrollRunId)
           .map((row) => ({
             ...row,
-            reconciliation: { employee: { firstName: 'Abebe', lastName: 'Kebede' } },
+            reconciliation: {
+              employee: withEmployee(
+                reconciliations.find((rec) => rec.id === row.reconciliationId) ?? {},
+              ).employee,
+            },
           })),
       deleteMany: async ({ where }: Row) => {
         const before = statutory.length;
@@ -456,5 +469,69 @@ describe('statutory-only corrections (zero net difference)', () => {
     expect(item).toMatchObject({ status: 'SETTLED', statutoryRunId: 'dec-v2' });
     expect(s.statutory).toHaveLength(1);
     expect((await s.remittance('dec-v2')).incomeTax.total).toBe(10250);
+  });
+});
+
+describe('settlement-only rows (employee not otherwise in the run)', () => {
+  const adaMensah = { employeeFirstName: 'Ada', employeeLastName: 'Mensah', employeeNumber: 'EMP-0042' };
+
+  it('ended contract: the settlement is paid and the statutory difference is declared once, with the employee number', async () => {
+    const s = store();
+    const item = await s.approveCorrection({ net: 525, tax: 120, emp: 35, emr: 55 });
+    Object.assign(item, adaMensah);
+
+    // December has a settlement-only row for Ada holding the settlement line.
+    await s.settleIn('dec', item.id, 525, 1);
+
+    const dec = await s.remittance('dec');
+    expect(dec.incomeTax.adjustments).toEqual([
+      expect.objectContaining({
+        amount: 120,
+        pending: false,
+        employeeCode: 'EMP-0042',
+        detail: 'Ada Mensah (EMP-0042)',
+      }),
+    ]);
+    expect(dec.incomeTax.total).toBe(10120);
+    expect(dec.pensionEmployee.total).toBe(2135);
+
+    // The next run does not declare it again.
+    await s.approveRegular('jan');
+    expect((await s.remittance('jan')).incomeTax.adjustments).toEqual([]);
+    expect(s.statutory).toHaveLength(1);
+    expect(item.status).toBe('SETTLED');
+  });
+
+  it('recovery settled by a recorded receipt: declared once by the next approved regular run', async () => {
+    const s = store();
+    const item = await s.approveCorrection({ net: -300, tax: -80, emp: -21, emr: -33 });
+    Object.assign(item, adaMensah);
+    expect(item.direction).toBe('OWED_TO_COMPANY');
+
+    // What PayrollAdjustmentService.recordReceipt leaves behind.
+    Object.assign(item, {
+      receipts: [{ amount: new Decimal(300), reference: 'TRF-0001' }],
+      settledAmount: new Decimal(300),
+      status: 'SETTLED',
+    });
+
+    await s.approveRegular('dec', false);
+    const preview = await s.remittance('dec');
+    expect(preview.incomeTax.adjustments).toEqual([
+      expect.objectContaining({ amount: -80, pending: true, employeeCode: 'EMP-0042' }),
+    ]);
+    expect(s.statutory).toHaveLength(0);
+
+    await s.service.approveRun('dec', ctx);
+    expect(s.statutory).toHaveLength(1);
+    expect(item.statutoryRunId).toBe('dec');
+    expect(item.status).toBe('SETTLED');
+    const dec = await s.remittance('dec');
+    expect(dec.incomeTax.total).toBe(9920);
+    expect(dec.incomeTax.adjustments[0].pending).toBe(false);
+
+    await s.approveRegular('jan');
+    expect((await s.remittance('jan')).incomeTax.adjustments).toEqual([]);
+    expect(s.statutory).toHaveLength(1);
   });
 });

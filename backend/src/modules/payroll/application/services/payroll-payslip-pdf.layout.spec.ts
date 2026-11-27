@@ -206,3 +206,43 @@ describe('payslip adjustment lines', () => {
     expect(text.indexOf('AFTER TAX')).toBeGreaterThan(gross);
   });
 });
+
+describe('settlement-only payslip', () => {
+  it('is marked as a final settlement and shows no salary, tax or pension rows', () => {
+    const lines = buildPayslipLines(
+      model({
+        employeeName: 'Ada Mensah',
+        settlementOnly: true,
+        paidDays: 0,
+        earnedSalary: 0,
+        netTopUp: 2500,
+        grossIncome: 0,
+        pensionEmployee: 0,
+        pensionEmployer: 0,
+        incomeTax: 0,
+        totalDeductions: 0,
+        netPay: 2500,
+        adjustmentLines: [
+          {
+            label: 'Net bonus - October 2026 correction',
+            amount: 2500,
+            kind: 'EARNING',
+            taxable: false,
+            systemField: 'NET_TOP_UP',
+            settlement: true,
+          },
+        ],
+      }),
+    );
+    const text = textOf(lines);
+    expect(text).toContain('FINAL SETTLEMENT');
+    expect(text).toContain('Final settlement / settlement only');
+    expect(text).toContain('Ada Mensah');
+    expect(text).toContain('Net bonus - October 2026 correction 2,500.00');
+    expect(text).toContain('NET SETTLEMENT / 实发结算 ETB 2,500.00');
+    expect(text).not.toContain('Basic salary');
+    expect(text).not.toContain('Income tax');
+    expect(text).not.toContain('GROSS');
+    expect(text).not.toContain('FROM EMPLOYEE');
+  });
+});

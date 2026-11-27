@@ -30,11 +30,14 @@ export interface OvertimeHours {
  * taxable / net bonus types, which use bonusTopUp / netTopUp). All amounts >= 0.
  */
 export interface PayrollAdjustmentTotals {
-  /** Earnings added to gross and taxable income before tax. */
+  /**
+   * Earnings added to gross and taxable income before tax. Negative when taxable
+   * manual correction deductions (owed to the company) outweigh taxable earnings.
+   */
   taxableEarnings: number;
   /** Earnings added to net pay after tax (not in gross, not taxed). */
   nonTaxableEarnings: number;
-  /** Earnings (taxable or not) added to the pension base. */
+  /** Earnings (taxable or not) added to the pension base; negative for pensionable taxable deductions. */
   pensionableEarnings: number;
   /** Deductions subtracted from net pay after tax (e.g. recoveries). */
   deductions: number;
@@ -176,9 +179,10 @@ export class PayrollCalculationService {
       settlementNonTaxable = 0,
       adjustments = ZERO_ADJUSTMENTS,
     } = input;
-    const adjustmentTaxable = this.round(Math.max(0, adjustments.taxableEarnings));
+    // Taxable / pensionable totals are signed: a taxable correction deduction lowers them.
+    const adjustmentTaxable = this.round(adjustments.taxableEarnings);
     const adjustmentNonTaxable = this.round(Math.max(0, adjustments.nonTaxableEarnings));
-    const adjustmentPensionable = this.round(Math.max(0, adjustments.pensionableEarnings));
+    const adjustmentPensionable = this.round(adjustments.pensionableEarnings);
     const adjustmentDeductions = this.round(Math.max(0, adjustments.deductions));
 
     const payrollDays = this.round(Math.max(0, payrollDaysInput));
@@ -232,19 +236,22 @@ export class PayrollCalculationService {
 
     // Tax is calculated once on the whole month's taxable income.
     const taxableIncome = this.round(
-      earnedSalary +
-        totalOtPay +
-        totalBonus +
-        taxableTransport +
-        settlementTaxable +
-        adjustmentTaxable,
+      Math.max(
+        0,
+        earnedSalary +
+          totalOtPay +
+          totalBonus +
+          taxableTransport +
+          settlementTaxable +
+          adjustmentTaxable,
+      ),
     );
 
     // Pension % of the pension base: earned salary plus adjustments flagged
     // pensionable (e.g. salary arrears). Bonuses, severance, OT and allowances
     // are never in it. Expatriates: caller sets pensionApplicable false;
     // freelancers always pay.
-    const pensionBase = earnedSalary + adjustmentPensionable;
+    const pensionBase = Math.max(0, earnedSalary + adjustmentPensionable);
     const pensionEmployee = pensionApplicable
       ? this.round(pensionBase * (policy.pensionEmployeePct / 100))
       : 0;

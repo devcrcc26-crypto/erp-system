@@ -11,6 +11,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -397,6 +398,66 @@ export class CreatePayrollAdjustmentLineDto {
   @IsString()
   @MaxLength(500)
   capOverrideReason?: string;
+}
+
+export class CreatePayrollCorrectionLineDto {
+  @ApiProperty()
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ description: 'Missed bonus, Severance pay, Salary arrears or Other' })
+  @IsUUID()
+  adjustmentTypeId!: string;
+
+  @ApiProperty({
+    enum: ['OWED_TO_EMPLOYEE', 'OWED_TO_COMPANY'],
+    description: 'Owed to the employee (earning) or owed to the company (deduction)',
+  })
+  @IsIn(['OWED_TO_EMPLOYEE', 'OWED_TO_COMPANY'])
+  direction!: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+
+  @ApiProperty({
+    enum: ['TAXABLE', 'NET'],
+    description:
+      'Taxable changes gross, taxable income, tax and pension; Net changes net pay only',
+  })
+  @IsIn(['TAXABLE', 'NET'])
+  treatment!: 'TAXABLE' | 'NET';
+
+  @ApiProperty({ description: 'Positive amount in ETB' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount!: number;
+
+  @ApiProperty({ description: 'Why the line is needed (required)' })
+  @IsString()
+  @MaxLength(500)
+  note!: string;
+}
+
+export class RecordPayrollReceiptDto {
+  @ApiProperty({ description: 'Amount received in ETB' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount!: number;
+
+  @ApiProperty({ description: 'Date received (YYYY-MM-DD)', example: '2026-11-27' })
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'receivedOn must be a date (YYYY-MM-DD)' })
+  receivedOn!: string;
+
+  @ApiProperty({ description: 'Receipt / transfer reference' })
+  @IsString()
+  @MaxLength(120)
+  reference!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }
 
 export class CreatePayrollAdjustmentTypeDto {

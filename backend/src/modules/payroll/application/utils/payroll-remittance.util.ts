@@ -68,6 +68,8 @@ export interface StatutoryCarryLine extends StatutoryDifferences {
   reconciliationId: string;
   employeeId: string;
   employeeName: string;
+  /** Employee number, so the declaration row can be matched to the employee. */
+  employeeCode?: string | null;
   forMonth: number;
   forYear: number;
   /** Instalments planned for the item when it is settled over several runs. */
@@ -81,6 +83,8 @@ export interface RemittanceLine {
   amount: number;
   /** e.g. employee name, and the "carried in full with instalment 1 of 3" note. */
   detail: string | null;
+  /** Employee number of the carried item (null for the run's own figure). */
+  employeeCode?: string | null;
   reconciliationId: string | null;
   pending: boolean;
 }
@@ -119,7 +123,16 @@ export function buildRemittance(
         return {
           label: `${kind} adjustment – ${correctionPeriodLabel(carry.forMonth, carry.forYear)}`,
           amount: round2(pick(carry)),
-          detail: [carry.employeeName, instalmentNote].filter(Boolean).join(' · ') || null,
+          detail:
+            [
+              carry.employeeCode
+                ? `${carry.employeeName} (${carry.employeeCode})`
+                : carry.employeeName,
+              instalmentNote,
+            ]
+              .filter(Boolean)
+              .join(' · ') || null,
+          employeeCode: carry.employeeCode ?? null,
           reconciliationId: carry.reconciliationId,
           pending: carry.pending,
         };

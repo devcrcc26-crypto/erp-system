@@ -116,6 +116,7 @@ const SHEET_DETAIL_INCLUDE = {
       siteAssignment: {
         select: { id: true, siteName: true, requestNumber: true },
       },
+      claimedByRun: { select: { runNumber: true } },
       documents: {
         where: { document: { deletedAt: null } },
         include: { document: { select: DOCUMENT_SELECT } },
@@ -631,6 +632,7 @@ export class OvertimeService
     const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const entry = await this.prisma.overtimeEntry.findFirst({
       where: { id: entryId, sheetId },
+      include: { claimedByRun: { select: { runNumber: true } } },
     });
     if (!entry) {
       throw new NotFoundException('Overtime entry not found');
@@ -900,6 +902,7 @@ export class OvertimeService
     const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const entry = await this.prisma.overtimeEntry.findFirst({
       where: { id: entryId, sheetId },
+      include: { claimedByRun: { select: { runNumber: true } } },
     });
     if (!entry) {
       throw new NotFoundException('Overtime entry not found');
@@ -1412,10 +1415,14 @@ export class OvertimeService
    * Entries a payroll run has claimed (paid) are locked for good: they cannot
    * be edited or deleted by anyone, HR included. New entries can still be added.
    */
-  private assertEntryNotClaimed(entry: { claimedByRunId: string | null }): void {
+  private assertEntryNotClaimed(entry: {
+    claimedByRunId: string | null;
+    claimedByRun?: { runNumber: string } | null;
+  }): void {
     if (entry.claimedByRunId) {
+      const runNumber = entry.claimedByRun?.runNumber;
       throw new BadRequestException(
-        'This overtime entry has been paid by payroll and is locked. Add a new entry instead',
+        `Locked in payroll${runNumber ? ` (${runNumber})` : ''}. Add a new entry instead`,
       );
     }
   }
@@ -1858,8 +1865,10 @@ export class OvertimeService
           .map((link) => link.document)
           .filter((doc): doc is Record<string, unknown> => Boolean(doc))
       : [];
+    const claimedByRun = row.claimedByRun as { runNumber?: string } | null | undefined;
     return {
       ...row,
+      claimedByRun: undefined,
       date:
         date instanceof Date
           ? this.formatDateOnly(date)
@@ -1887,6 +1896,8 @@ export class OvertimeService
           ?.siteName ?? null,
       /** Claimed by a payroll run: locked (no edit / delete). */
       paidByPayroll: Boolean(row.claimedByRunId),
+      /** Number of the payroll run that locked the entry (shown as "Locked in payroll (PR-xxxx)"). */
+      claimedByRunNumber: claimedByRun?.runNumber ?? null,
       documents,
     };
   }

@@ -108,6 +108,19 @@ export async function approvePayrollRun(
   return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/approve`, payload);
 }
 
+/** Sends a SUBMITTED run back to DRAFT (approver); the reason is recorded on the run. */
+export async function returnPayrollRunToDraft(
+  runId: string,
+  reason: string,
+): Promise<PayrollRunDetail> {
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/return-to-draft`, { reason });
+}
+
+/** The submitter takes a SUBMITTED run back to DRAFT. */
+export async function withdrawPayrollRun(runId: string): Promise<PayrollRunDetail> {
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/withdraw`);
+}
+
 export async function gmApprovePayrollRun(
   runId: string,
   payload: ApprovePayrollRunPayload = {},
@@ -231,6 +244,8 @@ export interface BankLetterPreview {
   totalNet: number;
   includedCount: number;
   excludedEmployees: Array<{ id: string; name: string }>;
+  /** Settlement-only rows with a negative net: collect the money (Record receipt); never in the letter. */
+  collectFromEmployees?: Array<{ id: string; name: string; amount: number }>;
   reason?: string | null;
 }
 

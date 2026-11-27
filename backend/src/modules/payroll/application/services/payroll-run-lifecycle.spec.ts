@@ -133,26 +133,36 @@ describe('approving a run', () => {
     );
   });
 
-  it('refuses when OT changed after the run was calculated', async () => {
+  it('approves when OT changed after calculation but leaves those entries unclaimed', async () => {
     const { service, prisma } = setup(baseRun(), {
-      entries: [{ includedOtEntryIds: ['ot-1'], createdAt: calculatedAt }],
+      entries: [{ includedOtEntryIds: ['ot-1', 'ot-2'], createdAt: calculatedAt }],
       overtime: [
         { id: 'ot-1', updatedAt: new Date('2026-11-03T00:00:00Z'), claimedByRunId: null, sheet: { status: 'APPROVED', deletedAt: null } },
+        { id: 'ot-2', updatedAt: new Date('2026-11-01T00:00:00Z'), claimedByRunId: null, sheet: { status: 'APPROVED', deletedAt: null } },
       ],
     });
 
-    await expect(service.approveRun('run-1', ctx)).rejects.toThrow(/Recalculate the run/);
-    expect(prisma.payrollRun.update).not.toHaveBeenCalled();
+    await service.approveRun('run-1', ctx);
+
+    expect(prisma.overtimeEntry.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['ot-2'] }, claimedByRunId: null },
+      data: { claimedByRunId: 'run-1', claimedAt: expect.any(Date) },
+    });
+    expect(prisma.payrollRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'APPROVED' }) }),
+    );
   });
 
-  it('refuses when a priced OT entry was already paid by another run', async () => {
-    const { service } = setup(baseRun(), {
+  it('skips priced OT already claimed by another run instead of blocking approval', async () => {
+    const { service, prisma } = setup(baseRun(), {
       entries: [{ includedOtEntryIds: ['ot-1'], createdAt: calculatedAt }],
       overtime: [
         { id: 'ot-1', updatedAt: new Date('2026-11-01T00:00:00Z'), claimedByRunId: 'other-run', sheet: { status: 'APPROVED', deletedAt: null } },
       ],
     });
-    await expect(service.approveRun('run-1', ctx)).rejects.toThrow(BadRequestException);
+    await service.approveRun('run-1', ctx);
+    expect(prisma.overtimeEntry.updateMany).not.toHaveBeenCalled();
+    expect(prisma.payrollRun.update).toHaveBeenCalled();
   });
 
   it('settles the reconciliation items its lines pay, and rejects over-settling', async () => {
@@ -178,7 +188,36 @@ describe('approving a run', () => {
       settlementLines: [{ reconciliationId: 'rec-1', amount: new Decimal(2500) }],
       reconciliation: item,
     });
-    await expect(tooMuch.service.approveRun('run-1', ctx)).rejects.toThrow(/only 2000.00 ETB is still owed/);
+    await expect(tooMuch.service.approveRun('run-1', ctx)).rejects.toThrow(
+      /Amount exceeds the remaining balance of 2000\.00 ETB/,
+    );
+  });
+
+  it('returns a submitted run to draft with a reason', async () => {
+    const { service, prisma } = setup(baseRun({ status: 'SUBMITTED', submittedBy: 'hr-2' }));
+    await service.returnToDraft('run-1', 'Figures need another look', ctx);
+    expect(prisma.payrollRun.update).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: expect.objectContaining({
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        reopenReason: 'Figures need another look',
+        reopenedBy: ctx.userId,
+      }),
+    });
+  });
+
+  it('lets the submitter withdraw a submitted run to draft', async () => {
+    const { service, prisma } = setup(baseRun({ status: 'SUBMITTED', submittedBy: ctx.userId }));
+    await service.withdrawRun('run-1', ctx);
+    expect(prisma.payrollRun.update).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: expect.objectContaining({
+        status: 'DRAFT',
+        reopenReason: 'Withdrawn by submitter',
+      }),
+    });
   });
 
   it('a correction run creates one reconciliation item per changed net pay', async () => {

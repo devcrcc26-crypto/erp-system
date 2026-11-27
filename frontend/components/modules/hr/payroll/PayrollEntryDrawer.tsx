@@ -16,6 +16,7 @@ import {
   parsePayrollMoney,
   payrollFlagLabelKey,
 } from '@/lib/utils/payroll-display';
+import { entryNetAdjustments } from '@/lib/utils/payroll-entry-detail';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const KEY = 'hr.payroll.entryDrawer';
@@ -96,6 +97,8 @@ export default function PayrollEntryDrawer({
   const deductions = entry
     ? parsePayrollMoney(entry.incomeTax) + parsePayrollMoney(entry.pensionEmployee)
     : 0;
+  // Net bonuses and after-tax adjustment lines: gross - tax - pension +/- this = net.
+  const adjustments = entry ? entryNetAdjustments(entry) : 0;
 
   return (
     <Drawer
@@ -183,6 +186,17 @@ export default function PayrollEntryDrawer({
                 <span>{t(`${KEY}.deductions`)}</span>
                 <strong>{formatPayrollMoney(deductions, { emptyZero: false })}</strong>
               </div>
+              {adjustments !== 0 ? (
+                <>
+                  <span className="erp-pe-paybar-op" aria-hidden>
+                    {adjustments > 0 ? '+' : '−'}
+                  </span>
+                  <div>
+                    <span>{t(`${KEY}.adjustments`)}</span>
+                    <strong>{formatPayrollMoney(Math.abs(adjustments), { emptyZero: false })}</strong>
+                  </div>
+                </>
+              ) : null}
               <span className="erp-pe-paybar-op" aria-hidden>=</span>
               <div className="is-net">
                 <span>

@@ -2,6 +2,7 @@ import {
   adjustmentLineLabel,
   adjustmentTotalsFromLines,
   deductionCap,
+  effectiveLineTreatment,
   exceedsDeductionCap,
   reconciliationRemaining,
   reconciliationStatusFor,
@@ -114,3 +115,65 @@ describe('reconciliation settlement', () => {
     ).toBe('Other');
   });
 });
+
+describe('manual correction line treatment', () => {
+  const type = { typeKind: 'EARNING' as const, typeTaxable: true, typePensionable: true, systemField: null };
+
+  it('takes direction and treatment from the line, falling back to the type', () => {
+    expect(
+      effectiveLineTreatment({ ...type, kindOverride: null, taxableOverride: null }),
+    ).toEqual({ kind: 'EARNING', taxable: true, pensionable: true, taxableDeduction: false });
+    expect(
+      effectiveLineTreatment({ ...type, kindOverride: 'DEDUCTION', taxableOverride: true }),
+    ).toEqual({ kind: 'DEDUCTION', taxable: true, pensionable: true, taxableDeduction: true });
+  });
+
+  it('never makes a net line pensionable, and ignores overrides on built-in bonus types', () => {
+    expect(
+      effectiveLineTreatment({ ...type, kindOverride: 'EARNING', taxableOverride: false }),
+    ).toMatchObject({ taxable: false, pensionable: false });
+    expect(
+      effectiveLineTreatment({
+        typeKind: 'EARNING',
+        typeTaxable: true,
+        typePensionable: false,
+        systemField: 'BONUS_TOP_UP',
+        kindOverride: 'DEDUCTION',
+        taxableOverride: false,
+      }),
+    ).toEqual({ kind: 'EARNING', taxable: true, pensionable: false, taxableDeduction: false });
+  });
+
+  it('a taxable deduction reduces taxable (and pensionable) earnings; a net deduction stays after tax', () => {
+    const totals = adjustmentTotalsFromLines([
+      earning(1000, true, true),
+      {
+        amount: 400,
+        kind: 'DEDUCTION',
+        taxable: true,
+        pensionable: true,
+        systemField: null,
+        taxableDeduction: true,
+      },
+      { amount: 250, kind: 'DEDUCTION', taxable: false, pensionable: false, systemField: null },
+    ]);
+    expect(totals.adjustments).toEqual({
+      taxableEarnings: 600,
+      nonTaxableEarnings: 0,
+      pensionableEarnings: 600,
+      deductions: 250,
+    });
+    const onlyDeduction = adjustmentTotalsFromLines([
+      {
+        amount: 400,
+        kind: 'DEDUCTION',
+        taxable: true,
+        pensionable: false,
+        systemField: null,
+        taxableDeduction: true,
+      },
+    ]);
+    expect(onlyDeduction.adjustments.taxableEarnings).toBe(-400);
+  });
+});
+

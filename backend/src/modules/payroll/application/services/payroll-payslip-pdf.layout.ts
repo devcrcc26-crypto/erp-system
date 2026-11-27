@@ -64,6 +64,11 @@ export interface PayslipPdfModel {
    * bonusTopUp / netTopUp and carry systemField.
    */
   adjustmentLines?: PayslipAdjustmentLine[];
+  /**
+   * The employee was not otherwise in the run: the payslip only shows what was
+   * settled (a final settlement) and no salary, tax or pension.
+   */
+  settlementOnly?: boolean;
   /** When set, payslip is a correction slip for a locked month. */
   correction?: {
     originalAmount: number;
@@ -191,6 +196,9 @@ function sanitizeFileToken(value: string): string {
  * Overtime rows with zero hours and a zero bonus top-up are omitted.
  */
 export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
+  if (model.settlementOnly) {
+    return buildSettlementOnlyLines(model);
+  }
   const isCorrection = Boolean(model.correction);
   const lines: PayslipLine[] = [
     {
@@ -428,6 +436,63 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
       ? 'This correction payslip is system-generated.'
       : 'This payslip is system-generated.',
   });
+  return lines;
+}
+
+/**
+ * Final settlement slip: the employee had no pay in this run, only amounts
+ * settled from earlier corrections. No salary, overtime, tax or pension rows.
+ */
+function buildSettlementOnlyLines(model: PayslipPdfModel): PayslipLine[] {
+  const lines: PayslipLine[] = [
+    { kind: 'brand', left: 'CRCC Ethiopia Branch', right: 'FINAL SETTLEMENT / 最终结算单' },
+    {
+      kind: 'right',
+      text: `Final settlement / settlement only — ${formatPayslipMonth(model.month, model.year)}`,
+    },
+    { kind: 'rule' },
+    {
+      kind: 'pair',
+      left: `Employee / 员工:  ${model.employeeName}`,
+      right: `ID / 工号: ${model.employeeCode || '-'}`,
+    },
+    {
+      kind: 'pair',
+      left: `Bank / 银行: ${model.bankName || '-'}`,
+      right: `Account / 账号: ${model.bankAccountMasked || '-'}`,
+    },
+    { kind: 'rule' },
+    { kind: 'section', label: 'SETTLEMENT / 结算', trailing: 'Amount (ETB)' },
+  ];
+
+  const adjustments = model.adjustmentLines ?? [];
+  const settled = adjustments.filter((line) => line.settlement);
+  const shown = settled.length > 0 ? settled : adjustments;
+  for (const line of shown) {
+    lines.push({
+      kind: 'amount',
+      indent: 1,
+      label: line.label,
+      amount: line.kind === 'DEDUCTION' ? `-${formatEtb(line.amount)}` : formatEtb(line.amount),
+    });
+  }
+
+  lines.push({ kind: 'rule' });
+  lines.push({
+    kind: 'net',
+    label: 'NET SETTLEMENT / 实发结算',
+    amount: `ETB ${formatEtb(model.netPay)}`,
+  });
+  lines.push({ kind: 'rule' });
+  lines.push({
+    kind: 'note',
+    text: 'Salary, tax and pension of the original month were declared in its own run. / 原月份的工资、税和养老金已在当月工资单中申报。',
+  });
+  lines.push({
+    kind: 'note',
+    text: `Run ${model.runNumber} · Generated ${formatGeneratedDate(model.generatedAt)}`,
+  });
+  lines.push({ kind: 'note', text: 'This payslip is system-generated.' });
   return lines;
 }
 
