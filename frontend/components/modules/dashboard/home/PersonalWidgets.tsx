@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import {
   CalendarCheck2,
-  CalendarDays,
   ClipboardCheck,
   FileClock,
   Inbox,
@@ -17,7 +16,6 @@ import { addisParts, daysUntil } from '@/lib/dashboard/addis-time';
 import { useApprovalRequests } from '@/lib/query/approvals';
 import { useMyAttendance } from '@/lib/query/attendance';
 import { useMyEvaluations, usePendingMyAction } from '@/lib/query/evaluation';
-import { useMyLeaveBalances } from '@/lib/query/leave';
 import { useCurrentOvertimeSheet } from '@/lib/query/overtime';
 import {
   approvalRequestStatusVariant,
@@ -26,7 +24,6 @@ import {
 } from '@/lib/utils/approval-display';
 import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
 import { EVALUATION_STATUS_BADGE } from '@/lib/utils/evaluation-status';
-import { formatLeaveType } from '@/lib/utils/leave-display';
 import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
 import {
   formatOvertimeHours,
@@ -159,58 +156,9 @@ export function MyRequestsWidget({ enabled }: { enabled: boolean }): React.React
 
 /** Remaining days for each leave type the employee holds a balance for. */
 export function LeaveBalanceWidget({ enabled }: { enabled: boolean }): React.ReactNode {
-  const { t, locale } = useEpcTranslation();
   // TODO: re-enable when leave balances are verified
-  const query = useMyLeaveBalances({ enabled: false && enabled });
-  const leaveYearLabel = query.data?.[0]?.year ?? addisParts().year;
-  const balances = (query.data ?? []).filter(
-    (balance) =>
-      balance.entitled + balance.broughtForward > 0 || balance.remaining > 0,
-  );
-
-  return (
-    <OverviewCard
-      title={t(`${HOME}.leaveBalance.title`)}
-      icon={<CalendarDays size={18} strokeWidth={1.9} />}
-      tone="ok"
-      viewAllHref="/hr/leave-requests"
-      query={query}
-      // TODO: re-enable when leave balances are verified
-      isEmpty
-      emptyState={
-        <OverviewEmptyState
-          icon={CalendarDays}
-          title={t('hr.leave.balanceUpdatingNotice')}
-        />
-      }
-    >
-      {/* TODO: re-enable when leave balances are verified */}
-      {false ? (
-        <ul className="m-0 flex flex-col p-0">
-          {balances.map((balance) => (
-            <li
-              key={`${balance.year}-${balance.leaveType}`}
-              className="flex list-none items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0 last:pb-0"
-            >
-              <span className="truncate text-sm font-medium text-slate-800">
-                {formatLeaveType(balance.leaveType, t)}
-              </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
-                {t(`${HOME}.leaveBalance.daysLeft`, {
-                  days: formatCount(balance.remaining, locale),
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <OverviewEmptyState
-          icon={CalendarDays}
-          title={t(`${HOME}.leaveBalance.empty`, { year: leaveYearLabel })}
-        />
-      )}
-    </OverviewCard>
-  );
+  void enabled;
+  return null;
 }
 
 /**

@@ -46,6 +46,15 @@ Work through this before deploying to production. Each item says how to check it
   - `npx ts-node --transpile-only prisma/seed-work-schedule-permissions.ts`: gives Employee (and leads, HR, GM/MD) `wfh.view` / `wfh.create`. Without it, Work From Home is missing from New Request and employees get 403 on submit. On 2026-10-29 the local dev DB had no `wfh` grants for Employee.
   - `npx ts-node --transpile-only prisma/scripts/grant-new-request-create-permissions.ts`: New Request `create` grants for all roles, and limits Vehicle Refueling to Driver / HR Officer / HR Manager / System Administrator. On 2026-10-29 the local dev DB still let Employee create refueling requests.
 
+## Security
+
+- [ ] **Vehicle write permissions re-seeded.** Fixed in code 2026-11-27: vehicle and asset write endpoints no longer skip their `vehicles.edit` / `assets.edit` check (`@DelegatePermissionCheck()` removed; covered by `src/shared/permissions/write-endpoint-permissions.spec.ts`), and asset `initiate-return` is limited to the assignee or `assets.edit`. The old vehicle seed also gave **every role** `canCreate`/`canEdit` on the `vehicles.view` row, and flags merge across a module's rows, so every role still effectively holds `vehicles.edit` in an existing database. Run the corrected seed on each database: `cd backend && npx ts-node --transpile-only prisma/seed-vehicle-permissions.ts` (idempotent; sample vehicles are skipped when they exist). Done when only HR roles (HR Assistant, HR Officer, HR Manager, Local HR Manager) and System Administrators can add, edit or delete a vehicle; everyone else gets 403.
+- [ ] **Review remaining delegated write handlers.** `attendance.controller.ts` and `leave.controller.ts` also combine `@DelegatePermissionCheck()` with `@Require*Permission`, which the guard ignores. Confirm each service checks ownership or permission (employee-contract writes do, via `assertCanManage`).
+
+## Backlog (not launch blockers)
+
+- **Server-side page checks.** The session token lives in browser storage, so the Next.js proxy only sees the `erp-authenticated=1` flag cookie and cannot verify a session or permission. The API is the security boundary; frontend route checks (`frontend/lib/permissions/route-access.ts`) only control what renders. Real server-side checks need the backend to issue the session as an HttpOnly cookie. Accepted for launch on 2026-11-27.
+
 ## Environment
 
 - [ ] **File storage reachable from the backend process.** Upload an attachment in any module.

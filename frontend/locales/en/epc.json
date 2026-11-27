@@ -192,6 +192,12 @@
     }
   },
   "pages": {
+    "unauthorized": {
+      "title": "Access denied",
+      "heading": "You don't have permission to view this page",
+      "description": "Your account doesn't include access to this page. If you think you need it, ask your HR or system administrator.",
+      "backToDashboard": "Back to dashboard"
+    },
     "users": {
       "new": "Add Employee",
       "detail": "Employee Detail",

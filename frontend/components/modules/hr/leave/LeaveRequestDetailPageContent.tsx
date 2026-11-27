@@ -483,7 +483,8 @@ export default function LeaveRequestDetailPageContent({
             </DetailSection>
           ) : null}
 
-          {request.balance ? (
+          {/* TODO: re-enable when leave balances are verified — also show for employees */}
+          {canViewHr && request.balance ? (
             <DetailSection title={t('hr.section.leaveBalance')}>
               <div className="erp-leave-balance-grid">
                 <div className="erp-leave-balance-tile">

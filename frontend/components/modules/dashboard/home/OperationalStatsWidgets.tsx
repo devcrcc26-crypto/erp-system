@@ -244,13 +244,7 @@ export function DashboardKpiStrip({ enabled }: { enabled: boolean }): React.Reac
   const site = personal.upcomingSiteAssignment;
   return (
     <ul className="dv2-kpi-strip" aria-label={t(`${STATS}.personal.title`)}>
-      {/* TODO: re-enable when leave balances are verified */}
-      <KpiTile
-        icon={CalendarDays}
-        label={t(`${STATS}.personal.leaveBalance`)}
-        value="—"
-        hint={t('hr.leave.balanceUpdatingNotice')}
-      />
+      {/* TODO: re-enable when leave balances are verified — restore leave balance KpiTile */}
       <KpiTile
         icon={Timer}
         label={t(`${STATS}.personal.otHours`)}

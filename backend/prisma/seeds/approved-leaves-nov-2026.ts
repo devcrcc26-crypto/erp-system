@@ -139,10 +139,11 @@ const PAPER_APPROVED_LEAVES: PaperApprovedLeaveSeed[] = [
     leaveType: LeaveType.ANNUAL,
     startDate: '2026-11-16',
     endDate: '2026-11-27',
-    days: 10.5,
+    /** Schedule-aware: 16–26 = 9.5 working days + 27 morning = 10. */
+    days: 10,
     approvalDate: '2026-11-10',
     periods: [
-      { startDate: '2026-11-16', endDate: '2026-11-26', days: 10, dayPortion: LeaveDayPortion.FULL },
+      { startDate: '2026-11-16', endDate: '2026-11-26', days: 9.5, dayPortion: LeaveDayPortion.FULL },
       { startDate: '2026-11-27', endDate: '2026-11-27', days: 0.5, dayPortion: LeaveDayPortion.MORNING },
     ],
   },

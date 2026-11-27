@@ -7,6 +7,8 @@ import { Breadcrumb } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
+import { canAccessRoute } from '@/lib/permissions/route-access';
+import { useAuthStore } from '@/stores/auth.store';
 
 /**
  * Splits route crumbs into navigable parents and the current page label.
@@ -29,6 +31,8 @@ export function splitBreadcrumbTrail(segments: readonly BreadcrumbSegment[]): {
 
 /**
  * Full route breadcrumb trail, including the current page as the last item.
+ * A parent the session cannot open (see `canAccessRoute`) is shown as plain
+ * text, never as a link.
  */
 export default function Breadcrumbs({
   segments,
@@ -36,6 +40,8 @@ export default function Breadcrumbs({
   segments: readonly BreadcrumbSegment[];
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const capabilities = useAuthStore((state) => state.capabilities);
+  const ready = useAuthStore((state) => state.capabilitiesReady);
 
   if (segments.length === 0) {
     return null;
@@ -56,7 +62,7 @@ export default function Breadcrumbs({
       };
     }
 
-    if (!segment.href) {
+    if (!segment.href || !canAccessRoute(segment.href, { capabilities, ready })) {
       return {
         key: `${segment.label}-${index}`,
         title: (

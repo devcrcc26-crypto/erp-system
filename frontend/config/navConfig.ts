@@ -40,6 +40,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/profile': 'nav.profile',
   '/profile/evaluations': 'profile.tabEvaluations',
   '/notifications': 'nav.notifications',
+  '/unauthorized': 'pages.unauthorized.title',
   '/audit-logs': 'nav.auditLogs',
   '/departments': 'pages.departments.title',
   '/positions': 'pages.positions.title',

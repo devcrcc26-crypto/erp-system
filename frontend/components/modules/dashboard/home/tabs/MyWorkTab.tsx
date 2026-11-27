@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert } from 'antd';
 import { FileClock, MapPin, MapPinOff, Timer } from 'lucide-react';
 import { useCanAccessOvertime } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -34,12 +33,7 @@ export default function MyWorkTab({ enabled }: { enabled: boolean }): React.Reac
 
   return (
     <div className="flex flex-col gap-5">
-      {/* TODO: re-enable when leave balances are verified */}
-      <Alert
-        type="info"
-        showIcon
-        title={t('hr.leave.balanceUpdatingNotice')}
-      />
+      {/* TODO: re-enable when leave balances are verified — restore leave balance notice/metric */}
       <MetricStrip query={query} label={t(`${STATS}.personal.title`)} columns={2}>
         <OverviewStatCard
           index={0}

@@ -192,6 +192,12 @@
     }
   },
   "pages": {
+    "unauthorized": {
+      "title": "无权访问",
+      "heading": "您没有权限查看此页面",
+      "description": "您的账户无权访问此页面。如需访问，请联系人力资源部或系统管理员。",
+      "backToDashboard": "返回仪表板"
+    },
     "users": {
       "new": "添加员工",
       "detail": "员工详情",

@@ -227,8 +227,7 @@ export default function EmployeeLeaveProfileSection({
     return '/profile?tab=leave';
   }, [isSelf, targetEmployeeId]);
 
-  // TODO: re-enable when leave balances are verified
-  // Employee self-service hides balances until HR finishes recalculation.
+  // TODO: re-enable when leave balances are verified — also fetch for isSelf
   const balancesQuery = useMyLeaveBalances(
     {
       ...(selectedPeriod
@@ -240,6 +239,7 @@ export default function EmployeeLeaveProfileSection({
       sectionEnabled &&
       (selectedPeriod != null || !periodsLoading),
   );
+  const showBalances = !isSelf;
 
   const myHistoryQuery = useMyLeaveRequestsAll({}, isSelf);
   const employeeHistoryQuery = useLeaveRequestsAll(
@@ -475,54 +475,50 @@ export default function EmployeeLeaveProfileSection({
 
   return (
     <div className="erp-leave-profile">
-      <LeaveProfileSection
-        title={t('hr.section.leaveBalance')}
-        action={periodControl}
-      >
-        {isSelf ? (
-          // TODO: re-enable when leave balances are verified
-          <Alert
-            type="info"
-            showIcon
-            title={t('hr.leave.balanceUpdatingNotice')}
-          />
-        ) : balancesError ? (
-          <Alert type="error" showIcon title={errorMessage(balancesError)} />
-        ) : balancesLoading ? (
-          <div className="flex justify-center py-10">
-            <Spin />
-          </div>
-        ) : periodOptions.length === 0 && !periodsLoading ? (
-          <Alert
-            type="info"
-            showIcon
-            title={t('hr.leave.noContractPeriods')}
-          />
-        ) : displayBalances.length === 0 ? (
-          <Alert type="info" showIcon title={t('hr.leave.noBalance')} />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {leaveYearRange ? (
-              <p className="erp-leave-balance-year m-0">
-                {t('hr.leave.leaveYearRange', {
-                  start: formatProjectDate(leaveYearRange.start),
-                  end: formatProjectDate(leaveYearRange.end),
-                })}
-              </p>
-            ) : null}
-            <div className="erp-leave-balance-grid">
-              {displayBalances.map(({ leaveType, balance }) => (
-                <BalanceTile
-                  key={leaveType}
-                  leaveType={leaveType}
-                  label={formatLeaveType(leaveType, t)}
-                  balance={balance}
-                />
-              ))}
+      {/* TODO: re-enable when leave balances are verified — also show for isSelf */}
+      {showBalances ? (
+        <LeaveProfileSection
+          title={t('hr.section.leaveBalance')}
+          action={periodControl}
+        >
+          {balancesError ? (
+            <Alert type="error" showIcon title={errorMessage(balancesError)} />
+          ) : balancesLoading ? (
+            <div className="flex justify-center py-10">
+              <Spin />
             </div>
-          </div>
-        )}
-      </LeaveProfileSection>
+          ) : periodOptions.length === 0 && !periodsLoading ? (
+            <Alert
+              type="info"
+              showIcon
+              title={t('hr.leave.noContractPeriods')}
+            />
+          ) : displayBalances.length === 0 ? (
+            <Alert type="info" showIcon title={t('hr.leave.noBalance')} />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {leaveYearRange ? (
+                <p className="erp-leave-balance-year m-0">
+                  {t('hr.leave.leaveYearRange', {
+                    start: formatProjectDate(leaveYearRange.start),
+                    end: formatProjectDate(leaveYearRange.end),
+                  })}
+                </p>
+              ) : null}
+              <div className="erp-leave-balance-grid">
+                {displayBalances.map(({ leaveType, balance }) => (
+                  <BalanceTile
+                    key={leaveType}
+                    leaveType={leaveType}
+                    label={formatLeaveType(leaveType, t)}
+                    balance={balance}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </LeaveProfileSection>
+      ) : null}
 
       <LeaveProfileSection
         title={t('hr.leave.historyTitle')}

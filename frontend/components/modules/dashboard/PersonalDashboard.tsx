@@ -102,11 +102,7 @@ export default function PersonalDashboard({
         </h1>
       </div>
 
-      {/* TODO: re-enable when leave balances are verified */}
-      <div className="erp-pro-card rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-        <span className="font-medium">{t(`${PERSONAL}.annualLeave`)}:</span>{' '}
-        {t('hr.leave.balanceUpdatingNotice')}
-      </div>
+      {/* TODO: re-enable when leave balances are verified — restore annual leave balance card */}
 
       <div className="erp-users-stat-bar erp-dashboard-stat-bar--4">
         <StatCard

@@ -208,7 +208,8 @@ export default function LeaveHistoryPageContent({
     !isSelf && employeeEnabled && allowed,
   );
 
-  const myBalancesQuery = useMyLeaveBalances(year, isSelf && allowed);
+  // TODO: re-enable when leave balances are verified — also fetch for isSelf / non-HR
+  const myBalancesQuery = useMyLeaveBalances(year, false);
   const employeeBalancesQuery = useLeaveBalances(
     {
       page: 1,
@@ -218,10 +219,8 @@ export default function LeaveHistoryPageContent({
     },
     !isSelf && employeeEnabled && canViewHr && allowed,
   );
-  const ownBalancesAsEmployeeQuery = useMyLeaveBalances(
-    year,
-    Boolean(isOwnEmployeePage && !canViewHr && allowed),
-  );
+  const ownBalancesAsEmployeeQuery = useMyLeaveBalances(year, false);
+  const showBalances = canViewHr && !isSelf;
 
   const myHistoryQuery = useMyLeaveRequestsAll({}, isSelf && allowed);
   const employeeHistoryQuery = useLeaveRequestsAll(
@@ -530,90 +529,96 @@ export default function LeaveHistoryPageContent({
             </p>
           </div>
         </div>
-        <div className="erp-users-stat-bar erp-employees-hero-stats">
-          {[
-            { label: t('hr.table.year'), value: String(year) },
-            {
-              label: t('hr.leaveType.ANNUAL'),
-              value:
-                annual != null
-                  ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
-                  : '-',
-            },
-            ...(parental?.balance
-              ? [
-                  {
-                    label: t(`hr.leaveType.${parental.leaveType}`),
-                    value: `${parental.balance.remaining} / ${parental.balance.entitled + parental.balance.broughtForward}`,
-                  },
-                ]
-              : []),
-          ].map((item) => (
-            <div key={item.label} className="erp-users-stat">
-              <div className="min-w-0 text-left">
-                <p className="erp-users-stat-label">{item.label}</p>
-                <p className="erp-users-stat-value">{item.value}</p>
+        {/* TODO: re-enable when leave balances are verified — also show for isSelf / non-HR */}
+        {showBalances ? (
+          <div className="erp-users-stat-bar erp-employees-hero-stats">
+            {[
+              { label: t('hr.table.year'), value: String(year) },
+              {
+                label: t('hr.leaveType.ANNUAL'),
+                value:
+                  annual != null
+                    ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
+                    : '-',
+              },
+              ...(parental?.balance
+                ? [
+                    {
+                      label: t(`hr.leaveType.${parental.leaveType}`),
+                      value: `${parental.balance.remaining} / ${parental.balance.entitled + parental.balance.broughtForward}`,
+                    },
+                  ]
+                : []),
+            ].map((item) => (
+              <div key={item.label} className="erp-users-stat">
+                <div className="min-w-0 text-left">
+                  <p className="erp-users-stat-label">{item.label}</p>
+                  <p className="erp-users-stat-value">{item.value}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </section>
 
-      <div className="erp-pro-card erp-employees-list-card">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
-            <span aria-hidden className="erp-employees-card-icon">
-              <Wallet size={18} />
-            </span>
-            <h3 className="erp-pro-card-toolbar-title">
-              {t('hr.section.leaveBalance')}
-            </h3>
+      {/* TODO: re-enable when leave balances are verified — also show for isSelf / non-HR */}
+      {showBalances ? (
+        <div className="erp-pro-card erp-employees-list-card">
+          <div className="erp-pro-card-toolbar erp-users-toolbar">
+            <div className="erp-users-toolbar-title flex min-w-0 items-center gap-3">
+              <span aria-hidden className="erp-employees-card-icon">
+                <Wallet size={18} />
+              </span>
+              <h3 className="erp-pro-card-toolbar-title">
+                {t('hr.section.leaveBalance')}
+              </h3>
+            </div>
+            <div className="erp-users-toolbar-actions flex items-center gap-2">
+              <span
+                className="text-xs"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {t('hr.table.year')}
+              </span>
+              <InputNumber
+                min={2000}
+                max={2100}
+                value={year}
+                onChange={(value) => {
+                  if (typeof value === 'number') {
+                    setYear(value);
+                  }
+                }}
+                size="small"
+                style={{ width: 96 }}
+              />
+            </div>
           </div>
-          <div className="erp-users-toolbar-actions flex items-center gap-2">
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('hr.table.year')}
-            </span>
-            <InputNumber
-              min={2000}
-              max={2100}
-              value={year}
-              onChange={(value) => {
-                if (typeof value === 'number') {
-                  setYear(value);
-                }
-              }}
-              size="small"
-              style={{ width: 96 }}
-            />
+          <div className="p-4">
+            {balancesError ? (
+              <Alert
+                type="error"
+                showIcon
+                title={errorMessage(balancesError)}
+              />
+            ) : balancesLoading ? (
+              <div className="flex justify-center py-8">
+                <Spin />
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {displayBalances.map(({ leaveType, balance }) => (
+                  <BalanceTile
+                    key={leaveType}
+                    label={formatLeaveType(leaveType, t)}
+                    balance={balance}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
-        <div className="p-4">
-          {balancesError ? (
-            <Alert
-              type="error"
-              showIcon
-              title={errorMessage(balancesError)}
-            />
-          ) : balancesLoading ? (
-            <div className="flex justify-center py-8">
-              <Spin />
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {displayBalances.map(({ leaveType, balance }) => (
-                <BalanceTile
-                  key={leaveType}
-                  label={formatLeaveType(leaveType, t)}
-                  balance={balance}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      ) : null}
 
       <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">

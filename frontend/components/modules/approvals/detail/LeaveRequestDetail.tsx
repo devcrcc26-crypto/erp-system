@@ -356,28 +356,31 @@ export default function LeaveRequestDetail({
         </>
       )}
 
-      <SectionCard
-        title={t('hr.section.leaveBalance')}
-        bodyClassName="px-3 py-4 sm:px-5"
-      >
-        {balance ? (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4">
-            <MetaItem label={t('hr.labels.entitled')}>{balance.entitled}</MetaItem>
-            <MetaItem label={t('hr.labels.broughtForward')}>
-              {balance.broughtForward}
-            </MetaItem>
-            <MetaItem label={t('hr.labels.used')}>{balance.used}</MetaItem>
-            <MetaItem label={t('hr.labels.pending')}>{balance.pending}</MetaItem>
-            <MetaItem label={t('hr.labels.remaining')}>
-              <Typography.Text strong>{balance.remaining}</Typography.Text>
-            </MetaItem>
-          </div>
-        ) : (
-          <Typography.Text type="secondary">
-            Balance unavailable for this leave type.
-          </Typography.Text>
-        )}
-      </SectionCard>
+      {/* TODO: re-enable when leave balances are verified — also show for non-HR approvers */}
+      {canManage ? (
+        <SectionCard
+          title={t('hr.section.leaveBalance')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
+          {balance ? (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4">
+              <MetaItem label={t('hr.labels.entitled')}>{balance.entitled}</MetaItem>
+              <MetaItem label={t('hr.labels.broughtForward')}>
+                {balance.broughtForward}
+              </MetaItem>
+              <MetaItem label={t('hr.labels.used')}>{balance.used}</MetaItem>
+              <MetaItem label={t('hr.labels.pending')}>{balance.pending}</MetaItem>
+              <MetaItem label={t('hr.labels.remaining')}>
+                <Typography.Text strong>{balance.remaining}</Typography.Text>
+              </MetaItem>
+            </div>
+          ) : (
+            <Typography.Text type="secondary">
+              Balance unavailable for this leave type.
+            </Typography.Text>
+          )}
+        </SectionCard>
+      ) : null}
     </div>
   );
 }
