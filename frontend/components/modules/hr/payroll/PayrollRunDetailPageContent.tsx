@@ -4,7 +4,6 @@ import './payroll-v2.css';
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Alert,
   Button,
   Checkbox,
   Dropdown,
@@ -20,6 +19,7 @@ import {
   Steps,
   Switch,
   Table,
+  Tabs,
   Tag,
   Tooltip,
 } from 'antd';
@@ -44,9 +44,15 @@ import {
 import dayjs from 'dayjs';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import PayrollCorrectionDrawer from '@/components/modules/hr/payroll/PayrollCorrectionDrawer';
+import PayrollRunAdjustmentsTab from '@/components/modules/hr/payroll/PayrollRunAdjustmentsTab';
+import PayrollRunHistoryTab from '@/components/modules/hr/payroll/PayrollRunHistoryTab';
+import PayrollRunWarningsBar, {
+  type PayrollRunTab,
+} from '@/components/modules/hr/payroll/PayrollRunWarningsBar';
 import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import PayrollEntryDrawer from '@/components/modules/hr/payroll/PayrollEntryDrawer';
-import { buildOtBreakdownLines } from '@/lib/utils/payroll-entry-detail';
 import PayrollAttendanceToggle from '@/components/modules/hr/payroll/PayrollAttendanceToggle';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
@@ -92,8 +98,12 @@ import {
   useUpdatePayrollRun,
   useReleasePayslips,
   useSubmitPayrollRun,
-  useUnlockPayrollRun,
 } from '@/lib/query/payroll';
+import {
+  usePayrollRunHistory,
+  usePayrollRunWarnings,
+  useReopenPayrollRun,
+} from '@/lib/query/payroll-adjustments';
 import {
   countEntryFlags,
   formatPayrollMoney,
@@ -205,24 +215,17 @@ function buildContractLines(row: PayrollEntryDetail): ContractLine[] | null {
   });
 }
 
-function SplitCell({
-  lines,
-  value,
-  total,
-}: {
-  lines: ContractLine[];
-  value: (line: ContractLine) => React.ReactNode;
-  total: React.ReactNode;
-}): React.ReactNode {
+/**
+ * Net effect of a run's adjustment lines on an entry: bonus and net top-ups
+ * and other earnings, less deductions.
+ */
+function entryAdjustmentsTotal(entry: PayrollEntryDetail): number {
   return (
-    <div className="erp-pr-split">
-      {lines.map((line) => (
-        <div key={line.key} className="erp-pr-split-line" title={line.title}>
-          {value(line)}
-        </div>
-      ))}
-      <div className="erp-pr-split-line erp-pr-split-total">{total}</div>
-    </div>
+    parsePayrollMoney(entry.bonusTopUp) +
+    parsePayrollMoney(entry.netTopUp) +
+    parsePayrollMoney(entry.adjustmentTaxable ?? 0) +
+    parsePayrollMoney(entry.adjustmentNonTaxable ?? 0) -
+    parsePayrollMoney(entry.adjustmentDeductions ?? 0)
   );
 }
 
@@ -295,7 +298,7 @@ export default function PayrollRunDetailPageContent({
   const markPaidMutation = useMarkPayrollRunPaid(runId);
   const cancelMutation = useCancelPayrollRun(runId);
   const createCorrectionMutation = useCreatePayrollCorrection(runId);
-  const unlockMutation = useUnlockPayrollRun(runId);
+  const reopenMutation = useReopenPayrollRun(runId);
   const generatePayslipsMutation = useGeneratePayslips(runId);
   const releasePayslipsMutation = useReleasePayslips(runId);
   const addFreelancersMutation = useAddPayrollFreelancers(runId);
@@ -311,7 +314,11 @@ export default function PayrollRunDetailPageContent({
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [correctionNote, setCorrectionNote] = useState('');
-  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+  const [activeTab, setActiveTab] = useState<PayrollRunTab>('summary');
+  const warningsQuery = usePayrollRunWarnings(runId, canAccess && (canCreate || canEdit || canApprove));
+  const historyQuery = usePayrollRunHistory(runId, canAccess);
   const [submitAcknowledge, setSubmitAcknowledge] = useState(false);
   // Submit / HR approve / GM approve need an explicit review of employment-flagged entries.
   const reviewStep =
@@ -474,24 +481,13 @@ export default function PayrollRunDetailPageContent({
     const sum = (pick: (e: PayrollEntryDetail) => number) =>
       filteredEntries.reduce((acc, e) => acc + pick(e), 0);
     return {
-      basicSalary: sum((e) => parsePayrollMoney(e.basicSalary)),
-      earnedSalary: sum((e) => parsePayrollMoney(e.earnedSalary)),
-      totalOtPay: sum((e) => parsePayrollMoney(e.totalOtPay)),
-      transport: sum((e) =>
-        parsePayrollMoney(e.taxableTransport) + parsePayrollMoney(e.nonTaxableTransport),
-      ),
-      bonus: sum((e) =>
-        parsePayrollMoney(e.monthlyBonus) + parsePayrollMoney(e.bonusTopUp),
-      ),
-      netBonus: sum(
-        (e) =>
-          parsePayrollMoney(e.contractNetBonus) + parsePayrollMoney(e.netTopUp),
-      ),
       gross: sum((e) => parsePayrollMoney(e.grossIncome)),
-      taxable: sum((e) => parsePayrollMoney(e.taxableIncome)),
       pension: sum((e) => parsePayrollMoney(e.pensionEmployee)),
       tax: sum((e) => parsePayrollMoney(e.incomeTax)),
+      adjustments: sum(entryAdjustmentsTotal),
       net: sum((e) => parsePayrollMoney(e.netPay)),
+      original: sum((e) => parsePayrollMoney(e.originalAmount ?? 0)),
+      delta: sum((e) => parsePayrollMoney(e.deltaAmount ?? 0)),
     };
   }, [filteredEntries]);
 
@@ -687,18 +683,32 @@ export default function PayrollRunDetailPageContent({
     }
   }
 
+  const [correctionEntryId, setCorrectionEntryId] = useState<string | null>(null);
+  const openEntry = useCallback(
+    (entryId: string): void => {
+      if (run?.type === 'CORRECTION') {
+        setCorrectionEntryId(entryId);
+      } else {
+        setSelectedEntry(entryId);
+      }
+    },
+    [run?.type, setSelectedEntry, setCorrectionEntryId],
+  );
+
   const contractLinesById = useMemo(
     () => new Map(filteredEntries.map((e) => [e.id, buildContractLines(e)])),
     [filteredEntries],
   );
 
+  // Essentials only; the full component breakdown is in the entry drawer
+  // (correction runs: the paid vs corrected drawer).
   const columns: ColumnsType<PayrollEntryDetail> = useMemo(
     () => [
       {
         title: t('hr.payroll.entry.employee'),
         key: 'employee',
         fixed: 'left',
-        width: 220,
+        width: 240,
         className: 'erp-payroll-col-employee',
         render: (_, row) => {
           const lines = contractLinesById.get(row.id);
@@ -724,309 +734,95 @@ export default function PayrollRunDetailPageContent({
           );
         },
       },
-      {
-        title: (
-          <Tooltip title={t('hr.payroll.entry.paidDaysBasis')}>
-            <span>{t('hr.payroll.entry.paidDays')}</span>
-          </Tooltip>
-        ),
-        key: 'paidDays',
-        width: 128,
-        align: 'right',
-        render: (_, row) => {
-          const lines = contractLinesById.get(row.id);
-          const total = (
-            <>
-              <Tooltip
-                title={t('hr.payroll.entry.paidDaysTooltip', {
-                  employed: parsePayrollMoney(row.employedDays),
-                  absent: parsePayrollMoney(row.absentDays),
-                  paid: parsePayrollMoney(row.payrollDays),
-                })}
-              >
-                <span className="erp-payroll-num">{parsePayrollMoney(row.payrollDays)}</span>
-              </Tooltip>
-              {row.hasOverride ? (
-                <Tag color="orange" className="erp-payroll-edited-tag">
-                  {t('hr.payroll.entry.daysOverride.edited')}
-                </Tag>
-              ) : null}
-            </>
-          );
-          if (!lines) {
-            return total;
-          }
-          return (
-            <SplitCell
-              lines={lines}
-              value={(line) => (
-                <>
-                  <span className="erp-pr-split-tag">{line.label}</span>
-                  <span className="erp-payroll-num">{line.days}</span>
-                </>
-              )}
-              total={total}
-            />
-          );
-        },
-      },
-      {
-        title: t('hr.payroll.entry.groupEarnings'),
-        key: 'earnings',
-        children: [
-          {
-            title: t('hr.payroll.entry.basic'),
-            dataIndex: 'basicSalary',
-            align: 'right',
-            width: 112,
-            className: 'erp-payroll-col-group-start',
-            render: (v, row) => {
-              const lines = contractLinesById.get(row.id);
-              if (!lines) {
-                return <MoneyCell value={v} />;
-              }
-              return (
-                <SplitCell
-                  lines={lines}
-                  value={(line) => <MoneyCell value={line.basic} />}
-                  total={<span aria-hidden="true" />}
-                />
-              );
+      ...(isCorrectionRun
+        ? [
+            {
+              title: t('hr.payroll.correctionLines.paid'),
+              dataIndex: 'originalAmount' as const,
+              align: 'right' as const,
+              width: 130,
+              render: (v: MoneyField | null | undefined) => <MoneyCell value={v ?? 0} />,
             },
-          },
-          {
-            title: t('hr.payroll.entry.earned'),
-            dataIndex: 'earnedSalary',
-            align: 'right',
-            width: 112,
-            render: (v, row) => {
-              const lines = contractLinesById.get(row.id);
-              if (!lines) {
-                return <MoneyCell value={v} />;
-              }
-              return (
-                <SplitCell
-                  lines={lines}
-                  value={(line) => <MoneyCell value={line.earned} />}
-                  total={<MoneyCell value={v} strong />}
-                />
-              );
+            {
+              title: t('hr.payroll.correctionLines.corrected'),
+              dataIndex: 'netPay' as const,
+              align: 'right' as const,
+              width: 130,
+              render: (v: MoneyField) => <MoneyCell value={v} />,
             },
-          },
-          {
-            title: t('hr.payroll.entry.otPay'),
-            dataIndex: 'totalOtPay',
-            align: 'right',
-            width: 108,
-            render: (v, row) => {
-              const lines = contractLinesById.get(row.id);
-              const otLines = buildOtBreakdownLines(row);
-              const otBasic = formatPayrollMoney(row.basicSalary, {
-                emptyZero: false,
-              });
-              const total = (
-                <Tooltip
-                  title={
-                    otLines.length > 0 ? (
-                      <div className="text-xs">
-                        {otLines.map((line) => (
-                          <div key={line.key}>
-                            {t(line.labelKey, {
-                              hours: line.hours,
-                              basic: otBasic,
-                            })}
-                            : {formatPayrollMoney(line.pay, { emptyZero: false })}
-                          </div>
-                        ))}
-                      </div>
-                    ) : undefined
-                  }
-                >
+            {
+              title: t('hr.payroll.correctionLines.netDifference'),
+              dataIndex: 'deltaAmount' as const,
+              align: 'right' as const,
+              width: 140,
+              className: 'erp-payroll-col-net',
+              render: (v: MoneyField | null | undefined) => {
+                const value = parsePayrollMoney(v ?? 0);
+                return (
                   <span
-                    style={{ ...PAYROLL_MONEY_CELL_STYLE, fontWeight: lines ? 600 : undefined }}
+                    className={`erp-payroll-num${Math.abs(value) >= 0.005 ? ' font-semibold' : ' erp-payroll-num--muted'}`}
                   >
-                    {formatPayrollMoney(v)}
+                    {value > 0 ? '+' : value < 0 ? '−' : ''}
+                    {formatPayrollMoney(Math.abs(value), { emptyZero: false })}
                   </span>
-                </Tooltip>
-              );
-              if (!lines) {
-                return total;
-              }
-              return (
-                <SplitCell
-                  lines={lines}
-                  value={(line) => <MoneyCell value={line.ot} />}
-                  total={total}
-                />
-              );
+                );
+              },
             },
-          },
-          {
-            title: t('hr.payroll.entry.transport'),
-            key: 'transport',
-            align: 'right',
-            width: 108,
-            render: (_, row) => {
-              const lines = contractLinesById.get(row.id);
-              const value =
-                parsePayrollMoney(row.taxableTransport) +
-                parsePayrollMoney(row.nonTaxableTransport);
-              if (!lines) {
-                return <MoneyCell value={value} />;
-              }
-              return (
-                <SplitCell
-                  lines={lines}
-                  value={(line) => <MoneyCell value={line.transport} />}
-                  total={<MoneyCell value={value} strong />}
-                />
-              );
+          ]
+        : [
+            {
+              title: t('hr.payroll.entry.gross'),
+              dataIndex: 'grossIncome' as const,
+              align: 'right' as const,
+              width: 130,
+              className: 'erp-payroll-col-gross',
+              render: (v: MoneyField) => <MoneyCell value={v} />,
             },
-          },
-          {
-            title: t('hr.payroll.entry.bonus'),
-            key: 'bonus',
-            align: 'right',
-            width: 120,
-            render: (_, row) => {
-              const lines = contractLinesById.get(row.id);
-              const topUp = parsePayrollMoney(row.bonusTopUp);
-              const value = parsePayrollMoney(row.monthlyBonus) + topUp;
-              const total = (
-                <span
-                  style={{ ...PAYROLL_MONEY_CELL_STYLE, fontWeight: lines ? 600 : undefined }}
-                >
-                  {formatPayrollMoney(value)}
-                  {topUp > 0 ? (
-                    <Tooltip
-                      title={row.bonusTopUpReason || t('hr.payroll.entry.bonusTopUpAmount')}
-                    >
-                      <span className="erp-payroll-topup-mark">*</span>
-                    </Tooltip>
-                  ) : null}
-                </span>
-              );
-              if (!lines) {
-                return total;
-              }
-              return (
-                <SplitCell
-                  lines={lines}
-                  value={(line) => <MoneyCell value={line.bonus} />}
-                  total={total}
-                />
-              );
+            {
+              title: t('hr.payroll.entry.pensionEmp'),
+              dataIndex: 'pensionEmployee' as const,
+              align: 'right' as const,
+              width: 116,
+              render: (v: MoneyField) => <MoneyCell value={v} />,
             },
-          },
-          {
-            title: t('hr.payroll.entry.gross'),
-            dataIndex: 'grossIncome',
-            align: 'right',
-            width: 116,
-            className: 'erp-payroll-col-gross',
-            render: (v) => <MoneyCell value={v} strong />,
-          },
-        ],
-      },
-      {
-        title: t('hr.payroll.entry.groupTax'),
-        key: 'taxGroup',
-        children: [
-          {
-            title: t('hr.payroll.entry.taxable'),
-            dataIndex: 'taxableIncome',
-            align: 'right',
-            width: 116,
-            className: 'erp-payroll-col-group-start',
-            render: (v) => <MoneyCell value={v} />,
-          },
-          {
-            title: t('hr.payroll.entry.pensionEmp'),
-            dataIndex: 'pensionEmployee',
-            align: 'right',
-            width: 108,
-            render: (v) => <MoneyCell value={v} />,
-          },
-          {
-            title: t('hr.payroll.entry.tax'),
-            dataIndex: 'incomeTax',
-            align: 'right',
-            width: 108,
-            render: (v) => <MoneyCell value={v} />,
-          },
-        ],
-      },
-      {
-        title: t('hr.payroll.entry.groupPay'),
-        key: 'payGroup',
-        children: [
-          {
-            title: t('hr.payroll.entry.netBonus'),
-            key: 'netBonus',
-            align: 'right',
-            width: 112,
-            className: 'erp-payroll-col-group-start',
-            render: (_, row) => {
-              const contractNet = parsePayrollMoney(row.contractNetBonus);
-              const oneTime = parsePayrollMoney(row.netTopUp);
-              const total = contractNet + oneTime;
-              return (
-                <span style={PAYROLL_MONEY_CELL_STYLE}>
-                  {formatPayrollMoney(total)}
-                  {oneTime > 0 ? (
-                    <Tooltip title={row.netTopUpReason || t('hr.payroll.entry.netTopUpAmount')}>
-                      <span className="erp-payroll-topup-mark">*</span>
-                    </Tooltip>
-                  ) : null}
-                </span>
-              );
+            {
+              title: t('hr.payroll.entry.tax'),
+              dataIndex: 'incomeTax' as const,
+              align: 'right' as const,
+              width: 116,
+              render: (v: MoneyField) => <MoneyCell value={v} />,
             },
-          },
-          {
-            title: t('hr.payroll.entry.net'),
-            dataIndex: 'netPay',
-            align: 'right',
-            width: 124,
-            className: 'erp-payroll-col-net',
-            render: (v) => <MoneyCell value={v} strong />,
-          },
-          ...(isCorrectionRun
-            ? [
-                {
-                  title: t('hr.payroll.correction.originalAmount'),
-                  dataIndex: 'originalAmount' as const,
-                  align: 'right' as const,
-                  width: 112,
-                  render: (v: MoneyField | null | undefined) => (
-                    <MoneyCell value={v ?? 0} />
-                  ),
-                },
-                {
-                  title: t('hr.payroll.correction.correctedAmount'),
-                  dataIndex: 'correctedAmount' as const,
-                  align: 'right' as const,
-                  width: 112,
-                  render: (v: MoneyField | null | undefined) => (
-                    <MoneyCell value={v ?? 0} />
-                  ),
-                },
-                {
-                  title: t('hr.payroll.correction.deltaAmount'),
-                  dataIndex: 'deltaAmount' as const,
-                  align: 'right' as const,
-                  width: 112,
-                  render: (v: MoneyField | null | undefined) => (
-                    <MoneyCell value={v ?? 0} strong />
-                  ),
-                },
-              ]
-            : []),
-        ],
-      },
+            {
+              title: t('hr.payroll.adjustments.column'),
+              key: 'adjustments',
+              align: 'right' as const,
+              width: 124,
+              render: (_: unknown, row: PayrollEntryDetail) => {
+                const value = entryAdjustmentsTotal(row);
+                if (Math.abs(value) < 0.005) {
+                  return <span className="erp-payroll-num erp-payroll-num--muted">-</span>;
+                }
+                return (
+                  <span className="erp-payroll-num">
+                    {value > 0 ? '+' : '−'}
+                    {formatPayrollMoney(Math.abs(value), { emptyZero: false })}
+                  </span>
+                );
+              },
+            },
+            {
+              title: t('hr.payroll.entry.net'),
+              dataIndex: 'netPay' as const,
+              align: 'right' as const,
+              width: 136,
+              className: 'erp-payroll-col-net',
+              render: (v: MoneyField) => <MoneyCell value={v} strong />,
+            },
+          ]),
       {
         title: t('hr.payroll.entry.flag'),
         dataIndex: 'flag',
-        width: 120,
+        width: 130,
         render: (flag: PayrollEntryFlag) =>
           flag === 'NONE' ? (
             '-'
@@ -1081,7 +877,7 @@ export default function PayrollRunDetailPageContent({
               })}
               onClick={(event) => {
                 event.stopPropagation();
-                setSelectedEntry(row.id);
+                openEntry(row.id);
               }}
             />
           </Tooltip>
@@ -1094,7 +890,7 @@ export default function PayrollRunDetailPageContent({
       openingPayslipId,
       contractLinesById,
       isCorrectionRun,
-      setSelectedEntry,
+      openEntry,
     ],
   );
 
@@ -1165,7 +961,7 @@ export default function PayrollRunDetailPageContent({
             ghost
             icon={<RightOutlined />}
             iconPlacement="end"
-            onClick={() => setSelectedEntry(entry.id)}
+            onClick={() => openEntry(entry.id)}
           >
             {t('hr.payroll.detail.showDetails')}
           </Button>
@@ -1184,21 +980,30 @@ export default function PayrollRunDetailPageContent({
       content: <MoneyCell value={value} strong />,
       align: 'right',
     });
+    const signedMoney = (value: number): { content: React.ReactNode; align: 'right' } => ({
+      content: (
+        <strong className="erp-payroll-num">
+          {value > 0 ? '+' : value < 0 ? '−' : ''}
+          {formatPayrollMoney(Math.abs(value), { emptyZero: false })}
+        </strong>
+      ),
+      align: 'right',
+    });
     return [
       { content: <strong>{t('hr.payroll.entry.totals')}</strong> },
-      {},
-      money(totals.basicSalary),
-      money(totals.earnedSalary),
-      money(totals.totalOtPay),
-      money(totals.transport),
-      money(totals.bonus),
-      money(totals.gross),
-      money(totals.taxable),
-      money(totals.pension),
-      money(totals.tax),
-      money(totals.netBonus),
-      { ...money(totals.net), className: 'erp-payroll-col-net' },
-      ...(isCorrectionRun ? [{}, {}, {}] : []),
+      ...(isCorrectionRun
+        ? [
+            money(totals.original),
+            money(totals.net),
+            { ...signedMoney(totals.delta), className: 'erp-payroll-col-net' },
+          ]
+        : [
+            money(totals.gross),
+            money(totals.pension),
+            money(totals.tax),
+            signedMoney(totals.adjustments),
+            { ...money(totals.net), className: 'erp-payroll-col-net' },
+          ]),
       {},
       ...(showPayslipColumn ? [{}] : []),
       {},
@@ -1380,11 +1185,24 @@ export default function PayrollRunDetailPageContent({
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
       add('submit', t('hr.payroll.actions.submit'), 'submit', 'primary');
     }
-    if (
-      (status === 'SUBMITTED' || status === 'APPROVED' || status === 'GM_APPROVED') &&
-      canCreate
-    ) {
+    // Recalculating sends a submitted run back to draft. An approved run can't
+    // be recalculated or deleted: it is reopened as a new version.
+    if (status === 'SUBMITTED' && canCreate) {
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
+    }
+    if ((status === 'APPROVED' || status === 'GM_APPROVED') && (canApprove || isSysAdmin)) {
+      buttons.push(
+        <Button
+          key="reopen"
+          onClick={() => {
+            setReopenReason('');
+            setReopenModalOpen(true);
+          }}
+          loading={reopenMutation.isPending}
+        >
+          {t('hr.payroll.reopen.action')}
+        </Button>,
+      );
     }
     if (status === 'SUBMITTED' && (canApprove || isSysAdmin)) {
       add('approve', t('hr.payroll.actions.approve'), 'approve', 'primary');
@@ -1399,15 +1217,6 @@ export default function PayrollRunDetailPageContent({
       return null;
     }
     if (isLockedRegular && canManageCorrections) {
-      buttons.push(
-        <Button
-          key="unlock"
-          onClick={() => setUnlockModalOpen(true)}
-          loading={unlockMutation.isPending}
-        >
-          {t('hr.payroll.actions.unlockRun')}
-        </Button>,
-      );
       buttons.push(
         <Button
           key="correction"
@@ -1443,7 +1252,7 @@ export default function PayrollRunDetailPageContent({
   if (!canAccess) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
-        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+        <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
@@ -1478,7 +1287,7 @@ export default function PayrollRunDetailPageContent({
   ) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
-        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+        <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
@@ -1486,12 +1295,99 @@ export default function PayrollRunDetailPageContent({
   if (!run) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
-        <Alert type="error" showIcon title={t('hr.payroll.detail.notFound')} />
+        <ErpNotice tone="error" title={t('hr.payroll.detail.notFound')} />
       </div>
     );
   }
 
   const confirmMeta = confirmAction ? confirmCopy(confirmAction) : null;
+  const nextVersionId =
+    historyQuery.data?.versions.find((version) => version.previousVersionId === run.id)?.id ??
+    null;
+  const warnings = warningsQuery.data;
+  const followUpPanel =
+    (warnings &&
+      (warnings.pendingOvertime.length > 0 ||
+        warnings.overtimeNotIncluded.length > 0 ||
+        warnings.deductionsOverCap.length > 0)) ||
+    run.attendanceSnapshotStale ||
+    run.policyReviewRequired ? (
+      <section className="erp-pro-card erp-payroll-panel erp-payroll-followup">
+        {run.attendanceSnapshotStale ? (
+          <ErpNotice
+            tone="warning"
+            title={
+              run.status === 'DRAFT' || run.status === 'REVIEWED'
+                ? t('hr.payroll.actions.attendanceStaleDraft')
+                : t('hr.payroll.actions.attendanceStaleApproved')
+            }
+          />
+        ) : null}
+        {run.policyReviewRequired ? (
+          <ErpNotice
+            tone="warning"
+            title={t('hr.payroll.actions.policyReviewRequired')}
+            description={run.policyReviewNote ?? undefined}
+          />
+        ) : null}
+        {warnings && warnings.pendingOvertime.length > 0 ? (
+          <div className="erp-payroll-followup-group">
+            <h4 className="erp-payroll-followup-title">{t('hr.payroll.warnings.pendingOvertimeTitle')}</h4>
+            <p className="erp-payroll-muted-note">{t('hr.payroll.warnings.pendingOvertimeHint')}</p>
+            <ul className="erp-payroll-followup-list">
+              {warnings.pendingOvertime.map((row) => (
+                <li key={row.sheetId}>
+                  <span className="truncate">
+                    {row.employeeName}
+                    {row.employeeCode ? ` · ${row.employeeCode}` : ''}
+                  </span>
+                  <span className="erp-payroll-muted-note">
+                    {row.sheetNumber} ·{' '}
+                    {t('hr.payroll.warnings.entriesHours', { entries: row.entries, hours: row.hours })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {warnings && warnings.overtimeNotIncluded.length > 0 ? (
+          <div className="erp-payroll-followup-group">
+            <h4 className="erp-payroll-followup-title">{t('hr.payroll.warnings.notIncludedTitle')}</h4>
+            <p className="erp-payroll-muted-note">{t('hr.payroll.warnings.notIncludedHint')}</p>
+            <ul className="erp-payroll-followup-list">
+              {warnings.overtimeNotIncluded.map((row) => (
+                <li key={row.sheetId}>
+                  <span className="truncate">
+                    {row.employeeName}
+                    {row.employeeCode ? ` · ${row.employeeCode}` : ''}
+                  </span>
+                  <span className="erp-payroll-muted-note">
+                    {row.sheetNumber} ·{' '}
+                    {t('hr.payroll.warnings.entriesHours', { entries: row.entries, hours: row.hours })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {warnings && warnings.deductionsOverCap.length > 0 ? (
+          <div className="erp-payroll-followup-group">
+            <h4 className="erp-payroll-followup-title">{t('hr.payroll.warnings.deductionsTitle')}</h4>
+            <ul className="erp-payroll-followup-list">
+              {warnings.deductionsOverCap.map((row) => (
+                <li key={row.employeeId}>
+                  <span className="truncate">{row.employeeName}</span>
+                  <span className="erp-payroll-num">
+                    {formatPayrollMoney(row.deductions, { emptyZero: false })} /{' '}
+                    {formatPayrollMoney(row.cap, { emptyZero: false })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </section>
+    ) : null;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2 erp-payroll-detail">
@@ -1575,9 +1471,8 @@ export default function PayrollRunDetailPageContent({
       >
         <p className="erp-payroll-modal-hint">{t('hr.payroll.freelancers.addHint')}</p>
         {runInApproval ? (
-          <Alert
-            type="warning"
-            showIcon
+          <ErpNotice
+            tone="warning"
             className="!mb-4"
             title={t('hr.payroll.freelancers.reopenWarning')}
           />
@@ -1662,27 +1557,49 @@ export default function PayrollRunDetailPageContent({
       </Modal>
 
       <Modal
-        title={t('hr.payroll.actions.unlockRun')}
-        open={unlockModalOpen}
-        onCancel={() => setUnlockModalOpen(false)}
-        okText={t('hr.payroll.actions.unlockConfirm')}
-        okButtonProps={{ danger: true }}
-        confirmLoading={unlockMutation.isPending}
+        title={t('hr.payroll.reopen.title', { runNumber: run.runNumber })}
+        open={reopenModalOpen}
+        onCancel={() => setReopenModalOpen(false)}
+        okText={t('hr.payroll.reopen.confirm')}
+        okButtonProps={{ disabled: reopenReason.trim().length < 5 }}
+        confirmLoading={reopenMutation.isPending}
         onOk={() => {
           void (async () => {
             try {
-              await unlockMutation.mutateAsync();
-              messageApi.success(t('hr.payroll.actions.unlockSuccess'));
-              setUnlockModalOpen(false);
+              const next = await reopenMutation.mutateAsync(reopenReason.trim());
+              messageApi.success(
+                t('hr.payroll.reopen.success', { version: next.version ?? 2 }),
+              );
+              setReopenModalOpen(false);
+              router.push(`/hr/payroll/${next.id}`);
             } catch (error) {
-              notifyApiError(error, t('hr.payroll.actions.unlockRun'), messageApi, t);
+              notifyApiError(error, t('hr.payroll.reopen.action'), messageApi, t);
             }
           })();
         }}
         destroyOnHidden
         className="erp-payroll-modal"
       >
-        <p className="erp-payroll-modal-hint">{t('hr.payroll.correction.unlockHint')}</p>
+        <p className="erp-payroll-modal-hint">{t('hr.payroll.reopen.hint')}</p>
+        <Form layout="vertical">
+          <Form.Item
+            label={t('hr.payroll.reopen.reasonLabel')}
+            required
+            help={
+              reopenReason.length > 0 && reopenReason.trim().length < 5
+                ? t('hr.payroll.reopen.reasonRequired')
+                : undefined
+            }
+          >
+            <Input.TextArea
+              rows={3}
+              value={reopenReason}
+              onChange={(event) => setReopenReason(event.target.value)}
+              placeholder={t('hr.payroll.reopen.reasonPlaceholder')}
+              maxLength={1000}
+            />
+          </Form.Item>
+        </Form>
       </Modal>
 
       <ConfirmDialog
@@ -1892,448 +1809,487 @@ export default function PayrollRunDetailPageContent({
               />
             ) : null}
           </div>
-          {renderActionButtons(run.status)}
         </div>
-
-        {isCorrectionRun ? (
-          <Alert
+        {run.status === 'SUPERSEDED' ? (
+          <ErpNotice
+            tone="info"
             className="mt-3"
-            type="info"
-            showIcon
-            title={t('hr.payroll.correction.bannerTitle', {
-              period: formatPayrollPeriod(
-                run.originalRun?.month ?? run.month,
-                run.originalRun?.year ?? run.year,
-              ),
+            title={t('hr.payroll.reopen.supersededNotice', {
+              date: run.reopenedAt ? dayjs(run.reopenedAt).format('YYYY-MM-DD') : '-',
+              reason: run.reopenReason ?? '-',
             })}
-            description={
-              <div className="flex flex-col gap-1">
-                <span>{t('hr.payroll.correction.bannerBody')}</span>
-                {run.originalRunId ? (
-                  <Link href={`/hr/payroll/${run.originalRunId}`}>
-                    {t('hr.payroll.correction.viewOriginal', {
-                      runNumber: run.originalRun?.runNumber ?? run.originalRunId,
-                    })}
-                  </Link>
+            action={
+              nextVersionId ? (
+                <Link href={`/hr/payroll/${nextVersionId}`}>
+                  {t('hr.payroll.reopen.openLatest')}
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : null}
+      </section>
+
+      <PayrollRunWarningsBar
+        run={run}
+        warnings={warningsQuery.data}
+        flaggedCount={totalFlagged}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'employees' && totalFlagged > 0) {
+            setFlaggedOnly(true);
+          }
+        }}
+      />
+
+      <Tabs
+        className="erp-payroll-tabs"
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as PayrollRunTab)}
+        items={[
+          {
+            key: 'summary',
+            label: t('hr.payroll.tabs.summary'),
+            children: (
+              <div className="erp-payroll-tab-stack">
+                <section className="erp-pro-card erp-payroll-panel">
+                  <div className="erp-payroll-summary-actions">
+                    {renderActionButtons(run.status)}
+                  </div>
+                  {isCorrectionRun ? (
+                    <ErpNotice
+                      tone="info"
+                      className="mt-3"
+                      title={t('hr.payroll.correction.bannerTitle', {
+                        period: formatPayrollPeriod(
+                          run.originalRun?.month ?? run.month,
+                          run.originalRun?.year ?? run.year,
+                        ),
+                      })}
+                      description={t('hr.payroll.correction.bannerBody')}
+                      action={
+                        run.originalRunId ? (
+                          <Link href={`/hr/payroll/${run.originalRunId}`}>
+                            {t('hr.payroll.correction.viewOriginal', {
+                              runNumber: run.originalRun?.runNumber ?? run.originalRunId,
+                            })}
+                          </Link>
+                        ) : undefined
+                      }
+                    />
+                  ) : null}
+                  <div className="erp-payroll-steps">
+                    <Steps
+                      size="small"
+                      titlePlacement="vertical"
+                      current={stepIndex}
+                      status={
+                        run.status === 'CANCELLED'
+                          ? 'error'
+                          : run.status === 'PAID'
+                            ? 'finish'
+                            : 'process'
+                      }
+                      items={[
+                        {
+                          title: t('hr.payroll.steps.draft'),
+                        },
+                        {
+                          title: t('hr.payroll.steps.reviewed'),
+                        },
+                        {
+                          title: t('hr.payroll.steps.submitted'),
+                          content: run.submittedAt ? (
+                            <StepMeta
+                              who={personLabel(run.submitter, run.submittedBy)}
+                              when={run.submittedAt}
+                            />
+                          ) : undefined,
+                        },
+                        {
+                          title: t('hr.payroll.steps.hrApproved'),
+                          content: run.approvedAt ? (
+                            <StepMeta
+                              who={personLabel(run.approver, run.approvedBy)}
+                              when={run.approvedAt}
+                            />
+                          ) : undefined,
+                        },
+                        {
+                          title: t('hr.payroll.steps.gmApproved'),
+                          content: run.gmApprovedAt ? (
+                            <StepMeta
+                              who={personLabel(run.gmApprover, run.gmApprovedBy)}
+                              when={run.gmApprovedAt}
+                            />
+                          ) : undefined,
+                        },
+                        {
+                          title: t('hr.payroll.steps.paid'),
+                          content: run.paidAt ? (
+                            <StepMeta
+                              who={personLabel(run.payer, run.paidBy)}
+                              when={run.paidAt}
+                            />
+                          ) : undefined,
+                        },
+                      ]}
+                    />
+                  </div>
+                </section>
+                <section className="erp-payroll-summary">
+                  {[
+                    {
+                      key: 'employees',
+                      label: t('hr.payroll.summary.employees'),
+                      value: String(run.totalEmployees),
+                      icon: <Users size={15} strokeWidth={2} />,
+                      money: false,
+                    },
+                    {
+                      key: 'gross',
+                      label: t('hr.payroll.summary.totalGross'),
+                      value: formatPayrollMoney(run.totalGross, { emptyZero: false }),
+                      icon: <Wallet size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                    {
+                      key: 'pensionEmp',
+                      label: t('hr.payroll.summary.pensionEmp'),
+                      value: formatPayrollMoney(run.totalPensionEmp, { emptyZero: false }),
+                      icon: <PiggyBank size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                    {
+                      key: 'pensionEmr',
+                      label: t('hr.payroll.summary.pensionEmr'),
+                      value: formatPayrollMoney(run.totalPensionEmr, { emptyZero: false }),
+                      icon: <Landmark size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                    {
+                      key: 'tax',
+                      label: t('hr.payroll.summary.totalTax'),
+                      value: formatPayrollMoney(run.totalTax, { emptyZero: false }),
+                      icon: <Receipt size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                    {
+                      key: 'netBonus',
+                      label: t('hr.payroll.summary.totalNetBonus'),
+                      value: formatPayrollMoney(run.totalNetBonus ?? 0, {
+                        emptyZero: false,
+                      }),
+                      icon: <Wallet size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                    {
+                      key: 'net',
+                      label: t('hr.payroll.summary.totalNet'),
+                      value: formatPayrollMoney(run.totalNetPay, { emptyZero: false }),
+                      icon: <Banknote size={15} strokeWidth={2} />,
+                      money: true,
+                    },
+                  ].map((card) => (
+                    <div
+                      key={card.key}
+                      className={`erp-payroll-summary-tile${card.key === 'net' ? ' erp-payroll-summary-tile--net' : ''}`}
+                    >
+                      <p className="erp-payroll-summary-label">
+                        <span className="erp-payroll-summary-chip" aria-hidden>
+                          {card.icon}
+                        </span>
+                        <span className="truncate">{card.label}</span>
+                      </p>
+                      <p className="erp-payroll-summary-value" title={card.value}>
+                        {card.value}
+                        {card.money ? <span className="erp-payroll-summary-unit">ETB</span> : null}
+                      </p>
+                    </div>
+                  ))}
+                </section>
+                {followUpPanel}
+                {canCreate && !isCorrectionRun && (run.status === 'GM_APPROVED' || run.status === 'PAID') ? (
+                  <section className="erp-pro-card erp-payroll-payslips">
+                    <div>
+                      <h3 className="erp-payroll-payslips-title">
+                        {t('hr.payroll.payslips.title')}
+                      </h3>
+                      <div className="erp-payroll-payslips-counts">
+                        <span className="erp-payroll-count-chip">
+                          {t('hr.payroll.payslips.generated')}
+                          <strong>{payslipCounts.generated}</strong>
+                        </span>
+                        <span className="erp-payroll-count-chip">
+                          {t('hr.payroll.payslips.released')}
+                          <strong>{payslipCounts.released}</strong>
+                        </span>
+                        <span className="erp-payroll-count-chip">
+                          {t('hr.payroll.payslips.downloaded')}
+                          <strong>{payslipCounts.downloaded}</strong>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="erp-payroll-payslips-actions">
+                      <Button
+                        loading={generatePayslipsMutation.isPending}
+                        onClick={() => {
+                          void (async () => {
+                            try {
+                              const result = await generatePayslipsMutation.mutateAsync();
+                              messageApi.success(
+                                t('hr.payroll.payslips.generateSuccess', {
+                                  created: result.created,
+                                  updated: result.updated,
+                                  skipped: result.skipped,
+                                }),
+                              );
+                            } catch (error) {
+                              notifyApiError(
+                                error,
+                                t('hr.payroll.payslips.generate'),
+                                messageApi,
+                                t,
+                              );
+                            }
+                          })();
+                        }}
+                      >
+                        {t('hr.payroll.payslips.generate')}
+                      </Button>
+                      <Button
+                        type="primary"
+                        disabled={payslipCounts.pendingRelease === 0}
+                        onClick={() => setReleaseOpen(true)}
+                      >
+                        {t('hr.payroll.payslips.release')}
+                      </Button>
+                      <Button
+                        icon={<DownloadOutlined />}
+                        loading={zipping}
+                        onClick={() => {
+                          void (async () => {
+                            const mm = String(run.month).padStart(2, '0');
+                            const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
+                            setZipping(true);
+                            try {
+                              await downloadPayslipZip(
+                                run.id,
+                                `Payslips_${run.year}_${mm}_${safeRun}.zip`,
+                              );
+                              messageApi.success(t('hr.payroll.payslips.zipSuccess'));
+                            } catch (error) {
+                              notifyApiError(
+                                error,
+                                t('hr.payroll.payslips.downloadZip'),
+                                messageApi,
+                                t,
+                              );
+                            } finally {
+                              setZipping(false);
+                            }
+                          })();
+                        }}
+                      >
+                        {t('hr.payroll.payslips.downloadZip')}
+                      </Button>
+                    </div>
+                  </section>
                 ) : null}
               </div>
-            }
-          />
-        ) : null}
-
-        {run.attendanceSnapshotStale ? (
-          <Alert
-            className="mt-3"
-            type="warning"
-            showIcon
-            title={
-              run.status === 'DRAFT' || run.status === 'REVIEWED'
-                ? t('hr.payroll.actions.attendanceStaleDraft')
-                : t('hr.payroll.actions.attendanceStaleApproved')
-            }
-          />
-        ) : null}
-        {run.policyReviewRequired ? (
-          <Alert
-            className="mt-3"
-            type="warning"
-            showIcon
-            title={t('hr.payroll.actions.policyReviewRequired')}
-            description={run.policyReviewNote ?? undefined}
-          />
-        ) : null}
-
-        <div className="erp-payroll-steps">
-          <Steps
-            size="small"
-            titlePlacement="vertical"
-            current={stepIndex}
-            status={
-              run.status === 'CANCELLED'
-                ? 'error'
-                : run.status === 'PAID'
-                  ? 'finish'
-                  : 'process'
-            }
-            items={[
-              {
-                title: t('hr.payroll.steps.draft'),
-              },
-              {
-                title: t('hr.payroll.steps.reviewed'),
-              },
-              {
-                title: t('hr.payroll.steps.submitted'),
-                content: run.submittedAt ? (
-                  <StepMeta
-                    who={personLabel(run.submitter, run.submittedBy)}
-                    when={run.submittedAt}
-                  />
-                ) : undefined,
-              },
-              {
-                title: t('hr.payroll.steps.hrApproved'),
-                content: run.approvedAt ? (
-                  <StepMeta
-                    who={personLabel(run.approver, run.approvedBy)}
-                    when={run.approvedAt}
-                  />
-                ) : undefined,
-              },
-              {
-                title: t('hr.payroll.steps.gmApproved'),
-                content: run.gmApprovedAt ? (
-                  <StepMeta
-                    who={personLabel(run.gmApprover, run.gmApprovedBy)}
-                    when={run.gmApprovedAt}
-                  />
-                ) : undefined,
-              },
-              {
-                title: t('hr.payroll.steps.paid'),
-                content: run.paidAt ? (
-                  <StepMeta
-                    who={personLabel(run.payer, run.paidBy)}
-                    when={run.paidAt}
-                  />
-                ) : undefined,
-              },
-            ]}
-          />
-        </div>
-      </section>
-
-      <section className="erp-payroll-summary">
-        {[
+            ),
+          },
           {
             key: 'employees',
-            label: t('hr.payroll.summary.employees'),
-            value: String(run.totalEmployees),
-            icon: <Users size={15} strokeWidth={2} />,
-            money: false,
-          },
-          {
-            key: 'gross',
-            label: t('hr.payroll.summary.totalGross'),
-            value: formatPayrollMoney(run.totalGross, { emptyZero: false }),
-            icon: <Wallet size={15} strokeWidth={2} />,
-            money: true,
-          },
-          {
-            key: 'pensionEmp',
-            label: t('hr.payroll.summary.pensionEmp'),
-            value: formatPayrollMoney(run.totalPensionEmp, { emptyZero: false }),
-            icon: <PiggyBank size={15} strokeWidth={2} />,
-            money: true,
-          },
-          {
-            key: 'pensionEmr',
-            label: t('hr.payroll.summary.pensionEmr'),
-            value: formatPayrollMoney(run.totalPensionEmr, { emptyZero: false }),
-            icon: <Landmark size={15} strokeWidth={2} />,
-            money: true,
-          },
-          {
-            key: 'tax',
-            label: t('hr.payroll.summary.totalTax'),
-            value: formatPayrollMoney(run.totalTax, { emptyZero: false }),
-            icon: <Receipt size={15} strokeWidth={2} />,
-            money: true,
-          },
-          {
-            key: 'netBonus',
-            label: t('hr.payroll.summary.totalNetBonus'),
-            value: formatPayrollMoney(run.totalNetBonus ?? 0, {
-              emptyZero: false,
-            }),
-            icon: <Wallet size={15} strokeWidth={2} />,
-            money: true,
-          },
-          {
-            key: 'net',
-            label: t('hr.payroll.summary.totalNet'),
-            value: formatPayrollMoney(run.totalNetPay, { emptyZero: false }),
-            icon: <Banknote size={15} strokeWidth={2} />,
-            money: true,
-          },
-        ].map((card) => (
-          <div
-            key={card.key}
-            className={`erp-payroll-summary-tile${card.key === 'net' ? ' erp-payroll-summary-tile--net' : ''}`}
-          >
-            <p className="erp-payroll-summary-label">
-              <span className="erp-payroll-summary-chip" aria-hidden>
-                {card.icon}
-              </span>
-              <span className="truncate">{card.label}</span>
-            </p>
-            <p className="erp-payroll-summary-value" title={card.value}>
-              {card.value}
-              {card.money ? <span className="erp-payroll-summary-unit">ETB</span> : null}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      {canCreate && (run.status === 'GM_APPROVED' || run.status === 'PAID') ? (
-        <section className="erp-pro-card erp-payroll-payslips">
-          <div>
-            <h3 className="erp-payroll-payslips-title">
-              {t('hr.payroll.payslips.title')}
-            </h3>
-            <div className="erp-payroll-payslips-counts">
-              <span className="erp-payroll-count-chip">
-                {t('hr.payroll.payslips.generated')}
-                <strong>{payslipCounts.generated}</strong>
-              </span>
-              <span className="erp-payroll-count-chip">
-                {t('hr.payroll.payslips.released')}
-                <strong>{payslipCounts.released}</strong>
-              </span>
-              <span className="erp-payroll-count-chip">
-                {t('hr.payroll.payslips.downloaded')}
-                <strong>{payslipCounts.downloaded}</strong>
-              </span>
-            </div>
-          </div>
-          <div className="erp-payroll-payslips-actions">
-            <Button
-              loading={generatePayslipsMutation.isPending}
-              onClick={() => {
-                void (async () => {
-                  try {
-                    const result = await generatePayslipsMutation.mutateAsync();
-                    messageApi.success(
-                      t('hr.payroll.payslips.generateSuccess', {
-                        created: result.created,
-                        updated: result.updated,
-                        skipped: result.skipped,
-                      }),
-                    );
-                  } catch (error) {
-                    notifyApiError(
-                      error,
-                      t('hr.payroll.payslips.generate'),
-                      messageApi,
-                      t,
-                    );
-                  }
-                })();
-              }}
-            >
-              {t('hr.payroll.payslips.generate')}
-            </Button>
-            <Button
-              type="primary"
-              disabled={payslipCounts.pendingRelease === 0}
-              onClick={() => setReleaseOpen(true)}
-            >
-              {t('hr.payroll.payslips.release')}
-            </Button>
-            <Button
-              icon={<DownloadOutlined />}
-              loading={zipping}
-              onClick={() => {
-                void (async () => {
-                  const mm = String(run.month).padStart(2, '0');
-                  const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
-                  setZipping(true);
-                  try {
-                    await downloadPayslipZip(
-                      run.id,
-                      `Payslips_${run.year}_${mm}_${safeRun}.zip`,
-                    );
-                    messageApi.success(t('hr.payroll.payslips.zipSuccess'));
-                  } catch (error) {
-                    notifyApiError(
-                      error,
-                      t('hr.payroll.payslips.downloadZip'),
-                      messageApi,
-                      t,
-                    );
-                  } finally {
-                    setZipping(false);
-                  }
-                })();
-              }}
-            >
-              {t('hr.payroll.payslips.downloadZip')}
-            </Button>
-          </div>
-        </section>
-      ) : null}
-
-      {totalFlagged > 0 ? (
-        <Alert
-          type="warning"
-          showIcon
-          title={t('hr.payroll.detail.flaggedBanner', { count: totalFlagged })}
-          action={
-            flaggedOnly ? undefined : (
-              <Button size="small" onClick={() => setFlaggedOnly(true)}>
-                {t('hr.payroll.detail.showFlaggedOnly')}
-              </Button>
-            )
-          }
-        />
-      ) : null}
-
-      <section className="erp-pro-card erp-payroll-entries">
-        <div className="erp-pro-card-toolbar erp-users-toolbar">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title m-0">
-              {t('hr.payroll.detail.entriesTitle')}
-            </h3>
-            <span className="erp-users-count-pill">
-              {filteredEntries.length.toLocaleString()}
-            </span>
-          </div>
-          {canChangeRun ? (
-            <Button onClick={() => setFreelancerModalOpen(true)}>
-              {t('hr.payroll.freelancers.add')}
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="erp-users-filter-bar">
-          <Input
-            allowClear
-            prefix={<SearchOutlined className="erp-users-search-icon" />}
-            placeholder={t('hr.payroll.entry.searchPlaceholder')}
-            className="erp-users-search-input min-w-0"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Select
-            allowClear
-            placeholder={t('hr.payroll.entry.filterDepartment')}
-            className="erp-users-filter-select"
-            options={departments.map((d) => ({ value: d, label: d }))}
-            value={departmentFilter}
-            onChange={setDepartmentFilter}
-          />
-          <Select
-            allowClear
-            placeholder={t('hr.payroll.entry.filterDiscipline')}
-            className="erp-users-filter-select"
-            options={disciplines.map((d) => ({ value: d, label: d }))}
-            value={disciplineFilter}
-            onChange={setDisciplineFilter}
-          />
-          <label className="erp-payroll-switch">
-            <Switch size="small" checked={flaggedOnly} onChange={setFlaggedOnly} />
-            {t('hr.payroll.entry.flaggedOnly')}
-          </label>
-          {isCorrectionRun ? (
-            <label className="erp-payroll-switch">
-              <Switch size="small" checked={changedOnly} onChange={setChangedOnly} />
-              {t('hr.payroll.correction.changedOnly')}
-            </label>
-          ) : null}
-          {hasEntryFilters ? (
-            <Button type="link" onClick={resetEntryFilters} className="!px-1">
-              {t('common.reset')}
-            </Button>
-          ) : null}
-        </div>
-
-        {isPhone ? (
-          <div className="erp-payroll-entry-cards">
-            {totalsRow ? (
-              <div className="erp-payroll-mobile-totals">
-                <p className="erp-payroll-mobile-totals-title">
-                  {t('hr.payroll.detail.filteredTotals')}
-                </p>
-                <dl>
-                  <div>
-                    <dt>{t('hr.payroll.entry.gross')}</dt>
-                    <dd>{formatPayrollMoney(totalsRow.gross, { emptyZero: false })}</dd>
+            label: t('hr.payroll.tabs.employees'),
+            children: (
+              <div className="erp-payroll-tab-stack">
+                <section className="erp-pro-card erp-payroll-entries">
+                  <div className="erp-pro-card-toolbar erp-users-toolbar">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <h3 className="erp-pro-card-toolbar-title m-0">
+                        {t('hr.payroll.detail.entriesTitle')}
+                      </h3>
+                      <span className="erp-users-count-pill">
+                        {filteredEntries.length.toLocaleString()}
+                      </span>
+                    </div>
+                    {canChangeRun ? (
+                      <Button onClick={() => setFreelancerModalOpen(true)}>
+                        {t('hr.payroll.freelancers.add')}
+                      </Button>
+                    ) : null}
                   </div>
-                  <div>
-                    <dt>{t('hr.payroll.entry.tax')}</dt>
-                    <dd>{formatPayrollMoney(totalsRow.tax, { emptyZero: false })}</dd>
+
+                  <div className="erp-users-filter-bar">
+                    <Input
+                      allowClear
+                      prefix={<SearchOutlined className="erp-users-search-icon" />}
+                      placeholder={t('hr.payroll.entry.searchPlaceholder')}
+                      className="erp-users-search-input min-w-0"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <Select
+                      allowClear
+                      placeholder={t('hr.payroll.entry.filterDepartment')}
+                      className="erp-users-filter-select"
+                      options={departments.map((d) => ({ value: d, label: d }))}
+                      value={departmentFilter}
+                      onChange={setDepartmentFilter}
+                    />
+                    <Select
+                      allowClear
+                      placeholder={t('hr.payroll.entry.filterDiscipline')}
+                      className="erp-users-filter-select"
+                      options={disciplines.map((d) => ({ value: d, label: d }))}
+                      value={disciplineFilter}
+                      onChange={setDisciplineFilter}
+                    />
+                    <label className="erp-payroll-switch">
+                      <Switch size="small" checked={flaggedOnly} onChange={setFlaggedOnly} />
+                      {t('hr.payroll.entry.flaggedOnly')}
+                    </label>
+                    {isCorrectionRun ? (
+                      <label className="erp-payroll-switch">
+                        <Switch size="small" checked={changedOnly} onChange={setChangedOnly} />
+                        {t('hr.payroll.correction.changedOnly')}
+                      </label>
+                    ) : null}
+                    {hasEntryFilters ? (
+                      <Button type="link" onClick={resetEntryFilters} className="!px-1">
+                        {t('common.reset')}
+                      </Button>
+                    ) : null}
                   </div>
-                  <div className="erp-payroll-mobile-totals-net">
-                    <dt>{t('hr.payroll.entry.net')}</dt>
-                    <dd>{formatPayrollMoney(totalsRow.net, { emptyZero: false })}</dd>
-                  </div>
-                </dl>
+
+                  {isPhone ? (
+                    <div className="erp-payroll-entry-cards">
+                      {totalsRow ? (
+                        <div className="erp-payroll-mobile-totals">
+                          <p className="erp-payroll-mobile-totals-title">
+                            {t('hr.payroll.detail.filteredTotals')}
+                          </p>
+                          <dl>
+                            <div>
+                              <dt>{t('hr.payroll.entry.gross')}</dt>
+                              <dd>{formatPayrollMoney(totalsRow.gross, { emptyZero: false })}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('hr.payroll.entry.tax')}</dt>
+                              <dd>{formatPayrollMoney(totalsRow.tax, { emptyZero: false })}</dd>
+                            </div>
+                            <div className="erp-payroll-mobile-totals-net">
+                              <dt>{t('hr.payroll.entry.net')}</dt>
+                              <dd>{formatPayrollMoney(totalsRow.net, { emptyZero: false })}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      ) : null}
+                      {filteredEntries.length === 0 ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className="py-6" />
+                      ) : (
+                        <ul className="erp-payroll-entry-card-list">
+                          {filteredEntries.slice(0, mobileVisible).map(renderEntryCard)}
+                        </ul>
+                      )}
+                      {filteredEntries.length > mobileVisible ? (
+                        <Button
+                          block
+                          className="erp-payroll-entry-cards-more"
+                          onClick={() =>
+                            setMobilePage({
+                              key: mobileFilterKey,
+                              count: mobileVisible + MOBILE_PAGE_SIZE,
+                            })
+                          }
+                        >
+                          {t('hr.payroll.detail.showMore', {
+                            count: Math.min(MOBILE_PAGE_SIZE, filteredEntries.length - mobileVisible),
+                          })}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <Table<PayrollEntryDetail>
+                      rowKey="id"
+                      size="small"
+                      columns={columns}
+                      dataSource={filteredEntries}
+                      // Fixed x wider than the columns yields fractional widths; the header copies rounded ones and drifts.
+                      scroll={{ x: 'max-content', y: 'max(320px, calc(100dvh - 300px))' }}
+                      className="erp-payroll-entries-table"
+                      rowClassName={(row) =>
+                        [
+                          'erp-payroll-row',
+                          contractLinesById.get(row.id) ? 'erp-payroll-row--split' : '',
+                          row.id === selectedEntryId ? 'erp-payroll-row--active' : '',
+                          row.flag !== 'NONE' ? 'erp-payroll-row--flagged' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
+                      }
+                      onRow={(row) => ({
+                        onClick: (event) => {
+                          // Buttons / links inside the row keep their own action.
+                          if ((event.target as HTMLElement).closest('button, a')) {
+                            return;
+                          }
+                          openEntry(row.id);
+                        },
+                      })}
+                      pagination={false}
+                      summary={() =>
+                        totalsRow ? (
+                          <Table.Summary fixed="bottom">
+                            <Table.Summary.Row>
+                              {summaryCells(totalsRow).map((cell, index) => (
+                                <Table.Summary.Cell
+                                  key={index}
+                                  index={index}
+                                  align={cell.align}
+                                  className={cell.className}
+                                >
+                                  {cell.content}
+                                </Table.Summary.Cell>
+                              ))}
+                            </Table.Summary.Row>
+                          </Table.Summary>
+                        ) : null
+                      }
+                    />
+                  )}
+                </section>
               </div>
-            ) : null}
-            {filteredEntries.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className="py-6" />
-            ) : (
-              <ul className="erp-payroll-entry-card-list">
-                {filteredEntries.slice(0, mobileVisible).map(renderEntryCard)}
-              </ul>
-            )}
-            {filteredEntries.length > mobileVisible ? (
-              <Button
-                block
-                className="erp-payroll-entry-cards-more"
-                onClick={() =>
-                  setMobilePage({
-                    key: mobileFilterKey,
-                    count: mobileVisible + MOBILE_PAGE_SIZE,
-                  })
-                }
-              >
-                {t('hr.payroll.detail.showMore', {
-                  count: Math.min(MOBILE_PAGE_SIZE, filteredEntries.length - mobileVisible),
-                })}
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <Table<PayrollEntryDetail>
-            rowKey="id"
-            size="small"
-            columns={columns}
-            dataSource={filteredEntries}
-            // Fixed x wider than the columns yields fractional widths; the header copies rounded ones and drifts.
-            scroll={{ x: 'max-content', y: 'max(320px, calc(100dvh - 300px))' }}
-            className="erp-payroll-entries-table"
-            rowClassName={(row) =>
-              [
-                'erp-payroll-row',
-                contractLinesById.get(row.id) ? 'erp-payroll-row--split' : '',
-                row.id === selectedEntryId ? 'erp-payroll-row--active' : '',
-                row.flag !== 'NONE' ? 'erp-payroll-row--flagged' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')
-            }
-            onRow={(row) => ({
-              onClick: (event) => {
-                // Buttons / links inside the row keep their own action.
-                if ((event.target as HTMLElement).closest('button, a')) {
-                  return;
-                }
-                setSelectedEntry(row.id);
-              },
-            })}
-            pagination={false}
-            summary={() =>
-              totalsRow ? (
-                <Table.Summary fixed="bottom">
-                  <Table.Summary.Row>
-                    {summaryCells(totalsRow).map((cell, index) => (
-                      <Table.Summary.Cell
-                        key={index}
-                        index={index}
-                        align={cell.align}
-                        className={cell.className}
-                      >
-                        {cell.content}
-                      </Table.Summary.Cell>
-                    ))}
-                  </Table.Summary.Row>
-                </Table.Summary>
-              ) : null
-            }
-          />
-        )}
-      </section>
+            ),
+          },
+          {
+            key: 'adjustments',
+            label: t('hr.payroll.tabs.adjustments'),
+            children: (
+              <PayrollRunAdjustmentsTab
+                run={run}
+                canEdit={canEdit}
+                canWaive={canApprove || isSysAdmin}
+              />
+            ),
+          },
+          {
+            key: 'history',
+            label: t('hr.payroll.tabs.history'),
+            children: <PayrollRunHistoryTab run={run} />,
+          },
+        ]}
+      />
+
+      <PayrollCorrectionDrawer
+        runId={run.id}
+        entry={
+          correctionEntryId
+            ? (run.entries.find((row) => row.id === correctionEntryId) ?? null)
+            : null
+        }
+        onClose={() => setCorrectionEntryId(null)}
+      />
 
       <PayrollEntryDrawer
         entry={

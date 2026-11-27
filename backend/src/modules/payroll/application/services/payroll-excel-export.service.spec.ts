@@ -273,6 +273,7 @@ async function exportFixture(
   };
   const auditCalls: unknown[] = [];
   const prisma = {
+    payrollAdjustmentLine: { findMany: async (): Promise<unknown[]> => [] },
     payrollRun: {
       findFirst: async (): Promise<{
         id: string;

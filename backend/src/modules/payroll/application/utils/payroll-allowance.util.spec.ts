@@ -180,7 +180,7 @@ describe('computeContractAllowances', () => {
     expect(result.monthlyBonus).toBeCloseTo(56000 * 28 / 30, 2);
   });
 
-  it('ALLOWANCES_REDUCED_BY_ABSENCE default (false) → absences do not reduce allowances', () => {
+  it('ALLOWANCES_REDUCED_BY_ABSENCE default (true) → absences reduce allowances', () => {
     const totalEmployedDays = 30;
     const payrollDays = 28;
     const result = computeContractAllowances(
@@ -188,16 +188,16 @@ describe('computeContractAllowances', () => {
       totalEmployedDays, payrollDays, totalEmployedDays, PRORATED,
       ALLOWANCES_REDUCED_BY_ABSENCE,
     );
-    expect(result.transport).toBe(2550);
-    expect(result.monthlyBonus).toBe(56000);
+    expect(result.transport).toBeCloseTo(2550 * 28 / 30, 2);
+    expect(result.monthlyBonus).toBeCloseTo(56000 * 28 / 30, 2);
   });
 
   it('config LEAVER_ALLOWANCE_MODE defaults to PRORATED', () => {
     expect(LEAVER_ALLOWANCE_MODE).toBe('PRORATED');
   });
 
-  it('config ALLOWANCES_REDUCED_BY_ABSENCE defaults to false', () => {
-    expect(ALLOWANCES_REDUCED_BY_ABSENCE).toBe(false);
+  it('config ALLOWANCES_REDUCED_BY_ABSENCE defaults to true', () => {
+    expect(ALLOWANCES_REDUCED_BY_ABSENCE).toBe(true);
   });
 });
 

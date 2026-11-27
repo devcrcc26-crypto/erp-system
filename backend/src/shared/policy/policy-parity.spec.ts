@@ -48,7 +48,7 @@ describe('policy defaults = the agreed rules', () => {
       unpaidLeaveCountsRestDays: false, // agreed 2026-10-15: rest days inside unpaid leave stay paid (was true)
       monthDays: 30, // PAYROLL_MONTH_DAYS
       leaverAllowanceMode: 'PRORATED', // LEAVER_ALLOWANCE_MODE
-      allowancesReducedByAbsence: false, // ALLOWANCES_REDUCED_BY_ABSENCE
+      allowancesReducedByAbsence: true, // ALLOWANCES_REDUCED_BY_ABSENCE — absences cut transport + bonus
       pensionEmployeePct: 7,
       pensionEmployerPct: 11,
       transportTaxable: false,

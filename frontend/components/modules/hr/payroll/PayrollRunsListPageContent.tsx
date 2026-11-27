@@ -5,7 +5,6 @@ import '@/components/modules/users/employees-v2.css';
 import './payroll-v2.css';
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
   Form,
@@ -17,6 +16,7 @@ import {
   Tag,
   Tooltip,
 } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -179,7 +179,9 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         periodLabel.includes(query)
       );
     });
-    const active = scoped.filter((row) => row.status !== 'CANCELLED');
+    const active = scoped.filter(
+      (row) => row.status !== 'CANCELLED' && row.status !== 'SUPERSEDED',
+    );
     return {
       all: active.length,
       inProgress: active.filter((row) =>
@@ -195,7 +197,9 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
       (row) =>
         row.month === currentMonth &&
         row.year === currentYear &&
-        row.status !== 'CANCELLED',
+        row.type !== 'CORRECTION' &&
+        row.status !== 'CANCELLED' &&
+        row.status !== 'SUPERSEDED',
     );
     const lastPaid = allRows.find((row) => row.status === 'PAID');
     return {
@@ -215,6 +219,10 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         return false;
       }
       if (statusFilter && row.status !== statusFilter) {
+        return false;
+      }
+      // Superseded versions are history (see the run's History tab) unless asked for.
+      if (row.status === 'SUPERSEDED' && statusFilter !== 'SUPERSEDED') {
         return false;
       }
       if (!query) {
@@ -418,7 +426,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   if (!canAccess) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-employees-v2 erp-payroll-v2">
-        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+        <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
@@ -490,9 +498,8 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
       />
 
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
+        <ErpNotice
+          tone="error"
           className="mb-3"
           title={
             listQuery.error instanceof ApiRequestError

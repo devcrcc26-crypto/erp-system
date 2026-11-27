@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Alert, Button, Drawer, Form, Input, Spin, Switch } from 'antd';
+import { Button, Drawer, Form, Input, Spin, Switch } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import PayrollAdjustmentTypesTable from '@/components/modules/hr/payroll/PayrollAdjustmentTypesTable';
 import {
   BankOutlined,
+  TagsOutlined,
   CalculatorOutlined,
   CheckCircleFilled,
   EnvironmentOutlined,
@@ -185,9 +188,8 @@ export default function PayrollCompanySettingsModal({
     >
       <div className="erp-payroll-settings-content">
         {readOnly ? (
-          <Alert
-            type="info"
-            showIcon
+          <ErpNotice
+            tone="info"
             className="erp-payroll-settings-readonly"
             title={t('hr.payroll.companySettings.readOnly')}
           />
@@ -199,9 +201,8 @@ export default function PayrollCompanySettingsModal({
           </div>
         ) : settingsQuery.isError ? (
           <div>
-            <Alert
-              type="error"
-              showIcon
+            <ErpNotice
+              tone="error"
               title={
                 settingsQuery.error instanceof ApiRequestError
                   ? settingsQuery.error.message
@@ -361,6 +362,14 @@ export default function PayrollCompanySettingsModal({
             </SettingsSection>
           </Form>
         )}
+
+        <SettingsSection
+          icon={<TagsOutlined />}
+          title={t('hr.payroll.adjustmentTypes.title')}
+          description={t('hr.payroll.adjustmentTypes.hint')}
+        >
+          <PayrollAdjustmentTypesTable readOnly={readOnly} />
+        </SettingsSection>
       </div>
     </Drawer>
   );

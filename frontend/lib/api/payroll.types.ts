@@ -145,6 +145,11 @@ export interface PayrollEntryDetail {
   bonusTopUpReason: string | null;
   netTopUp: MoneyField;
   netTopUpReason: string | null;
+  /** Adjustment lines other than taxable / net bonus, by tax treatment. */
+  adjustmentTaxable?: MoneyField;
+  adjustmentNonTaxable?: MoneyField;
+  adjustmentPensionable?: MoneyField;
+  adjustmentDeductions?: MoneyField;
   flag: PayrollEntryFlag;
   flagNote: string | null;
   notes: string | null;
@@ -243,6 +248,11 @@ export interface PayrollRunDetail {
   month: number;
   year: number;
   type?: PayrollRunType;
+  /** Version within the period; reopening creates the next one. */
+  version?: number;
+  previousVersionId?: string | null;
+  reopenReason?: string | null;
+  reopenedAt?: string | null;
   originalRunId?: string | null;
   originalRun?: {
     id: string;

@@ -13,6 +13,7 @@ import {
   type PayrollEntry,
   type PayrollEntryFlag,
   type PayrollRun,
+  type PayrollRunStatus,
 } from '@prisma/client';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -27,9 +28,26 @@ import {
 } from './payroll-company-settings.service';
 import {
   PayrollCalculationService,
+  ZERO_ADJUSTMENTS,
   type OvertimeHours,
+  type PayrollAdjustmentTotals,
   type PayrollCalculationResult,
 } from './payroll-calculation.service';
+import {
+  adjustmentTotalsFromLines,
+  deductionCap,
+  exceedsDeductionCap,
+  reconciliationRemaining,
+  reconciliationStatusFor,
+  type AdjustmentLineTotals,
+} from '../utils/payroll-adjustment.util';
+import {
+  buildCorrectionLines,
+  correctionComponentAmounts,
+  ZERO_MANUAL_OT,
+  type CorrectionEntrySnapshot,
+  type ManualOtPayByCategory,
+} from '../utils/payroll-correction.util';
 import {
   FULLY_ABSENT_NO_PAY_NOTE,
   isFullyAbsentFromStoredLogs,
@@ -140,12 +158,90 @@ export interface EmploymentReviewEntry {
   flagNote: string | null;
 }
 
-interface CapturedTopUp {
-  bonusTopUp: number;
-  bonusTopUpReason: string | null;
-  netTopUp: number;
-  netTopUpReason: string | null;
-  notes: string | null;
+/** Statuses in which a run can still change (recalculate, edit, delete). */
+const EDITABLE_RUN_STATUSES: PayrollRunStatus[] = ['DRAFT', 'REVIEWED', 'SUBMITTED'];
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+interface PayrollRunWarningEmployee {
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string | null;
+}
+
+export interface PayrollRunWarnings {
+  runId: string;
+  /** OT for the month not yet approved (draft, submitted, in review, returned). */
+  pendingOvertime: Array<
+    PayrollRunWarningEmployee & {
+      sheetId: string;
+      sheetNumber: string;
+      sheetStatus: string;
+      entries: number;
+      hours: number;
+    }
+  >;
+  /** Approved, unpaid OT this run did not price (approved after it was calculated). */
+  overtimeNotIncluded: Array<
+    PayrollRunWarningEmployee & {
+      sheetId: string;
+      sheetNumber: string;
+      sheetStatus: string;
+      entries: number;
+      hours: number;
+    }
+  >;
+  /** Open / partly settled reconciliation items for employees in this run. */
+  openReconciliations: Array<
+    PayrollRunWarningEmployee & {
+      id: string;
+      direction: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+      amount: number;
+      remaining: number;
+      forMonth: number;
+      forYear: number;
+    }
+  >;
+  /** Deductions above one third of the monthly wage. */
+  deductionsOverCap: Array<PayrollRunWarningEmployee & { deductions: number; cap: number }>;
+  negativeNetPay: Array<PayrollRunWarningEmployee & { netPay: number }>;
+}
+
+export interface PayrollRunHistoryItem {
+  id: string;
+  runNumber: string;
+  type: string;
+  version: number;
+  status: string;
+  createdAt: Date;
+  approvedAt: Date | null;
+  gmApprovedAt: Date | null;
+  paidAt: Date | null;
+  reopenReason: string | null;
+  reopenedAt: Date | null;
+  reopenedByName: string | null;
+  previousVersionId: string | null;
+  originalRunId: string | null;
+  totalNetPay: number;
+}
+
+export interface PayrollRunHistory {
+  versions: PayrollRunHistoryItem[];
+  corrections: PayrollRunHistoryItem[];
+  originalRun: PayrollRunHistoryItem | null;
 }
 
 interface ContractSnapshot {
@@ -206,6 +302,7 @@ interface OvertimeSnapshot {
   totalWeekendHours: Decimal | null;
   totalHolidayHours: Decimal | null;
   entries: Array<{
+    id: string;
     date: Date;
     startTime: Date;
     endTime: Date;
@@ -393,6 +490,7 @@ export class PayrollRunService {
     const attendanceOn =
       considerAttendance ?? (await this.defaultConsiderAttendance(ctx.companyId));
 
+    // The live run for the period; SUPERSEDED versions are history only.
     const existing = await this.prisma.payrollRun.findFirst({
       where: {
         companyId: ctx.companyId,
@@ -400,7 +498,9 @@ export class PayrollRunService {
         year,
         type: 'REGULAR',
         deletedAt: null,
+        status: { not: 'SUPERSEDED' },
       },
+      orderBy: { createdAt: 'desc' },
     });
 
     let runId: string;
@@ -489,6 +589,12 @@ export class PayrollRunService {
     if (!run) {
       throw new NotFoundException('Payroll run not found');
     }
+    this.assertRunEditable(run);
+    if (run.type === 'CORRECTION') {
+      await this.rebuildCorrectionEntries(run, ctx);
+      await this.reopenIfInApproval(run, ctx);
+      return this.getRun(runId, ctx.companyId);
+    }
 
     const includeFreelancerIds = await this.includedFreelancerIds(runId);
 
@@ -502,6 +608,7 @@ export class PayrollRunService {
     });
     await this.persistEntryDrafts(drafts, ctx);
     await this.updateRunTotals(runId, ctx);
+    await this.reopenIfInApproval(run, ctx);
 
     await this.prisma.payrollRun.update({
       where: { id: runId },
@@ -601,109 +708,33 @@ export class PayrollRunService {
     }
     this.assertRunEditable(run);
 
+    if (run.type === 'CORRECTION') {
+      await this.rebuildCorrectionEntries(run, ctx);
+      await this.reopenIfInApproval(run, ctx);
+      return this.getRun(runId, ctx.companyId);
+    }
+
     const includeFreelancerIds = await this.includedFreelancerIds(runId);
 
+    // Bonus and net top-ups are adjustment lines on the run, so they survive
+    // regeneration by themselves. Only HR's entry notes need carrying over.
     const existingEntries = await this.prisma.payrollEntry.findMany({
-      where: { runId },
-      select: {
-        id: true,
-        employeeId: true,
-        payrollDays: true,
-        bonusTopUp: true,
-        bonusTopUpReason: true,
-        netTopUp: true,
-        netTopUpReason: true,
-        notes: true,
-      },
+      where: { runId, notes: { not: null } },
+      select: { employeeId: true, notes: true },
     });
-
-    const captured = new Map<string, CapturedTopUp>();
-    for (const entry of existingEntries) {
-      // A 0-day override clears top-ups from the entry; its snapshot still has them.
-      const zeroSnapshot =
-        this.toNumber(entry.payrollDays) === 0
-          ? await this.latestZeroDaysSnapshot(entry.id, ctx.companyId)
-          : null;
-      const bonusTopUp = zeroSnapshot?.bonusTopUp ?? this.toNumber(entry.bonusTopUp);
-      const bonusTopUpReason = zeroSnapshot
-        ? zeroSnapshot.bonusTopUpReason
-        : entry.bonusTopUpReason;
-      const netTopUp = zeroSnapshot?.netTopUp ?? this.toNumber(entry.netTopUp);
-      const netTopUpReason = zeroSnapshot ? zeroSnapshot.netTopUpReason : entry.netTopUpReason;
-      if (
-        bonusTopUp !== 0 ||
-        bonusTopUpReason != null ||
-        netTopUp !== 0 ||
-        netTopUpReason != null ||
-        entry.notes != null
-      ) {
-        captured.set(entry.employeeId, {
-          bonusTopUp,
-          bonusTopUpReason,
-          netTopUp,
-          netTopUpReason,
-          notes: entry.notes,
-        });
-      }
-    }
+    const capturedNotes = new Map<string, string | null>(
+      existingEntries.map((entry) => [entry.employeeId, entry.notes]),
+    );
 
     await this.prisma.payrollSalaryPeriod.deleteMany({
       where: { entry: { runId } },
     });
     await this.prisma.payrollEntry.deleteMany({ where: { runId } });
 
-    // Regenerate without top-ups, then reapply captured adjustments.
-    const drafts = await this.buildEntryDrafts(run, ctx, new Map(), {
+    const drafts = await this.buildEntryDrafts(run, ctx, capturedNotes, {
       includeFreelancerIds,
     });
     await this.persistEntryDrafts(drafts, ctx);
-
-    if (captured.size > 0) {
-      const topUpEntries = await this.prisma.payrollEntry.findMany({
-        where: {
-          runId,
-          employeeId: { in: [...captured.keys()] },
-        },
-      });
-
-      for (const entry of topUpEntries) {
-        const topUp = captured.get(entry.employeeId);
-        if (!topUp) {
-          continue;
-        }
-
-        if (topUp.bonusTopUp === 0 && topUp.netTopUp === 0) {
-          await this.prisma.payrollEntry.update({
-            where: { id: entry.id },
-            data: {
-              bonusTopUpReason: topUp.bonusTopUpReason,
-              netTopUpReason: topUp.netTopUpReason,
-              notes: topUp.notes ?? entry.notes,
-              updatedBy: ctx.userId,
-            },
-          });
-          continue;
-        }
-
-        const result = await this.recalcEntryAmounts(entry, run, {
-          bonusTopUp: topUp.bonusTopUp,
-          netTopUp: topUp.netTopUp,
-        });
-        await this.prisma.payrollEntry.update({
-          where: { id: entry.id },
-          data: {
-            bonusTopUp: new Decimal(topUp.bonusTopUp),
-            bonusTopUpReason: topUp.bonusTopUpReason,
-            netTopUp: new Decimal(topUp.netTopUp),
-            netTopUpReason: topUp.netTopUpReason,
-            notes: topUp.notes ?? entry.notes,
-            ...this.calculationToEntryUpdate(result),
-            updatedBy: ctx.userId,
-          },
-        });
-      }
-    }
-
     await this.updateRunTotals(runId, ctx);
 
     await this.prisma.payrollRun.update({
@@ -827,13 +858,17 @@ export class PayrollRunService {
     return this.getRun(runId, ctx.companyId);
   }
 
-  private assertRunEditable(run: PayrollRun): void {
-    if (
-      run.status === 'PAID' ||
-      run.status === 'CANCELLED' ||
-      run.status === 'SUPERSEDED'
-    ) {
-      throw new BadRequestException(`Cannot change a run in ${run.status} status`);
+  /**
+   * Only runs that are not yet approved can change. An approved run must be
+   * reopened (new version); a paid run is locked for good.
+   */
+  private assertRunEditable(run: Pick<PayrollRun, 'status'>): void {
+    if (!EDITABLE_RUN_STATUSES.includes(run.status)) {
+      throw new BadRequestException(
+        run.status === 'APPROVED' || run.status === 'GM_APPROVED'
+          ? `This run is ${run.status}. Reopen it to make changes`
+          : `Cannot change a run in ${run.status} status`,
+      );
     }
   }
 
@@ -846,15 +881,12 @@ export class PayrollRunService {
   }
 
   /**
-   * Changed figures invalidate prior sign-off: SUBMITTED / APPROVED / GM_APPROVED
-   * go back to DRAFT and must pass review and both approvals again.
+   * Changed figures invalidate a submission: a SUBMITTED run goes back to DRAFT
+   * and must be reviewed and submitted again. Approved runs cannot change at
+   * all (see assertRunEditable / reopenRun).
    */
   private async reopenIfInApproval(run: PayrollRun, ctx: ServiceContext): Promise<void> {
-    if (
-      run.status !== 'SUBMITTED' &&
-      run.status !== 'APPROVED' &&
-      run.status !== 'GM_APPROVED'
-    ) {
+    if (run.status !== 'SUBMITTED') {
       return;
     }
     await this.prisma.payrollRun.update({
@@ -872,12 +904,7 @@ export class PayrollRunService {
     });
 
     const recipients = new Set<string>(
-      await this.findUserIdsByRoleNames(ctx.companyId, [
-        HR_MANAGER_ROLE,
-        ...(run.status === 'GM_APPROVED' || run.status === 'APPROVED'
-          ? [GENERAL_MANAGER_ROLE]
-          : []),
-      ]),
+      await this.findUserIdsByRoleNames(ctx.companyId, [HR_MANAGER_ROLE]),
     );
     recipients.delete(ctx.userId);
     await this.notifyMany(
@@ -885,7 +912,7 @@ export class PayrollRunService {
       [...recipients],
       'payroll.run_reopened',
       `Payroll ${run.runNumber} changed - approval needed again`,
-      `Payroll run ${run.runNumber} (${run.month}/${run.year}) was changed after it was ${run.status === 'SUBMITTED' ? 'submitted' : 'approved'}. It is back in draft and must be reviewed and approved again.`,
+      `Payroll run ${run.runNumber} (${run.month}/${run.year}) was changed after it was submitted. It is back in draft and must be reviewed and submitted again.`,
       `/payroll/runs/${run.id}`,
     );
     this.logger.log(
@@ -1190,16 +1217,40 @@ export class PayrollRunService {
       'approve',
       options?.confirmEmploymentReview,
     );
+    const claimableOtIds = await this.assertOvertimeUnchangedSinceCalculation(run);
 
-    const updated = await this.prisma.payrollRun.update({
-      where: { id: runId },
-      data: {
-        status: 'APPROVED',
-        approvedAt: new Date(),
-        approvedBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    // Approval consumes the run's inputs: OT entries are claimed, linked
+    // reconciliation items are settled, and a correction run records what is
+    // owed. All in one transaction with the status change.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const approved = await tx.payrollRun.update({
+        where: { id: runId },
+        data: {
+          status: 'APPROVED',
+          approvedAt: new Date(),
+          approvedBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+      await this.claimOvertimeEntries(tx, run.id, claimableOtIds);
+      await this.applyReconciliationSettlements(tx, run.id, 1);
+      if (run.type === 'CORRECTION') {
+        await this.createReconciliationItems(tx, run, ctx);
+      }
+      return approved;
     });
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'run_approved',
+        recordType: 'PayrollRun',
+        recordId: run.id,
+        recordReference: run.runNumber,
+        afterValue: { claimedOvertimeEntries: claimableOtIds.length },
+      }),
+    );
 
     const gms = await this.findUserIdsByRoleNames(ctx.companyId, [
       GENERAL_MANAGER_ROLE,
@@ -1273,6 +1324,11 @@ export class PayrollRunService {
    */
   async markPaid(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
     const run = await this.requireRun(runId, ctx.companyId);
+    if (run.type === 'CORRECTION') {
+      throw new BadRequestException(
+        'A correction run pays nothing itself. Settle its reconciliation items in a payroll run',
+      );
+    }
     if (run.status !== 'GM_APPROVED') {
       throw new BadRequestException(
         `Run must be GM_APPROVED before marking as paid`,
@@ -1295,30 +1351,36 @@ export class PayrollRunService {
    */
   async cancelRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
     const run = await this.requireRun(runId, ctx.companyId);
-    if (
-      run.status === 'GM_APPROVED' ||
-      run.status === 'PAID' ||
-      run.status === 'SUPERSEDED'
-    ) {
+    if (!EDITABLE_RUN_STATUSES.includes(run.status)) {
       throw new BadRequestException(
-        `Cannot cancel a run in ${run.status} status`,
+        run.status === 'APPROVED' || run.status === 'GM_APPROVED'
+          ? 'An approved run cannot be deleted. Reopen it instead'
+          : `Cannot delete a run in ${run.status} status`,
       );
     }
 
-    return this.prisma.payrollRun.update({
-      where: { id: runId },
-      data: {
-        status: 'CANCELLED',
-        updatedBy: ctx.userId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      // Draft runs claim nothing; release defensively so inputs are never stranded.
+      await tx.overtimeEntry.updateMany({
+        where: { claimedByRunId: runId },
+        data: { claimedByRunId: null, claimedAt: null },
+      });
+      return tx.payrollRun.update({
+        where: { id: runId },
+        data: {
+          status: 'CANCELLED',
+          updatedBy: ctx.userId,
+        },
+      });
     });
   }
 
   /**
    * Creates a CORRECTION draft for a locked REGULAR run (GM_APPROVED / PAID).
-   * Recalculates with current inputs via the same entry builder, diffs net pay
-   * against the original, and stores every employee with original/corrected/delta.
-   * Prior DRAFT corrections are replaced; finalized corrections are SUPERSEDED.
+   * It recalculates the period with current inputs and compares every payroll
+   * component with what was paid (the original run, or the last approved
+   * correction). It pays nothing itself: approving it creates reconciliation
+   * items. Draft corrections are replaced; an approved one is SUPERSEDED.
    */
   async createCorrectionRun(
     originalRunId: string,
@@ -1339,31 +1401,34 @@ export class PayrollRunService {
       );
     }
 
-    const priorCorrections = await this.prisma.payrollRun.findMany({
+    const liveCorrections = await this.prisma.payrollRun.findMany({
       where: {
         companyId: ctx.companyId,
         originalRunId,
         type: 'CORRECTION',
         deletedAt: null,
+        status: { notIn: ['CANCELLED', 'SUPERSEDED'] },
       },
-      select: { id: true, status: true, runNumber: true },
       orderBy: { createdAt: 'desc' },
     });
+    if (liveCorrections.some((prior) => prior.status === 'PAID')) {
+      throw new BadRequestException(
+        'A paid correction already exists for this period and cannot be superseded',
+      );
+    }
 
-    for (const prior of priorCorrections) {
-      if (prior.status === 'DRAFT' || prior.status === 'REVIEWED') {
+    let superseded: PayrollRun | null = null;
+    for (const prior of liveCorrections) {
+      if (EDITABLE_RUN_STATUSES.includes(prior.status)) {
         await this.deleteCorrectionRunCascade(prior.id, ctx);
-      } else if (
-        prior.status === 'SUBMITTED' ||
-        prior.status === 'APPROVED' ||
-        prior.status === 'GM_APPROVED' ||
-        prior.status === 'PAID'
-      ) {
-        await this.voidPayslipsForRun(prior.id, ctx);
+      } else {
+        // APPROVED / GM_APPROVED: its reconciliation items and claims stay;
+        // the new correction is compared with it.
         await this.prisma.payrollRun.update({
           where: { id: prior.id },
           data: { status: 'SUPERSEDED', updatedBy: ctx.userId },
         });
+        superseded = superseded ?? prior;
       }
     }
 
@@ -1380,151 +1445,46 @@ export class PayrollRunService {
       correctionCount + 1,
     );
 
-    const correctionRun = await this.prisma.payrollRun.create({
-      data: {
-        id: randomUUID(),
-        companyId: ctx.companyId,
-        runNumber,
-        month: original.month,
-        year: original.year,
-        type: 'CORRECTION',
-        originalRunId: original.id,
-        status: 'DRAFT',
-        taxableThreshold: original.taxableThreshold,
-        // Same basis as the run it corrects.
-        considerAttendance: original.considerAttendance,
-        notes: note?.trim() ? note.trim() : null,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
-    });
-
-    const originalEntries = await this.prisma.payrollEntry.findMany({
-      where: { runId: original.id, companyId: ctx.companyId },
-      select: { employeeId: true, netPay: true },
-    });
-    const originalNetByEmployee = new Map(
-      originalEntries.map((entry) => [
-        entry.employeeId,
-        this.toNumber(entry.netPay),
-      ]),
-    );
-
-    const includeFreelancerIds = new Set<string>([
-      ...(await this.includedFreelancerIds(original.id)),
-      ...originalEntries.map((entry) => entry.employeeId),
-    ]);
-
-    const drafts = await this.buildEntryDrafts(correctionRun, ctx, new Map(), {
-      includeFreelancerIds,
-    });
-
-    const correctionDrafts: EntryDraft[] = [];
-    const seenEmployees = new Set<string>();
-
-    for (const draft of drafts) {
-      const employeeId = draft.entry.employeeId as string;
-      seenEmployees.add(employeeId);
-      const correctedAmount = this.toNumber(
-        draft.entry.netPay as Decimal | number | null | undefined,
-      );
-      const originalAmount = originalNetByEmployee.get(employeeId) ?? 0;
-      const deltaAmount =
-        Math.round((correctedAmount - originalAmount) * 100) / 100;
-      correctionDrafts.push({
-        entry: {
-          ...draft.entry,
-          originalAmount: new Decimal(originalAmount),
-          correctedAmount: new Decimal(correctedAmount),
-          deltaAmount: new Decimal(deltaAmount),
-        },
-        salaryPeriods: draft.salaryPeriods,
-      });
-    }
-
-    // Employees on the original run who drop out of the recalculation.
-    for (const [employeeId, originalAmount] of originalNetByEmployee) {
-      if (seenEmployees.has(employeeId)) {
-        continue;
-      }
-      const deltaAmount = Math.round((0 - originalAmount) * 100) / 100;
-      const originalEntry = await this.prisma.payrollEntry.findFirst({
-        where: {
-          runId: original.id,
-          employeeId,
+    const correctionRunId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payrollRun.create({
+        data: {
+          id: correctionRunId,
           companyId: ctx.companyId,
-        },
-      });
-      if (!originalEntry) {
-        continue;
-      }
-      correctionDrafts.push({
-        entry: {
-          id: randomUUID(),
-          companyId: ctx.companyId,
-          runId: correctionRun.id,
-          employeeId,
-          contractId: originalEntry.contractId,
-          attendanceRecordId: null,
-          overtimeSheetId: null,
-          scheduledDays: originalEntry.scheduledDays,
-          presentDays: originalEntry.presentDays,
-          absentDays: originalEntry.absentDays,
-          employedDays: originalEntry.employedDays,
-          payrollDays: new Decimal(0),
-          basicSalary: originalEntry.basicSalary,
-          transportAllowance: new Decimal(0),
-          monthlyBonus: new Decimal(0),
-          contractNetBonus: new Decimal(0),
-          earnedSalary: new Decimal(0),
-          normalOtHours: new Decimal(0),
-          eveningOtHours: new Decimal(0),
-          sundayOtHours: new Decimal(0),
-          holidayOtHours: new Decimal(0),
-          normalOtPay: new Decimal(0),
-          eveningOtPay: new Decimal(0),
-          sundayOtPay: new Decimal(0),
-          holidayOtPay: new Decimal(0),
-          totalOtPay: new Decimal(0),
-          taxableTransport: new Decimal(0),
-          nonTaxableTransport: new Decimal(0),
-          grossIncome: new Decimal(0),
-          taxableIncome: new Decimal(0),
-          pensionEmployee: new Decimal(0),
-          pensionEmployer: new Decimal(0),
-          incomeTax: new Decimal(0),
-          totalDeductions: new Decimal(0),
-          netPay: new Decimal(0),
-          unusedLeavePayout: new Decimal(0),
-          severancePay: new Decimal(0),
-          noticePay: new Decimal(0),
-          bonusTopUp: new Decimal(0),
-          netTopUp: new Decimal(0),
-          originalAmount: new Decimal(originalAmount),
-          correctedAmount: new Decimal(0),
-          deltaAmount: new Decimal(deltaAmount),
-          flag: 'NONE',
-          bankName: originalEntry.bankName,
-          bankAccountNumber: originalEntry.bankAccountNumber,
-          employeeCategory: originalEntry.employeeCategory,
+          runNumber,
+          month: original.month,
+          year: original.year,
+          type: 'CORRECTION',
+          originalRunId: original.id,
+          status: 'DRAFT',
+          taxableThreshold: original.taxableThreshold,
+          // Same basis as the run it corrects.
+          considerAttendance: original.considerAttendance,
+          notes: note?.trim() ? note.trim() : null,
+          version: superseded ? superseded.version + 1 : 1,
+          previousVersionId: superseded?.id ?? null,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
         },
-        salaryPeriods: [],
       });
-    }
+    });
+    const correctionRun = await this.requireRun(correctionRunId, ctx.companyId);
 
-    await this.persistEntryDrafts(correctionDrafts, ctx);
-    await this.updateRunTotals(correctionRun.id, ctx);
+    // What was paid is the starting point: same manual OT and adjustment lines
+    // (settlement links are not copied - a correction settles nothing).
+    const baselineId = await this.resolveCorrectionBaselineId(correctionRun);
+    await this.prisma.$transaction(async (tx) => {
+      await this.copyRunInputs(tx, baselineId, correctionRunId, ctx, {
+        keepReconciliationLinks: false,
+      });
+    });
 
-    const changedCount = correctionDrafts.filter(
-      (draft) => this.toNumber(draft.entry.deltaAmount as Decimal | number | null) !== 0,
-    ).length;
+    await this.rebuildCorrectionEntries(correctionRun, ctx);
+
     this.logger.log(
-      `[PayrollRun] Created correction ${runNumber} for ${original.runNumber} with ${correctionDrafts.length} entries (${changedCount} changed)`,
+      `[PayrollRun] Created correction ${runNumber} for ${original.runNumber}`,
     );
-
-    return this.getRun(correctionRun.id, ctx.companyId);
+    return this.getRun(correctionRunId, ctx.companyId);
   }
 
   /**
@@ -1532,41 +1492,15 @@ export class PayrollRunService {
    * its payslips. Does not create a correction — for re-editing from scratch.
    */
   async unlockRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
-    await this.assertCanUnlockOrCorrect(ctx);
-
     const run = await this.requireRun(runId, ctx.companyId);
-    if (run.type !== 'REGULAR') {
-      throw new BadRequestException('Only regular payroll runs can be unlocked');
-    }
-    if (run.status !== 'GM_APPROVED' && run.status !== 'PAID') {
+    if (run.status === 'PAID') {
       throw new BadRequestException(
-        'Only GM_APPROVED or PAID runs can be unlocked',
+        'A paid run is locked. Create a correction run for its period instead',
       );
     }
-
-    await this.voidPayslipsForRun(runId, ctx);
-
-    await this.prisma.payrollRun.update({
-      where: { id: runId },
-      data: {
-        status: 'DRAFT',
-        submittedAt: null,
-        submittedBy: null,
-        approvedAt: null,
-        approvedBy: null,
-        gmApprovedAt: null,
-        gmApprovedBy: null,
-        paidAt: null,
-        paidBy: null,
-        updatedBy: ctx.userId,
-      },
-    });
-
-    this.logger.log(
-      `[PayrollRun] Unlocked ${run.runNumber} from ${run.status} to DRAFT`,
+    throw new BadRequestException(
+      'Unlocking is replaced by Reopen: give a reason and a new draft version is created',
     );
-
-    return this.getRun(runId, ctx.companyId);
   }
 
   /**
@@ -1622,31 +1556,36 @@ export class PayrollRunService {
       }
     }
 
-    const result = await this.recalcEntryAmounts(entry, entry.run, {
+    // Top-ups are stored as the run's Taxable bonus / Net bonus adjustment
+    // lines (one line each, replacing any existing ones for this employee).
+    const bonusReason =
+      dto.bonusTopUpReason !== undefined ? dto.bonusTopUpReason : entry.bonusTopUpReason;
+    const netReason =
+      dto.netTopUpReason !== undefined ? dto.netTopUpReason : entry.netTopUpReason;
+    await this.replaceSystemAdjustmentLine(
+      entry,
+      'BONUS_TOP_UP',
       bonusTopUp,
+      bonusReason,
+      dto.bonusTopUp !== undefined || dto.bonusTopUpReason !== undefined,
+      ctx,
+    );
+    await this.replaceSystemAdjustmentLine(
+      entry,
+      'NET_TOP_UP',
       netTopUp,
-    });
-
-    const updated = await this.prisma.payrollEntry.update({
-      where: { id: entryId },
-      data: {
-        bonusTopUp: new Decimal(bonusTopUp),
-        bonusTopUpReason:
-          dto.bonusTopUpReason !== undefined
-            ? dto.bonusTopUpReason
-            : entry.bonusTopUpReason,
-        netTopUp: new Decimal(netTopUp),
-        netTopUpReason:
-          dto.netTopUpReason !== undefined
-            ? dto.netTopUpReason
-            : entry.netTopUpReason,
-        notes: dto.notes !== undefined ? dto.notes : entry.notes,
-        ...this.calculationToEntryUpdate(result),
-        updatedBy: ctx.userId,
-      },
-    });
-
-    await this.updateRunTotals(entry.runId, ctx);
+      netReason,
+      dto.netTopUp !== undefined || dto.netTopUpReason !== undefined,
+      ctx,
+    );
+    if (dto.notes !== undefined) {
+      await this.prisma.payrollEntry.update({
+        where: { id: entryId },
+        data: { notes: dto.notes, updatedBy: ctx.userId },
+      });
+    }
+    const updated = await this.applyAdjustmentLinesToEntry(entry.runId, entry.employeeId, ctx);
+    await this.reopenIfInApproval(entry.run, ctx);
     return updated;
   }
 
@@ -2198,7 +2137,8 @@ export class PayrollRunService {
   private async buildEntryDrafts(
     run: PayrollRun,
     ctx: ServiceContext,
-    capturedTopUps: Map<string, CapturedTopUp>,
+    /** Entry notes kept across a recalculation, by employee. */
+    capturedNotes: Map<string, string | null>,
     options: { includeFreelancerIds?: Set<string>; onlyEmployeeIds?: string[] } = {},
   ): Promise<EntryDraft[]> {
     const { month, year } = run;
@@ -2339,39 +2279,7 @@ export class PayrollRunService {
           },
         } as Prisma.AttendanceRecordSelect,
       }),
-      this.prisma.overtimeSheet.findMany({
-        where: {
-          companyId: ctx.companyId,
-          employeeId: { in: employeeIds },
-          month,
-          year,
-          status: 'APPROVED',
-        },
-        select: {
-          id: true,
-          employeeId: true,
-          totalRegularHours: true,
-          totalNightHours: true,
-          totalWeekendHours: true,
-          totalHolidayHours: true,
-          entries: {
-            select: {
-              date: true,
-              startTime: true,
-              endTime: true,
-              endsAtEndOfDay: true,
-              isHoliday: true,
-              isOvernight: true,
-              regularHours: true,
-              nightHours: true,
-              weekendHours: true,
-              holidayHours: true,
-              siteWithinScheduleHours: true,
-            },
-            orderBy: { date: 'asc' },
-          },
-        },
-      }),
+      this.loadPayableOvertime(run, ctx.companyId, employeeIds),
       this.prisma.siteAssignment.findMany({
         where: {
           companyId: ctx.companyId,
@@ -2528,10 +2436,12 @@ export class PayrollRunService {
       attendanceByEmployee.set(record.employeeId, record);
     }
 
-    const overtimeByEmployee = new Map<string, OvertimeSnapshot>();
-    for (const sheet of overtimeSheets) {
-      overtimeByEmployee.set(sheet.employeeId, sheet);
-    }
+    const overtimeByEmployee = overtimeSheets;
+    const adjustmentsByEmployee = await this.loadAdjustmentTotals(
+      run.id,
+      ctx.companyId,
+      employeeIds,
+    );
 
     const siteByEmployee = new Map<
       string,
@@ -2591,7 +2501,7 @@ export class PayrollRunService {
         continue;
       }
 
-      const topUp = capturedTopUps.get(employee.id);
+      const lineTotals = adjustmentsByEmployee.get(employee.id);
       drafts.push(
         await this.computeEntryDraft({
           run,
@@ -2610,11 +2520,12 @@ export class PayrollRunService {
             missingResolutionByEmployee.get(employee.id) ?? null,
           taxableThreshold,
           policy,
-          bonusTopUp: topUp?.bonusTopUp ?? 0,
-          bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
-          netTopUp: topUp?.netTopUp ?? 0,
-          netTopUpReason: topUp?.netTopUpReason ?? null,
-          preservedNotes: topUp?.notes ?? null,
+          bonusTopUp: lineTotals?.totals.bonusTopUp ?? 0,
+          bonusTopUpReason: lineTotals?.bonusTopUpReason ?? null,
+          netTopUp: lineTotals?.totals.netTopUp ?? 0,
+          netTopUpReason: lineTotals?.netTopUpReason ?? null,
+          adjustments: lineTotals?.totals.adjustments ?? ZERO_ADJUSTMENTS,
+          preservedNotes: capturedNotes.get(employee.id) ?? null,
           manualOt: manualOtByEmployee.get(employee.id) ?? [],
         }),
       );
@@ -2849,6 +2760,8 @@ export class PayrollRunService {
     bonusTopUpReason: string | null;
     netTopUp: number;
     netTopUpReason: string | null;
+    /** Adjustment lines other than taxable / net bonus (see PayrollAdjustmentTotals). */
+    adjustments: PayrollAdjustmentTotals;
     preservedNotes: string | null;
     /** Manual (paper-based) OT adjustments for this employee on this run. */
     manualOt?: ManualOtWithContract[];
@@ -2867,6 +2780,7 @@ export class PayrollRunService {
       bonusTopUpReason,
       netTopUp,
       netTopUpReason,
+      adjustments,
       preservedNotes,
     } = input;
     // Attendance off for this run: calculate as if there were no attendance
@@ -3395,6 +3309,7 @@ export class PayrollRunService {
       policy,
       settlementTaxable: settlementApplied?.taxable ?? 0,
       settlementNonTaxable: settlementApplied?.nonTaxable ?? 0,
+      adjustments,
     });
 
     const entryId = randomUUID();
@@ -3482,6 +3397,14 @@ export class PayrollRunService {
       bonusTopUpReason: fullyAbsentWorkingDays ? null : bonusTopUpReason,
       netTopUp: new Decimal(effectiveNetTopUp),
       netTopUpReason: fullyAbsentWorkingDays ? null : netTopUpReason,
+      adjustmentTaxable: new Decimal(result.adjustmentTaxable),
+      adjustmentNonTaxable: new Decimal(result.adjustmentNonTaxable),
+      adjustmentPensionable: new Decimal(result.adjustmentPensionable),
+      adjustmentDeductions: new Decimal(result.adjustmentDeductions),
+      // OT not paid (0 paid days) is not consumed: it stays available.
+      includedOtEntryIds: zeroOtForUnpaidMonth
+        ? []
+        : (overtime?.entries ?? []).map((row) => row.id),
       flag,
       flagNote: flagNote ?? null,
       bankName: employee.bankName,
@@ -3704,6 +3627,12 @@ export class PayrollRunService {
       policy,
       settlementTaxable,
       settlementNonTaxable: severanceUntaxed ? severance : 0,
+      adjustments: {
+        taxableEarnings: this.toNumber(entry.adjustmentTaxable),
+        nonTaxableEarnings: this.toNumber(entry.adjustmentNonTaxable),
+        pensionableEarnings: this.toNumber(entry.adjustmentPensionable),
+        deductions: this.toNumber(entry.adjustmentDeductions),
+      },
     });
   }
 
@@ -3726,6 +3655,10 @@ export class PayrollRunService {
       pensionEmployer: new Decimal(result.pensionEmployer),
       incomeTax: new Decimal(result.incomeTax),
       totalDeductions: new Decimal(result.totalDeductions),
+      adjustmentTaxable: new Decimal(result.adjustmentTaxable),
+      adjustmentNonTaxable: new Decimal(result.adjustmentNonTaxable),
+      adjustmentPensionable: new Decimal(result.adjustmentPensionable),
+      adjustmentDeductions: new Decimal(result.adjustmentDeductions),
       netPay: new Decimal(result.netPay),
     };
   }
@@ -3795,6 +3728,1128 @@ export class PayrollRunService {
         updatedBy: ctx.userId,
       },
     });
+  }
+
+  // ── Inputs: overtime claims and adjustment lines ─────────────────────────
+
+  /**
+   * Overtime a run may pay, as one snapshot per employee built from entries
+   * (never sheet totals):
+   * - REGULAR: approved entries no run has claimed yet.
+   * - CORRECTION: everything claimed for the period (already paid) plus
+   *   approved entries not yet claimed (e.g. approved after the run).
+   */
+  private async loadPayableOvertime(
+    run: Pick<PayrollRun, 'type' | 'month' | 'year'>,
+    companyId: string,
+    employeeIds: string[],
+  ): Promise<Map<string, OvertimeSnapshot>> {
+    const unclaimedApproved: Prisma.OvertimeEntryWhereInput = {
+      claimedByRunId: null,
+      sheet: { status: 'APPROVED', deletedAt: null },
+    };
+    const rows = await this.prisma.overtimeEntry.findMany({
+      where: {
+        sheet: {
+          companyId,
+          employeeId: { in: employeeIds },
+          month: run.month,
+          year: run.year,
+        },
+        OR:
+          run.type === 'CORRECTION'
+            ? [{ claimedByRunId: { not: null } }, unclaimedApproved]
+            : [unclaimedApproved],
+      },
+      select: {
+        id: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        endsAtEndOfDay: true,
+        isHoliday: true,
+        isOvernight: true,
+        regularHours: true,
+        nightHours: true,
+        weekendHours: true,
+        holidayHours: true,
+        siteWithinScheduleHours: true,
+        sheet: { select: { id: true, employeeId: true } },
+      },
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+    });
+
+    const byEmployee = new Map<string, OvertimeSnapshot>();
+    for (const row of rows) {
+      const { sheet, ...entry } = row;
+      let snapshot = byEmployee.get(sheet.employeeId);
+      if (!snapshot) {
+        snapshot = {
+          id: sheet.id,
+          employeeId: sheet.employeeId,
+          totalRegularHours: new Decimal(0),
+          totalNightHours: new Decimal(0),
+          totalWeekendHours: new Decimal(0),
+          totalHolidayHours: new Decimal(0),
+          entries: [],
+        };
+        byEmployee.set(sheet.employeeId, snapshot);
+      }
+      snapshot.entries.push(entry);
+      snapshot.totalRegularHours = new Decimal(snapshot.totalRegularHours ?? 0).add(entry.regularHours);
+      snapshot.totalNightHours = new Decimal(snapshot.totalNightHours ?? 0).add(entry.nightHours);
+      snapshot.totalWeekendHours = new Decimal(snapshot.totalWeekendHours ?? 0).add(entry.weekendHours);
+      snapshot.totalHolidayHours = new Decimal(snapshot.totalHolidayHours ?? 0).add(entry.holidayHours);
+    }
+    return byEmployee;
+  }
+
+  /** Adjustment-line totals (and top-up reasons) per employee for a run. */
+  private async loadAdjustmentTotals(
+    runId: string,
+    companyId: string,
+    employeeIds?: string[],
+  ): Promise<
+    Map<
+      string,
+      {
+        totals: AdjustmentLineTotals;
+        bonusTopUpReason: string | null;
+        netTopUpReason: string | null;
+      }
+    >
+  > {
+    const lines = await this.prisma.payrollAdjustmentLine.findMany({
+      where: {
+        companyId,
+        payrollRunId: runId,
+        ...(employeeIds ? { employeeId: { in: employeeIds } } : {}),
+      },
+      select: {
+        employeeId: true,
+        amount: true,
+        note: true,
+        adjustmentType: {
+          select: { kind: true, taxable: true, pensionable: true, systemField: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    const grouped = new Map<string, typeof lines>();
+    for (const line of lines) {
+      const list = grouped.get(line.employeeId) ?? [];
+      list.push(line);
+      grouped.set(line.employeeId, list);
+    }
+    const result = new Map<
+      string,
+      { totals: AdjustmentLineTotals; bonusTopUpReason: string | null; netTopUpReason: string | null }
+    >();
+    const reasons = (list: typeof lines, field: string): string | null => {
+      const notes = list
+        .filter((line) => line.adjustmentType.systemField === field)
+        .map((line) => line.note.trim())
+        .filter(Boolean);
+      return notes.length > 0 ? notes.join('; ') : null;
+    };
+    for (const [employeeId, list] of grouped) {
+      result.set(employeeId, {
+        totals: adjustmentTotalsFromLines(
+          list.map((line) => ({
+            amount: this.toNumber(line.amount),
+            kind: line.adjustmentType.kind,
+            taxable: line.adjustmentType.taxable,
+            pensionable: line.adjustmentType.pensionable,
+            systemField: line.adjustmentType.systemField,
+          })),
+        ),
+        bonusTopUpReason: reasons(list, 'BONUS_TOP_UP'),
+        netTopUpReason: reasons(list, 'NET_TOP_UP'),
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Reprices one employee's entry from the run's adjustment lines (after a
+   * line is added or removed). Taxable / net bonus lines go to bonusTopUp /
+   * netTopUp exactly as before; the rest to the adjustment totals.
+   */
+  async applyAdjustmentLinesToEntry(
+    runId: string,
+    employeeId: string,
+    ctx: ServiceContext,
+  ): Promise<PayrollEntry> {
+    const entry = await this.prisma.payrollEntry.findFirst({
+      where: { runId, employeeId, companyId: ctx.companyId },
+      include: { run: true },
+    });
+    if (!entry) {
+      throw new NotFoundException('This employee has no entry in the payroll run');
+    }
+    const loaded = (await this.loadAdjustmentTotals(runId, ctx.companyId, [employeeId])).get(
+      employeeId,
+    );
+    const totals = loaded?.totals ?? {
+      bonusTopUp: 0,
+      netTopUp: 0,
+      adjustments: ZERO_ADJUSTMENTS,
+    };
+    // Same rule as generation: a month with 0 paid days pays no bonuses.
+    const zeroDays = this.toNumber(entry.payrollDays) === 0;
+    const bonusTopUp = zeroDays ? 0 : totals.bonusTopUp;
+    const netTopUp = zeroDays ? 0 : totals.netTopUp;
+    const withAdjustments: PayrollEntry = {
+      ...entry,
+      adjustmentTaxable: new Decimal(totals.adjustments.taxableEarnings),
+      adjustmentNonTaxable: new Decimal(totals.adjustments.nonTaxableEarnings),
+      adjustmentPensionable: new Decimal(totals.adjustments.pensionableEarnings),
+      adjustmentDeductions: new Decimal(totals.adjustments.deductions),
+    };
+    const result = await this.recalcEntryAmounts(withAdjustments, entry.run, {
+      bonusTopUp,
+      netTopUp,
+    });
+    const updated = await this.prisma.payrollEntry.update({
+      where: { id: entry.id },
+      data: {
+        bonusTopUp: new Decimal(bonusTopUp),
+        bonusTopUpReason: bonusTopUp > 0 ? (loaded?.bonusTopUpReason ?? null) : null,
+        netTopUp: new Decimal(netTopUp),
+        netTopUpReason: netTopUp > 0 ? (loaded?.netTopUpReason ?? null) : null,
+        ...this.calculationToEntryUpdate(result),
+        updatedBy: ctx.userId,
+      },
+    });
+    await this.updateRunTotals(runId, ctx);
+    return updated;
+  }
+
+  /**
+   * Replaces the employee's Taxable bonus / Net bonus line (the entry drawer's
+   * bonus and net top-up fields). Lines that settle a reconciliation item are kept.
+   */
+  private async replaceSystemAdjustmentLine(
+    entry: Pick<PayrollEntry, 'runId' | 'employeeId' | 'companyId'>,
+    systemField: 'BONUS_TOP_UP' | 'NET_TOP_UP',
+    amount: number,
+    reason: string | null,
+    touched: boolean,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    if (!touched) {
+      return;
+    }
+    const type = await this.prisma.payrollAdjustmentType.findFirst({
+      where: { companyId: entry.companyId, systemField },
+      select: { id: true, nameEn: true },
+    });
+    if (!type) {
+      throw new BadRequestException(
+        `Adjustment type for ${systemField} is missing. Run the payroll migrations`,
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payrollAdjustmentLine.deleteMany({
+        where: {
+          payrollRunId: entry.runId,
+          employeeId: entry.employeeId,
+          adjustmentTypeId: type.id,
+          reconciliationId: null,
+        },
+      });
+      if (amount > 0) {
+        await tx.payrollAdjustmentLine.create({
+          data: {
+            companyId: entry.companyId,
+            payrollRunId: entry.runId,
+            employeeId: entry.employeeId,
+            adjustmentTypeId: type.id,
+            amount: new Decimal(this.round(amount)),
+            note: reason?.trim() || type.nameEn,
+            createdBy: ctx.userId,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+    });
+  }
+
+  // ── Approval: claims and settlements ────────────────────────────────────
+
+  /**
+   * The OT entries this run priced must still be exactly what it priced.
+   * Returns the ids approval will claim (for a correction, those not already
+   * claimed by an earlier run for the period).
+   */
+  private async assertOvertimeUnchangedSinceCalculation(
+    run: Pick<PayrollRun, 'id' | 'type'>,
+  ): Promise<string[]> {
+    const entries = await this.prisma.payrollEntry.findMany({
+      where: { runId: run.id },
+      select: { includedOtEntryIds: true, createdAt: true },
+    });
+    const calculatedAt = new Map<string, Date>();
+    for (const entry of entries) {
+      for (const id of entry.includedOtEntryIds ?? []) {
+        calculatedAt.set(id, entry.createdAt);
+      }
+    }
+    if (calculatedAt.size === 0) {
+      return [];
+    }
+    const rows = await this.prisma.overtimeEntry.findMany({
+      where: { id: { in: [...calculatedAt.keys()] } },
+      select: {
+        id: true,
+        updatedAt: true,
+        claimedByRunId: true,
+        sheet: { select: { status: true, deletedAt: true } },
+      },
+    });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const claimable: string[] = [];
+    let changed = 0;
+    for (const [id, at] of calculatedAt) {
+      const row = byId.get(id);
+      if (!row) {
+        changed += 1;
+        continue;
+      }
+      if (row.claimedByRunId) {
+        // Corrections re-price OT an earlier run already paid; it stays claimed by it.
+        if (run.type !== 'CORRECTION') {
+          changed += 1;
+        }
+        continue;
+      }
+      if (
+        row.sheet.status !== 'APPROVED' ||
+        row.sheet.deletedAt ||
+        row.updatedAt.getTime() > at.getTime()
+      ) {
+        changed += 1;
+        continue;
+      }
+      claimable.push(id);
+    }
+    if (changed > 0) {
+      throw new BadRequestException({
+        message: `${changed} overtime entr${changed === 1 ? 'y has' : 'ies have'} changed since this run was calculated. Recalculate the run before approving`,
+        error: 'OVERTIME_CHANGED_SINCE_CALCULATION',
+        details: { changedEntries: changed },
+      });
+    }
+    return claimable;
+  }
+
+  private async claimOvertimeEntries(
+    tx: Prisma.TransactionClient,
+    runId: string,
+    ids: string[],
+  ): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+    const claimed = await tx.overtimeEntry.updateMany({
+      where: { id: { in: ids }, claimedByRunId: null },
+      data: { claimedByRunId: runId, claimedAt: new Date() },
+    });
+    if (claimed.count !== ids.length) {
+      throw new BadRequestException(
+        'Some overtime was claimed by another payroll run meanwhile. Recalculate the run before approving',
+      );
+    }
+  }
+
+  /**
+   * Applies (direction 1, on approval) or reverses (-1, on reopen) the
+   * settlements made by a run's adjustment lines.
+   */
+  private async applyReconciliationSettlements(
+    tx: Prisma.TransactionClient,
+    runId: string,
+    direction: 1 | -1,
+  ): Promise<void> {
+    const lines = await tx.payrollAdjustmentLine.findMany({
+      where: { payrollRunId: runId, reconciliationId: { not: null } },
+      select: { reconciliationId: true, amount: true },
+    });
+    const sums = new Map<string, number>();
+    for (const line of lines) {
+      const id = line.reconciliationId as string;
+      sums.set(id, this.round((sums.get(id) ?? 0) + this.toNumber(line.amount)));
+    }
+    for (const [id, sum] of sums) {
+      const item = await tx.payrollReconciliation.findUnique({ where: { id } });
+      if (!item) {
+        continue;
+      }
+      const amount = this.toNumber(item.amount);
+      const settled = this.toNumber(item.settledAmount);
+      if (direction === 1) {
+        if (item.status === 'WAIVED' || item.status === 'SETTLED') {
+          throw new BadRequestException(
+            `Reconciliation item for ${item.forMonth}/${item.forYear} is already ${item.status.toLowerCase()}. Remove its line before approving`,
+          );
+        }
+        if (sum > reconciliationRemaining(amount, settled) + 0.005) {
+          throw new BadRequestException(
+            `Lines settle ${sum.toFixed(2)} ETB but only ${reconciliationRemaining(amount, settled).toFixed(2)} ETB is still owed on a reconciliation item`,
+          );
+        }
+      }
+      const nextSettled = this.round(Math.max(0, settled + direction * sum));
+      await tx.payrollReconciliation.update({
+        where: { id },
+        data: {
+          settledAmount: new Decimal(nextSettled),
+          status:
+            item.status === 'WAIVED' ? 'WAIVED' : reconciliationStatusFor(amount, nextSettled),
+        },
+      });
+    }
+  }
+
+  /** On approval of a correction run: one item per employee whose net pay changed. */
+  private async createReconciliationItems(
+    tx: Prisma.TransactionClient,
+    run: PayrollRun,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const entries = await tx.payrollEntry.findMany({
+      where: { runId: run.id, deltaAmount: { not: 0 } },
+      select: { employeeId: true, deltaAmount: true },
+    });
+    const period = `${MONTH_NAMES[run.month - 1]} ${run.year}`;
+    const reason = run.notes?.trim()
+      ? `${run.runNumber} correction for ${period}: ${run.notes.trim()}`
+      : `${run.runNumber} correction for ${period}`;
+    for (const entry of entries) {
+      const delta = this.round(this.toNumber(entry.deltaAmount));
+      if (Math.abs(delta) < 0.005) {
+        continue;
+      }
+      await tx.payrollReconciliation.create({
+        data: {
+          companyId: run.companyId,
+          employeeId: entry.employeeId,
+          forMonth: run.month,
+          forYear: run.year,
+          correctionRunId: run.id,
+          direction: delta > 0 ? 'OWED_TO_EMPLOYEE' : 'OWED_TO_COMPANY',
+          amount: new Decimal(Math.abs(delta)),
+          reason: reason.slice(0, 500),
+          createdBy: ctx.userId,
+        },
+      });
+    }
+  }
+
+  // ── Reopen ──────────────────────────────────────────────────────────────
+
+  /**
+   * Reopens an APPROVED / GM_APPROVED run: the run becomes a SUPERSEDED
+   * version (kept, with the reason), what it consumed is released, and a new
+   * DRAFT version of the same period is created and calculated. Paid runs are
+   * locked.
+   */
+  async reopenRun(runId: string, reason: string, ctx: ServiceContext): Promise<PayrollRun> {
+    await this.assertPayrollApprove(ctx);
+    const run = await this.requireRun(runId, ctx.companyId);
+    const trimmed = reason?.trim() ?? '';
+    if (trimmed.length < 5) {
+      throw new BadRequestException('A reason (at least 5 characters) is required to reopen');
+    }
+    if (run.status === 'PAID') {
+      throw new BadRequestException(
+        'A paid run is locked. Create a correction run for its period instead',
+      );
+    }
+    if (run.status !== 'APPROVED' && run.status !== 'GM_APPROVED') {
+      throw new BadRequestException(
+        `Only an approved run can be reopened (this run is ${run.status}). A draft can be recalculated directly`,
+      );
+    }
+    if (run.type === 'REGULAR') {
+      const corrections = await this.prisma.payrollRun.count({
+        where: {
+          originalRunId: run.id,
+          type: 'CORRECTION',
+          deletedAt: null,
+          status: { not: 'CANCELLED' },
+        },
+      });
+      if (corrections > 0) {
+        throw new BadRequestException(
+          'This run has correction runs. Correct the period with a new correction run instead of reopening',
+        );
+      }
+    } else {
+      const items = await this.prisma.payrollReconciliation.findMany({
+        where: { correctionRunId: run.id },
+        select: { id: true, settledAmount: true, status: true, _count: { select: { lines: true } } },
+      });
+      const inUse = items.some(
+        (item) =>
+          this.toNumber(item.settledAmount) > 0 ||
+          item.status === 'WAIVED' ||
+          item._count.lines > 0,
+      );
+      if (inUse) {
+        throw new BadRequestException(
+          'Reconciliation items from this correction are already being settled or were waived. It cannot be reopened',
+        );
+      }
+    }
+
+    const now = new Date();
+    const baseNumber = run.runNumber.replace(/-V\d+$/, '');
+    const newRunId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await this.applyReconciliationSettlements(tx, run.id, -1);
+      if (run.type === 'CORRECTION') {
+        await tx.payrollReconciliation.deleteMany({ where: { correctionRunId: run.id } });
+      }
+      await tx.overtimeEntry.updateMany({
+        where: { claimedByRunId: run.id },
+        data: { claimedByRunId: null, claimedAt: null },
+      });
+      await tx.payrollRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'SUPERSEDED',
+          reopenReason: trimmed,
+          reopenedBy: ctx.userId,
+          reopenedAt: now,
+          updatedBy: ctx.userId,
+        },
+      });
+      await tx.payrollRun.create({
+        data: {
+          id: newRunId,
+          companyId: run.companyId,
+          runNumber: `${baseNumber}-V${run.version + 1}`,
+          month: run.month,
+          year: run.year,
+          type: run.type,
+          originalRunId: run.originalRunId,
+          status: 'DRAFT',
+          taxableThreshold: run.taxableThreshold,
+          considerAttendance: run.considerAttendance,
+          notes: run.notes,
+          version: run.version + 1,
+          previousVersionId: run.id,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+      await this.copyRunInputs(tx, run.id, newRunId, ctx, { keepReconciliationLinks: true });
+    });
+
+    const fresh = await this.requireRun(newRunId, ctx.companyId);
+    if (fresh.type === 'CORRECTION') {
+      await this.rebuildCorrectionEntries(fresh, ctx);
+    } else {
+      const includeFreelancerIds = await this.includedFreelancerIds(run.id);
+      const notes = await this.prisma.payrollEntry.findMany({
+        where: { runId: run.id, notes: { not: null } },
+        select: { employeeId: true, notes: true },
+      });
+      const drafts = await this.buildEntryDrafts(
+        fresh,
+        ctx,
+        new Map(notes.map((entry) => [entry.employeeId, entry.notes])),
+        { includeFreelancerIds },
+      );
+      await this.persistEntryDrafts(drafts, ctx);
+      await this.updateRunTotals(newRunId, ctx);
+    }
+
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'run_reopened',
+        recordType: 'PayrollRun',
+        recordId: run.id,
+        recordReference: run.runNumber,
+        beforeValue: { status: run.status, version: run.version },
+        afterValue: { status: 'SUPERSEDED', reason: trimmed, newRunId },
+      }),
+    );
+    const recipients = new Set<string>(
+      await this.findUserIdsByRoleNames(ctx.companyId, [HR_MANAGER_ROLE, GENERAL_MANAGER_ROLE]),
+    );
+    recipients.delete(ctx.userId);
+    await this.notifyMany(
+      ctx,
+      [...recipients],
+      'payroll.run_reopened',
+      `Payroll ${run.runNumber} reopened`,
+      `Payroll run ${run.runNumber} (${run.month}/${run.year}) was reopened: ${trimmed}. A new draft version must be reviewed and approved.`,
+      `/payroll/runs/${newRunId}`,
+    );
+    this.logger.log(`[PayrollRun] ${run.runNumber} reopened as version ${run.version + 1}`);
+    return this.getRun(newRunId, ctx.companyId);
+  }
+
+  /**
+   * Copies manual OT adjustments and adjustment lines from one run to another
+   * (reopened version, or the run a correction corrects). Legacy runs whose
+   * top-ups were never stored as lines get lines from their entries.
+   */
+  private async copyRunInputs(
+    tx: Prisma.TransactionClient,
+    fromRunId: string,
+    toRunId: string,
+    ctx: ServiceContext,
+    options: { keepReconciliationLinks: boolean },
+  ): Promise<void> {
+    const manualOt = await tx.payrollOtAdjustment.findMany({ where: { payrollRunId: fromRunId } });
+    if (manualOt.length > 0) {
+      await tx.payrollOtAdjustment.createMany({
+        data: manualOt.map((row) => ({
+          id: randomUUID(),
+          companyId: row.companyId,
+          payrollRunId: toRunId,
+          employeeId: row.employeeId,
+          contractId: row.contractId,
+          otCategory: row.otCategory,
+          hours: row.hours,
+          appliedHours: new Decimal(0),
+          amount: new Decimal(0),
+          note: row.note,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        })),
+      });
+    }
+
+    const lines = await tx.payrollAdjustmentLine.findMany({ where: { payrollRunId: fromRunId } });
+    if (lines.length > 0) {
+      await tx.payrollAdjustmentLine.createMany({
+        data: lines.map((line) => ({
+          id: randomUUID(),
+          companyId: line.companyId,
+          payrollRunId: toRunId,
+          employeeId: line.employeeId,
+          adjustmentTypeId: line.adjustmentTypeId,
+          amount: line.amount,
+          note: line.note,
+          reconciliationId: options.keepReconciliationLinks ? line.reconciliationId : null,
+          instalmentNumber: options.keepReconciliationLinks ? line.instalmentNumber : null,
+          instalmentCount: options.keepReconciliationLinks ? line.instalmentCount : null,
+          capOverrideReason: line.capOverrideReason,
+          sourceLineId: line.id,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        })),
+      });
+      return;
+    }
+
+    // Legacy: top-ups stored only on entries (paid runs were not backfilled).
+    const legacy = await tx.payrollEntry.findMany({
+      where: { runId: fromRunId, OR: [{ bonusTopUp: { not: 0 } }, { netTopUp: { not: 0 } }] },
+      select: {
+        companyId: true,
+        employeeId: true,
+        bonusTopUp: true,
+        bonusTopUpReason: true,
+        netTopUp: true,
+        netTopUpReason: true,
+      },
+    });
+    if (legacy.length === 0) {
+      return;
+    }
+    const types = await tx.payrollAdjustmentType.findMany({
+      where: { companyId: ctx.companyId, systemField: { in: ['BONUS_TOP_UP', 'NET_TOP_UP'] } },
+      select: { id: true, systemField: true, nameEn: true },
+    });
+    const bonusType = types.find((type) => type.systemField === 'BONUS_TOP_UP');
+    const netType = types.find((type) => type.systemField === 'NET_TOP_UP');
+    const data: Prisma.PayrollAdjustmentLineCreateManyInput[] = [];
+    for (const entry of legacy) {
+      if (bonusType && this.toNumber(entry.bonusTopUp) > 0) {
+        data.push({
+          companyId: entry.companyId,
+          payrollRunId: toRunId,
+          employeeId: entry.employeeId,
+          adjustmentTypeId: bonusType.id,
+          amount: entry.bonusTopUp,
+          note: entry.bonusTopUpReason?.trim() || bonusType.nameEn,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        });
+      }
+      if (netType && this.toNumber(entry.netTopUp) > 0) {
+        data.push({
+          companyId: entry.companyId,
+          payrollRunId: toRunId,
+          employeeId: entry.employeeId,
+          adjustmentTypeId: netType.id,
+          amount: entry.netTopUp,
+          note: entry.netTopUpReason?.trim() || netType.nameEn,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        });
+      }
+    }
+    if (data.length > 0) {
+      await tx.payrollAdjustmentLine.createMany({ data });
+    }
+  }
+
+  // ── Corrections ─────────────────────────────────────────────────────────
+
+  /**
+   * What a correction is compared against: the latest correction of the same
+   * original that was approved (and not undone by a reopen) before it, else
+   * the original run.
+   */
+  private async resolveCorrectionBaselineId(
+    run: Pick<PayrollRun, 'id' | 'originalRunId' | 'createdAt' | 'companyId'>,
+  ): Promise<string> {
+    if (!run.originalRunId) {
+      throw new BadRequestException('Correction run has no original run');
+    }
+    const prior = await this.prisma.payrollRun.findFirst({
+      where: {
+        companyId: run.companyId,
+        originalRunId: run.originalRunId,
+        type: 'CORRECTION',
+        id: { not: run.id },
+        deletedAt: null,
+        approvedAt: { not: null },
+        reopenedAt: null,
+        createdAt: { lt: run.createdAt },
+        status: { in: ['APPROVED', 'GM_APPROVED', 'PAID', 'SUPERSEDED'] },
+      },
+      orderBy: { approvedAt: 'desc' },
+      select: { id: true },
+    });
+    return prior?.id ?? run.originalRunId;
+  }
+
+  /**
+   * (Re)builds a correction run: recalculates the period with current inputs,
+   * stores corrected entries with original / corrected / delta net pay, and a
+   * paid-vs-corrected line for every payroll component.
+   */
+  private async rebuildCorrectionEntries(run: PayrollRun, ctx: ServiceContext): Promise<void> {
+    const baselineId = await this.resolveCorrectionBaselineId(run);
+
+    await this.prisma.payrollCorrectionLine.deleteMany({ where: { correctionRunId: run.id } });
+    await this.prisma.payrollSalaryPeriod.deleteMany({ where: { entry: { runId: run.id } } });
+    await this.prisma.payrollEntry.deleteMany({ where: { runId: run.id } });
+
+    const baselineEntries = await this.prisma.payrollEntry.findMany({
+      where: { runId: baselineId, companyId: ctx.companyId },
+    });
+    const baselineByEmployee = new Map(baselineEntries.map((entry) => [entry.employeeId, entry]));
+    const baselineManualOt = await this.manualOtPayByEmployee(baselineId);
+
+    const includeFreelancerIds = new Set<string>([
+      ...(await this.includedFreelancerIds(baselineId)),
+      ...baselineEntries.map((entry) => entry.employeeId),
+    ]);
+    const drafts = await this.buildEntryDrafts(run, ctx, new Map(), { includeFreelancerIds });
+
+    const correctionDrafts: EntryDraft[] = [];
+    const lineRows: Prisma.PayrollCorrectionLineCreateManyInput[] = [];
+    const seen = new Set<string>();
+
+    const pushLines = (
+      employeeId: string,
+      paid: PayrollEntry | null,
+      corrected: CorrectionEntrySnapshot | null,
+      correctedManualOt: ManualOtPayByCategory,
+    ): void => {
+      const lines = buildCorrectionLines(
+        correctionComponentAmounts(
+          paid,
+          baselineManualOt.get(employeeId) ?? ZERO_MANUAL_OT,
+        ),
+        correctionComponentAmounts(corrected, correctedManualOt),
+      );
+      for (const line of lines) {
+        lineRows.push({
+          companyId: ctx.companyId,
+          correctionRunId: run.id,
+          employeeId,
+          component: line.component,
+          sortOrder: line.sortOrder,
+          paidAmount: new Decimal(line.paidAmount),
+          correctedAmount: new Decimal(line.correctedAmount),
+          difference: new Decimal(line.difference),
+        });
+      }
+    };
+
+    for (const draft of drafts) {
+      const employeeId = draft.entry.employeeId as string;
+      seen.add(employeeId);
+      const paid = baselineByEmployee.get(employeeId) ?? null;
+      const correctedNet = this.toNumber(draft.entry.netPay as Decimal | number | null);
+      const originalNet = paid ? this.toNumber(paid.netPay) : 0;
+      correctionDrafts.push({
+        ...draft,
+        entry: {
+          ...draft.entry,
+          originalAmount: new Decimal(originalNet),
+          correctedAmount: new Decimal(correctedNet),
+          deltaAmount: new Decimal(this.round(correctedNet - originalNet)),
+        },
+      });
+      const correctedManualOt: ManualOtPayByCategory = { ...ZERO_MANUAL_OT };
+      for (const applied of draft.manualOt ?? []) {
+        correctedManualOt[applied.category] = this.round(
+          correctedManualOt[applied.category] + applied.amount,
+        );
+      }
+      pushLines(
+        employeeId,
+        paid,
+        draft.entry as unknown as CorrectionEntrySnapshot,
+        correctedManualOt,
+      );
+    }
+
+    // Employees paid before who drop out of the recalculation: corrected to 0.
+    for (const [employeeId, paid] of baselineByEmployee) {
+      if (seen.has(employeeId)) {
+        continue;
+      }
+      const originalNet = this.toNumber(paid.netPay);
+      correctionDrafts.push({
+        entry: {
+          id: randomUUID(),
+          companyId: ctx.companyId,
+          runId: run.id,
+          employeeId,
+          contractId: paid.contractId,
+          scheduledDays: paid.scheduledDays,
+          presentDays: paid.presentDays,
+          absentDays: paid.absentDays,
+          employedDays: paid.employedDays,
+          payrollDays: new Decimal(0),
+          basicSalary: paid.basicSalary,
+          originalAmount: new Decimal(originalNet),
+          correctedAmount: new Decimal(0),
+          deltaAmount: new Decimal(this.round(-originalNet)),
+          flag: 'NONE',
+          bankName: paid.bankName,
+          bankAccountNumber: paid.bankAccountNumber,
+          employeeCategory: paid.employeeCategory,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+        salaryPeriods: [],
+      });
+      pushLines(employeeId, paid, null, ZERO_MANUAL_OT);
+    }
+
+    await this.persistEntryDrafts(correctionDrafts, ctx);
+    for (let i = 0; i < lineRows.length; i += 500) {
+      await this.prisma.payrollCorrectionLine.createMany({ data: lineRows.slice(i, i + 500) });
+    }
+    await this.updateRunTotals(run.id, ctx);
+    await this.prisma.payrollRun.update({
+      where: { id: run.id },
+      data: {
+        attendanceSnapshotStale: false,
+        policyReviewRequired: false,
+        policyReviewNote: null,
+        updatedBy: ctx.userId,
+      } as Prisma.PayrollRunUpdateInput,
+    });
+  }
+
+  /** Manual (paper) OT pay per employee and category, as applied on a run. */
+  private async manualOtPayByEmployee(
+    runId: string,
+  ): Promise<Map<string, ManualOtPayByCategory>> {
+    const rows = await this.prisma.payrollOtAdjustment.findMany({
+      where: { payrollRunId: runId },
+      select: { employeeId: true, otCategory: true, amount: true },
+    });
+    const result = new Map<string, ManualOtPayByCategory>();
+    for (const row of rows) {
+      const current = result.get(row.employeeId) ?? { ...ZERO_MANUAL_OT };
+      current[row.otCategory] = this.round(current[row.otCategory] + this.toNumber(row.amount));
+      result.set(row.employeeId, current);
+    }
+    return result;
+  }
+
+  /** Paid vs corrected component lines of a correction run. */
+  async getCorrectionLines(
+    runId: string,
+    companyId: string,
+    employeeId?: string,
+  ): Promise<
+    Array<{
+      employeeId: string;
+      component: string;
+      sortOrder: number;
+      paidAmount: number;
+      correctedAmount: number;
+      difference: number;
+    }>
+  > {
+    const run = await this.requireRun(runId, companyId);
+    if (run.type !== 'CORRECTION') {
+      throw new BadRequestException('Only correction runs have component differences');
+    }
+    const rows = await this.prisma.payrollCorrectionLine.findMany({
+      where: { correctionRunId: runId, ...(employeeId ? { employeeId } : {}) },
+      orderBy: [{ employeeId: 'asc' }, { sortOrder: 'asc' }],
+    });
+    return rows.map((row) => ({
+      employeeId: row.employeeId,
+      component: row.component,
+      sortOrder: row.sortOrder,
+      paidAmount: this.toNumber(row.paidAmount),
+      correctedAmount: this.toNumber(row.correctedAmount),
+      difference: this.toNumber(row.difference),
+    }));
+  }
+
+  // ── Warnings and history ────────────────────────────────────────────────
+
+  /**
+   * What HR should follow up before finalizing: OT not yet approved for the
+   * month, OT approved after the run was calculated, open reconciliation
+   * items for employees in the run, and deductions above one third of wage.
+   */
+  async getRunWarnings(runId: string, companyId: string): Promise<PayrollRunWarnings> {
+    const run = await this.requireRun(runId, companyId);
+    const entries = await this.prisma.payrollEntry.findMany({
+      where: { runId },
+      select: {
+        employeeId: true,
+        basicSalary: true,
+        adjustmentDeductions: true,
+        netPay: true,
+        includedOtEntryIds: true,
+        employee: { select: { firstName: true, lastName: true, employeeId: true } },
+      },
+    });
+    const name = (employee: { firstName: string; lastName: string }): string =>
+      `${employee.firstName} ${employee.lastName}`.trim();
+    const employeeIds = entries.map((entry) => entry.employeeId);
+    const included = new Set(entries.flatMap((entry) => entry.includedOtEntryIds ?? []));
+
+    const sheets = await this.prisma.overtimeSheet.findMany({
+      where: {
+        companyId,
+        month: run.month,
+        year: run.year,
+        deletedAt: null,
+        status: { in: ['DRAFT', 'SUBMITTED', 'IN_REVIEW', 'RETURNED', 'APPROVED'] },
+      },
+      select: {
+        id: true,
+        sheetNumber: true,
+        status: true,
+        employeeId: true,
+        employee: { select: { firstName: true, lastName: true, employeeId: true } },
+        entries: {
+          where: { claimedByRunId: null },
+          select: { id: true, totalHours: true },
+        },
+      },
+    });
+
+    const pendingOvertime: PayrollRunWarnings['pendingOvertime'] = [];
+    const overtimeNotIncluded: PayrollRunWarnings['overtimeNotIncluded'] = [];
+    for (const sheet of sheets) {
+      if (sheet.entries.length === 0) {
+        continue;
+      }
+      const hours = (rows: typeof sheet.entries): number =>
+        this.round(rows.reduce((sum, row) => sum + this.toNumber(row.totalHours), 0));
+      const base = {
+        employeeId: sheet.employeeId,
+        employeeName: name(sheet.employee),
+        employeeCode: sheet.employee.employeeId,
+        sheetId: sheet.id,
+        sheetNumber: sheet.sheetNumber,
+      };
+      if (sheet.status !== 'APPROVED') {
+        pendingOvertime.push({
+          ...base,
+          sheetStatus: sheet.status,
+          entries: sheet.entries.length,
+          hours: hours(sheet.entries),
+        });
+        continue;
+      }
+      const notIncluded = sheet.entries.filter((row) => !included.has(row.id));
+      if (notIncluded.length > 0) {
+        overtimeNotIncluded.push({
+          ...base,
+          sheetStatus: sheet.status,
+          entries: notIncluded.length,
+          hours: hours(notIncluded),
+        });
+      }
+    }
+
+    const items =
+      employeeIds.length === 0
+        ? []
+        : await this.prisma.payrollReconciliation.findMany({
+            where: {
+              companyId,
+              employeeId: { in: employeeIds },
+              status: { in: ['OPEN', 'PARTIALLY_SETTLED'] },
+            },
+            select: {
+              id: true,
+              employeeId: true,
+              direction: true,
+              amount: true,
+              settledAmount: true,
+              forMonth: true,
+              forYear: true,
+              employee: { select: { firstName: true, lastName: true, employeeId: true } },
+            },
+            orderBy: [{ forYear: 'asc' }, { forMonth: 'asc' }],
+          });
+
+    const deductionsOverCap: PayrollRunWarnings['deductionsOverCap'] = [];
+    const negativeNetPay: PayrollRunWarnings['negativeNetPay'] = [];
+    for (const entry of entries) {
+      const wage = this.toNumber(entry.basicSalary);
+      const deductions = this.toNumber(entry.adjustmentDeductions);
+      if (deductions > 0 && exceedsDeductionCap(wage, deductions)) {
+        deductionsOverCap.push({
+          employeeId: entry.employeeId,
+          employeeName: name(entry.employee),
+          employeeCode: entry.employee.employeeId,
+          deductions,
+          cap: deductionCap(wage),
+        });
+      }
+      if (this.toNumber(entry.netPay) < 0) {
+        negativeNetPay.push({
+          employeeId: entry.employeeId,
+          employeeName: name(entry.employee),
+          employeeCode: entry.employee.employeeId,
+          netPay: this.toNumber(entry.netPay),
+        });
+      }
+    }
+
+    return {
+      runId,
+      pendingOvertime,
+      overtimeNotIncluded,
+      openReconciliations: items.map((item) => ({
+        id: item.id,
+        employeeId: item.employeeId,
+        employeeName: name(item.employee),
+        employeeCode: item.employee.employeeId,
+        direction: item.direction,
+        amount: this.toNumber(item.amount),
+        remaining: reconciliationRemaining(
+          this.toNumber(item.amount),
+          this.toNumber(item.settledAmount),
+        ),
+        forMonth: item.forMonth,
+        forYear: item.forYear,
+      })),
+      deductionsOverCap,
+      negativeNetPay,
+    };
+  }
+
+  /** Every version of the run's period (incl. superseded) and related corrections. */
+  async getRunHistory(runId: string, companyId: string): Promise<PayrollRunHistory> {
+    const run = await this.requireRun(runId, companyId);
+    const select = {
+      id: true,
+      runNumber: true,
+      type: true,
+      version: true,
+      status: true,
+      createdAt: true,
+      approvedAt: true,
+      gmApprovedAt: true,
+      paidAt: true,
+      reopenReason: true,
+      reopenedAt: true,
+      previousVersionId: true,
+      originalRunId: true,
+      totalNetPay: true,
+      reopener: { select: { firstName: true, lastName: true } },
+    } satisfies Prisma.PayrollRunSelect;
+    type Row = Prisma.PayrollRunGetPayload<{ select: typeof select }>;
+    const toItem = (row: Row): PayrollRunHistoryItem => ({
+      id: row.id,
+      runNumber: row.runNumber,
+      type: row.type,
+      version: row.version,
+      status: row.status,
+      createdAt: row.createdAt,
+      approvedAt: row.approvedAt,
+      gmApprovedAt: row.gmApprovedAt,
+      paidAt: row.paidAt,
+      reopenReason: row.reopenReason,
+      reopenedAt: row.reopenedAt,
+      reopenedByName: row.reopener
+        ? `${row.reopener.firstName} ${row.reopener.lastName}`.trim()
+        : null,
+      previousVersionId: row.previousVersionId,
+      originalRunId: row.originalRunId,
+      totalNetPay: this.toNumber(row.totalNetPay),
+    });
+
+    const versions = await this.prisma.payrollRun.findMany({
+      where: {
+        companyId,
+        month: run.month,
+        year: run.year,
+        type: run.type,
+        deletedAt: null,
+        ...(run.type === 'CORRECTION' ? { originalRunId: run.originalRunId } : {}),
+      },
+      select,
+      orderBy: [{ createdAt: 'asc' }],
+    });
+    const regularIds =
+      run.type === 'REGULAR'
+        ? versions.map((version) => version.id)
+        : run.originalRunId
+          ? [run.originalRunId]
+          : [];
+    const corrections =
+      regularIds.length === 0
+        ? []
+        : await this.prisma.payrollRun.findMany({
+            where: {
+              companyId,
+              type: 'CORRECTION',
+              originalRunId: { in: regularIds },
+              deletedAt: null,
+              ...(run.type === 'CORRECTION' ? { id: { notIn: versions.map((v) => v.id) } } : {}),
+            },
+            select,
+            orderBy: [{ createdAt: 'asc' }],
+          });
+    const original =
+      run.type === 'CORRECTION' && run.originalRunId
+        ? await this.prisma.payrollRun.findFirst({ where: { id: run.originalRunId }, select })
+        : null;
+    return {
+      versions: versions.map(toItem),
+      corrections: corrections.map(toItem),
+      originalRun: original ? toItem(original) : null,
+    };
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────

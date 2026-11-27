@@ -383,6 +383,11 @@ model Company {
   payrollEntries             PayrollEntry[]
   payrollEntryAudits         PayrollEntryAudit[]
   payrollOtAdjustments       PayrollOtAdjustment[]
+  payrollAdjustmentTypes     PayrollAdjustmentType[]
+  payrollAdjustmentLines     PayrollAdjustmentLine[]
+  payrollReconciliations     PayrollReconciliation[]
+  payrollCorrectionLines     PayrollCorrectionLine[]
+  payrollStatutoryAdjustments PayrollStatutoryAdjustment[]
   payrollPayslips            PayrollPayslip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -1018,6 +1023,9 @@ model User {
   payrollOtAdjustments               PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentEmployee")
   payrollOtAdjustmentsCreated        PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentCreator")
   payrollOtAdjustmentsUpdated        PayrollOtAdjustment[]       @relation("PayrollOtAdjustmentUpdater")
+  payrollAdjustmentLines             PayrollAdjustmentLine[]     @relation("PayrollAdjustmentLineEmployee")
+  payrollReconciliations             PayrollReconciliation[]     @relation("PayrollReconciliationEmployee")
+  payrollRunsReopened                PayrollRun[]                @relation("PayrollRunReopener")
   payrollPayslipsCreated             PayrollPayslip[]            @relation("PayrollPayslipCreator")
   payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
   educationRecords                   EducationRecord[]
@@ -4472,9 +4480,14 @@ model OvertimeEntry {
   /// Set when the site assignment was cancelled/shortened after the sheet was submitted (stored hours kept).
   siteReviewFlag      String?   @map("site_review_flag") @db.VarChar(40)
   siteReviewFlaggedAt DateTime? @map("site_review_flagged_at")
+  /// Payroll run that consumed this entry when the run was approved (null = not yet paid).
+  /// Claimed entries are locked: they cannot be edited or deleted.
+  claimedByRunId  String?   @map("claimed_by_run_id")
+  claimedAt       DateTime? @map("claimed_at")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
+  claimedByRun   PayrollRun?             @relation("OvertimeEntryClaimedByRun", fields: [claimedByRunId], references: [id], onDelete: SetNull)
   sheet          OvertimeSheet           @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   documents      OvertimeEntryDocument[]
   siteAssignment SiteAssignment?         @relation(fields: [siteAssignmentId], references: [id], onDelete: SetNull)
@@ -4483,6 +4496,7 @@ model OvertimeEntry {
   @@index([sheetId], map: "idx_overtime_entry_sheet")
   @@index([date], map: "idx_overtime_entry_date")
   @@index([siteAssignmentId], map: "idx_overtime_entry_site_assignment")
+  @@index([claimedByRunId], map: "idx_overtime_entry_claimed_by_run")
   @@map("overtime_entry")
 }
 
@@ -6807,6 +6821,14 @@ model PayrollRun{
   gmApprovedBy            String?                             @map("gm_approved_by")
   paidAt                  DateTime?                           @map("paid_at")
   paidBy                  String?                             @map("paid_by")
+  /// Version number within the period (1 = first). Reopening creates version + 1.
+  version                 Int                                 @default(1)
+  /// The SUPERSEDED version this draft was reopened from.
+  previousVersionId       String?                             @map("previous_version_id")
+  /// Set on a version when it is reopened (it becomes SUPERSEDED).
+  reopenReason            String?                             @map("reopen_reason")
+  reopenedBy              String?                             @map("reopened_by")
+  reopenedAt              DateTime?                           @map("reopened_at")
   createdAt               DateTime                            @default(now())  @map("created_at")
   createdBy               String                              @map("created_by")
   updatedAt               DateTime                            @default(now()) @updatedAt @map("updated_at")
@@ -6822,17 +6844,26 @@ model PayrollRun{
   approver                User?                               @relation("PayrollRunApprover", fields: [approvedBy], references: [id])
   gmApprover              User?                               @relation("PayrollRunGMApprover", fields: [gmApprovedBy], references: [id])
   payer                   User?                               @relation("PayrollRunPayer", fields: [paidBy], references: [id])
+  reopener                User?                               @relation("PayrollRunReopener", fields: [reopenedBy], references: [id])
+  previousVersion         PayrollRun?                         @relation("PayrollRunVersions", fields: [previousVersionId], references: [id])
+  nextVersions            PayrollRun[]                        @relation("PayrollRunVersions")
   originalRun             PayrollRun?                         @relation("PayrollCorrections", fields: [originalRunId], references: [id])
   corrections             PayrollRun[]                        @relation("PayrollCorrections")
   entries                 PayrollEntry[]
   payslips                PayrollPayslip[]
   otAdjustments           PayrollOtAdjustment[]
+  adjustmentLines         PayrollAdjustmentLine[]
+  correctionLines         PayrollCorrectionLine[]
+  reconciliations         PayrollReconciliation[]
+  statutoryAdjustments    PayrollStatutoryAdjustment[]
+  claimedOvertimeEntries  OvertimeEntry[]                     @relation("OvertimeEntryClaimedByRun")
 
 
-  /// One active REGULAR run per company/month (enforced in SQL partial unique index).
+  /// One live (not SUPERSEDED / CANCELLED) run per company/month/type (SQL partial unique index).
   @@index([companyId, month, year], map: "idx_payroll_run_company_month_year")
   @@index([companyId], map: "idx_payroll_run_company")
   @@index([originalRunId], map: "idx_payroll_run_original")
+  @@index([previousVersionId], map: "idx_payroll_run_previous_version")
   @@map("payroll_run")
 }
 
@@ -6884,6 +6915,180 @@ model PayrollOtAdjustment {
   @@index([employeeId], map: "idx_payroll_ot_adjustment_employee")
   @@index([contractId], map: "idx_payroll_ot_adjustment_contract")
   @@map("payroll_ot_adjustment")
+}
+
+enum PayrollAdjustmentKind {
+  EARNING
+  DEDUCTION
+
+  @@map("payroll_adjustment_kind")
+}
+
+enum PayrollReconciliationDirection {
+  OWED_TO_EMPLOYEE
+  OWED_TO_COMPANY
+
+  @@map("payroll_reconciliation_direction")
+}
+
+enum PayrollReconciliationStatus {
+  OPEN
+  PARTIALLY_SETTLED
+  SETTLED
+  WAIVED
+
+  @@map("payroll_reconciliation_status")
+}
+
+/// HR-editable catalogue of one-off payroll adjustments (Payroll settings).
+model PayrollAdjustmentType {
+  id          String                @id @default(uuid())
+  companyId   String                @map("company_id")
+  code        String                @db.VarChar(40)
+  nameEn      String                @map("name_en") @db.VarChar(120)
+  nameZh      String?               @map("name_zh") @db.VarChar(120)
+  kind        PayrollAdjustmentKind
+  taxable     Boolean               @default(false)
+  pensionable Boolean               @default(false)
+  active      Boolean               @default(true)
+  /// Built-in types that reuse an existing PayrollEntry field and calculation:
+  /// BONUS_TOP_UP (taxable bonus) or NET_TOP_UP (net bonus). Their flags are fixed.
+  systemField String?               @map("system_field") @db.VarChar(40)
+  sortOrder   Int                   @default(0) @map("sort_order")
+  createdBy   String                @map("created_by")
+  updatedBy   String                @map("updated_by")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  company Company                 @relation(fields: [companyId], references: [id])
+  lines   PayrollAdjustmentLine[]
+
+  @@unique([companyId, code], map: "uq_payroll_adjustment_type_company_code")
+  @@map("payroll_adjustment_type")
+}
+
+/// One adjustment for one employee in one run. Amounts are always positive;
+/// the type's kind says whether it is added or deducted.
+model PayrollAdjustmentLine {
+  id                String   @id @default(uuid())
+  companyId         String   @map("company_id")
+  payrollRunId      String   @map("payroll_run_id")
+  employeeId        String   @map("employee_id")
+  adjustmentTypeId  String   @map("adjustment_type_id")
+  amount            Decimal  @db.Decimal(14, 2)
+  note              String   @db.VarChar(500)
+  /// Open reconciliation item this line settles (fully or as one instalment).
+  reconciliationId  String?  @map("reconciliation_id")
+  instalmentNumber  Int?     @map("instalment_number")
+  instalmentCount   Int?     @map("instalment_count")
+  /// Why HR settled more than the suggested one-third-of-wage instalment.
+  capOverrideReason String?  @map("cap_override_reason") @db.VarChar(500)
+  /// Line this one was copied from (reopened version, or the run a correction corrects).
+  sourceLineId      String?  @map("source_line_id")
+  createdBy         String   @map("created_by")
+  updatedBy         String   @map("updated_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  company        Company                @relation(fields: [companyId], references: [id])
+  payrollRun     PayrollRun             @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee       User                   @relation("PayrollAdjustmentLineEmployee", fields: [employeeId], references: [id])
+  adjustmentType PayrollAdjustmentType  @relation(fields: [adjustmentTypeId], references: [id])
+  reconciliation PayrollReconciliation? @relation(fields: [reconciliationId], references: [id])
+
+  @@index([payrollRunId, employeeId], map: "idx_payroll_adjustment_line_run_employee")
+  @@index([reconciliationId], map: "idx_payroll_adjustment_line_reconciliation")
+  @@index([companyId], map: "idx_payroll_adjustment_line_company")
+  @@map("payroll_adjustment_line")
+}
+
+/// Money owed after an approved correction run (net difference per employee),
+/// settled through adjustment lines in later runs, or waived.
+model PayrollReconciliation {
+  id              String                         @id @default(uuid())
+  companyId       String                         @map("company_id")
+  employeeId      String                         @map("employee_id")
+  /// Payroll period the correction was for.
+  forMonth        Int                            @map("for_month")
+  forYear         Int                            @map("for_year")
+  correctionRunId String                         @map("correction_run_id")
+  direction       PayrollReconciliationDirection
+  amount          Decimal                        @db.Decimal(14, 2)
+  settledAmount   Decimal                        @default(0) @map("settled_amount") @db.Decimal(14, 2)
+  reason          String                         @db.VarChar(500)
+  status          PayrollReconciliationStatus    @default(OPEN)
+  /// Statutory differences from the correction (corrected - paid). Remitted
+  /// in full by the first run that settles the item, never pro rata.
+  incomeTaxDifference       Decimal                  @default(0) @map("income_tax_difference") @db.Decimal(14, 2)
+  employeePensionDifference Decimal                  @default(0) @map("employee_pension_difference") @db.Decimal(14, 2)
+  employerPensionDifference Decimal                  @default(0) @map("employer_pension_difference") @db.Decimal(14, 2)
+  /// Run whose approval carried the statutory differences (null = not yet carried).
+  statutoryRunId  String?                        @map("statutory_run_id")
+  waivedReason    String?                        @map("waived_reason") @db.VarChar(500)
+  waivedBy        String?                        @map("waived_by")
+  waivedAt        DateTime?                      @map("waived_at")
+  createdBy       String                         @map("created_by")
+  createdAt       DateTime                       @default(now()) @map("created_at")
+  updatedAt       DateTime                       @default(now()) @updatedAt @map("updated_at")
+
+  company       Company                 @relation(fields: [companyId], references: [id])
+  employee      User                    @relation("PayrollReconciliationEmployee", fields: [employeeId], references: [id])
+  correctionRun PayrollRun              @relation(fields: [correctionRunId], references: [id])
+  lines         PayrollAdjustmentLine[]
+  statutoryCarry PayrollStatutoryAdjustment?
+
+  @@index([companyId, status], map: "idx_payroll_reconciliation_company_status")
+  @@index([employeeId], map: "idx_payroll_reconciliation_employee")
+  @@index([correctionRunId], map: "idx_payroll_reconciliation_correction_run")
+  @@map("payroll_reconciliation")
+}
+
+/// Tax and pension differences of a correction, remitted with the run that
+/// first settles its reconciliation item (shown as separate labelled lines).
+model PayrollStatutoryAdjustment {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  payrollRunId     String   @map("payroll_run_id")
+  employeeId       String   @map("employee_id")
+  reconciliationId String   @unique @map("reconciliation_id")
+  /// Period the correction was for.
+  forMonth         Int      @map("for_month")
+  forYear          Int      @map("for_year")
+  incomeTax        Decimal  @map("income_tax") @db.Decimal(14, 2)
+  pensionEmployee  Decimal  @map("pension_employee") @db.Decimal(14, 2)
+  pensionEmployer  Decimal  @map("pension_employer") @db.Decimal(14, 2)
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  company        Company               @relation(fields: [companyId], references: [id])
+  payrollRun     PayrollRun            @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  reconciliation PayrollReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([payrollRunId], map: "idx_payroll_statutory_adjustment_run")
+  @@index([companyId], map: "idx_payroll_statutory_adjustment_company")
+  @@map("payroll_statutory_adjustment")
+}
+
+/// Correction runs: paid vs corrected amount for every payroll component.
+model PayrollCorrectionLine {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  correctionRunId String   @map("correction_run_id")
+  employeeId      String   @map("employee_id")
+  /// Component key, e.g. EARNED_SALARY, NORMAL_OT, INCOME_TAX, NET_PAY.
+  component       String   @db.VarChar(40)
+  sortOrder       Int      @default(0) @map("sort_order")
+  paidAmount      Decimal  @map("paid_amount") @db.Decimal(14, 2)
+  correctedAmount Decimal  @map("corrected_amount") @db.Decimal(14, 2)
+  difference      Decimal  @db.Decimal(14, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  company       Company    @relation(fields: [companyId], references: [id])
+  correctionRun PayrollRun @relation(fields: [correctionRunId], references: [id], onDelete: Cascade)
+
+  @@unique([correctionRunId, employeeId, component], map: "uq_payroll_correction_line_run_employee_component")
+  @@index([companyId], map: "idx_payroll_correction_line_company")
+  @@map("payroll_correction_line")
 }
 
 model PayrollEntry {
@@ -6964,6 +7169,20 @@ model PayrollEntry {
   // Net bonus top-up (after tax, not taxed)
   netTopUp                 Decimal             @default(0) @map("net_top_up") @db.Decimal(14, 2)
   netTopUpReason           String?             @map("net_top_up_reason")
+
+  // Adjustment lines other than the taxable / net bonus types (those stay in
+  // bonusTopUp / netTopUp). Totals by tax treatment.
+  /// Earnings added to gross and taxable income before tax.
+  adjustmentTaxable        Decimal             @default(0) @map("adjustment_taxable") @db.Decimal(14, 2)
+  /// Earnings added to net pay after tax.
+  adjustmentNonTaxable     Decimal             @default(0) @map("adjustment_non_taxable") @db.Decimal(14, 2)
+  /// Earnings added to the pension base (also counted in one of the two above).
+  adjustmentPensionable    Decimal             @default(0) @map("adjustment_pensionable") @db.Decimal(14, 2)
+  /// Deductions subtracted from net pay after tax (e.g. recoveries).
+  adjustmentDeductions     Decimal             @default(0) @map("adjustment_deductions") @db.Decimal(14, 2)
+
+  /// Overtime entry ids priced into this entry; claimed when the run is approved.
+  includedOtEntryIds       String[]            @default([]) @map("included_ot_entry_ids")
 
 
   // Flags and overrides 

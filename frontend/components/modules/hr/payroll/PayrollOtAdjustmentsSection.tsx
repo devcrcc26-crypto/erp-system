@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
-import { Alert, Button, Input, InputNumber, Segmented, Select, Skeleton, Tooltip } from 'antd';
+import { Button, Input, InputNumber, Segmented, Select, Skeleton, Tooltip } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { FileSearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -105,14 +106,13 @@ export default function PayrollOtAdjustmentsSection({
     return <Skeleton active paragraph={{ rows: 5 }} title={false} />;
   }
   if (query.isError || !data) {
-    return <Alert type="error" showIcon title={t(`${KEY}.loadFailed`)} />;
+    return <ErpNotice tone="error" title={t(`${KEY}.loadFailed`)} />;
   }
 
   if (data.contracts.length === 0) {
     return (
-      <Alert
-        type="info"
-        showIcon
+      <ErpNotice
+        tone="info"
         title={t(`${KEY}.noContract`)}
         description={t(`${KEY}.noContractHint`)}
       />

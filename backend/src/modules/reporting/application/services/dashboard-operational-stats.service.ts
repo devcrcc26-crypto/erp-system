@@ -879,8 +879,16 @@ export class DashboardOperationalStatsService {
     year: number,
   ): Promise<DashboardPayrollStats | null> {
     const run = await this.prisma.payrollRun.findFirst({
-      where: { companyId, month, year, deletedAt: null },
+      where: {
+        companyId,
+        month,
+        year,
+        type: 'REGULAR',
+        deletedAt: null,
+        status: { notIn: ['SUPERSEDED', 'CANCELLED'] },
+      },
       select: { id: true, status: true, totalEmployees: true },
+      orderBy: { createdAt: 'desc' },
     });
     if (!run) {
       return null;

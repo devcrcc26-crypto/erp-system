@@ -72,6 +72,8 @@ export interface OvertimeEntry {
   /** Site assignment cancelled/shortened after submission; hours were kept. */
   siteReviewFlag?: 'ASSIGNMENT_CANCELLED' | 'ASSIGNMENT_SHORTENED' | null;
   siteReviewFlaggedAt?: string | null;
+  /** Paid by an approved payroll run: locked (cannot be edited or deleted). */
+  paidByPayroll?: boolean;
   createdAt: string;
   updatedAt: string;
   documents?: OvertimeAttachmentDocument[];

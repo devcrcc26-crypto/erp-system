@@ -93,7 +93,9 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   unpaidLeaveCountsRestDays: false,
   monthDays: 30,
   leaverAllowanceMode: 'PRORATED',
-  allowancesReducedByAbsence: false,
+  // Absences scale transport + monthly bonus by paidDays/employedDays.
+  // Pension already follows earned salary (also cut by absences).
+  allowancesReducedByAbsence: true,
   pensionEmployeePct: 7,
   pensionEmployerPct: 11,
   pensionBase: 'EARNED',

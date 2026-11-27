@@ -58,6 +58,12 @@ export interface PayslipPdfModel {
   netPay: number;
   /** False when the run was calculated without attendance data. */
   attendanceConsidered?: boolean;
+  /**
+   * Adjustment lines in this run (label = type name, plus the original period
+   * and instalment for settlements). Taxable / net bonus lines are already in
+   * bonusTopUp / netTopUp and carry systemField.
+   */
+  adjustmentLines?: PayslipAdjustmentLine[];
   /** When set, payslip is a correction slip for a locked month. */
   correction?: {
     originalAmount: number;
@@ -65,6 +71,17 @@ export interface PayslipPdfModel {
     deltaAmount: number;
     note: string | null;
   } | null;
+}
+
+export interface PayslipAdjustmentLine {
+  label: string;
+  amount: number;
+  kind: 'EARNING' | 'DEDUCTION';
+  taxable: boolean;
+  /** BONUS_TOP_UP / NET_TOP_UP for the built-in bonus types, else null. */
+  systemField: string | null;
+  /** True when the line settles a reconciliation item. */
+  settlement: boolean;
 }
 
 export type PayslipLine =
@@ -264,6 +281,14 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
     });
   }
 
+  const adjustments = model.adjustmentLines ?? [];
+  for (const line of adjustments) {
+    if (line.systemField || line.kind !== 'EARNING' || !line.taxable) {
+      continue;
+    }
+    lines.push({ kind: 'amount', indent: 1, label: line.label, amount: formatEtb(line.amount) });
+  }
+
   lines.push({
     kind: 'total',
     label: 'GROSS / 应发合计',
@@ -305,6 +330,31 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
         text: reason
           ? `Includes one-time net top-up ${formatEtb(model.netTopUp)} - ${reason}`
           : `Includes one-time net top-up ${formatEtb(model.netTopUp)}`,
+      });
+    }
+  }
+
+  for (const line of adjustments) {
+    if (line.systemField && line.settlement) {
+      lines.push({
+        kind: 'note',
+        text: `Includes ${formatEtb(line.amount)} - ${line.label}`,
+      });
+    }
+  }
+
+  const afterTax = adjustments.filter(
+    (line) => !line.systemField && (line.kind === 'DEDUCTION' || !line.taxable),
+  );
+  if (afterTax.length > 0) {
+    lines.push({ kind: 'section', label: 'AFTER TAX / 税后' });
+    for (const line of afterTax) {
+      lines.push({
+        kind: 'amount',
+        indent: 1,
+        label: line.label,
+        amount:
+          line.kind === 'DEDUCTION' ? `-${formatEtb(line.amount)}` : formatEtb(line.amount),
       });
     }
   }

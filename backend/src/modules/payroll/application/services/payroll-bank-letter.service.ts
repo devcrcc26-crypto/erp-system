@@ -210,6 +210,7 @@ export class PayrollBankLetterService {
         month: true,
         year: true,
         status: true,
+        type: true,
         bankLetterRefNo: true,
         gmApprover: {
           select: { firstName: true, middleName: true, lastName: true },
@@ -237,6 +238,11 @@ export class PayrollBankLetterService {
     if (!ALLOWED_STATUSES.has(run.status)) {
       throw new BadRequestException(
         'Bank letter is only available for GM-approved or paid payroll runs',
+      );
+    }
+    if (run.type === 'CORRECTION') {
+      throw new BadRequestException(
+        'A correction run pays nothing itself. Its differences are paid or recovered through reconciliation items in a later run',
       );
     }
     return run;

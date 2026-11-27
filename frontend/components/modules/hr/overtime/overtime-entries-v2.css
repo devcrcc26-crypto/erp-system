@@ -248,3 +248,19 @@
     padding-left: 4px;
   }
 }
+
+/* Paid by payroll: locked row (no edit / delete). */
+.erp-ot-paid-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--erp-n-500);
+}
+
+.erp-ot-paid-lock:focus-visible {
+  outline: 2px solid var(--erp-accent);
+  outline-offset: 2px;
+}

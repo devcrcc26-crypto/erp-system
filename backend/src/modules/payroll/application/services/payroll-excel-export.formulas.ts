@@ -71,16 +71,23 @@ export function totalOtFormula(row: number): string {
   return `N${row}+P${row}+R${row}+T${row}`;
 }
 
+/** Pension base: earned salary (J) plus pensionable adjustments (e.g. salary arrears). */
+function pensionBase(firstRow: number, lastRow: number, pensionableExtra: number): string {
+  const earned = `SUM(J${firstRow}:J${lastRow})`;
+  return pensionableExtra > 0 ? `(${earned}+${formatConst(pensionableExtra)})` : earned;
+}
+
 /** W employer pension on first row spanning J_first:J_last (0 when exempt). */
 export function pensionEmployerFormula(
   firstRow: number,
   lastRow: number,
   exempt: boolean,
+  pensionableExtra = 0,
 ): string {
   if (exempt) {
     return '0';
   }
-  return `ROUND(SUM(J${firstRow}:J${lastRow})*11%,2)`;
+  return `ROUND(${pensionBase(firstRow, lastRow, pensionableExtra)}*11%,2)`;
 }
 
 /** X employee pension on first row spanning J_first:J_last (0 when exempt). */
@@ -88,11 +95,12 @@ export function pensionEmployeeFormula(
   firstRow: number,
   lastRow: number,
   exempt: boolean,
+  pensionableExtra = 0,
 ): string {
   if (exempt) {
     return '0';
   }
-  return `ROUND(SUM(J${firstRow}:J${lastRow})*7%,2)`;
+  return `ROUND(${pensionBase(firstRow, lastRow, pensionableExtra)}*7%,2)`;
 }
 
 /** Y taxable income on first row. */
@@ -114,7 +122,8 @@ export function totalDeductionFormula(firstRow: number): string {
 }
 
 /**
- * AB net = SUM(J)+SUM(K)+SUM(U)+SUM(V)-AA [+ postTax when non-zero].
+ * AB net = SUM(J)+SUM(K)+SUM(U)+SUM(V)-AA [+/- post-tax amount when non-zero:
+ * net bonuses and after-tax adjustment earnings, less adjustment deductions].
  */
 export function netPayFormula(
   firstRow: number,
@@ -127,7 +136,9 @@ export function netPayFormula(
   if (postTaxNetBonus === 0) {
     return base;
   }
-  return `${base}+${formatConst(postTaxNetBonus)}`;
+  return postTaxNetBonus > 0
+    ? `${base}+${formatConst(postTaxNetBonus)}`
+    : `${base}-${formatConst(-postTaxNetBonus)}`;
 }
 
 export function sumFormula(

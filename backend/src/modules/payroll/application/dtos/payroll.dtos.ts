@@ -357,3 +357,120 @@ export class ReplacePayrollOtAdjustmentsDto {
   @MaxLength(500)
   note?: string;
 }
+
+export class ReopenPayrollRunDto {
+  @ApiProperty({ description: 'Why the approved run is reopened (stored on the superseded version)' })
+  @IsString()
+  @MaxLength(1000)
+  reason!: string;
+}
+
+export class CreatePayrollAdjustmentLineDto {
+  @ApiProperty()
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty()
+  @IsUUID()
+  adjustmentTypeId!: string;
+
+  @ApiProperty({ description: 'Positive amount in ETB; the type decides add or deduct' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount!: number;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(500)
+  note!: string;
+
+  @ApiPropertyOptional({ description: 'Open reconciliation item this line settles' })
+  @IsOptional()
+  @IsUUID()
+  reconciliationId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Required when deductions would exceed one third of the monthly wage',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  capOverrideReason?: string;
+}
+
+export class CreatePayrollAdjustmentTypeDto {
+  @ApiProperty({ description: 'Unique code, e.g. MEAL_ALLOWANCE' })
+  @IsString()
+  @MaxLength(40)
+  code!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(120)
+  nameEn!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nameZh?: string;
+
+  @ApiProperty({ enum: ['EARNING', 'DEDUCTION'] })
+  @IsIn(['EARNING', 'DEDUCTION'])
+  kind!: 'EARNING' | 'DEDUCTION';
+
+  @ApiProperty()
+  @IsBoolean()
+  taxable!: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  pensionable!: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class UpdatePayrollAdjustmentTypeDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nameEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nameZh?: string;
+
+  @ApiPropertyOptional({ enum: ['EARNING', 'DEDUCTION'] })
+  @IsOptional()
+  @IsIn(['EARNING', 'DEDUCTION'])
+  kind?: 'EARNING' | 'DEDUCTION';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  taxable?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  pensionable?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class WaivePayrollReconciliationDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}

@@ -42,6 +42,7 @@ import {
   totalDeductionFormula,
   totalOtFormula,
 } from './payroll-excel-export.formulas';
+import { adjustmentLineLabel } from '../utils/payroll-adjustment.util';
 import { PayrollCompanySettingsService } from './payroll-company-settings.service';
 
 const XLSX_MIME =
@@ -255,6 +256,11 @@ export interface PayrollExportEntry {
   incomeTax: Numeric;
   totalDeductions: Numeric;
   netPay: Numeric;
+  /** Adjustment-line totals (see PayrollEntry.adjustment*). */
+  adjustmentTaxable?: Numeric;
+  adjustmentNonTaxable?: Numeric;
+  adjustmentPensionable?: Numeric;
+  adjustmentDeductions?: Numeric;
   /** False for expatriate contracts (pension formulas write 0). Always true for freelancers. */
   pensionApplicable?: boolean;
   employee: {
@@ -546,6 +552,7 @@ export class PayrollExcelExportService {
     await this.writePayrollFooter(payrollSheet, payrollRow + 2);
     await dataSheet.commit();
     await payrollSheet.commit();
+    await this.writeAdjustmentsSheet(workbook, run.id, companyId);
     await workbook.commit();
 
     await this.audit.create({
@@ -566,6 +573,69 @@ export class PayrollExcelExportService {
     });
 
     return { filename, postTaxTopUpCount, entryCount };
+  }
+
+  /**
+   * One row per adjustment line, labelled with the type and, for settlements,
+   * the original period and instalment (e.g. "Recovery – October 2026
+   * correction (1 of 3)"). Their totals are already in the Data sheet.
+   */
+  private async writeAdjustmentsSheet(
+    workbook: InstanceType<typeof ExcelJS.stream.xlsx.WorkbookWriter>,
+    runId: string,
+    companyId: string,
+  ): Promise<void> {
+    const lines = await this.prisma.payrollAdjustmentLine.findMany({
+      where: { payrollRunId: runId, companyId },
+      include: {
+        adjustmentType: {
+          select: { nameEn: true, kind: true, taxable: true, pensionable: true },
+        },
+        reconciliation: { select: { forMonth: true, forYear: true } },
+        employee: { select: { firstName: true, middleName: true, lastName: true, employeeId: true } },
+      },
+      orderBy: [{ employee: { firstName: 'asc' } }, { createdAt: 'asc' }],
+    });
+    if (lines.length === 0) {
+      return;
+    }
+    const sheet = workbook.addWorksheet('Adjustments');
+    sheet.columns = [
+      { header: 'Employee', key: 'employee', width: 32 },
+      { header: 'Employee ID', key: 'code', width: 14 },
+      { header: 'Adjustment', key: 'label', width: 44 },
+      { header: 'Kind', key: 'kind', width: 12 },
+      { header: 'Taxable', key: 'taxable', width: 10 },
+      { header: 'Pensionable', key: 'pensionable', width: 12 },
+      { header: 'Amount (ETB)', key: 'amount', width: 16 },
+      { header: 'Note', key: 'note', width: 48 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+    for (const line of lines) {
+      const amount = toNumber(line.amount);
+      sheet
+        .addRow({
+          employee: [line.employee.firstName, line.employee.middleName, line.employee.lastName]
+            .filter(Boolean)
+            .join(' '),
+          code: line.employee.employeeId ?? '',
+          label: adjustmentLineLabel({
+            typeName: line.adjustmentType.nameEn,
+            forMonth: line.reconciliation?.forMonth ?? null,
+            forYear: line.reconciliation?.forYear ?? null,
+            instalmentNumber: line.instalmentNumber,
+            instalmentCount: line.instalmentCount,
+          }),
+          kind: line.adjustmentType.kind === 'DEDUCTION' ? 'Deduction' : 'Earning',
+          taxable: line.adjustmentType.taxable ? 'Yes' : 'No',
+          pensionable: line.adjustmentType.pensionable ? 'Yes' : 'No',
+          amount: line.adjustmentType.kind === 'DEDUCTION' ? -amount : amount,
+          note: line.note,
+        })
+        .commit();
+    }
+    sheet.getColumn('amount').numFmt = MONEY_FORMAT;
+    await sheet.commit();
   }
 
   private applyDownloadHeaders(stream: Stream, filename: string): void {
@@ -642,6 +712,10 @@ export class PayrollExcelExportService {
       incomeTax: Numeric;
       totalDeductions: Numeric;
       netPay: Numeric;
+      adjustmentTaxable?: Numeric;
+      adjustmentNonTaxable?: Numeric;
+      adjustmentPensionable?: Numeric;
+      adjustmentDeductions?: Numeric;
       employee: PayrollExportEntry['employee'];
       contract: { startDate: Date; pensionApplicable?: boolean } | null;
       salaryPeriods: Array<
@@ -725,6 +799,10 @@ export class PayrollExcelExportService {
     incomeTax: Numeric;
     totalDeductions: Numeric;
     netPay: Numeric;
+    adjustmentTaxable?: Numeric;
+    adjustmentNonTaxable?: Numeric;
+    adjustmentPensionable?: Numeric;
+    adjustmentDeductions?: Numeric;
     employee: PayrollExportEntry['employee'];
     contract: { startDate: Date; pensionApplicable?: boolean } | null;
     salaryPeriods: Array<
@@ -775,6 +853,10 @@ export class PayrollExcelExportService {
       incomeTax: raw.incomeTax,
       totalDeductions: raw.totalDeductions,
       netPay: raw.netPay,
+      adjustmentTaxable: raw.adjustmentTaxable,
+      adjustmentNonTaxable: raw.adjustmentNonTaxable,
+      adjustmentPensionable: raw.adjustmentPensionable,
+      adjustmentDeductions: raw.adjustmentDeductions,
       employee: raw.employee,
       contract: raw.contract,
       pensionApplicable:
@@ -1000,7 +1082,9 @@ export class PayrollExcelExportService {
         fullyAbsent ? 0 : toNumber(entry.transportAllowance),
         MONEY_FORMAT,
       );
-      const topUp = isFirst ? toNumber(entry.bonusTopUp) : 0;
+      const topUp = isFirst
+        ? toNumber(entry.bonusTopUp) + toNumber(entry.adjustmentTaxable ?? 0)
+        : 0;
       setValue(
         COL.bones,
         fullyAbsent
@@ -1031,7 +1115,9 @@ export class PayrollExcelExportService {
       const bonusBase = fullyAbsent
         ? { value: 0 }
         : allowanceFormulaOrValue(monthlyBonus, contractDays);
-      const topUp = isFirst ? toNumber(entry.bonusTopUp) : 0;
+      const topUp = isFirst
+        ? round2(toNumber(entry.bonusTopUp) + toNumber(entry.adjustmentTaxable ?? 0))
+        : 0;
       const bonusShare = round2(bonusBase.value + topUp);
       if (bonusBase.formula && topUp !== 0) {
         setFormula(COL.bones, `${bonusBase.formula}+${topUp}`, bonusShare);
@@ -1064,14 +1150,15 @@ export class PayrollExcelExportService {
 
       if (isFirst) {
       const exempt = isPensionExempt(entry);
+      const pensionableExtra = toNumber(entry.adjustmentPensionable ?? 0);
       setFormula(
         COL.pensionEmr,
-        pensionEmployerFormula(firstRow, lastRow, exempt),
+        pensionEmployerFormula(firstRow, lastRow, exempt, pensionableExtra),
         toNumber(entry.pensionEmployer),
       );
       setFormula(
         COL.pensionEmp,
-        pensionEmployeeFormula(firstRow, lastRow, exempt),
+        pensionEmployeeFormula(firstRow, lastRow, exempt, pensionableExtra),
         toNumber(entry.pensionEmployee),
       );
       setFormula(
@@ -1089,9 +1176,12 @@ export class PayrollExcelExportService {
         totalDeductionFormula(firstRow),
         toNumber(entry.totalDeductions),
       );
-      const postTax = round2(
+      const netBonus = round2(
         toNumber(entry.contractNetBonus) + toNumber(entry.netTopUp),
       );
+      const afterTaxEarnings = toNumber(entry.adjustmentNonTaxable ?? 0);
+      const afterTaxDeductions = toNumber(entry.adjustmentDeductions ?? 0);
+      const postTax = round2(netBonus + afterTaxEarnings - afterTaxDeductions);
       const netCell = sheet.getCell(row, COL.netPay);
       netCell.value = {
         formula: netPayFormula(firstRow, lastRow, postTax),
@@ -1102,10 +1192,21 @@ export class PayrollExcelExportService {
         COL.netPay,
         round2((columnSums.get(COL.netPay) ?? 0) + toNumber(entry.netPay)),
       );
-      if (postTax > 0) {
-        netCell.note =
-          `Includes post-tax net bonus/top-up ${postTax.toFixed(2)}` +
-          (entry.netTopUpReason ? ` - ${entry.netTopUpReason}` : '');
+      const noteParts: string[] = [];
+      if (netBonus > 0) {
+        noteParts.push(
+          `Includes post-tax net bonus/top-up ${netBonus.toFixed(2)}` +
+            (entry.netTopUpReason ? ` - ${entry.netTopUpReason}` : ''),
+        );
+      }
+      if (afterTaxEarnings > 0) {
+        noteParts.push(`After-tax adjustments +${afterTaxEarnings.toFixed(2)}`);
+      }
+      if (afterTaxDeductions > 0) {
+        noteParts.push(`Deductions after tax -${afterTaxDeductions.toFixed(2)} (see Adjustments sheet)`);
+      }
+      if (noteParts.length > 0) {
+        netCell.note = noteParts.join('. ');
       }
     }
   }
@@ -1184,7 +1285,11 @@ export class PayrollExcelExportService {
     setF(
       PCOL.bonus,
       dataSumFormula('V', firstRow, lastRow),
-      round2(toNumber(entry.monthlyBonus) + toNumber(entry.bonusTopUp)),
+      round2(
+        toNumber(entry.monthlyBonus) +
+          toNumber(entry.bonusTopUp) +
+          toNumber(entry.adjustmentTaxable ?? 0),
+      ),
     );
     setF(
       PCOL.ssfEmployee,

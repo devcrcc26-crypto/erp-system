@@ -171,3 +171,38 @@ describe('payslip layout', () => {
     ).toBe('Sara Alemu Tesfaye');
   });
 });
+
+describe('payslip adjustment lines', () => {
+  it('lists taxable adjustments under earnings and recoveries after tax, with the settlement label', () => {
+    const lines = buildPayslipLines(
+      model({
+        adjustmentLines: [
+          {
+            label: 'Salary arrears',
+            amount: 1200,
+            kind: 'EARNING',
+            taxable: true,
+            systemField: null,
+            settlement: false,
+          },
+          {
+            label: 'Recovery / deduction – October 2026 correction (1 of 3)',
+            amount: 900,
+            kind: 'DEDUCTION',
+            taxable: false,
+            systemField: null,
+            settlement: true,
+          },
+        ],
+      }),
+    );
+    const text = textOf(lines);
+    const gross = text.indexOf('GROSS');
+    expect(text.indexOf('Salary arrears')).toBeGreaterThan(-1);
+    expect(text.indexOf('Salary arrears')).toBeLessThan(gross);
+    expect(text).toContain('AFTER TAX');
+    expect(text).toContain('Recovery / deduction – October 2026 correction (1 of 3)');
+    expect(text).toContain('-900.00');
+    expect(text.indexOf('AFTER TAX')).toBeGreaterThan(gross);
+  });
+});

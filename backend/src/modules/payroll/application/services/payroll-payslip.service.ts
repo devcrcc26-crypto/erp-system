@@ -21,6 +21,8 @@ import {
   type PayslipPdfModel,
 } from './payroll-payslip-pdf.layout';
 import { PayrollPayslipPdfService } from './payroll-payslip-pdf.service';
+import { adjustmentLineLabel } from '../utils/payroll-adjustment.util';
+import type { PayslipAdjustmentLine } from './payroll-payslip-pdf.layout';
 
 interface ServiceContext {
   userId: string;
@@ -179,6 +181,7 @@ export class PayrollPayslipService {
   ): Promise<PayslipGenerateResult> {
     const run = await this.requireRun(runId, ctx.companyId);
     this.assertReleasableStatus(run.status, 'generate payslips');
+    this.assertPaysEmployees(run.type);
 
     const entries = await this.prisma.payrollEntry.findMany({
       where: { runId, companyId: ctx.companyId },
@@ -262,6 +265,7 @@ export class PayrollPayslipService {
   async release(runId: string, ctx: ServiceContext): Promise<PayslipReleaseResult> {
     const run = await this.requireRun(runId, ctx.companyId);
     this.assertReleasableStatus(run.status, 'release payslips');
+    this.assertPaysEmployees(run.type);
 
     const payslips = await this.prisma.payrollPayslip.findMany({
       where: { runId, companyId: ctx.companyId, generatedAt: { not: null } },
@@ -354,7 +358,10 @@ export class PayrollPayslipService {
       throw new ForbiddenException('You cannot access this payslip');
     }
 
-    const model = this.toPdfModel(payslip);
+    const model = this.toPdfModel(
+      payslip,
+      await this.adjustmentLinesFor(payslip.run.id, payslip.employeeId),
+    );
     const buffer = await this.pdf.render(model);
     if (isOwner && !payslip.downloadedAt) {
       await this.prisma.payrollPayslip.update({
@@ -402,7 +409,10 @@ export class PayrollPayslipService {
     archive.pipe(stream);
 
     for (const payslip of payslips) {
-      const model = this.toPdfModel(payslip);
+      const model = this.toPdfModel(
+        payslip,
+        await this.adjustmentLinesFor(payslip.run.id, payslip.employeeId),
+      );
       const pdf = await this.pdf.render(model);
       const name = payslipPdfFileName({
         year: run.year,
@@ -423,6 +433,18 @@ export class PayrollPayslipService {
     };
   }
 
+  /**
+   * Correction runs pay nothing themselves: what they find is paid or
+   * recovered through reconciliation items in a later run's payslip.
+   */
+  private assertPaysEmployees(type: string): void {
+    if (type === 'CORRECTION') {
+      throw new BadRequestException(
+        'A correction run pays nothing itself, so it has no payslips. Its differences appear on the payslip of the run that settles them',
+      );
+    }
+  }
+
   private async listForEmployee(
     employeeId: string,
     companyId: string,
@@ -434,6 +456,7 @@ export class PayrollPayslipService {
         employeeId,
         generatedAt: { not: null },
         ...(releasedOnly ? { releasedAt: { not: null } } : {}),
+        run: { status: { not: 'SUPERSEDED' } },
       },
       include: this.payslipInclude(),
       orderBy: [{ run: { year: 'desc' } }, { run: { month: 'desc' } }],
@@ -536,7 +559,41 @@ export class PayrollPayslipService {
     };
   }
 
-  private toPdfModel(payslip: PayslipWithRelations): PayslipPdfModel {
+  /** Adjustment lines of the run for one employee, labelled for the payslip. */
+  private async adjustmentLinesFor(
+    runId: string,
+    employeeId: string,
+  ): Promise<PayslipAdjustmentLine[]> {
+    const rows = await this.prisma.payrollAdjustmentLine.findMany({
+      where: { payrollRunId: runId, employeeId },
+      include: {
+        adjustmentType: {
+          select: { nameEn: true, kind: true, taxable: true, systemField: true },
+        },
+        reconciliation: { select: { forMonth: true, forYear: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((row) => ({
+      label: adjustmentLineLabel({
+        typeName: row.adjustmentType.nameEn,
+        forMonth: row.reconciliation?.forMonth ?? null,
+        forYear: row.reconciliation?.forYear ?? null,
+        instalmentNumber: row.instalmentNumber,
+        instalmentCount: row.instalmentCount,
+      }),
+      amount: this.toNumber(row.amount),
+      kind: row.adjustmentType.kind,
+      taxable: row.adjustmentType.taxable,
+      systemField: row.adjustmentType.systemField,
+      settlement: row.reconciliationId != null,
+    }));
+  }
+
+  private toPdfModel(
+    payslip: PayslipWithRelations,
+    adjustmentLines: PayslipAdjustmentLine[] = [],
+  ): PayslipPdfModel {
     const item = this.toListItem(payslip);
     const entry = payslip.entry;
     const isCorrection = payslip.run.type === 'CORRECTION';
@@ -590,6 +647,7 @@ export class PayrollPayslipService {
       netPay: item.netPay,
       attendanceConsidered: payslip.run.considerAttendance,
       correction,
+      adjustmentLines,
     };
   }
 

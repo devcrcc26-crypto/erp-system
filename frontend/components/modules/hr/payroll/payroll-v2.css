@@ -2715,3 +2715,287 @@
     display: none;
   }
 }
+
+/* ── Corrections, reconciliation and adjustments (run detail tabs) ─────── */
+
+/* Notices on payroll pages sit on the neutral card; colour stays on the icon chip. */
+.erp-payroll-v2 .erp-notice,
+.erp-payroll-modal .erp-notice,
+.erp-payroll-settings-drawer .erp-notice {
+  border-color: var(--erp-n-200);
+  background: #ffffff;
+}
+
+.erp-payroll-tabs > .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+.erp-payroll-tab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-payroll-panel {
+  padding: 16px 20px;
+}
+
+.erp-payroll-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.erp-payroll-panel-title {
+  margin: 0 0 4px;
+  font-size: calc(15px * var(--erp-font-scale, 1));
+  font-weight: 600;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-panel-desc,
+.erp-payroll-muted-note {
+  margin: 0;
+  font-size: calc(12px * var(--erp-font-scale, 1));
+  line-height: 1.5;
+  color: var(--pr-muted);
+}
+
+.erp-payroll-summary-actions .erp-payroll-hero-actions {
+  justify-content: flex-start;
+}
+
+.erp-payroll-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.erp-payroll-num--muted {
+  color: var(--pr-muted);
+}
+
+/* Compact, dismissible summary of what still needs attention. */
+.erp-payroll-warnbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--erp-n-200);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--pr-shadow);
+}
+
+.erp-payroll-warnbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+}
+
+.erp-payroll-warnbar-label {
+  font-weight: 600;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-warnbar-items {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-warnbar-items li + li::before {
+  content: '·';
+  margin: 0 8px;
+  color: var(--pr-muted);
+}
+
+.erp-payroll-warnbar-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pr-primary-strong);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.erp-payroll-warnbar-link:hover {
+  color: var(--pr-primary);
+}
+
+.erp-payroll-warnbar-link:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.erp-payroll-warnbar-close.ant-btn {
+  color: var(--pr-muted);
+}
+
+/* Follow-up lists (pending OT, OT approved after calculation, deductions). */
+.erp-payroll-followup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-payroll-followup-title {
+  margin: 0 0 2px;
+  font-size: calc(13px * var(--erp-font-scale, 1));
+  font-weight: 600;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-followup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-followup-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--pr-tile);
+}
+
+/* Reconciliation direction badges (existing accent and amber pairs). */
+.erp-payroll-rec-tag.ant-tag {
+  margin-top: 4px;
+  border: 0;
+}
+
+.erp-payroll-rec-tag--pay.ant-tag {
+  background: var(--erp-accent-light);
+  color: var(--erp-accent-hover);
+}
+
+.erp-payroll-rec-tag--recover.ant-tag {
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+}
+
+/* Correction drawer: net difference and highlighted changed components. */
+.erp-payroll-correction-net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--pr-tile);
+}
+
+.erp-payroll-correction-net strong {
+  font-size: calc(18px * var(--erp-font-scale, 1));
+  color: var(--pr-strong);
+}
+
+.erp-payroll-modal .ant-table-tbody > tr.erp-payroll-diff-row > td {
+  background: var(--erp-accent-wash);
+}
+
+/* History of versions. */
+.erp-payroll-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-payroll-history-item {
+  padding: 10px 12px;
+  border: 1px solid var(--pr-divider);
+  border-radius: 12px;
+}
+
+.erp-payroll-history-item--current {
+  border-color: var(--erp-accent-soft);
+  background: var(--erp-accent-wash);
+}
+
+.erp-payroll-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.erp-payroll-history-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-history-version {
+  font-weight: 400;
+  color: var(--pr-muted);
+}
+
+.erp-payroll-history-current.ant-tag {
+  border: 0;
+  background: var(--erp-accent-light);
+  color: var(--erp-accent-hover);
+}
+
+.erp-payroll-history-reason {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pr-divider);
+}
+
+/* Settings: adjustment types. */
+.erp-payroll-adj-type-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 500;
+  color: var(--pr-strong);
+}
+
+.erp-payroll-adj-type-code {
+  margin: 0;
+  font-size: calc(12px * var(--erp-font-scale, 1));
+  color: var(--pr-muted);
+}
+
+.erp-payroll-adj-builtin.ant-tag {
+  border: 0;
+  background: var(--erp-n-100);
+  color: var(--pr-muted);
+}
+
+.erp-payroll-dot {
+  color: var(--pr-muted);
+}
+
+.erp-payroll-dot--on {
+  color: var(--pr-strong);
+}

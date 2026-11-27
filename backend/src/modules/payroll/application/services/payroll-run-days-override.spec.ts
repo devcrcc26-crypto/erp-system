@@ -115,10 +115,13 @@ describe('PayrollRunService.overrideEntryDays', () => {
     );
 
     const { data } = tx.payrollEntry.update.mock.calls[0][0];
+    // Default policy reduces allowances by absence: 19/30 of full-month amounts.
+    const transport = Math.round((3000 * 19) / 30 * 100) / 100;
+    const monthlyBonus = Math.round((6000 * 19) / 30 * 100) / 100;
     const expected = new PayrollCalculationService().calculate({
       basicSalary: 30000,
-      transportAllowance: 3000,
-      monthlyBonus: 6000,
+      transportAllowance: transport,
+      monthlyBonus,
       bonusTopUp: 0,
       netTopUp: 500,
       payrollDays: 19,
@@ -129,6 +132,8 @@ describe('PayrollRunService.overrideEntryDays', () => {
     });
     expect(Number(data.payrollDays)).toBe(19);
     expect(Number(data.earnedSalary)).toBe(19000);
+    expect(Number(data.transportAllowance)).toBe(transport);
+    expect(Number(data.monthlyBonus)).toBe(monthlyBonus);
     expect(Number(data.totalOtPay)).toBe(1000);
     expect(Number(data.taxableIncome)).toBe(expected.taxableIncome);
     expect(Number(data.incomeTax)).toBe(expected.incomeTax);
@@ -151,7 +156,10 @@ describe('PayrollRunService.overrideEntryDays', () => {
   });
 
   it('leaves transport and bonus alone when the policy does not reduce them', async () => {
-    const { service, tx } = setup(makeEntry());
+    const { service, tx } = setup(makeEntry(), {
+      ...POLICY_DEFAULTS,
+      allowancesReducedByAbsence: false,
+    });
     await service.overrideEntryDays('run-1', 'entry-1', { payrollDays: 15 }, ctx);
     const { data } = tx.payrollEntry.update.mock.calls[0][0];
     expect(Number(data.transportAllowance)).toBe(3000);

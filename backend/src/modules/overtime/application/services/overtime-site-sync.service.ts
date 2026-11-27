@@ -141,6 +141,10 @@ export class OvertimeSiteSyncService {
     if (!entry) {
       return false;
     }
+    // Paid by a payroll run: its hours are locked.
+    if (entry.claimedByRunId) {
+      return false;
+    }
     try {
       const classified = await this.overtimeEntryService.classifyEntry(
         entry.sheet.employeeId,

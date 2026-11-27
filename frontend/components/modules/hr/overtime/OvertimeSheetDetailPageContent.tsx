@@ -18,6 +18,7 @@ import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeleteOutlined,
+  LockOutlined,
   DownloadOutlined,
   EditOutlined,
   FieldTimeOutlined,
@@ -576,6 +577,21 @@ export default function OvertimeSheetDetailPageContent({
               width: 56,
               fixed: 'right' as const,
               render: (_: unknown, row: OvertimeDayGroup) => {
+                // Paid overtime is locked for good; new entries can still be added.
+                if (row.entries.some((entry) => entry.paidByPayroll)) {
+                  return (
+                    <Tooltip title={t('pages.hr.overtime.paidLocked')}>
+                      <span
+                        className="erp-ot-paid-lock"
+                        role="img"
+                        aria-label={t('pages.hr.overtime.paidLocked')}
+                        tabIndex={0}
+                      >
+                        <LockOutlined />
+                      </span>
+                    </Tooltip>
+                  );
+                }
                 const items: MenuProps['items'] = [
                   {
                     key: 'edit',

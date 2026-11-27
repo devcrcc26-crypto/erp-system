@@ -30,7 +30,10 @@ function makeService(status: 'REVIEWED' | 'SUBMITTED' | 'APPROVED', rows = entry
       groupBy: jest.fn(async () => []),
     },
     userRole: { findFirst: jest.fn(async () => ({ id: 'ur-1' })), findMany: jest.fn(async () => []) },
+    payrollAdjustmentLine: { findMany: jest.fn(async () => []) },
+    overtimeEntry: { findMany: jest.fn(async () => []), updateMany: jest.fn(async () => ({ count: 0 })) },
   };
+  prisma.$transaction = jest.fn(async (fn: (tx: unknown) => unknown) => fn(prisma));
   const audit = { create: jest.fn(async () => undefined), buildFromRequestContext: (x: any) => x };
   const permissions = {
     hasPermission: jest.fn(async () => true),

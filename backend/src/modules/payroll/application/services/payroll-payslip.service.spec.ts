@@ -39,6 +39,7 @@ describe('PayrollPayslipService', () => {
         update: jest.fn(),
       },
       user: { findFirst: jest.fn() },
+      payrollAdjustmentLine: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const notifications = { send: jest.fn().mockResolvedValue({ emailQueued: false }) };
     const permissions = { hasPermission: jest.fn().mockResolvedValue(false) };

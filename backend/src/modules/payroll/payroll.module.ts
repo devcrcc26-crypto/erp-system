@@ -14,6 +14,7 @@ import { PayrollPayslipPdfService } from './application/services/payroll-payslip
 import { PayrollPayslipService } from './application/services/payroll-payslip.service';
 import { PayrollOtAdjustmentService } from './application/services/payroll-ot-adjustment.service';
 import { PayrollRunService } from './application/services/payroll-run.service';
+import { PayrollAdjustmentService } from './application/services/payroll-adjustment.service';
 /**
  * NotificationService is exported by NotificationsModule (registered globally
  * in AppModule via NotificationsModule.register()).
@@ -37,6 +38,7 @@ import { PayrollRunService } from './application/services/payroll-run.service';
     PayrollPayslipService,
     PayrollRunService,
     PayrollOtAdjustmentService,
+    PayrollAdjustmentService,
   ],
   exports: [
     PayrollRunService,

@@ -36,7 +36,13 @@ import {
   UpdatePayrollRunDto,
   ReplacePayrollOtAdjustmentsDto,
   UpsertPayrollOtAdjustmentDto,
+  CreatePayrollAdjustmentLineDto,
+  CreatePayrollAdjustmentTypeDto,
+  ReopenPayrollRunDto,
+  UpdatePayrollAdjustmentTypeDto,
+  WaivePayrollReconciliationDto,
 } from '../../application/dtos/payroll.dtos';
+import { PayrollAdjustmentService } from '../../application/services/payroll-adjustment.service';
 import { PayrollOtAdjustmentService } from '../../application/services/payroll-ot-adjustment.service';
 import {
   PayrollBankLetterPreview,
@@ -65,6 +71,7 @@ export class PayrollController {
     private readonly payrollCompanySettingsService: PayrollCompanySettingsService,
     private readonly permissionService: PermissionService,
     private readonly payrollOtAdjustmentService: PayrollOtAdjustmentService,
+    private readonly payrollAdjustmentService: PayrollAdjustmentService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { userId: string; companyId: string } {
@@ -194,7 +201,7 @@ export class PayrollController {
   @RequireAnyPermission({ module: 'payroll', action: 'create' })
   @ApiOperation({
     summary:
-      'Recalculate all entries (preserves bonus top-ups and added freelancers). Allowed until PAID; resets an approved run to DRAFT.',
+      'Recalculate all entries (keeps adjustment lines, manual OT and added freelancers). DRAFT / REVIEWED / SUBMITTED only; an approved run must be reopened.',
   })
   recalculate(
     @Param('id') id: string,
@@ -444,6 +451,186 @@ export class PayrollController {
     );
   }
 
+  @Post('runs/:id/reopen')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary:
+      'Reopen an APPROVED / GM_APPROVED run: it becomes SUPERSEDED (kept, with the reason), its claimed inputs are released and a new DRAFT version is calculated. Paid runs are locked.',
+  })
+  reopenRun(
+    @Param('id') id: string,
+    @Body() dto: ReopenPayrollRunDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.reopenRun(id, dto.reason, this.ctx(user));
+  }
+
+  @Get('runs/:id/warnings')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({
+    summary:
+      'Follow-ups for a run: pending OT, OT approved after calculation, open reconciliation items, deductions over one third of wage',
+  })
+  runWarnings(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.getRunWarnings(id, user.companyId);
+  }
+
+  @Get('runs/:id/history')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({
+    summary: 'All versions of the run period (incl. superseded) and related corrections',
+  })
+  runHistory(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.getRunHistory(id, user.companyId);
+  }
+
+  @Get('runs/:id/correction-lines')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Correction run: paid vs corrected amount per payroll component' })
+  correctionLines(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.getCorrectionLines(id, user.companyId, employeeId || undefined);
+  }
+
+  @Get('runs/:id/adjustments')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Adjustment lines in a run' })
+  listAdjustmentLines(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.listRunLines(id, user.companyId);
+  }
+
+  @Post('runs/:id/adjustments')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Add an adjustment line (optionally settling a reconciliation item) and reprice the entry (DRAFT / REVIEWED / SUBMITTED, audited)',
+  })
+  addAdjustmentLine(
+    @Param('id') id: string,
+    @Body() dto: CreatePayrollAdjustmentLineDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.addLine(id, dto, this.ctx(user));
+  }
+
+  @Delete('runs/:id/adjustments/:lineId')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({ summary: 'Remove an adjustment line and reprice the entry (audited)' })
+  removeAdjustmentLine(
+    @Param('id') id: string,
+    @Param('lineId') lineId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.removeLine(id, lineId, this.ctx(user));
+  }
+
+  @Get('runs/:id/reconciliations/:reconciliationId/suggestion')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'Suggested settlement for a reconciliation item in this run (recoveries stay within one third of the monthly wage)',
+  })
+  settlementSuggestion(
+    @Param('id') id: string,
+    @Param('reconciliationId') reconciliationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.suggestSettlement(id, reconciliationId, user.companyId);
+  }
+
+  @Get('reconciliations')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Reconciliation items (open by default; status=all for every item)' })
+  listReconciliations(
+    @Query('status') status: string | undefined,
+    @Query('employeeId') employeeId: string | undefined,
+    @Query('correctionRunId') correctionRunId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.listReconciliations(user.companyId, {
+      status: status === 'all' ? 'all' : 'open',
+      employeeIds: employeeId ? [employeeId] : undefined,
+      correctionRunId: correctionRunId || undefined,
+    });
+  }
+
+  @Post('reconciliations/:id/waive')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({ summary: 'Waive what is still owed on a reconciliation item (reason required)' })
+  waiveReconciliation(
+    @Param('id') id: string,
+    @Body() dto: WaivePayrollReconciliationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.waive(id, dto.reason, this.ctx(user));
+  }
+
+  @Get('adjustment-types')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Payroll adjustment types (settings)' })
+  listAdjustmentTypes(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.payrollAdjustmentService.listTypes(user.companyId);
+  }
+
+  @Post('adjustment-types')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({ summary: 'Create a payroll adjustment type' })
+  createAdjustmentType(
+    @Body() dto: CreatePayrollAdjustmentTypeDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.createType(dto, this.ctx(user));
+  }
+
+  @Patch('adjustment-types/:id')
+  @RequireAnyPermission({ module: 'payroll', action: 'edit' })
+  @ApiOperation({
+    summary: 'Edit a payroll adjustment type (Taxable bonus / Net bonus: names and active only)',
+  })
+  updateAdjustmentType(
+    @Param('id') id: string,
+    @Body() dto: UpdatePayrollAdjustmentTypeDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.updateType(id, dto, this.ctx(user));
+  }
+
   @Patch('runs/:id/unlock')
   @RequireAnyPermission(
     { module: 'payroll', action: 'edit' },
@@ -451,7 +638,7 @@ export class PayrollController {
   )
   @ApiOperation({
     summary:
-      'Unlock a GM_APPROVED/PAID regular run back to DRAFT and void payslips (HR Manager / Local HR Manager / System Administrator)',
+      'Retired: use POST runs/:id/reopen for approved runs. Paid runs are locked (create a correction run).',
   })
   unlockRun(
     @Param('id') id: string,

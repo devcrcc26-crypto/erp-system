@@ -635,6 +635,7 @@ export class OvertimeService
     if (!entry) {
       throw new NotFoundException('Overtime entry not found');
     }
+    this.assertEntryNotClaimed(entry);
 
     const date = this.parseDateOnly(dto.date);
     const isHr = await this.hasHrOvertimePrivileges(userId, companyId);
@@ -903,6 +904,7 @@ export class OvertimeService
     if (!entry) {
       throw new NotFoundException('Overtime entry not found');
     }
+    this.assertEntryNotClaimed(entry);
 
     const beforeValue = {
       entryId: entry.id,
@@ -1185,6 +1187,14 @@ export class OvertimeService
         throw new ForbiddenException('Only HR can delete overtime sheets');
       }
     }
+    const paidEntries = await this.prisma.overtimeEntry.count({
+      where: { sheetId: row.id, claimedByRunId: { not: null } },
+    });
+    if (paidEntries > 0) {
+      throw new BadRequestException(
+        'This sheet has overtime already paid by payroll and cannot be deleted. Use a payroll correction instead',
+      );
+    }
 
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
@@ -1396,6 +1406,18 @@ export class OvertimeService
       isHrViewer ||
       this.onBehalfService.isEligibleFor(userId, employeeId, companyId)
     );
+  }
+
+  /**
+   * Entries a payroll run has claimed (paid) are locked for good: they cannot
+   * be edited or deleted by anyone, HR included. New entries can still be added.
+   */
+  private assertEntryNotClaimed(entry: { claimedByRunId: string | null }): void {
+    if (entry.claimedByRunId) {
+      throw new BadRequestException(
+        'This overtime entry has been paid by payroll and is locked. Add a new entry instead',
+      );
+    }
   }
 
   private async requireEditableSheet(
@@ -1863,6 +1885,8 @@ export class OvertimeService
       siteName:
         (row.siteAssignment as { siteName?: string } | null | undefined)
           ?.siteName ?? null,
+      /** Claimed by a payroll run: locked (no edit / delete). */
+      paidByPayroll: Boolean(row.claimedByRunId),
       documents,
     };
   }

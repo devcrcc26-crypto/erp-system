@@ -568,7 +568,7 @@ export class EmploymentLifecycleService {
       where: {
         companyId: ctx.companyId,
         deletedAt: null,
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'SUPERSEDED'] },
         OR: [
           { year: { gt: from.getUTCFullYear() } },
           { year: from.getUTCFullYear(), month: { gte: from.getUTCMonth() + 1 } },

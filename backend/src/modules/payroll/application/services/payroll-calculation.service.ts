@@ -25,6 +25,28 @@ export interface OvertimeHours {
   holidayHours: number;
 }
 
+/**
+ * Adjustment-line totals for one entry (PayrollAdjustmentLine, excluding the
+ * taxable / net bonus types, which use bonusTopUp / netTopUp). All amounts >= 0.
+ */
+export interface PayrollAdjustmentTotals {
+  /** Earnings added to gross and taxable income before tax. */
+  taxableEarnings: number;
+  /** Earnings added to net pay after tax (not in gross, not taxed). */
+  nonTaxableEarnings: number;
+  /** Earnings (taxable or not) added to the pension base. */
+  pensionableEarnings: number;
+  /** Deductions subtracted from net pay after tax (e.g. recoveries). */
+  deductions: number;
+}
+
+export const ZERO_ADJUSTMENTS: PayrollAdjustmentTotals = {
+  taxableEarnings: 0,
+  nonTaxableEarnings: 0,
+  pensionableEarnings: 0,
+  deductions: 0,
+};
+
 export interface PayrollCalculationInput {
   basicSalary: number;
   transportAllowance: number;
@@ -69,6 +91,8 @@ export interface PayrollCalculationInput {
   settlementTaxable?: number;
   /** Final-settlement amounts that are not taxed (in gross only, no pension). */
   settlementNonTaxable?: number;
+  /** Adjustment lines in this run; omitted = none. */
+  adjustments?: PayrollAdjustmentTotals;
 }
 
 export interface SolveBonusForNetInput {
@@ -104,6 +128,13 @@ export interface PayrollCalculationResult {
 
   /** contractNetBonus + netTopUp (after tax, not taxed). */
   totalNetBonus: number;
+
+  /** Adjustment-line totals applied (see PayrollAdjustmentTotals). */
+  adjustmentTaxable: number;
+  adjustmentNonTaxable: number;
+  adjustmentPensionable: number;
+  adjustmentDeductions: number;
+
   netPay: number;
 }
 
@@ -143,7 +174,12 @@ export class PayrollCalculationService {
       policy = POLICY_DEFAULTS,
       settlementTaxable = 0,
       settlementNonTaxable = 0,
+      adjustments = ZERO_ADJUSTMENTS,
     } = input;
+    const adjustmentTaxable = this.round(Math.max(0, adjustments.taxableEarnings));
+    const adjustmentNonTaxable = this.round(Math.max(0, adjustments.nonTaxableEarnings));
+    const adjustmentPensionable = this.round(Math.max(0, adjustments.pensionableEarnings));
+    const adjustmentDeductions = this.round(Math.max(0, adjustments.deductions));
 
     const payrollDays = this.round(Math.max(0, payrollDaysInput));
     const earnedSalary = this.round(
@@ -190,20 +226,30 @@ export class PayrollCalculationService {
         totalBonus +
         transportAllowance +
         settlementTaxable +
-        settlementNonTaxable,
+        settlementNonTaxable +
+        adjustmentTaxable,
     );
 
     // Tax is calculated once on the whole month's taxable income.
     const taxableIncome = this.round(
-      earnedSalary + totalOtPay + totalBonus + taxableTransport + settlementTaxable,
+      earnedSalary +
+        totalOtPay +
+        totalBonus +
+        taxableTransport +
+        settlementTaxable +
+        adjustmentTaxable,
     );
 
-    // Pension % of earned salary (expatriates: caller sets pensionApplicable false; freelancers always pay).
+    // Pension % of the pension base: earned salary plus adjustments flagged
+    // pensionable (e.g. salary arrears). Bonuses, severance, OT and allowances
+    // are never in it. Expatriates: caller sets pensionApplicable false;
+    // freelancers always pay.
+    const pensionBase = earnedSalary + adjustmentPensionable;
     const pensionEmployee = pensionApplicable
-      ? this.round(earnedSalary * (policy.pensionEmployeePct / 100))
+      ? this.round(pensionBase * (policy.pensionEmployeePct / 100))
       : 0;
     const pensionEmployer = pensionApplicable
-      ? this.round(earnedSalary * (policy.pensionEmployerPct / 100))
+      ? this.round(pensionBase * (policy.pensionEmployerPct / 100))
       : 0;
     const incomeTax = taxApplicable
       ? this.round(this.calculateIncomeTax(taxableIncome, policy.incomeTaxBrackets))
@@ -212,7 +258,15 @@ export class PayrollCalculationService {
 
     // Net bonuses are after tax and never enter taxable income / gross / deductions.
     const totalNetBonus = this.round(contractNetBonus + netTopUp);
-    const netPay = this.round(grossIncome - totalDeductions + totalNetBonus);
+    // Non-taxable adjustment earnings are added and adjustment deductions taken
+    // off after tax. totalDeductions stays pension + income tax.
+    const netPay = this.round(
+      grossIncome -
+        totalDeductions +
+        totalNetBonus +
+        adjustmentNonTaxable -
+        adjustmentDeductions,
+    );
 
     return {
       payrollDays,
@@ -231,6 +285,10 @@ export class PayrollCalculationService {
       incomeTax,
       totalDeductions,
       totalNetBonus,
+      adjustmentTaxable,
+      adjustmentNonTaxable,
+      adjustmentPensionable,
+      adjustmentDeductions,
       netPay,
     };
   }

@@ -1071,7 +1071,7 @@ export class EmploymentSeparationService {
       where: {
         companyId: ctx.companyId,
         deletedAt: null,
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'SUPERSEDED'] },
         OR: [
           { year: { gt: leavingDate.getUTCFullYear() } },
           { year: leavingDate.getUTCFullYear(), month: { gte: leavingDate.getUTCMonth() + 1 } },

@@ -479,6 +479,9 @@ export class HrReportService {
         where: {
           companyId,
           deletedAt: null,
+          // Correction runs pay nothing themselves (their differences are
+          // settled through later runs), so only regular runs count.
+          type: 'REGULAR',
           year: { gte: from.getUTCFullYear(), lte: to.getUTCFullYear() },
         },
         select: {
@@ -898,7 +901,8 @@ export class HrReportService {
 
     for (const run of runs) {
       statusCounts.set(run.status, (statusCounts.get(run.status) ?? 0) + 1);
-      if (run.status === 'CANCELLED') {
+      // Superseded versions were replaced by a later version of the period.
+      if (run.status === 'CANCELLED' || run.status === 'SUPERSEDED') {
         continue;
       }
       for (const entry of run.entries) {

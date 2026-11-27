@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Checkbox, Spin } from 'antd';
+import { Checkbox, Spin } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { PayrollEmploymentReviewEntry } from '@/lib/api/payroll.types';
 import { payrollFlagLabelKey } from '@/lib/utils/payroll-display';
@@ -29,9 +30,8 @@ export default function PayrollEmploymentReviewPanel({
     return null;
   }
   return (
-    <Alert
-      type="warning"
-      showIcon
+    <ErpNotice
+      tone="warning"
       className="mt-3"
       title={t('hr.payroll.employmentReview.title', { count: entries.length })}
       description={
