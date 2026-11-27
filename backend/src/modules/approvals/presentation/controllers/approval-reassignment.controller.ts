@@ -2,6 +2,7 @@ import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { ApprovalReassignmentService } from '../../application/services/approval-reassignment.service';
@@ -26,6 +27,9 @@ export class ApprovalReassignmentController {
   constructor(private readonly service: ApprovalReassignmentService) {}
 
   @Post(':tierId/reassign')
+  // Role-based (HR Manager / System Administrator): enforced by
+  // ApprovalReassignmentService.assertCanReassign, not a module permission.
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Reassign a pending approval tier to another active user (HR Manager / System Administrator)',
   })

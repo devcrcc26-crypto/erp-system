@@ -8,7 +8,8 @@ import { randomUUID } from 'crypto';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
-// vehicles.* — flat grant to all roles (unchanged)
+// vehicles.* — every role may view the fleet (vehicle application and
+// refueling forms list it); only HR roles may create, edit or delete vehicles.
 const PERMISSION_DEFS = [
   {
     module: 'vehicles',
@@ -180,8 +181,10 @@ async function main(): Promise<void> {
 
     for (const role of roles) {
       const isEditRole = editRoles.has(role.name);
+      // Flags merge across every vehicles.* row (PermissionService), so a
+      // write flag on the view row would grant vehicles.edit too. Keep all
+      // write flags off for non-edit roles on both rows.
       for (const permission of permissions) {
-        const isEditPerm = permission.action === 'edit';
         await prisma.rolePermission.upsert({
           where: {
             roleId_permissionId: {
@@ -191,8 +194,8 @@ async function main(): Promise<void> {
           },
           update: {
             canView: true,
-            canCreate: true,
-            canEdit: isEditRole || !isEditPerm,
+            canCreate: isEditRole,
+            canEdit: isEditRole,
             canDelete: isEditRole,
             canApprove: isEditRole,
             canExport: isEditRole,
@@ -202,8 +205,8 @@ async function main(): Promise<void> {
             roleId: role.id,
             permissionId: permission.id,
             canView: true,
-            canCreate: true,
-            canEdit: isEditRole || !isEditPerm,
+            canCreate: isEditRole,
+            canEdit: isEditRole,
             canDelete: isEditRole,
             canApprove: isEditRole,
             canExport: isEditRole,

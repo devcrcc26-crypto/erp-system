@@ -86,7 +86,6 @@ export class CompanyAssetController {
   }
 
   @Post()
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -131,7 +130,6 @@ export class CompanyAssetController {
   }
 
   @Patch(":id")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -152,7 +150,6 @@ export class CompanyAssetController {
   }
 
   @Patch(":id/status")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -173,7 +170,6 @@ export class CompanyAssetController {
   }
 
   @Delete(":id")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -202,7 +198,6 @@ export class CompanyAssetController {
   }
 
   @Post(":assetId/assignments/issue")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -223,7 +218,6 @@ export class CompanyAssetController {
   }
 
   @Post(":assetId/assignments/:assignmentId/return")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -256,6 +250,12 @@ export class CompanyAssetController {
     @Body() body: Record<string, unknown>,
   ): Promise<unknown> {
     const dto = await parseDto(ReturnCompanyAssetAssignmentDto, body);
+    await this.companyAssetService.assertCanInitiateReturn(
+      assetId,
+      assignmentId,
+      companyId,
+      user.userId,
+    );
     return this.companyAssetService.returnAssetAssignment(
       assetId,
       assignmentId,
@@ -266,7 +266,6 @@ export class CompanyAssetController {
   }
 
   @Post(":assetId/assignments/:assignmentId/acknowledge-return")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )
@@ -307,9 +306,7 @@ export class CompanyAssetController {
   }
 
   @Post(":id/photo")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
-    { module: "documents", action: "create" },
     { module: "assets", action: "edit" },
   )
   @ApiOperation({ summary: "Upload a photo for an asset" })
@@ -343,7 +340,6 @@ export class CompanyAssetController {
   }
 
   @Delete(":id/photo")
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: "assets", action: "edit" },
   )

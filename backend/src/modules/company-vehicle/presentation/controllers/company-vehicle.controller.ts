@@ -80,7 +80,6 @@ export class CompanyVehicleController {
   }
 
   @Post()
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )
@@ -115,7 +114,6 @@ export class CompanyVehicleController {
   }
 
   @Patch(':id')
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )
@@ -136,7 +134,6 @@ export class CompanyVehicleController {
   }
 
   @Patch(':id/status')
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )
@@ -157,7 +154,6 @@ export class CompanyVehicleController {
   }
 
   @Delete(':id')
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )
@@ -189,7 +185,6 @@ export class CompanyVehicleController {
   }
 
   @Post(':id/photo')
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )
@@ -223,7 +218,6 @@ export class CompanyVehicleController {
   }
 
   @Delete(':id/photo')
-  @DelegatePermissionCheck()
   @RequireAnyPermission(
     { module: 'vehicles', action: 'edit' },
   )

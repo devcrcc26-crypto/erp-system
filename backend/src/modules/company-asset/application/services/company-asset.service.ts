@@ -537,6 +537,40 @@ export class CompanyAssetService {
     return this.toAssetResponse(updated);
   }
 
+  /**
+   * Ensures the user may start a return on this assignment: the employee the
+   * asset is assigned to, or an asset manager (assets.edit).
+   */
+  async assertCanInitiateReturn(
+    assetId: string,
+    assignmentId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const assetsEdit = await this.permissionService.hasPermission(userId, companyId, "assets", "edit");
+
+    if (assetsEdit) {
+      return;
+    }
+
+    const ownAssignment = await this.prisma.assetAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        companyId,
+        assetId,
+        userId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!ownAssignment) {
+      throw new ForbiddenException(
+        "You can only return assets assigned to you",
+      );
+    }
+  }
+
   /** Ensures the user may view this asset's photo (register access or assignee). */
   private async assertCanViewAssetPhoto(
     assetId: string,
