@@ -20,6 +20,7 @@ import {
   deductionCap,
   exceedsDeductionCap,
   reconciliationRemaining,
+  reconciliationStatusFor,
   suggestRecoveryInstalment,
   type RecoveryInstalmentSuggestion,
 } from '../utils/payroll-adjustment.util';
@@ -85,6 +86,12 @@ export interface PayrollReconciliationDto {
   /** Owed after settled lines and lines waiting in unapproved runs. */
   remaining: number;
   pendingAmount: number;
+  /** Correction tax / pension differences (corrected - paid). */
+  incomeTaxDifference: number;
+  employeePensionDifference: number;
+  employerPensionDifference: number;
+  /** Run whose approval declared them; null = not yet declared. */
+  statutoryRunId: string | null;
   reason: string;
   status: PayrollReconciliationStatus;
   waivedReason: string | null;
@@ -301,7 +308,7 @@ export class PayrollAdjustmentService {
     }
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { runId, employeeId: dto.employeeId, companyId: ctx.companyId },
-      select: { id: true, basicSalary: true, adjustmentDeductions: true },
+      select: { id: true, earnedSalary: true, adjustmentDeductions: true },
     });
     if (!entry) {
       throw new BadRequestException('This employee has no entry in the payroll run');
@@ -326,6 +333,11 @@ export class PayrollAdjustmentService {
       if (item.status === 'SETTLED' || item.status === 'WAIVED') {
         throw new BadRequestException(`This item is already ${item.status.toLowerCase()}`);
       }
+      if (item.direction === 'STATUTORY_ONLY') {
+        throw new BadRequestException(
+          'This item is statutory only: nothing is paid or recovered. Its tax and pension differences are declared by the next approved run',
+        );
+      }
       const expectedKind = item.direction === 'OWED_TO_COMPANY' ? 'DEDUCTION' : 'EARNING';
       if (type.kind !== expectedKind) {
         throw new BadRequestException(
@@ -347,7 +359,8 @@ export class PayrollAdjustmentService {
 
     const capOverrideReason = dto.capOverrideReason?.trim() || null;
     if (type.kind === 'DEDUCTION') {
-      const wage = Number(entry.basicSalary);
+      // One third of the salary earned this month (prorated basic).
+      const wage = Number(entry.earnedSalary);
       const total = Number(entry.adjustmentDeductions) + amount;
       if (exceedsDeductionCap(wage, total) && !capOverrideReason) {
         throw new BadRequestException({
@@ -431,7 +444,7 @@ export class PayrollAdjustmentService {
         companyId,
         ...(filters.status === 'all'
           ? {}
-          : { status: { in: ['OPEN', 'PARTIALLY_SETTLED'] } }),
+          : { status: { in: ['OPEN', 'PARTIALLY_SETTLED', 'WAIVED'] } }),
         ...(filters.employeeIds ? { employeeId: { in: filters.employeeIds } } : {}),
         ...(filters.correctionRunId ? { correctionRunId: filters.correctionRunId } : {}),
       },
@@ -464,6 +477,10 @@ export class PayrollAdjustmentService {
         settledAmount: settled,
         pendingAmount: Math.round(pending * 100) / 100,
         remaining: Math.max(0, reconciliationRemaining(amount, settled) - Math.round(pending * 100) / 100),
+        incomeTaxDifference: Number(row.incomeTaxDifference),
+        employeePensionDifference: Number(row.employeePensionDifference),
+        employerPensionDifference: Number(row.employerPensionDifference),
+        statutoryRunId: row.statutoryRunId,
         reason: row.reason,
         status: row.status,
         waivedReason: row.waivedReason,
@@ -487,7 +504,7 @@ export class PayrollAdjustmentService {
     const item = await this.loadReconciliation(reconciliationId, companyId);
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { runId, employeeId: item.employeeId, companyId },
-      select: { basicSalary: true, adjustmentDeductions: true },
+      select: { earnedSalary: true, adjustmentDeductions: true },
     });
     if (!entry) {
       throw new BadRequestException('This employee has no entry in the payroll run');
@@ -496,9 +513,12 @@ export class PayrollAdjustmentService {
       where: { companyId, active: true, code: { in: ['RECOVERY', 'NET_BONUS'] } },
       select: { id: true, code: true },
     });
+    if (item.direction === 'STATUTORY_ONLY') {
+      throw new BadRequestException('A statutory-only item has nothing to settle');
+    }
     const instalmentNumber = item.settledLineCount + item.pendingLineCount + 1;
     if (item.direction === 'OWED_TO_COMPANY') {
-      const monthlyWage = Number(entry.basicSalary);
+      const monthlyWage = Number(entry.earnedSalary);
       const recovery = suggestRecoveryInstalment({
         monthlyWage,
         existingDeductions: Number(entry.adjustmentDeductions),
@@ -550,6 +570,11 @@ export class PayrollAdjustmentService {
     if (item.status === 'SETTLED' || item.status === 'WAIVED') {
       throw new BadRequestException(`This item is already ${item.status.toLowerCase()}`);
     }
+    if (item.direction === 'STATUTORY_ONLY') {
+      throw new BadRequestException(
+        'A statutory-only item cannot be waived: its tax and pension differences must be declared',
+      );
+    }
     if (item.pendingLineCount > 0) {
       throw new BadRequestException(
         'A payroll run that is not yet approved settles part of this item. Remove that line first',
@@ -567,14 +592,78 @@ export class PayrollAdjustmentService {
     await this.auditChange(ctx, 'reconciliation_waived', reconciliationId, null, {
       status: item.status,
     }, { status: 'WAIVED', reason: trimmed });
-    const [dto] = await this.listReconciliations(ctx.companyId, {
-      status: 'all',
-      employeeIds: [item.employeeId],
-    }).then((rows) => rows.filter((row) => row.id === reconciliationId));
-    return dto;
+    return this.getReconciliationDto(reconciliationId, ctx.companyId, item.employeeId);
+  }
+
+  /**
+   * Reopens a waived reconciliation item so it can be settled again.
+   * Restores OPEN / PARTIALLY_SETTLED from settledAmount (payroll.approve).
+   */
+  async unwaive(
+    reconciliationId: string,
+    ctx: ServiceContext,
+  ): Promise<PayrollReconciliationDto> {
+    const allowed = await this.permissions.hasPermission(
+      ctx.userId,
+      ctx.companyId,
+      'payroll',
+      'approve',
+    );
+    if (!allowed) {
+      throw new ForbiddenException('Missing permission: payroll.approve');
+    }
+    const row = await this.prisma.payrollReconciliation.findFirst({
+      where: { id: reconciliationId, companyId: ctx.companyId },
+    });
+    if (!row) {
+      throw new NotFoundException('Reconciliation item not found');
+    }
+    if (row.status !== 'WAIVED') {
+      throw new BadRequestException('Only a waived item can be undone');
+    }
+    if (row.direction === 'STATUTORY_ONLY') {
+      throw new BadRequestException('A statutory-only item cannot be waived or unwaived');
+    }
+    const amount = Number(row.amount);
+    const settled = Number(row.settledAmount);
+    const nextStatus = reconciliationStatusFor(amount, settled);
+    await this.prisma.payrollReconciliation.update({
+      where: { id: reconciliationId },
+      data: {
+        status: nextStatus,
+        waivedReason: null,
+        waivedBy: null,
+        waivedAt: null,
+      },
+    });
+    await this.auditChange(
+      ctx,
+      'reconciliation_unwaived',
+      reconciliationId,
+      null,
+      { status: 'WAIVED' },
+      { status: nextStatus },
+    );
+    return this.getReconciliationDto(reconciliationId, ctx.companyId, row.employeeId);
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
+
+  private async getReconciliationDto(
+    id: string,
+    companyId: string,
+    employeeId: string,
+  ): Promise<PayrollReconciliationDto> {
+    const rows = await this.listReconciliations(companyId, {
+      status: 'all',
+      employeeIds: [employeeId],
+    });
+    const dto = rows.find((row) => row.id === id);
+    if (!dto) {
+      throw new NotFoundException('Reconciliation item not found');
+    }
+    return dto;
+  }
 
   private async loadReconciliation(
     id: string,

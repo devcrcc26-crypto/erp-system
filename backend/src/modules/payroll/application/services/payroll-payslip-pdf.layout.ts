@@ -298,7 +298,7 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
   lines.push({
     kind: 'amount',
     indent: 1,
-    label: 'Pension (employee 7%) / 养老金',
+    label: 'FROM EMPLOYEE (7%) / 个人养老金',
     amount: model.pensionApplicable
       ? formatEtb(model.pensionEmployee)
       : 'Not applicable / 不适用',
@@ -406,7 +406,7 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
   lines.push({ kind: 'rule' });
   lines.push({
     kind: 'note',
-    text: `Employer pension (11%, not deducted) / 公司养老金: ${
+    text: `FROM EMPLOYER (11%, not deducted) / 公司养老金: ${
       model.pensionApplicable
         ? formatEtb(model.pensionEmployer)
         : 'Not applicable / 不适用'

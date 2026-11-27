@@ -16,6 +16,7 @@ import {
   type PayrollRunStatus,
 } from '@prisma/client';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
+import { getTodayInTimezone } from '../../../../shared/utils/date-validation.util';
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -41,6 +42,8 @@ import {
   reconciliationStatusFor,
   type AdjustmentLineTotals,
 } from '../utils/payroll-adjustment.util';
+import { itemsToCarry, type PayrollRunRemittance } from '../utils/payroll-remittance.util';
+import { loadRunRemittance } from '../utils/payroll-remittance.loader';
 import {
   buildCorrectionLines,
   correctionComponentAmounts,
@@ -208,7 +211,7 @@ export interface PayrollRunWarnings {
   openReconciliations: Array<
     PayrollRunWarningEmployee & {
       id: string;
-      direction: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+      direction: 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY' | 'STATUTORY_ONLY';
       amount: number;
       remaining: number;
       forMonth: number;
@@ -486,6 +489,7 @@ export class PayrollRunService {
     if (month < 1 || month > 12) {
       throw new BadRequestException('Month must be between 1 and 12');
     }
+    await this.assertCreatePeriodAllowed(month, year, ctx);
     // Per-run choice, else the company default for new runs.
     const attendanceOn =
       considerAttendance ?? (await this.defaultConsiderAttendance(ctx.companyId));
@@ -1234,6 +1238,8 @@ export class PayrollRunService {
       });
       await this.claimOvertimeEntries(tx, run.id, claimableOtIds);
       await this.applyReconciliationSettlements(tx, run.id, 1);
+      await this.carryStatutoryDifferences(tx, run.id, ctx);
+      await this.carryStatutoryOnlyItems(tx, run, ctx);
       if (run.type === 'CORRECTION') {
         await this.createReconciliationItems(tx, run, ctx);
       }
@@ -4121,29 +4127,202 @@ export class PayrollRunService {
       where: { runId: run.id, deltaAmount: { not: 0 } },
       select: { employeeId: true, deltaAmount: true },
     });
+    // Tax and pension differences travel with the item so the run that
+    // settles it can remit them (corrected - paid, from the component lines).
+    const statutoryLines = await tx.payrollCorrectionLine.findMany({
+      where: {
+        correctionRunId: run.id,
+        component: { in: ['INCOME_TAX', 'PENSION_EMPLOYEE', 'PENSION_EMPLOYER'] },
+      },
+      select: { employeeId: true, component: true, difference: true },
+    });
+    const statutory = new Map<string, { tax: number; emp: number; emr: number }>();
+    for (const line of statutoryLines) {
+      const current = statutory.get(line.employeeId) ?? { tax: 0, emp: 0, emr: 0 };
+      const value = this.toNumber(line.difference);
+      if (line.component === 'INCOME_TAX') current.tax = value;
+      if (line.component === 'PENSION_EMPLOYEE') current.emp = value;
+      if (line.component === 'PENSION_EMPLOYER') current.emr = value;
+      statutory.set(line.employeeId, current);
+    }
     const period = `${MONTH_NAMES[run.month - 1]} ${run.year}`;
     const reason = run.notes?.trim()
       ? `${run.runNumber} correction for ${period}: ${run.notes.trim()}`
       : `${run.runNumber} correction for ${period}`;
+    // Net difference per employee; employees whose net pay is unchanged but
+    // whose tax / pension changed get a statutory-only item (nothing to pay or
+    // recover, the differences are still declared).
+    const deltas = new Map<string, number>();
     for (const entry of entries) {
-      const delta = this.round(this.toNumber(entry.deltaAmount));
-      if (Math.abs(delta) < 0.005) {
-        continue;
-      }
+      deltas.set(entry.employeeId, this.round(this.toNumber(entry.deltaAmount)));
+    }
+    const changed = (value: { tax: number; emp: number; emr: number } | undefined): boolean =>
+      Boolean(
+        value &&
+          (Math.abs(value.tax) >= 0.005 ||
+            Math.abs(value.emp) >= 0.005 ||
+            Math.abs(value.emr) >= 0.005),
+      );
+    const employeeIds = new Set<string>([
+      ...[...deltas].filter(([, delta]) => Math.abs(delta) >= 0.005).map(([id]) => id),
+      ...[...statutory].filter(([, value]) => changed(value)).map(([id]) => id),
+    ]);
+    for (const employeeId of employeeIds) {
+      const delta = deltas.get(employeeId) ?? 0;
+      const statutoryOnly = Math.abs(delta) < 0.005;
       await tx.payrollReconciliation.create({
         data: {
           companyId: run.companyId,
-          employeeId: entry.employeeId,
+          employeeId,
           forMonth: run.month,
           forYear: run.year,
           correctionRunId: run.id,
-          direction: delta > 0 ? 'OWED_TO_EMPLOYEE' : 'OWED_TO_COMPANY',
-          amount: new Decimal(Math.abs(delta)),
+          direction: statutoryOnly
+            ? 'STATUTORY_ONLY'
+            : delta > 0
+              ? 'OWED_TO_EMPLOYEE'
+              : 'OWED_TO_COMPANY',
+          amount: new Decimal(statutoryOnly ? 0 : Math.abs(delta)),
+          incomeTaxDifference: new Decimal(statutory.get(employeeId)?.tax ?? 0),
+          employeePensionDifference: new Decimal(statutory.get(employeeId)?.emp ?? 0),
+          employerPensionDifference: new Decimal(statutory.get(employeeId)?.emr ?? 0),
           reason: reason.slice(0, 500),
           createdBy: ctx.userId,
         },
       });
     }
+  }
+
+  /**
+   * The first run that settles a reconciliation item remits the correction's
+   * tax and pension differences in full (later instalments carry nothing).
+   */
+  private async carryStatutoryDifferences(
+    tx: Prisma.TransactionClient,
+    runId: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const lines = await tx.payrollAdjustmentLine.findMany({
+      where: { payrollRunId: runId, reconciliationId: { not: null } },
+      select: { reconciliationId: true },
+    });
+    const ids = [...new Set(lines.map((line) => line.reconciliationId as string))];
+    if (ids.length === 0) {
+      return;
+    }
+    const items = await tx.payrollReconciliation.findMany({ where: { id: { in: ids } } });
+    await this.writeStatutoryCarries(tx, runId, items, ctx, false);
+  }
+
+  /**
+   * A regular run's approval also declares every open statutory-only item
+   * (zero net difference, changed tax / pension) and marks it SETTLED.
+   */
+  private async carryStatutoryOnlyItems(
+    tx: Prisma.TransactionClient,
+    run: Pick<PayrollRun, 'id' | 'companyId' | 'type'>,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    if (run.type !== 'REGULAR') {
+      return;
+    }
+    const items = await tx.payrollReconciliation.findMany({
+      where: {
+        companyId: run.companyId,
+        direction: 'STATUTORY_ONLY',
+        status: 'OPEN',
+        statutoryRunId: null,
+      },
+    });
+    await this.writeStatutoryCarries(tx, run.id, items, ctx, true);
+  }
+
+  private async writeStatutoryCarries(
+    tx: Prisma.TransactionClient,
+    runId: string,
+    items: Array<{
+      id: string;
+      companyId: string;
+      employeeId: string;
+      forMonth: number;
+      forYear: number;
+      statutoryRunId: string | null;
+      incomeTaxDifference: Decimal;
+      employeePensionDifference: Decimal;
+      employerPensionDifference: Decimal;
+    }>,
+    ctx: ServiceContext,
+    settle: boolean,
+  ): Promise<void> {
+    const toCarry = itemsToCarry(
+      items.map((item) => ({
+        ...item,
+        incomeTaxDifference: this.toNumber(item.incomeTaxDifference),
+        employeePensionDifference: this.toNumber(item.employeePensionDifference),
+        employerPensionDifference: this.toNumber(item.employerPensionDifference),
+      })),
+    );
+    for (const item of toCarry) {
+      await tx.payrollStatutoryAdjustment.create({
+        data: {
+          companyId: item.companyId,
+          payrollRunId: runId,
+          employeeId: item.employeeId,
+          reconciliationId: item.id,
+          forMonth: item.forMonth,
+          forYear: item.forYear,
+          incomeTax: new Decimal(item.incomeTaxDifference),
+          pensionEmployee: new Decimal(item.employeePensionDifference),
+          pensionEmployer: new Decimal(item.employerPensionDifference),
+          createdBy: ctx.userId,
+        },
+      });
+      await tx.payrollReconciliation.update({
+        where: { id: item.id },
+        data: { statutoryRunId: runId, ...(settle ? { status: 'SETTLED' as const } : {}) },
+      });
+    }
+  }
+
+  /** Undoes carryStatutoryDifferences for a run being reopened. */
+  private async releaseStatutoryDifferences(
+    tx: Prisma.TransactionClient,
+    runId: string,
+  ): Promise<void> {
+    const carried = await tx.payrollStatutoryAdjustment.findMany({
+      where: { payrollRunId: runId },
+      select: { reconciliationId: true },
+    });
+    if (carried.length === 0) {
+      return;
+    }
+    const ids = carried.map((row) => row.reconciliationId);
+    // Statutory-only items were settled by the carry itself: open them again
+    // so the next approved run declares them.
+    await tx.payrollReconciliation.updateMany({
+      where: { id: { in: ids }, statutoryRunId: runId, direction: 'STATUTORY_ONLY' },
+      data: { statutoryRunId: null, status: 'OPEN' },
+    });
+    await tx.payrollReconciliation.updateMany({
+      where: { id: { in: ids }, statutoryRunId: runId },
+      data: { statutoryRunId: null },
+    });
+    await tx.payrollStatutoryAdjustment.deleteMany({ where: { payrollRunId: runId } });
+  }
+
+  /**
+   * Income tax and pension to declare / remit for a run: its own totals plus
+   * the correction differences it carries, as labelled lines. Before approval
+   * the lines are a preview of what approval will carry.
+   */
+  async getRunRemittance(runId: string, companyId: string): Promise<PayrollRunRemittance> {
+    const run = await this.requireRun(runId, companyId);
+    if (run.type === 'CORRECTION') {
+      throw new BadRequestException(
+        'A correction run remits nothing itself. Its differences are remitted with the run that settles them',
+      );
+    }
+    return loadRunRemittance(this.prisma, run);
   }
 
   // ── Reopen ──────────────────────────────────────────────────────────────
@@ -4188,17 +4367,24 @@ export class PayrollRunService {
     } else {
       const items = await this.prisma.payrollReconciliation.findMany({
         where: { correctionRunId: run.id },
-        select: { id: true, settledAmount: true, status: true, _count: { select: { lines: true } } },
+        select: {
+          id: true,
+          settledAmount: true,
+          status: true,
+          statutoryRunId: true,
+          _count: { select: { lines: true } },
+        },
       });
       const inUse = items.some(
         (item) =>
           this.toNumber(item.settledAmount) > 0 ||
           item.status === 'WAIVED' ||
+          item.statutoryRunId != null ||
           item._count.lines > 0,
       );
       if (inUse) {
         throw new BadRequestException(
-          'Reconciliation items from this correction are already being settled or were waived. It cannot be reopened',
+          'Reconciliation items from this correction are already being settled, declared or were waived. It cannot be reopened',
         );
       }
     }
@@ -4207,6 +4393,7 @@ export class PayrollRunService {
     const baseNumber = run.runNumber.replace(/-V\d+$/, '');
     const newRunId = randomUUID();
     await this.prisma.$transaction(async (tx) => {
+      await this.releaseStatutoryDifferences(tx, run.id);
       await this.applyReconciliationSettlements(tx, run.id, -1);
       if (run.type === 'CORRECTION') {
         await tx.payrollReconciliation.deleteMany({ where: { correctionRunId: run.id } });
@@ -4631,7 +4818,7 @@ export class PayrollRunService {
       where: { runId },
       select: {
         employeeId: true,
-        basicSalary: true,
+        earnedSalary: true,
         adjustmentDeductions: true,
         netPay: true,
         includedOtEntryIds: true,
@@ -4724,7 +4911,8 @@ export class PayrollRunService {
     const deductionsOverCap: PayrollRunWarnings['deductionsOverCap'] = [];
     const negativeNetPay: PayrollRunWarnings['negativeNetPay'] = [];
     for (const entry of entries) {
-      const wage = this.toNumber(entry.basicSalary);
+      // One third of the salary earned this month (prorated basic).
+      const wage = this.toNumber(entry.earnedSalary);
       const deductions = this.toNumber(entry.adjustmentDeductions);
       if (deductions > 0 && exceedsDeductionCap(wage, deductions)) {
         deductionsOverCap.push({
@@ -4868,6 +5056,41 @@ export class PayrollRunService {
    * Approve stays on assertPayrollApprove (Local is excluded there).
    */
   private async assertCanUnlockOrCorrect(ctx: ServiceContext): Promise<void> {
+    if (await this.isLocalHrOrAbove(ctx)) {
+      return;
+    }
+    throw new ForbiddenException(
+      'Only HR Manager, Local HR Manager, or System Administrator can unlock or correct payroll',
+    );
+  }
+
+  /**
+   * Local HR Manager, HR Manager, or System Administrator — can open a run up
+   * to two calendar months ahead (Addis Ababa); everyone else is limited to
+   * the current month.
+   */
+  private async assertCreatePeriodAllowed(
+    month: number,
+    year: number,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const [todayYear, todayMonth] = getTodayInTimezone()
+      .split('-')
+      .map(Number);
+    const requested = year * 12 + month;
+    const current = todayYear * 12 + todayMonth;
+    const allowAhead = await this.isLocalHrOrAbove(ctx);
+    const maxAllowed = allowAhead ? current + 2 : current;
+    if (requested > maxAllowed) {
+      throw new BadRequestException(
+        allowAhead
+          ? 'Payroll can only be created for the current month or up to two months ahead'
+          : 'Payroll can only be created for the current month',
+      );
+    }
+  }
+
+  private async isLocalHrOrAbove(ctx: ServiceContext): Promise<boolean> {
     const roles = await this.prisma.userRole.findMany({
       where: {
         userId: ctx.userId,
@@ -4877,15 +5100,10 @@ export class PayrollRunService {
       select: { role: { select: { name: true } } },
     });
     const roleNames = roles.map((row) => row.role.name);
-    if (
+    return (
       isTrueSystemAdministrator(roleNames) ||
       roleNames.includes(HR_MANAGER_ROLE) ||
       roleNames.includes(LOCAL_HR_MANAGER_ROLE)
-    ) {
-      return;
-    }
-    throw new ForbiddenException(
-      'Only HR Manager, Local HR Manager, or System Administrator can unlock or correct payroll',
     );
   }
 

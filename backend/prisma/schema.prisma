@@ -6927,6 +6927,9 @@ enum PayrollAdjustmentKind {
 enum PayrollReconciliationDirection {
   OWED_TO_EMPLOYEE
   OWED_TO_COMPANY
+  /// Net difference is zero but tax / pension changed: nothing is paid or
+  /// recovered; the next approved regular run declares the differences.
+  STATUTORY_ONLY
 
   @@map("payroll_reconciliation_direction")
 }

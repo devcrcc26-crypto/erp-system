@@ -482,6 +482,23 @@ export class PayrollController {
     return this.payrollRunService.getRunWarnings(id, user.companyId);
   }
 
+  @Get('runs/:id/remittance')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({
+    summary:
+      'Income tax and pension to declare for a run: its own totals plus correction differences it carries (labelled lines)',
+  })
+  runRemittance(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.getRunRemittance(id, user.companyId);
+  }
+
   @Get('runs/:id/history')
   @RequireAnyPermission(
     { module: 'payroll', action: 'create' },
@@ -572,7 +589,10 @@ export class PayrollController {
     { module: 'payroll', action: 'approve' },
     { module: 'payroll', action: 'edit' },
   )
-  @ApiOperation({ summary: 'Reconciliation items (open by default; status=all for every item)' })
+  @ApiOperation({
+    summary:
+      'Reconciliation items (open + waived by default; status=all for every item including settled)',
+  })
   listReconciliations(
     @Query('status') status: string | undefined,
     @Query('employeeId') employeeId: string | undefined,
@@ -595,6 +615,18 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollAdjustmentService.waive(id, dto.reason, this.ctx(user));
+  }
+
+  @Post('reconciliations/:id/unwaive')
+  @RequireAnyPermission({ module: 'payroll', action: 'approve' })
+  @ApiOperation({
+    summary: 'Undo a waive and reopen the reconciliation item for settlement',
+  })
+  unwaiveReconciliation(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollAdjustmentService.unwaive(id, this.ctx(user));
   }
 
   @Get('adjustment-types')

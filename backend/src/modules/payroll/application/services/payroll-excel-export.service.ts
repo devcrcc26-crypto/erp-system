@@ -43,6 +43,8 @@ import {
   totalOtFormula,
 } from './payroll-excel-export.formulas';
 import { adjustmentLineLabel } from '../utils/payroll-adjustment.util';
+import { loadRunRemittance } from '../utils/payroll-remittance.loader';
+import type { PayrollRunRemittance } from '../utils/payroll-remittance.util';
 import { PayrollCompanySettingsService } from './payroll-company-settings.service';
 
 const XLSX_MIME =
@@ -401,6 +403,10 @@ export class PayrollExcelExportService {
         month: true,
         year: true,
         status: true,
+        type: true,
+        totalTax: true,
+        totalPensionEmp: true,
+        totalPensionEmr: true,
       },
     });
 
@@ -549,10 +555,22 @@ export class PayrollExcelExportService {
     );
     await payrollSheet.getRow(payrollRow).commit();
 
-    await this.writePayrollFooter(payrollSheet, payrollRow + 2);
+    // Correction tax / pension differences this run remits, below the totals.
+    const remittance =
+      run.type === 'CORRECTION'
+        ? null
+        : await loadRunRemittance(this.prisma, { ...run, companyId });
+    const lastStatutoryRow = remittance
+      ? await this.writePayrollStatutoryRows(payrollSheet, payrollRow, remittance)
+      : payrollRow;
+
+    await this.writePayrollFooter(payrollSheet, lastStatutoryRow + 2);
     await dataSheet.commit();
     await payrollSheet.commit();
     await this.writeAdjustmentsSheet(workbook, run.id, companyId);
+    if (remittance) {
+      await this.writeRemittanceSheet(workbook, remittance);
+    }
     await workbook.commit();
 
     await this.audit.create({
@@ -573,6 +591,119 @@ export class PayrollExcelExportService {
     });
 
     return { filename, postTaxTopUpCount, entryCount };
+  }
+
+  /**
+   * Tax form (Payroll sheet): one row per correction this run remits, with its
+   * tax and SSF differences, then the totals to declare. Returns the last row.
+   */
+  private async writePayrollStatutoryRows(
+    sheet: ExcelJS.Worksheet,
+    totalsRow: number,
+    remittance: PayrollRunRemittance,
+  ): Promise<number> {
+    type Row = { label: string; tax: number; emp: number; emr: number };
+    const rows = new Map<string, Row>();
+    const add = (
+      lines: PayrollRunRemittance['incomeTax']['adjustments'],
+      key: 'tax' | 'emp' | 'emr',
+    ): void => {
+      for (const line of lines) {
+        const id = line.reconciliationId ?? line.label;
+        const current =
+          rows.get(id) ??
+          ({
+            label: `${line.label.replace(/^[^–]+– /, 'Correction adjustment – ')}${line.detail ? ` (${line.detail})` : ''}`,
+            tax: 0,
+            emp: 0,
+            emr: 0,
+          } as Row);
+        current[key] = line.amount;
+        rows.set(id, current);
+      }
+    };
+    add(remittance.incomeTax.adjustments, 'tax');
+    add(remittance.pensionEmployee.adjustments, 'emp');
+    add(remittance.pensionEmployer.adjustments, 'emr');
+    if (rows.size === 0) {
+      return totalsRow;
+    }
+
+    let row = totalsRow;
+    for (const item of rows.values()) {
+      row += 1;
+      sheet.getCell(row, PCOL.name).value = item.label;
+      for (const [col, value] of [
+        [PCOL.ssfEmployee, item.emp],
+        [PCOL.ssfEmployer, item.emr],
+        [PCOL.taxWithheld, item.tax],
+      ] as const) {
+        const cell = sheet.getCell(row, col);
+        cell.value = value;
+        cell.numFmt = MONEY_FORMAT;
+      }
+      styleBodyRow(sheet, row, PCOL.sn, PCOL.netPay);
+      await sheet.getRow(row).commit();
+    }
+
+    row += 1;
+    sheet.getCell(row, PCOL.name).value = 'Total to declare (incl. corrections)';
+    for (const [col, total] of [
+      [PCOL.ssfEmployee, remittance.pensionEmployee.total],
+      [PCOL.ssfEmployer, remittance.pensionEmployer.total],
+      [PCOL.taxWithheld, remittance.incomeTax.total],
+    ] as const) {
+      const letter = colLetter(col);
+      const cell = sheet.getCell(row, col);
+      cell.value = { formula: `SUM(${letter}${totalsRow}:${letter}${row - 1})`, result: total };
+      cell.numFmt = MONEY_FORMAT;
+    }
+    styleTotalsRow(sheet, row, PCOL.sn, PCOL.netPay);
+    await sheet.getRow(row).commit();
+    return row;
+  }
+
+  /**
+   * Remittance sheet: income tax and pension to declare, each as the run's own
+   * figure plus one labelled line per correction it carries
+   * (e.g. "Tax adjustment – October 2026 correction").
+   */
+  private async writeRemittanceSheet(
+    workbook: InstanceType<typeof ExcelJS.stream.xlsx.WorkbookWriter>,
+    remittance: PayrollRunRemittance,
+  ): Promise<void> {
+    const sheet = workbook.addWorksheet('Remittance');
+    sheet.columns = [
+      { header: 'Item', key: 'label', width: 52 },
+      { header: 'Detail', key: 'detail', width: 48 },
+      { header: 'Amount (ETB)', key: 'amount', width: 18 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+    const sections: Array<[string, PayrollRunRemittance['incomeTax']]> = [
+      ['Income tax', remittance.incomeTax],
+      ['FROM EMPLOYEE (7%)', remittance.pensionEmployee],
+      ['FROM EMPLOYER (11%)', remittance.pensionEmployer],
+    ];
+    for (const [title, section] of sections) {
+      sheet.addRow({ label: `${title} - this run`, amount: section.runAmount }).commit();
+      for (const line of section.adjustments) {
+        sheet
+          .addRow({
+            label: line.label,
+            detail: [line.detail, line.pending ? 'pending approval of this run' : null]
+              .filter(Boolean)
+              .join(' · '),
+            amount: line.amount,
+          })
+          .commit();
+      }
+      const totalRow = sheet.addRow({ label: `${title} - total to remit`, amount: section.total });
+      totalRow.font = { bold: true };
+      totalRow.commit();
+      sheet.addRow({}).commit();
+    }
+    sheet.getColumn('amount').numFmt = MONEY_FORMAT;
+    await sheet.commit();
   }
 
   /**
@@ -970,8 +1101,8 @@ export class PayrollExcelExportService {
       [COL.holidayPay, 'OT Holiday'],
       [COL.totalOt, 'OT Total'],
       [COL.bones, 'Bonus'],
-      [COL.pensionEmr, 'Pension Employer'],
-      [COL.pensionEmp, 'Pension Employee'],
+      [COL.pensionEmr, 'FROM EMPLOYER (11%)'],
+      [COL.pensionEmp, 'FROM EMPLOYEE (7%)'],
       [COL.taxableIncome, 'Taxable Income'],
       [COL.incomeTax, 'Income Tax'],
       [COL.totalDeduction, 'Total Deduction'],
@@ -996,8 +1127,8 @@ export class PayrollExcelExportService {
       [PCOL.taxableTransport, 'Taxable Transport'],
       [PCOL.overTime, 'Overtime'],
       [PCOL.bonus, 'Bonus'],
-      [PCOL.ssfEmployee, 'SSF Employee'],
-      [PCOL.ssfEmployer, 'SSF Employer'],
+      [PCOL.ssfEmployee, 'FROM EMPLOYEE (7%)'],
+      [PCOL.ssfEmployer, 'FROM EMPLOYER (11%)'],
       [PCOL.taxableIncome, 'Taxable Income'],
       [PCOL.taxWithheld, 'Tax Withheld'],
       [PCOL.advance, 'Advance'],

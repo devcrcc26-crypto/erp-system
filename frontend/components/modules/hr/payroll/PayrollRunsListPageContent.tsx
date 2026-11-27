@@ -38,6 +38,7 @@ import PayrollCompanySettingsModal from '@/components/modules/hr/payroll/Payroll
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
+  useCanCreateNextMonthPayroll,
   useCanCreatePayroll,
   useCanEditPayroll,
 } from '@/hooks/use-auth-capabilities';
@@ -54,6 +55,7 @@ import {
   usePayrollCompanySettings,
   usePayrollRuns,
 } from '@/lib/query/payroll';
+import { disablePayrollCreateMonths } from '@/lib/utils/date-validation';
 import {
   formatPayrollMoney,
   formatPayrollPeriod,
@@ -143,8 +145,13 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const canAccess = useCanAccessPayroll();
   const canCreate = useCanCreatePayroll();
+  const canCreateNextMonth = useCanCreateNextMonthPayroll();
   const canEdit = useCanEditPayroll();
   const listQuery = usePayrollRuns(canAccess);
+  const disableCreatePeriod = useMemo(
+    () => disablePayrollCreateMonths(canCreateNextMonth),
+    [canCreateNextMonth],
+  );
   const createMutation = useCreatePayrollRun();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
@@ -460,15 +467,20 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
       >
         <p className="erp-payroll-modal-hint">{t('hr.payroll.list.emptyDescription')}</p>
         <Form layout="vertical">
-          <Form.Item label={t('hr.payroll.create.period')} required>
+          <Form.Item
+            label={t('hr.payroll.create.period')}
+            required
+            extra={
+              canCreateNextMonth
+                ? t('hr.payroll.create.periodNextMonthHint')
+                : undefined
+            }
+          >
             <DatePicker
               picker="month"
               value={period}
               onChange={(value) => setPeriod(value)}
-              disabledDate={(current) =>
-                current != null &&
-                current.endOf('month').isAfter(dayjs().endOf('month'))
-              }
+              disabledDate={disableCreatePeriod}
               className="w-full"
               placeholder={t('hr.payroll.create.periodPlaceholder')}
             />

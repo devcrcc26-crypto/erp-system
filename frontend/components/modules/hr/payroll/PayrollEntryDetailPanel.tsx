@@ -157,6 +157,11 @@ function PayStatement({
       kind: 'deduct',
     },
     {
+      key: 'pensionEmr',
+      label: t('hr.payroll.entry.pensionEmr'),
+      value: parsePayrollMoney(row.pensionEmployer),
+    },
+    {
       key: 'tax',
       label: t('hr.payroll.entry.tax'),
       sub: t(`${KEY}.taxableSub`, { amount: money(row.taxableIncome) }),

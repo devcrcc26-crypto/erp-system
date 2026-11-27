@@ -259,6 +259,14 @@ export function useCanManagePayrollCorrections(): boolean {
 }
 
 /**
+ * Local HR Manager and above may create a payroll run up to two calendar
+ * months ahead. Matches backend createRun period gate.
+ */
+export function useCanCreateNextMonthPayroll(): boolean {
+  return useCanManagePayrollCorrections();
+}
+
+/**
  * True when the session may reassign pending approval tiers
  * (HR Manager or System Administrator; the API enforces the same rule).
  * Local HR Manager cannot reassign.

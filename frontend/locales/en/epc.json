@@ -5978,6 +5978,16 @@
       }
     },
     "payroll": {
+      "remittance": {
+        "title": "Tax and pension to declare",
+        "hint": "This run's own figures plus the tax and pension differences of corrections it settles. A correction's differences are declared in full with the first run that settles it, even when the amount is recovered in instalments.",
+        "incomeTax": "Income tax",
+        "pensionEmployee": "FROM EMPLOYEE (7%)",
+        "pensionEmployer": "FROM EMPLOYER (11%)",
+        "thisRun": "This run",
+        "total": "Total to declare",
+        "pending": "On approval"
+      },
       "tabs": {
         "summary": "Summary",
         "employees": "Employees",
@@ -6046,9 +6056,9 @@
         "column": "Adjustments"
       },
       "reconciliation": {
-        "title": "Open reconciliation items",
-        "hint": "Amounts owed after an approved correction run. Settle them here with an adjustment line, in one go or in instalments.",
-        "empty": "No open reconciliation items for employees in this run.",
+        "title": "Reconciliation items",
+        "hint": "Amounts owed after an approved correction run. Settle them here with an adjustment line, or undo a waive to reopen an item.",
+        "empty": "No open or waived reconciliation items for employees in this run.",
         "owedToEmployee": "Owed to employee",
         "owedToCompany": "Owed to company",
         "period": "Period",
@@ -6058,8 +6068,14 @@
         "settle": "Settle",
         "settleTitle": "Settle {{period}} correction",
         "waive": "Waive",
+        "unwaive": "Undo waive",
+        "unwaiveConfirm": "Reopen this item so it can be settled again?",
+        "unwaived": "Waive undone. The item is open again.",
+        "statutoryOnly": "Statutory only – no payment",
+        "statutoryOnlyHint": "Tax {{tax}} · pension {{pension}} ETB, declared with the next approved run",
+        "waiveStatutoryNote": "Tax and pension differences will not be declared, because the original payment stands.",
         "waiveTitle": "Waive what is still owed",
-        "waiveHint": "The remaining amount will not be paid or recovered. This cannot be undone.",
+        "waiveHint": "The remaining amount will not be paid or recovered. You can undo the waive later from this list.",
         "waiveReason": "Reason",
         "waived": "Item waived.",
         "suggestionRecovery": "Suggested {{amount}} ETB keeps deductions within one third of the {{wage}} ETB wage (about {{count}} instalments).",
@@ -6112,8 +6128,8 @@
           "ADJUSTMENT_DEDUCTIONS": "Deductions",
           "GROSS": "Gross",
           "TAXABLE_INCOME": "Taxable income",
-          "PENSION_EMPLOYEE": "Pension (employee)",
-          "PENSION_EMPLOYER": "Pension (employer)",
+          "PENSION_EMPLOYEE": "FROM EMPLOYEE (7%)",
+          "PENSION_EMPLOYER": "FROM EMPLOYER (11%)",
           "INCOME_TAX": "Income tax",
           "NET_PAY": "Net pay"
         }
@@ -6217,6 +6233,7 @@
         "title": "New payroll run",
         "period": "Pay period",
         "periodPlaceholder": "Select month",
+        "periodNextMonthHint": "You can create a run for this month or up to two months ahead.",
         "notes": "Notes",
         "submit": "Create & generate",
         "selectPeriodRequired": "Select a pay period.",
@@ -6237,8 +6254,8 @@
       "summary": {
         "employees": "Employees",
         "totalGross": "Total gross",
-        "pensionEmp": "Pension 7%",
-        "pensionEmr": "Pension 11%",
+        "pensionEmp": "FROM EMPLOYEE (7%)",
+        "pensionEmr": "FROM EMPLOYER (11%)",
         "totalTax": "Total tax",
         "totalNetBonus": "Total net bonus",
         "totalNet": "Total net"
@@ -6515,6 +6532,8 @@
         "employee": "Employee",
         "paidDays": "Paid days",
         "paidDaysBasis": "Paid days on a 30-day month basis",
+        "contractPeriods": "Contract periods",
+        "monthlyBonus": "Monthly bonus",
         "contractsCount": "{{count}} contracts",
         "groupEarnings": "Earnings",
         "groupTax": "Tax & pension",
@@ -6559,7 +6578,8 @@
         "bonus": "Bonus",
         "gross": "Gross",
         "taxable": "Taxable",
-        "pensionEmp": "Pension 7%",
+        "pensionEmp": "FROM EMPLOYEE (7%)",
+        "pensionEmr": "FROM EMPLOYER (11%)",
         "tax": "Tax",
         "netBonus": "Net bonus",
         "net": "Net",

@@ -5977,6 +5977,16 @@
       }
     },
     "payroll": {
+      "remittance": {
+        "title": "应申报的个税与养老金",
+        "hint": "本工资单自身金额，加上其结算的更正所产生的个税与养老金差额。即使分期收回，更正差额也在首次结算的工资单中一次性全额申报。",
+        "incomeTax": "个人所得税",
+        "pensionEmployee": "FROM EMPLOYEE (7%)",
+        "pensionEmployer": "FROM EMPLOYER (11%)",
+        "thisRun": "本工资单",
+        "total": "应申报合计",
+        "pending": "批准后计入"
+      },
       "tabs": {
         "summary": "概览",
         "employees": "员工",
@@ -6045,9 +6055,9 @@
         "column": "调整"
       },
       "reconciliation": {
-        "title": "未结清的对账项",
-        "hint": "更正工资单批准后产生的应付或应收金额。可在此用调整项一次性或分期结算。",
-        "empty": "本工资单中的员工没有未结清的对账项。",
+        "title": "对账项",
+        "hint": "更正工资单批准后产生的应付或应收金额。可用调整项结算，也可撤销豁免以重新打开。",
+        "empty": "本工资单中的员工没有未结清或已豁免的对账项。",
         "owedToEmployee": "应付员工",
         "owedToCompany": "应收回",
         "period": "期间",
@@ -6057,8 +6067,14 @@
         "settle": "结算",
         "settleTitle": "结算 {{period}} 更正",
         "waive": "豁免",
+        "unwaive": "撤销豁免",
+        "unwaiveConfirm": "重新打开此项以便再次结算？",
+        "unwaived": "已撤销豁免，对账项重新打开。",
+        "statutoryOnly": "仅申报 - 不发放",
+        "statutoryOnlyHint": "个税 {{tax}} · 养老金 {{pension}} ETB，随下一个批准的工资单申报",
+        "waiveStatutoryNote": "由于原发放保持不变，个税与养老金差额将不会申报。",
         "waiveTitle": "豁免剩余金额",
-        "waiveHint": "剩余金额将不再支付或收回，且无法撤销。",
+        "waiveHint": "剩余金额将不再支付或收回。之后可在此列表撤销豁免。",
         "waiveReason": "原因",
         "waived": "已豁免。",
         "suggestionRecovery": "建议 {{amount}} ETB，使扣款不超过月工资 {{wage}} ETB 的三分之一（约 {{count}} 期）。",
@@ -6111,8 +6127,8 @@
           "ADJUSTMENT_DEDUCTIONS": "扣款",
           "GROSS": "应发合计",
           "TAXABLE_INCOME": "应税收入",
-          "PENSION_EMPLOYEE": "养老金（个人）",
-          "PENSION_EMPLOYER": "养老金（单位）",
+          "PENSION_EMPLOYEE": "FROM EMPLOYEE (7%)",
+          "PENSION_EMPLOYER": "FROM EMPLOYER (11%)",
           "INCOME_TAX": "个人所得税",
           "NET_PAY": "实发工资"
         }
@@ -6216,6 +6232,7 @@
         "title": "新建薪资运行",
         "period": "薪资月份",
         "periodPlaceholder": "选择月份",
+        "periodNextMonthHint": "可为本月或之后两个月创建运行，不能更远。",
         "notes": "备注",
         "submit": "创建并生成",
         "selectPeriodRequired": "请选择薪资月份。",
@@ -6236,8 +6253,8 @@
       "summary": {
         "employees": "人数",
         "totalGross": "应发合计",
-        "pensionEmp": "养老金 7%",
-        "pensionEmr": "养老金 11%",
+        "pensionEmp": "FROM EMPLOYEE (7%)",
+        "pensionEmr": "FROM EMPLOYER (11%)",
         "totalTax": "个税合计",
         "totalNetBonus": "税后奖金合计",
         "totalNet": "实发合计"
@@ -6514,6 +6531,8 @@
         "employee": "员工",
         "paidDays": "计薪天数",
         "paidDaysBasis": "按每月 30 天计算的计薪天数",
+        "contractPeriods": "合同期间",
+        "monthlyBonus": "月度奖金",
         "contractsCount": "{{count}} 份合同",
         "groupEarnings": "收入",
         "groupTax": "税费与养老金",
@@ -6558,7 +6577,8 @@
         "bonus": "奖金",
         "gross": "应发",
         "taxable": "应税",
-        "pensionEmp": "养老金 7%",
+        "pensionEmp": "FROM EMPLOYEE (7%)",
+        "pensionEmr": "FROM EMPLOYER (11%)",
         "tax": "个税",
         "netBonus": "税后奖金",
         "net": "实发",

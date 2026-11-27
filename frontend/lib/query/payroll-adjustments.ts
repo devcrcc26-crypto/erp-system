@@ -6,6 +6,7 @@ import {
   createPayrollAdjustmentType,
   getPayrollCorrectionLines,
   getPayrollRunHistory,
+  getPayrollRunRemittance,
   getPayrollRunWarnings,
   getPayrollSettlementSuggestion,
   listPayrollAdjustmentLines,
@@ -13,6 +14,7 @@ import {
   listPayrollReconciliations,
   removePayrollAdjustmentLine,
   reopenPayrollRun,
+  unwaivePayrollReconciliation,
   updatePayrollAdjustmentType,
   waivePayrollReconciliation,
   type AddPayrollAdjustmentLinePayload,
@@ -23,6 +25,7 @@ import { payrollKeys } from '@/lib/query/payroll';
 export const payrollAdjustmentKeys = {
   warnings: (runId: string) => [...payrollKeys.run(runId), 'warnings'] as const,
   history: (runId: string) => [...payrollKeys.run(runId), 'history'] as const,
+  remittance: (runId: string) => [...payrollKeys.run(runId), 'remittance'] as const,
   lines: (runId: string) => [...payrollKeys.run(runId), 'adjustment-lines'] as const,
   correctionLines: (runId: string, employeeId?: string) =>
     [...payrollKeys.run(runId), 'correction-lines', employeeId ?? 'all'] as const,
@@ -43,6 +46,14 @@ export function usePayrollRunWarnings(runId: string, enabled = true) {
   return useQuery({
     queryKey: payrollAdjustmentKeys.warnings(runId),
     queryFn: () => getPayrollRunWarnings(runId),
+    enabled: enabled && Boolean(runId),
+  });
+}
+
+export function usePayrollRunRemittance(runId: string, enabled = true) {
+  return useQuery({
+    queryKey: payrollAdjustmentKeys.remittance(runId),
+    queryFn: () => getPayrollRunRemittance(runId),
     enabled: enabled && Boolean(runId),
   });
 }
@@ -119,6 +130,17 @@ export function useWaivePayrollReconciliation() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       waivePayrollReconciliation(id, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'reconciliations'] });
+      void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'run'] });
+    },
+  });
+}
+
+export function useUnwaivePayrollReconciliation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwaivePayrollReconciliation(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'reconciliations'] });
       void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'run'] });

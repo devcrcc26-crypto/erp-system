@@ -48,6 +48,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import PayrollCorrectionDrawer from '@/components/modules/hr/payroll/PayrollCorrectionDrawer';
 import PayrollRunAdjustmentsTab from '@/components/modules/hr/payroll/PayrollRunAdjustmentsTab';
 import PayrollRunHistoryTab from '@/components/modules/hr/payroll/PayrollRunHistoryTab';
+import PayrollRemittancePanel from '@/components/modules/hr/payroll/PayrollRemittancePanel';
 import PayrollRunWarningsBar, {
   type PayrollRunTab,
 } from '@/components/modules/hr/payroll/PayrollRunWarningsBar';
@@ -172,6 +173,36 @@ function splitByWeight(total: number, weights: number[]): number[] {
     allocated += share;
     return share;
   });
+}
+
+/** Compact period labels for the employees table (one or more contracts). */
+function formatContractPeriodLines(row: PayrollEntryDetail): {
+  lines: string[];
+  title: string;
+} | null {
+  if (!row.salaryPeriods.length) {
+    return null;
+  }
+  const periods = [...row.salaryPeriods].sort((a, b) =>
+    a.periodStart.localeCompare(b.periodStart),
+  );
+  const lines = periods.map((p) => {
+    const start = dayjs(p.periodStart.slice(0, 10));
+    const end = dayjs(p.periodEnd.slice(0, 10));
+    const days = parsePayrollMoney(p.days);
+    const number = p.contract?.contractNumber;
+    const range = `${start.format('D MMM')}–${end.format('D MMM')}`;
+    return number ? `${number} · ${range} (${days}d)` : `${range} (${days}d)`;
+  });
+  const title = periods
+    .map((p) => {
+      const start = dayjs(p.periodStart.slice(0, 10)).format('YYYY-MM-DD');
+      const end = dayjs(p.periodEnd.slice(0, 10)).format('YYYY-MM-DD');
+      const number = p.contract?.contractNumber;
+      return number ? `${number}: ${start} – ${end}` : `${start} – ${end}`;
+    })
+    .join('\n');
+  return { lines, title };
 }
 
 // Transport and bonus are Σ(contract amount × days / 30) on the backend, with any
@@ -699,6 +730,10 @@ export default function PayrollRunDetailPageContent({
     () => new Map(filteredEntries.map((e) => [e.id, buildContractLines(e)])),
     [filteredEntries],
   );
+  const contractPeriodLinesById = useMemo(
+    () => new Map(filteredEntries.map((e) => [e.id, formatContractPeriodLines(e)])),
+    [filteredEntries],
+  );
 
   // Essentials only; the full component breakdown is in the entry drawer
   // (correction runs: the paid vs corrected drawer).
@@ -731,6 +766,57 @@ export default function PayrollRunDetailPageContent({
                 </span>
               ) : null}
             </div>
+          );
+        },
+      },
+      {
+        title: t('hr.payroll.entry.paidDays'),
+        key: 'paidDays',
+        align: 'right',
+        width: 100,
+        render: (_: unknown, row: PayrollEntryDetail) => {
+          const paid = parsePayrollMoney(row.payrollDays);
+          const employed = parsePayrollMoney(row.employedDays);
+          const absent = parsePayrollMoney(row.absentDays);
+          return (
+            <Tooltip
+              title={t('hr.payroll.entry.paidDaysTooltip', {
+                employed,
+                absent,
+                paid,
+              })}
+            >
+              <span className="erp-payroll-num">
+                {formatPayrollMoney(paid, { emptyZero: false })}
+                {row.hasOverride ? (
+                  <Tag color="orange" className="erp-payroll-edited-tag ml-1">
+                    {t('hr.payroll.entry.daysOverride.edited')}
+                  </Tag>
+                ) : null}
+              </span>
+            </Tooltip>
+          );
+        },
+      },
+      {
+        title: t('hr.payroll.entry.contractPeriods'),
+        key: 'contractPeriods',
+        width: 200,
+        render: (_: unknown, row: PayrollEntryDetail) => {
+          const periods = contractPeriodLinesById.get(row.id);
+          if (!periods) {
+            return <span className="erp-payroll-num erp-payroll-num--muted">-</span>;
+          }
+          return (
+            <Tooltip title={<span className="whitespace-pre-line">{periods.title}</span>}>
+              <div className="erp-payroll-period-lines">
+                {periods.lines.map((line) => (
+                  <p key={line} className="m-0 text-[12px] leading-snug text-[var(--color-text-secondary)]">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </Tooltip>
           );
         },
       },
@@ -771,6 +857,13 @@ export default function PayrollRunDetailPageContent({
           ]
         : [
             {
+              title: t('hr.payroll.entry.monthlyBonus'),
+              dataIndex: 'monthlyBonus' as const,
+              align: 'right' as const,
+              width: 120,
+              render: (v: MoneyField) => <MoneyCell value={v} />,
+            },
+            {
               title: t('hr.payroll.entry.gross'),
               dataIndex: 'grossIncome' as const,
               align: 'right' as const,
@@ -782,7 +875,14 @@ export default function PayrollRunDetailPageContent({
               title: t('hr.payroll.entry.pensionEmp'),
               dataIndex: 'pensionEmployee' as const,
               align: 'right' as const,
-              width: 116,
+              width: 140,
+              render: (v: MoneyField) => <MoneyCell value={v} />,
+            },
+            {
+              title: t('hr.payroll.entry.pensionEmr'),
+              dataIndex: 'pensionEmployer' as const,
+              align: 'right' as const,
+              width: 140,
               render: (v: MoneyField) => <MoneyCell value={v} />,
             },
             {
@@ -889,6 +989,7 @@ export default function PayrollRunDetailPageContent({
       showPayslipColumn,
       openingPayslipId,
       contractLinesById,
+      contractPeriodLinesById,
       isCorrectionRun,
       openEntry,
     ],
@@ -942,6 +1043,10 @@ export default function PayrollRunDetailPageContent({
           <div>
             <dt>{t('hr.payroll.entry.pensionEmp')}</dt>
             <dd>{formatPayrollMoney(entry.pensionEmployee)}</dd>
+          </div>
+          <div>
+            <dt>{t('hr.payroll.entry.pensionEmr')}</dt>
+            <dd>{formatPayrollMoney(entry.pensionEmployer)}</dd>
           </div>
         </dl>
         <div className="erp-payroll-entry-card-actions">
@@ -2008,6 +2113,7 @@ export default function PayrollRunDetailPageContent({
                   ))}
                 </section>
                 {followUpPanel}
+                {isCorrectionRun ? null : <PayrollRemittancePanel runId={run.id} />}
                 {canCreate && !isCorrectionRun && (run.status === 'GM_APPROVED' || run.status === 'PAID') ? (
                   <section className="erp-pro-card erp-payroll-payslips">
                     <div>

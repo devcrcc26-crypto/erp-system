@@ -6,7 +6,8 @@ const BASE = '/payroll';
 // ── Types ────────────────────────────────────────────────────────────────
 
 export type PayrollAdjustmentKind = 'EARNING' | 'DEDUCTION';
-export type PayrollReconciliationDirection = 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY';
+/** STATUTORY_ONLY: net unchanged, tax / pension differ - nothing paid or recovered. */
+export type PayrollReconciliationDirection = 'OWED_TO_EMPLOYEE' | 'OWED_TO_COMPANY' | 'STATUTORY_ONLY';
 export type PayrollReconciliationStatus = 'OPEN' | 'PARTIALLY_SETTLED' | 'SETTLED' | 'WAIVED';
 
 export interface PayrollAdjustmentType {
@@ -79,6 +80,10 @@ export interface PayrollReconciliation {
   settledAmount: number;
   remaining: number;
   pendingAmount: number;
+  incomeTaxDifference: number;
+  employeePensionDifference: number;
+  employerPensionDifference: number;
+  statutoryRunId: string | null;
   reason: string;
   status: PayrollReconciliationStatus;
   waivedReason: string | null;
@@ -166,6 +171,27 @@ export interface PayrollRunHistory {
   originalRun: PayrollRunHistoryItem | null;
 }
 
+export interface PayrollRemittanceLine {
+  label: string;
+  amount: number;
+  detail: string | null;
+  reconciliationId: string | null;
+  /** True until the run is approved (preview). */
+  pending: boolean;
+}
+
+export interface PayrollRemittanceSection {
+  runAmount: number;
+  adjustments: PayrollRemittanceLine[];
+  total: number;
+}
+
+export interface PayrollRunRemittance {
+  incomeTax: PayrollRemittanceSection;
+  pensionEmployee: PayrollRemittanceSection;
+  pensionEmployer: PayrollRemittanceSection;
+}
+
 export interface PayrollCorrectionLine {
   employeeId: string;
   component: string;
@@ -183,6 +209,10 @@ export function reopenPayrollRun(runId: string, reason: string): Promise<Payroll
 
 export function getPayrollRunWarnings(runId: string): Promise<PayrollRunWarnings> {
   return apiGet<PayrollRunWarnings>(`${BASE}/runs/${runId}/warnings`);
+}
+
+export function getPayrollRunRemittance(runId: string): Promise<PayrollRunRemittance> {
+  return apiGet<PayrollRunRemittance>(`${BASE}/runs/${runId}/remittance`);
 }
 
 export function getPayrollRunHistory(runId: string): Promise<PayrollRunHistory> {
@@ -242,6 +272,10 @@ export function waivePayrollReconciliation(
   reason: string,
 ): Promise<PayrollReconciliation> {
   return apiPost<PayrollReconciliation>(`${BASE}/reconciliations/${id}/waive`, { reason });
+}
+
+export function unwaivePayrollReconciliation(id: string): Promise<PayrollReconciliation> {
+  return apiPost<PayrollReconciliation>(`${BASE}/reconciliations/${id}/unwaive`, {});
 }
 
 export function listPayrollAdjustmentTypes(): Promise<PayrollAdjustmentType[]> {

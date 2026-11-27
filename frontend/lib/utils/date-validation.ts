@@ -45,3 +45,16 @@ export function getDisabledReturnDate(
 export function disableFutureMonths(current: Dayjs | null): boolean {
   return Boolean(current && current.isAfter(dayjs().endOf('month')));
 }
+
+/**
+ * Payroll create period: current month by default; Local HR Manager and above
+ * may pick up to two months ahead (not further).
+ */
+export function disablePayrollCreateMonths(
+  allowNextMonth: boolean,
+): (current: Dayjs | null) => boolean {
+  const max = allowNextMonth
+    ? dayjs().add(2, 'month').endOf('month')
+    : dayjs().endOf('month');
+  return (current) => Boolean(current && current.endOf('month').isAfter(max));
+}

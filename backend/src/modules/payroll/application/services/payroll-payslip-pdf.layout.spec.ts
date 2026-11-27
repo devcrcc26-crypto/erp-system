@@ -121,7 +121,7 @@ describe('payslip layout', () => {
         }),
       ),
     );
-    expect(body).toContain('Pension (employee 7%) / 养老金 Not applicable / 不适用');
+    expect(body).toContain('FROM EMPLOYEE (7%) / 个人养老金 Not applicable / 不适用');
     expect(body).toContain('公司养老金: Not applicable / 不适用');
     expect(body).toContain('Bonus top-up / 额外奖金  (Site completion)');
     expect(body).toContain('Evening   2 h × 1.75');

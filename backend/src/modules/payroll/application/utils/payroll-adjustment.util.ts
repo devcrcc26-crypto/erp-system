@@ -93,7 +93,8 @@ export function adjustmentTotalsFromLines(
 /**
  * One third of the monthly wage: the most that may be deducted from an
  * employee's pay in one month (Ethiopian Labour Proclamation 1156/2019,
- * Art. 59). "Monthly wage" is the contract basic salary. Statutory income tax
+ * Art. 59). "Monthly wage" is the salary earned that month (prorated basic,
+ * PayrollEntry.earnedSalary), not the contract basic. Statutory income tax
  * and pension are not counted against the cap - only deductions HR adds
  * (recovery / deduction lines).
  */

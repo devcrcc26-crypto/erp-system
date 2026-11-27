@@ -78,6 +78,13 @@ function setup(run: Run, options: {
       update: jest.fn(async () => undefined),
       create: jest.fn(async () => undefined),
       deleteMany: jest.fn(async () => undefined),
+      updateMany: jest.fn(async () => ({ count: 0 })),
+    },
+    payrollCorrectionLine: { findMany: jest.fn(async () => []) },
+    payrollStatutoryAdjustment: {
+      findMany: jest.fn(async () => []),
+      create: jest.fn(async () => undefined),
+      deleteMany: jest.fn(async () => undefined),
     },
     userRole: { findMany: jest.fn(async () => []) },
   };

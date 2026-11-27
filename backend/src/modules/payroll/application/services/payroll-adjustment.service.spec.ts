@@ -35,7 +35,10 @@ function setup(options: {
     payrollEntry: {
       findFirst: jest.fn(async () => ({
         id: 'entry-1',
-        basicSalary: new Decimal(9000),
+        // Joined mid-month: contract basic 30000, earned 9000. The one-third
+        // limit is on earned salary (3000), not contract basic (10000).
+        basicSalary: new Decimal(30000),
+        earnedSalary: new Decimal(9000),
         adjustmentDeductions: new Decimal(0),
         ...options.entry,
       })),
@@ -46,6 +49,11 @@ function setup(options: {
     },
     payrollReconciliation: {
       findFirst: jest.fn(async () => options.item ?? null),
+      findMany: jest.fn(async () => (options.item ? [options.item] : [])),
+      update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => ({
+        ...(options.item ?? {}),
+        ...data,
+      })),
     },
     payrollAdjustmentLine: {
       create: jest.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'line-1', ...data })),
@@ -109,7 +117,7 @@ describe('PayrollAdjustmentService.addLine', () => {
     ).rejects.toThrow(/deduction type/);
   });
 
-  it('needs a reason to take deductions above one third of the monthly wage', async () => {
+  it('needs a reason to take deductions above one third of the earned salary', async () => {
     const { service, prisma } = setup({ entry: { adjustmentDeductions: new Decimal(2000) } });
     // 2000 + 1500 > 9000 / 3
     await expect(service.addLine('run-1', line(), ctx)).rejects.toThrow(/one third of the monthly wage/);
@@ -135,5 +143,88 @@ describe('PayrollAdjustmentService.suggestSettlement', () => {
     expect(suggestion.recovery).toMatchObject({ cap: 3000, capRemaining: 2500, monthlyWage: 9000 });
     expect(suggestion.suggestedTypeId).toBe('type-recovery');
     expect(suggestion.instalmentNumber).toBe(3);
+  });
+});
+
+describe('statutory-only items', () => {
+  const statutoryOnly = {
+    id: 'rec-s',
+    employeeId: 'emp-1',
+    direction: 'STATUTORY_ONLY',
+    status: 'OPEN',
+    amount: new Decimal(0),
+    settledAmount: new Decimal(0),
+    lines: [],
+    employee: { firstName: 'A', lastName: 'B', employeeId: 'E1' },
+    correctionRun: { runNumber: 'CR-1' },
+    incomeTaxDifference: new Decimal(10),
+    employeePensionDifference: new Decimal(0),
+    employerPensionDifference: new Decimal(0),
+    statutoryRunId: null,
+    reason: 'Tax only',
+    waivedReason: null,
+    waivedAt: null,
+    createdAt: new Date(),
+    forMonth: 10,
+    forYear: 2026,
+    correctionRunId: 'cr-1',
+  };
+
+  it('cannot be waived', async () => {
+    const { service } = setup({ item: statutoryOnly });
+    await expect(service.waive('rec-s', 'Not needed any more', ctx)).rejects.toThrow(
+      /cannot be waived/,
+    );
+  });
+
+  it('cannot be settled with an adjustment line', async () => {
+    const { service } = setup({ item: statutoryOnly });
+    await expect(
+      service.addLine('run-1', line({ reconciliationId: 'rec-s' }), ctx),
+    ).rejects.toThrow(/statutory only/);
+  });
+});
+
+describe('PayrollAdjustmentService.unwaive', () => {
+  const waivedOpen = {
+    id: 'rec-w',
+    employeeId: 'emp-1',
+    direction: 'OWED_TO_COMPANY',
+    status: 'WAIVED',
+    amount: new Decimal(5000),
+    settledAmount: new Decimal(1000),
+    lines: [],
+    employee: { firstName: 'A', lastName: 'B', employeeId: 'E1' },
+    correctionRun: { runNumber: 'CR-1' },
+    incomeTaxDifference: new Decimal(0),
+    employeePensionDifference: new Decimal(0),
+    employerPensionDifference: new Decimal(0),
+    statutoryRunId: null,
+    reason: 'Underpaid',
+    waivedReason: 'Written off',
+    waivedAt: new Date(),
+    createdAt: new Date(),
+    forMonth: 10,
+    forYear: 2026,
+    correctionRunId: 'cr-1',
+  };
+
+  it('reopens a waived item to PARTIALLY_SETTLED when some amount was already settled', async () => {
+    const { service, prisma } = setup({ item: waivedOpen });
+    await service.unwaive('rec-w', ctx);
+    expect(prisma.payrollReconciliation.update).toHaveBeenCalledWith({
+      where: { id: 'rec-w' },
+      data: {
+        status: 'PARTIALLY_SETTLED',
+        waivedReason: null,
+        waivedBy: null,
+        waivedAt: null,
+      },
+    });
+  });
+
+  it('rejects items that are not waived', async () => {
+    const { service } = setup({ item: { ...waivedOpen, status: 'OPEN' } });
+    await expect(service.unwaive('rec-w', ctx)).rejects.toThrow(/Only a waived item/);
   });
 });

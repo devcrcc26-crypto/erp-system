@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
@@ -19,6 +19,7 @@ import {
   usePayrollAdjustmentTypes,
   usePayrollSettlementSuggestion,
   useRemovePayrollAdjustmentLine,
+  useUnwaivePayrollReconciliation,
   useWaivePayrollReconciliation,
 } from '@/lib/query/payroll-adjustments';
 import { formatPayrollMoney, formatPayrollPeriod, parsePayrollMoney } from '@/lib/utils/payroll-display';
@@ -39,7 +40,7 @@ interface LineForm {
   capOverrideReason?: string;
 }
 
-/** Same rule as the API: deductions above one third of the monthly wage need a reason. */
+/** Same rule as the API: deductions above one third of the earned salary need a reason. */
 function deductionCap(monthlyWage: number): number {
   return Math.floor((Math.max(0, monthlyWage) / 3) * 100) / 100;
 }
@@ -62,6 +63,7 @@ export default function PayrollRunAdjustmentsTab({
   const addMutation = useAddPayrollAdjustmentLine(run.id);
   const removeMutation = useRemovePayrollAdjustmentLine(run.id);
   const waiveMutation = useWaivePayrollReconciliation();
+  const unwaiveMutation = useUnwaivePayrollReconciliation();
 
   const [form] = Form.useForm<LineForm>();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -75,7 +77,10 @@ export default function PayrollRunAdjustmentsTab({
     [run.entries],
   );
   const reconciliations = useMemo(
-    () => (reconciliationsQuery.data ?? []).filter((item) => entriesByEmployee.has(item.employeeId)),
+    () =>
+      (reconciliationsQuery.data ?? []).filter(
+        (item) => item.direction === 'STATUTORY_ONLY' || entriesByEmployee.has(item.employeeId),
+      ),
     [reconciliationsQuery.data, entriesByEmployee],
   );
   const activeTypes = (typesQuery.data ?? []).filter((type) => type.active);
@@ -88,7 +93,8 @@ export default function PayrollRunAdjustmentsTab({
   const watchedAmount = Form.useWatch('amount', form);
   const selectedType = activeTypes.find((type) => type.id === watchedType);
   const selectedEntry = watchedEmployee ? entriesByEmployee.get(watchedEmployee) : undefined;
-  const wage = selectedEntry ? parsePayrollMoney(selectedEntry.basicSalary) : 0;
+  // One third of the salary earned this month (prorated basic), as the API.
+  const wage = selectedEntry ? parsePayrollMoney(selectedEntry.earnedSalary) : 0;
   const deductionsAfter =
     selectedEntry && selectedType?.kind === 'DEDUCTION'
       ? parsePayrollMoney(selectedEntry.adjustmentDeductions ?? 0) + (watchedAmount ?? 0)
@@ -103,6 +109,7 @@ export default function PayrollRunAdjustmentsTab({
 
   function openSettle(item: PayrollReconciliation): void {
     setSettling(item);
+    setPrefilledFor(null);
     form.resetFields();
     form.setFieldsValue({
       employeeId: item.employeeId,
@@ -111,16 +118,25 @@ export default function PayrollRunAdjustmentsTab({
     setDrawerOpen(true);
   }
 
+  function closeDrawer(): void {
+    setDrawerOpen(false);
+    setSettling(null);
+    setPrefilledFor(null);
+  }
+
   // Prefill the suggested type and amount once the suggestion arrives.
   const suggestion = suggestionQuery.data;
   const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
-  if (settling && suggestion && prefilledFor !== settling.id) {
+  useEffect(() => {
+    if (!settling || !suggestion || prefilledFor === settling.id) {
+      return;
+    }
     setPrefilledFor(settling.id);
     form.setFieldsValue({
       adjustmentTypeId: suggestion.suggestedTypeId ?? undefined,
       amount: suggestion.amount > 0 ? suggestion.amount : null,
     });
-  }
+  }, [settling, suggestion, prefilledFor, form]);
 
   async function saveLine(): Promise<void> {
     try {
@@ -134,9 +150,7 @@ export default function PayrollRunAdjustmentsTab({
         capOverrideReason: overCap ? values.capOverrideReason?.trim() : undefined,
       });
       messageApi.success(t(`${KEY}.added`));
-      setDrawerOpen(false);
-      setSettling(null);
-      setPrefilledFor(null);
+      closeDrawer();
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
@@ -156,6 +170,15 @@ export default function PayrollRunAdjustmentsTab({
       setWaiveReason('');
     } catch (error) {
       notifyApiError(error, t(`${REC}.waive`), messageApi, t);
+    }
+  }
+
+  async function unwaive(item: PayrollReconciliation): Promise<void> {
+    try {
+      await unwaiveMutation.mutateAsync(item.id);
+      messageApi.success(t(`${REC}.unwaived`));
+    } catch (error) {
+      notifyApiError(error, t(`${REC}.unwaive`), messageApi, t);
     }
   }
 
@@ -181,12 +204,16 @@ export default function PayrollRunAdjustmentsTab({
             className={
               item.direction === 'OWED_TO_EMPLOYEE'
                 ? 'erp-payroll-rec-tag erp-payroll-rec-tag--pay'
-                : 'erp-payroll-rec-tag erp-payroll-rec-tag--recover'
+                : item.direction === 'OWED_TO_COMPANY'
+                  ? 'erp-payroll-rec-tag erp-payroll-rec-tag--recover'
+                  : 'erp-payroll-rec-tag erp-payroll-adj-builtin'
             }
           >
             {item.direction === 'OWED_TO_EMPLOYEE'
               ? t(`${REC}.owedToEmployee`)
-              : t(`${REC}.owedToCompany`)}
+              : item.direction === 'OWED_TO_COMPANY'
+                ? t(`${REC}.owedToCompany`)
+                : t(`${REC}.statutoryOnly`)}
           </Tag>
         </div>
       ),
@@ -205,13 +232,37 @@ export default function PayrollRunAdjustmentsTab({
       width: 160,
       render: (_, item) => (
         <div>
+          {item.status === 'WAIVED' ? (
+            <Tag className="erp-payroll-rec-tag erp-payroll-adj-builtin">
+              {t(`${REC}.status.WAIVED`)}
+            </Tag>
+          ) : null}
+          {item.direction === 'STATUTORY_ONLY' ? (
+            <p className="erp-payroll-muted-note">
+              {t(`${REC}.statutoryOnlyHint`, {
+                tax: formatPayrollMoney(item.incomeTaxDifference, { emptyZero: false }),
+                pension: formatPayrollMoney(
+                  item.employeePensionDifference + item.employerPensionDifference,
+                  { emptyZero: false },
+                ),
+              })}
+            </p>
+          ) : null}
           <span className="erp-payroll-num font-semibold">
-            {formatPayrollMoney(item.remaining, { emptyZero: false })}
+            {formatPayrollMoney(
+              item.status === 'WAIVED'
+                ? Math.max(0, item.amount - item.settledAmount)
+                : item.remaining,
+              { emptyZero: false },
+            )}
           </span>
           {item.pendingAmount > 0 ? (
             <p className="erp-payroll-muted-note">
               {t(`${REC}.pending`, { amount: formatPayrollMoney(item.pendingAmount, { emptyZero: false }) })}
             </p>
+          ) : null}
+          {item.status === 'WAIVED' && item.waivedReason ? (
+            <p className="erp-payroll-muted-note">{item.waivedReason}</p>
           ) : null}
         </div>
       ),
@@ -219,22 +270,47 @@ export default function PayrollRunAdjustmentsTab({
     {
       title: <span className="sr-only">{t(`${REC}.settle`)}</span>,
       key: 'actions',
-      width: 170,
+      width: 190,
       align: 'right',
-      render: (_, item) => (
-        <div className="flex justify-end gap-1">
-          {editable ? (
-            <Button size="small" type="primary" ghost disabled={item.remaining <= 0} onClick={() => openSettle(item)}>
-              {t(`${REC}.settle`)}
-            </Button>
-          ) : null}
-          {canWaive ? (
-            <Button size="small" type="text" onClick={() => setWaiving(item)}>
-              {t(`${REC}.waive`)}
-            </Button>
-          ) : null}
-        </div>
-      ),
+      render: (_, item) => {
+        if (item.direction === 'STATUTORY_ONLY') {
+          return null;
+        }
+        if (item.status === 'WAIVED') {
+          return canWaive ? (
+            <Popconfirm
+              title={t(`${REC}.unwaiveConfirm`)}
+              okText={t(`${REC}.unwaive`)}
+              cancelText={t('common.cancel')}
+              onConfirm={() => void unwaive(item)}
+            >
+              <Button size="small" type="primary" ghost loading={unwaiveMutation.isPending}>
+                {t(`${REC}.unwaive`)}
+              </Button>
+            </Popconfirm>
+          ) : null;
+        }
+        return (
+          <div className="flex justify-end gap-1">
+            {editable ? (
+              <Button
+                size="small"
+                type="primary"
+                ghost
+                disabled={item.remaining <= 0}
+                onClick={() => openSettle(item)}
+              >
+                {t(`${REC}.settle`)}
+              </Button>
+            ) : null}
+            {canWaive ? (
+              <Button size="small" type="text" onClick={() => setWaiving(item)}>
+                {t(`${REC}.waive`)}
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -395,11 +471,7 @@ export default function PayrollRunAdjustmentsTab({
 
       <Drawer
         open={drawerOpen}
-        onClose={() => {
-          setDrawerOpen(false);
-          setSettling(null);
-          setPrefilledFor(null);
-        }}
+        onClose={closeDrawer}
         size={480}
         destroyOnHidden
         rootClassName="erp-payroll-modal"
@@ -410,7 +482,7 @@ export default function PayrollRunAdjustmentsTab({
         }
         footer={
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setDrawerOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={closeDrawer}>{t('common.cancel')}</Button>
             <Button type="primary" loading={addMutation.isPending} onClick={() => void saveLine()}>
               {t(`${KEY}.add`)}
             </Button>
@@ -526,6 +598,7 @@ export default function PayrollRunAdjustmentsTab({
         className="erp-payroll-modal"
       >
         <p className="erp-payroll-modal-hint">{t(`${REC}.waiveHint`)}</p>
+        <p className="erp-payroll-modal-hint">{t(`${REC}.waiveStatutoryNote`)}</p>
         {waiving ? (
           <p className="m-0 mb-3">
             {waiving.employeeName} · {formatPayrollPeriod(waiving.forMonth, waiving.forYear)} ·{' '}

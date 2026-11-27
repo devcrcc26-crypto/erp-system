@@ -2999,3 +2999,36 @@
 .erp-payroll-dot--on {
   color: var(--pr-strong);
 }
+
+/* Tax and pension to declare (run + carried correction differences). */
+.erp-payroll-remit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.erp-payroll-remit {
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--pr-tile);
+}
+
+.erp-payroll-remit-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.erp-payroll-remit-row dd {
+  margin: 0;
+}
+
+.erp-payroll-remit-total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pr-divider);
+  font-weight: 600;
+  color: var(--pr-strong);
+}
