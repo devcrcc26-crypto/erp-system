@@ -769,6 +769,29 @@ export class PayrollController {
     return this.payrollPayslipService.listForHr(employeeId, this.ctx(user));
   }
 
+  @Get('employees/:employeeId/ot-manual')
+  @RequireAnyPermission(
+    { module: 'overtime', action: 'view' },
+    { module: 'overtime', action: 'create' },
+    { module: 'overtime', action: 'manage' },
+    { module: 'hr', action: 'view' },
+    { module: 'payroll', action: 'view' },
+    { module: 'payroll', action: 'create' },
+  )
+  @ApiOperation({
+    summary:
+      'Manual (paper) OT lines for an employee profile OT tab. Self, or hr.view / overtime.manage. Hours from save; amounts after run APPROVED.',
+  })
+  listEmployeeOtManual(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollOtAdjustmentService.listProfileManualLines(
+      employeeId,
+      this.ctx(user),
+    );
+  }
+
   @Post('runs/:id/payslips/generate')
   @RequireAnyPermission({ module: 'payroll', action: 'create' })
   @ApiOperation({

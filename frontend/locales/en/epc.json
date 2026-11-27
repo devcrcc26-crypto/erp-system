@@ -6697,6 +6697,12 @@
       "noHistory": "No overtime sheets yet.",
       "profileLoadError": "Unable to load overtime information.",
       "sheetsInYear": "{{count}} sheets",
+      "profileSource": "Source",
+      "profileCategory": "Category",
+      "manualPaperSource": "Manually submitted (paper)",
+      "manualPending": "Recorded by HR – pending payroll",
+      "manualIncluded": "Included in payroll – {{runNumber}}",
+      "periodHoursSplit": "Sheets {{sheet}} · Paper {{manual}} · Combined {{combined}} ({{count}} sheets)",
       "unregisteredHolidayBanner": "This sheet contains {{count}} manually flagged holiday date(s) not found in the public holiday calendar: {{dates}}. Please verify before approving."
     },
     "buttons": {

@@ -18,6 +18,7 @@ import type {
   PayrollEntryDetail,
   PayrollOtAdjustment,
   PayrollOtBreakdown,
+  PayrollOtProfileManualLine,
   ReplacePayrollOtAdjustmentsPayload,
   UpsertPayrollOtAdjustmentPayload,
   UpdatePayrollRunPayload,
@@ -317,6 +318,14 @@ export async function listEmployeePayslips(
   employeeId: string,
 ): Promise<EmployeePayslip[]> {
   return apiGet<EmployeePayslip[]>(`${BASE}/employees/${employeeId}/payslips`);
+}
+
+export async function listEmployeeOtManual(
+  employeeId: string,
+): Promise<PayrollOtProfileManualLine[]> {
+  return apiGet<PayrollOtProfileManualLine[]>(
+    `${BASE}/employees/${employeeId}/ot-manual`,
+  );
 }
 
 /**

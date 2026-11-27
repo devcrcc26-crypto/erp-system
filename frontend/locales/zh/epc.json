@@ -6696,6 +6696,12 @@
       "noHistory": "暂无加班表。",
       "profileLoadError": "无法加载加班信息。",
       "sheetsInYear": "{{count}} 张加班表",
+      "profileSource": "来源",
+      "profileCategory": "类别",
+      "manualPaperSource": "手工提交（纸质）",
+      "manualPending": "HR 已录入 – 待工资核算",
+      "manualIncluded": "已计入工资 – {{runNumber}}",
+      "periodHoursSplit": "加班表 {{sheet}} · 纸质 {{manual}} · 合计 {{combined}}（{{count}} 张表）",
       "unregisteredHolidayBanner": "此加班表包含 {{count}} 个未在公共假日日历中登记、但被手动标记为假日的日期：{{dates}}。请在批准前核实。"
     },
     "buttons": {

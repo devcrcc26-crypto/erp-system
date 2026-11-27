@@ -16,6 +16,7 @@ import {
   gmApprovePayrollRun,
   getPayrollEmploymentReview,
   getPayrollEntryAudit,
+  listEmployeeOtManual,
   listEmployeePayslips,
   listMyPayslips,
   listPayrollRuns,
@@ -67,6 +68,8 @@ export const payrollKeys = {
   myPayslips: () => [...payrollKeys.all, 'my-payslips'] as const,
   employeePayslips: (employeeId: string) =>
     [...payrollKeys.all, 'employee-payslips', employeeId] as const,
+  employeeOtManual: (employeeId: string) =>
+    [...payrollKeys.all, 'employee-ot-manual', employeeId] as const,
 };
 
 export function usePayrollRuns(enabled = true) {
@@ -126,6 +129,9 @@ function applyBreakdownResponse(
     void queryClient.invalidateQueries({ queryKey: payrollKeys.run(runId), exact: true });
   }
   markRunsListStale(queryClient);
+  void queryClient.invalidateQueries({
+    queryKey: payrollKeys.employeeOtManual(employeeId),
+  });
 }
 
 function invalidateRun(queryClient: ReturnType<typeof useQueryClient>, id: string): void {
@@ -328,6 +334,15 @@ export function useEmployeePayslips(employeeId: string, enabled = true) {
   return useQuery({
     queryKey: payrollKeys.employeePayslips(employeeId),
     queryFn: () => listEmployeePayslips(employeeId),
+    enabled: enabled && Boolean(employeeId),
+  });
+}
+
+/** Manual paper OT lines for the employee profile OT tab. */
+export function useEmployeeOtManual(employeeId: string, enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.employeeOtManual(employeeId),
+    queryFn: () => listEmployeeOtManual(employeeId),
     enabled: enabled && Boolean(employeeId),
   });
 }

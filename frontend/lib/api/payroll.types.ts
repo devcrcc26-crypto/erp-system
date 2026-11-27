@@ -390,6 +390,26 @@ interface PayrollOtPerson {
   lastName: string;
 }
 
+/** Manual paper OT on the employee profile OT tab (alongside sheet rows). */
+export interface PayrollOtProfileManualLine {
+  id: string;
+  source: 'PAYROLL_MANUAL';
+  employeeId: string;
+  month: number;
+  year: number;
+  otCategory: PayrollOtCategory;
+  hours: number;
+  /** Null while the run is DRAFT / REVIEWED / SUBMITTED. */
+  amount: number | null;
+  note: string | null;
+  recordedBy: PayrollOtPerson;
+  recordedAt: string;
+  runId: string;
+  runNumber: string;
+  runStatus: string;
+  includedInPayroll: boolean;
+}
+
 /** Manual (paper-based) OT hours on a run for one employee, contract and category. */
 export interface PayrollOtAdjustment {
   id: string;

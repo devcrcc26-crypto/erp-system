@@ -1,12 +1,14 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type PayrollOtCategory } from '@prisma/client';
+import { Prisma, type PayrollOtCategory, type PayrollRunStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import type {
   ReplacePayrollOtAdjustmentsDto,
@@ -34,6 +36,19 @@ interface ServiceContext {
 
 /** Runs whose entries HR can still change (same rule as other entry edits). */
 const EDITABLE_STATUSES = new Set(['DRAFT', 'REVIEWED']);
+
+/** Amounts are visible on the profile once the run has been HR-approved. */
+const AMOUNT_VISIBLE_STATUSES = new Set<PayrollRunStatus>([
+  'APPROVED',
+  'GM_APPROVED',
+  'PAID',
+]);
+
+/** Live runs only — cancelled / superseded versions are hidden; reopen copies lines forward. */
+const PROFILE_EXCLUDED_RUN_STATUSES = new Set<PayrollRunStatus>([
+  'CANCELLED',
+  'SUPERSEDED',
+]);
 
 const personSelect = {
   id: true,
@@ -79,6 +94,28 @@ export interface PayrollOtAdjustmentView {
   createdAt: Date;
   updatedBy: { id: string; firstName: string; lastName: string };
   updatedAt: Date;
+}
+
+/** Manual paper OT for the employee profile OT tab (alongside sheet entries). */
+export interface PayrollOtProfileManualLine {
+  id: string;
+  source: 'PAYROLL_MANUAL';
+  employeeId: string;
+  month: number;
+  year: number;
+  otCategory: PayrollOtCategory;
+  /** Hours recorded (applied hours when the entry has been priced). */
+  hours: number;
+  /** Null while the run is still DRAFT / REVIEWED / SUBMITTED. */
+  amount: number | null;
+  note: string | null;
+  recordedBy: { id: string; firstName: string; lastName: string };
+  recordedAt: Date;
+  runId: string;
+  runNumber: string;
+  runStatus: PayrollRunStatus;
+  /** True once the run is APPROVED / GM_APPROVED / PAID. */
+  includedInPayroll: boolean;
 }
 
 export interface PayrollOtCategoryBreakdown {
@@ -163,7 +200,98 @@ export class PayrollOtAdjustmentService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly payrollRunService: PayrollRunService,
+    private readonly permissions: PermissionService,
   ) {}
+
+  /**
+   * Manual paper OT lines for an employee's profile OT tab.
+   * Visible as soon as saved on a live run (no sheet approval). Hours always;
+   * amounts only after the run is APPROVED / GM_APPROVED / PAID.
+   * Self, or hr.view / overtime.manage for others.
+   */
+  async listProfileManualLines(
+    employeeId: string,
+    ctx: ServiceContext,
+  ): Promise<PayrollOtProfileManualLine[]> {
+    await this.assertCanViewEmployeeOt(employeeId, ctx);
+
+    const rows = await this.prisma.payrollOtAdjustment.findMany({
+      where: {
+        companyId: ctx.companyId,
+        employeeId,
+        hours: { not: 0 },
+        payrollRun: {
+          companyId: ctx.companyId,
+          deletedAt: null,
+          status: { notIn: [...PROFILE_EXCLUDED_RUN_STATUSES] },
+        },
+      },
+      include: {
+        ...adjustmentInclude,
+        payrollRun: {
+          select: {
+            id: true,
+            runNumber: true,
+            status: true,
+            month: true,
+            year: true,
+          },
+        },
+      },
+      orderBy: [
+        { payrollRun: { year: 'desc' } },
+        { payrollRun: { month: 'desc' } },
+        { otCategory: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    return rows.map((row) => {
+      const included = AMOUNT_VISIBLE_STATUSES.has(row.payrollRun.status);
+      const hours =
+        num(row.appliedHours) !== 0 ? num(row.appliedHours) : num(row.hours);
+      return {
+        id: row.id,
+        source: 'PAYROLL_MANUAL' as const,
+        employeeId: row.employeeId,
+        month: row.payrollRun.month,
+        year: row.payrollRun.year,
+        otCategory: row.otCategory,
+        hours: round2(hours),
+        amount: included ? round2(num(row.amount)) : null,
+        note: row.note,
+        recordedBy: row.creator,
+        recordedAt: row.createdAt,
+        runId: row.payrollRun.id,
+        runNumber: row.payrollRun.runNumber,
+        runStatus: row.payrollRun.status,
+        includedInPayroll: included,
+      };
+    });
+  }
+
+  private async assertCanViewEmployeeOt(
+    employeeId: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    if (employeeId === ctx.userId) {
+      return;
+    }
+    const [hrView, otManage] = await Promise.all([
+      this.permissions.hasPermission(ctx.userId, ctx.companyId, 'hr', 'view'),
+      this.permissions.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'overtime',
+        'manage',
+      ),
+    ]);
+    if (!hrView && !otManage) {
+      throw new ForbiddenException(
+        'You can only view your own overtime, or need hr.view / overtime.manage',
+      );
+    }
+  }
 
   /** All adjustments on a run (optionally one employee), for history views. */
   async list(

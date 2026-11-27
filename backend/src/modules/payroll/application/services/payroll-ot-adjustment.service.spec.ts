@@ -76,6 +76,7 @@ describe('PayrollOtAdjustmentService', () => {
   let prisma: Record<string, Record<string, jest.Mock>> & { $transaction: jest.Mock };
   let runService: { entryUpdateForOvertime: jest.Mock; refreshRunTotals: jest.Mock };
   let audit: { create: jest.Mock; buildFromRequestContext: jest.Mock };
+  let permissions: { hasPermission: jest.Mock };
   let service: PayrollOtAdjustmentService;
   let stored: Array<Record<string, unknown>>;
   let tx: {
@@ -135,10 +136,14 @@ describe('PayrollOtAdjustmentService', () => {
       create: jest.fn(async () => undefined),
       buildFromRequestContext: jest.fn((input: unknown) => input),
     };
+    permissions = {
+      hasPermission: jest.fn(async () => true),
+    };
     service = new PayrollOtAdjustmentService(
       prisma as never,
       audit as never,
       runService as never,
+      permissions as never,
     );
   });
 
@@ -460,5 +465,87 @@ describe('PayrollOtAdjustmentService', () => {
     expect(ot.hours.normalHours).toBe(4);
     expect(ot.pay.normalOtPay).toBe(300);
     expect(runService.refreshRunTotals).toHaveBeenCalledTimes(1);
+  });
+
+  describe('listProfileManualLines', () => {
+    const creator = { id: 'hr-1', firstName: 'Ada', lastName: 'Mensah' };
+
+    function profileRow(
+      overrides: Record<string, unknown> = {},
+    ): Record<string, unknown> {
+      return {
+        id: 'adj-p1',
+        employeeId: EMPLOYEE,
+        otCategory: 'NORMAL',
+        hours: new Decimal(5),
+        appliedHours: new Decimal(5),
+        amount: new Decimal(375),
+        note: 'Paper records - Nov 2026',
+        createdAt: new Date('2026-11-10T08:00:00Z'),
+        creator,
+        updater: creator,
+        employee: {
+          id: EMPLOYEE,
+          firstName: 'Kwame',
+          lastName: 'Boateng',
+          employeeId: 'E-100',
+        },
+        contract: { id: CONTRACT_A, contractNumber: 'CN-A' },
+        payrollRun: {
+          id: RUN,
+          runNumber: 'PR-2026-11',
+          status: 'DRAFT',
+          month: 11,
+          year: 2026,
+        },
+        ...overrides,
+      };
+    }
+
+    it('returns hours only while the run is still in draft', async () => {
+      prisma.payrollOtAdjustment.findMany = jest.fn(async () => [profileRow()]);
+      const lines = await service.listProfileManualLines(EMPLOYEE, {
+        ...ctx,
+        userId: EMPLOYEE,
+      });
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toMatchObject({
+        source: 'PAYROLL_MANUAL',
+        hours: 5,
+        amount: null,
+        includedInPayroll: false,
+        runNumber: 'PR-2026-11',
+        otCategory: 'NORMAL',
+        note: 'Paper records - Nov 2026',
+        recordedBy: creator,
+      });
+    });
+
+    it('includes amounts once the run is approved', async () => {
+      prisma.payrollOtAdjustment.findMany = jest.fn(async () => [
+        profileRow({
+          payrollRun: {
+            id: RUN,
+            runNumber: 'PR-2026-11',
+            status: 'APPROVED',
+            month: 11,
+            year: 2026,
+          },
+        }),
+      ]);
+      const [line] = await service.listProfileManualLines(EMPLOYEE, {
+        ...ctx,
+        userId: EMPLOYEE,
+      });
+      expect(line.amount).toBe(375);
+      expect(line.includedInPayroll).toBe(true);
+    });
+
+    it('forbids viewing another employee without hr.view or overtime.manage', async () => {
+      permissions.hasPermission = jest.fn(async () => false);
+      await expect(
+        service.listProfileManualLines(EMPLOYEE, ctx),
+      ).rejects.toThrow(/hr\.view|overtime\.manage/);
+    });
   });
 });

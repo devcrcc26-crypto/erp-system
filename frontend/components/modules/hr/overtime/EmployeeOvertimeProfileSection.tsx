@@ -17,10 +17,9 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProfileContractPeriod } from '@/hooks/use-profile-contract-period';
 import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  OvertimeSheetListItem,
-  OvertimeSheetStatus,
-} from '@/lib/api/overtime.types';
+import type { PayrollOtCategory, PayrollOtProfileManualLine } from '@/lib/api/payroll.types';
+import type { OvertimeSheetListItem } from '@/lib/api/overtime.types';
+import { useEmployeeOtManual } from '@/lib/query/payroll';
 import { useOvertimeSheetsAll } from '@/lib/query/overtime';
 import {
   monthOverlapsContractPeriod,
@@ -35,8 +34,26 @@ import {
 import { overtimeSheetDetailHref } from '@/lib/utils/hr-self-service-nav';
 import { overtimeHistoryPath, myOvertimeHistoryPath } from '@/lib/utils/overtime-history-path';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 
 const HISTORY_PAGE_SIZE = 10;
+
+const MANUAL_CATEGORY_LABEL: Record<PayrollOtCategory, string> = {
+  NORMAL: 'hr.overtimeCategory.regular',
+  EVENING: 'hr.overtimeCategory.night',
+  SUNDAY: 'hr.overtimeCategory.weekend',
+  HOLIDAY: 'hr.overtimeCategory.holiday',
+};
+
+const MANUAL_TO_SHEET: Record<
+  PayrollOtCategory,
+  'regular' | 'night' | 'weekend' | 'holiday'
+> = {
+  NORMAL: 'regular',
+  EVENING: 'night',
+  SUNDAY: 'weekend',
+  HOLIDAY: 'holiday',
+};
 
 export type EmployeeOvertimeProfileMode = 'self' | 'employee';
 
@@ -68,7 +85,27 @@ type YearTotals = {
   holiday: number;
   total: number;
   sheets: number;
+  sheetHours: number;
+  manualHours: number;
 };
+
+type ProfileOtHistoryRow =
+  | {
+      key: string;
+      kind: 'sheet';
+      month: number;
+      year: number;
+      sortAt: number;
+      sheet: OvertimeSheetListItem;
+    }
+  | {
+      key: string;
+      kind: 'manual';
+      month: number;
+      year: number;
+      sortAt: number;
+      line: PayrollOtProfileManualLine;
+    };
 
 function emptyTotals(): YearTotals {
   return {
@@ -78,6 +115,8 @@ function emptyTotals(): YearTotals {
     holiday: 0,
     total: 0,
     sheets: 0,
+    sheetHours: 0,
+    manualHours: 0,
   };
 }
 
@@ -92,9 +131,24 @@ function sumSheetTotals(sheets: OvertimeSheetListItem[]): YearTotals {
     totals.weekend += sheet.totalWeekendHours;
     totals.holiday += sheet.totalHolidayHours;
     totals.total += sheet.totalHours;
+    totals.sheetHours += sheet.totalHours;
     totals.sheets += 1;
   }
   return totals;
+}
+
+function addManualTotals(
+  totals: YearTotals,
+  lines: PayrollOtProfileManualLine[],
+): YearTotals {
+  const next = { ...totals };
+  for (const line of lines) {
+    const bucket = MANUAL_TO_SHEET[line.otCategory];
+    next[bucket] += line.hours;
+    next.manualHours += line.hours;
+    next.total += line.hours;
+  }
+  return next;
 }
 
 function OvertimeProfileSection({
@@ -158,7 +212,8 @@ function HoursTile({
 /**
  * Year overtime totals and sheet history for a profile surface.
  * Use `self` on My Profile (pass the signed-in user's id); use `employee` on
- * HR employee detail. Both modes list only that employee's sheets.
+ * HR employee detail. Both modes list only that employee's sheets, plus any
+ * manual paper OT saved on live payroll runs.
  */
 export default function EmployeeOvertimeProfileSection({
   mode,
@@ -208,36 +263,69 @@ export default function EmployeeOvertimeProfileSection({
     { employeeId: targetEmployeeId },
     employeeEnabled,
   );
+  const manualQuery = useEmployeeOtManual(
+    targetEmployeeId ?? '',
+    employeeEnabled,
+  );
 
-  const historyLoading = sheetsQuery.isLoading || periodsLoading;
-  const historyError = sheetsQuery.error;
+  const historyLoading =
+    sheetsQuery.isLoading || manualQuery.isLoading || periodsLoading;
+  const historyError = sheetsQuery.error ?? manualQuery.error;
 
-  const allHistory = useMemo(() => {
+  const filteredSheets = useMemo(() => {
     const rows = sheetsQuery.data ?? [];
-    const filtered =
-      selectedPeriod != null
-        ? rows.filter((sheet) =>
-            monthOverlapsContractPeriod(
-              sheet.year,
-              sheet.month,
-              selectedPeriod,
-            ),
-          )
-        : rows;
-    return [...filtered].sort((a, b) => {
+    return selectedPeriod != null
+      ? rows.filter((sheet) =>
+          monthOverlapsContractPeriod(sheet.year, sheet.month, selectedPeriod),
+        )
+      : rows;
+  }, [sheetsQuery.data, selectedPeriod]);
+
+  const filteredManual = useMemo(() => {
+    const rows = manualQuery.data ?? [];
+    return selectedPeriod != null
+      ? rows.filter((line) =>
+          monthOverlapsContractPeriod(line.year, line.month, selectedPeriod),
+        )
+      : rows;
+  }, [manualQuery.data, selectedPeriod]);
+
+  const allHistory = useMemo((): ProfileOtHistoryRow[] => {
+    const sheetRows: ProfileOtHistoryRow[] = filteredSheets.map((sheet) => ({
+      key: `sheet-${sheet.id}`,
+      kind: 'sheet',
+      month: sheet.month,
+      year: sheet.year,
+      sortAt: new Date(sheet.createdAt).getTime(),
+      sheet,
+    }));
+    const manualRows: ProfileOtHistoryRow[] = filteredManual.map((line) => ({
+      key: `manual-${line.id}`,
+      kind: 'manual',
+      month: line.month,
+      year: line.year,
+      sortAt: new Date(line.recordedAt).getTime(),
+      line,
+    }));
+    return [...sheetRows, ...manualRows].sort((a, b) => {
       if (a.year !== b.year) {
         return b.year - a.year;
       }
       if (a.month !== b.month) {
         return b.month - a.month;
       }
-      return (
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      if (a.kind !== b.kind) {
+        // Sheets first within the month, then paper lines.
+        return a.kind === 'sheet' ? -1 : 1;
+      }
+      return b.sortAt - a.sortAt;
     });
-  }, [sheetsQuery.data, selectedPeriod]);
+  }, [filteredSheets, filteredManual]);
 
-  const yearTotals = useMemo(() => sumSheetTotals(allHistory), [allHistory]);
+  const yearTotals = useMemo(
+    () => addManualTotals(sumSheetTotals(filteredSheets), filteredManual),
+    [filteredSheets, filteredManual],
+  );
 
   useEffect(() => {
     setHistoryPage(1);
@@ -255,117 +343,165 @@ export default function EmployeeOvertimeProfileSection({
     return allHistory.slice(start, start + historyMeta.limit);
   }, [allHistory, historyMeta.page, historyMeta.limit]);
 
-  const columns: ColumnsType<OvertimeSheetListItem> = useMemo(() => {
-    const sheetColumn: ColumnsType<OvertimeSheetListItem>[number] = {
-      title: t('hr.table.sheetNumber'),
-      dataIndex: 'sheetNumber',
-      key: 'sheetNumber',
-      width: 140,
-      render: (value: string) => (
-        <span className="erp-users-id-chip">{value}</span>
-      ),
+  const columns: ColumnsType<ProfileOtHistoryRow> = useMemo(() => {
+    const sourceColumn: ColumnsType<ProfileOtHistoryRow>[number] = {
+      title: t('hr.overtime.profileSource'),
+      key: 'source',
+      width: 200,
+      render: (_: unknown, row: ProfileOtHistoryRow) =>
+        row.kind === 'sheet' ? (
+          <span className="erp-users-id-chip">{row.sheet.sheetNumber}</span>
+        ) : (
+          <span className="erp-users-cell-sub">{t('hr.overtime.manualPaperSource')}</span>
+        ),
     };
-    const periodColumn: ColumnsType<OvertimeSheetListItem>[number] = {
+    const periodColumn: ColumnsType<ProfileOtHistoryRow>[number] = {
       title: t('hr.table.period'),
       key: 'period',
       width: 140,
-      render: (_: unknown, row: OvertimeSheetListItem) => (
+      render: (_: unknown, row: ProfileOtHistoryRow) => (
         <span className="erp-users-cell-strong">
           {formatOvertimePeriod(row.month, row.year, t)}
         </span>
       ),
     };
-    const statusColumn: ColumnsType<OvertimeSheetListItem>[number] = {
-      title: t('common.status'),
-      dataIndex: 'status',
-      key: 'status',
+    const categoryColumn: ColumnsType<ProfileOtHistoryRow>[number] = {
+      title: t('hr.overtime.profileCategory'),
+      key: 'category',
       width: 120,
-      render: (value: OvertimeSheetStatus) => (
-        <StatusBadge
-          label={formatOvertimeStatus(value, t)}
-          variant={overtimeStatusVariant(value)}
-        />
-      ),
+      render: (_: unknown, row: ProfileOtHistoryRow) =>
+        row.kind === 'manual' ? (
+          <span className="erp-users-cell-sub">
+            {t(MANUAL_CATEGORY_LABEL[row.line.otCategory])}
+          </span>
+        ) : (
+          <span className="erp-users-cell-sub">—</span>
+        ),
+    };
+    const statusColumn: ColumnsType<ProfileOtHistoryRow>[number] = {
+      title: t('common.status'),
+      key: 'status',
+      width: 220,
+      render: (_: unknown, row: ProfileOtHistoryRow) => {
+        if (row.kind === 'sheet') {
+          return (
+            <StatusBadge
+              label={formatOvertimeStatus(row.sheet.status, t)}
+              variant={overtimeStatusVariant(row.sheet.status)}
+            />
+          );
+        }
+        if (row.line.includedInPayroll) {
+          return (
+            <StatusBadge
+              label={t('hr.overtime.manualIncluded', {
+                runNumber: row.line.runNumber,
+              })}
+              variant="success"
+            />
+          );
+        }
+        return (
+          <StatusBadge
+            label={t('hr.overtime.manualPending')}
+            variant="warning"
+          />
+        );
+      },
     };
 
     if (showCategoryColumns) {
       const hoursColumn = (
-        dataIndex:
-          | 'totalRegularHours'
-          | 'totalNightHours'
-          | 'totalWeekendHours'
-          | 'totalHolidayHours'
-          | 'totalHours',
+        dataIndex: 'regular' | 'night' | 'weekend' | 'holiday' | 'total',
         title: string,
         strong = false,
-      ): ColumnsType<OvertimeSheetListItem>[number] => ({
+      ): ColumnsType<ProfileOtHistoryRow>[number] => ({
         title,
-        dataIndex,
         key: dataIndex,
         width: strong ? 104 : 88,
         align: 'right',
-        // Category columns hide on phones; the year summary cards show them.
         responsive: strong ? undefined : ['md'],
-        render: (value: number) => (
-          <span
-            className={`${strong ? 'erp-users-cell-strong' : 'erp-users-cell-sub'} tabular-nums`}
-          >
-            {formatOvertimeHours(value)}
-          </span>
-        ),
+        render: (_: unknown, row: ProfileOtHistoryRow) => {
+          let value = 0;
+          if (row.kind === 'sheet') {
+            const sheet = row.sheet;
+            value =
+              dataIndex === 'regular'
+                ? sheet.totalRegularHours
+                : dataIndex === 'night'
+                  ? sheet.totalNightHours
+                  : dataIndex === 'weekend'
+                    ? sheet.totalWeekendHours
+                    : dataIndex === 'holiday'
+                      ? sheet.totalHolidayHours
+                      : sheet.totalHours;
+          } else {
+            const bucket = MANUAL_TO_SHEET[row.line.otCategory];
+            value =
+              dataIndex === 'total' || dataIndex === bucket ? row.line.hours : 0;
+          }
+          return (
+            <span
+              className={`${strong ? 'erp-users-cell-strong' : 'erp-users-cell-sub'} tabular-nums`}
+            >
+              {formatOvertimeHours(value)}
+            </span>
+          );
+        },
       });
       return [
-        sheetColumn,
+        sourceColumn,
         periodColumn,
-        hoursColumn('totalRegularHours', t('hr.overtimeCategory.regular')),
-        hoursColumn('totalNightHours', t('hr.overtimeCategory.night')),
-        hoursColumn('totalWeekendHours', t('hr.overtimeCategory.weekend')),
-        hoursColumn('totalHolidayHours', t('hr.overtimeCategory.holiday')),
-        hoursColumn('totalHours', t('hr.table.totalHours'), true),
+        categoryColumn,
+        hoursColumn('regular', t('hr.overtimeCategory.regular')),
+        hoursColumn('night', t('hr.overtimeCategory.night')),
+        hoursColumn('weekend', t('hr.overtimeCategory.weekend')),
+        hoursColumn('holiday', t('hr.overtimeCategory.holiday')),
+        hoursColumn('total', t('hr.table.totalHours'), true),
         statusColumn,
       ];
     }
 
     return [
-      sheetColumn,
+      sourceColumn,
       periodColumn,
+      categoryColumn,
       {
         title: t('hr.table.totalHours'),
-        dataIndex: 'totalHours',
         key: 'totalHours',
         width: 96,
         align: 'right',
-        render: (value: number) => (
+        render: (_: unknown, row: ProfileOtHistoryRow) => (
           <span className="erp-users-cell-strong tabular-nums">
-            {formatOvertimeHours(value)}
-          </span>
-        ),
-      },
-      {
-        title: t('hr.overtimeCategory.regular'),
-        dataIndex: 'totalRegularHours',
-        key: 'totalRegularHours',
-        width: 88,
-        align: 'right',
-        responsive: ['lg'],
-        render: (value: number) => (
-          <span className="erp-users-cell-sub tabular-nums">
-            {formatOvertimeHours(value)}
+            {formatOvertimeHours(
+              row.kind === 'sheet' ? row.sheet.totalHours : row.line.hours,
+            )}
           </span>
         ),
       },
       statusColumn,
       {
         title: t('hr.table.submittedDate'),
-        dataIndex: 'submittedAt',
         key: 'submittedAt',
-        width: 120,
+        width: 140,
         responsive: ['md'],
-        render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">
-            {value ? formatProjectDate(value) : '-'}
-          </span>
-        ),
+        render: (_: unknown, row: ProfileOtHistoryRow) => {
+          if (row.kind === 'sheet') {
+            return (
+              <span className="erp-users-cell-sub">
+                {row.sheet.submittedAt
+                  ? formatProjectDate(row.sheet.submittedAt)
+                  : '-'}
+              </span>
+            );
+          }
+          return (
+            <span className="erp-users-cell-sub">
+              {formatUserName(row.line.recordedBy)} ·{' '}
+              {formatProjectDate(row.line.recordedAt)}
+            </span>
+          );
+        },
       },
     ];
   }, [t, showCategoryColumns]);
@@ -466,7 +602,10 @@ export default function EmployeeOvertimeProfileSection({
               label={t('hr.overtimeCategory.total')}
               value={formatOvertimeHours(yearTotals.total)}
               accent={accent.hover}
-              meta={t('hr.overtime.sheetsInYear', {
+              meta={t('hr.overtime.periodHoursSplit', {
+                sheet: formatOvertimeHours(yearTotals.sheetHours),
+                manual: formatOvertimeHours(yearTotals.manualHours),
+                combined: formatOvertimeHours(yearTotals.total),
                 count: yearTotals.sheets,
               })}
             />
@@ -484,20 +623,24 @@ export default function EmployeeOvertimeProfileSection({
             <Alert type="error" showIcon title={errorMessage(historyError)} />
           </div>
         ) : (
-          <DataTable<OvertimeSheetListItem>
-            rowKey="id"
+          <DataTable<ProfileOtHistoryRow>
+            rowKey="key"
             size="small"
             className="erp-pro-table erp-users-table erp-leave-history-table"
             loading={historyLoading}
             columns={columns}
             dataSource={historyRows}
-            onRow={(record) => ({
-              onClick: () =>
-                router.push(
-                  overtimeSheetDetailHref(record.id, detailReturnTo),
-                ),
-              style: { cursor: 'pointer' },
-            })}
+            onRow={(record) =>
+              record.kind === 'sheet'
+                ? {
+                    onClick: () =>
+                      router.push(
+                        overtimeSheetDetailHref(record.sheet.id, detailReturnTo),
+                      ),
+                    style: { cursor: 'pointer' },
+                  }
+                : {}
+            }
             pagination={{
               current: historyMeta.page,
               pageSize: historyMeta.limit,
