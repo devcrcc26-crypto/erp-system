@@ -131,9 +131,11 @@ export function ResponseHistory({
               <p className="erp-resubmit-history-item-label">
                 {response.responseType === 'RESUBMIT'
                   ? t('pages.approvals.resubmit.resubmitLabel')
-                  : t('pages.approvals.resubmit.conditionResponse', {
-                      index: (response.conditionIndex ?? 0) + 1,
-                    })}
+                  : response.responseType === 'APPROVE_WITH_CHANGES'
+                    ? t('pages.approvals.history.approvedWithChanges')
+                    : t('pages.approvals.resubmit.conditionResponse', {
+                        index: (response.conditionIndex ?? 0) + 1,
+                      })}
               </p>
               <p className="erp-resubmit-history-item-meta">
                 {formatApprovalUserName(response.responder)} ·{' '}

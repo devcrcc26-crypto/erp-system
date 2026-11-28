@@ -22,6 +22,7 @@ import ExpenseClaimDetail from '@/components/modules/approvals/detail/ExpenseCla
 import FlightApplicationDetail from '@/components/modules/approvals/detail/FlightApplicationDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import { OvertimeEditedBadge } from '@/components/modules/approvals/detail/OvertimeApprovalEditChrome';
+import OvertimeApproveWithChangesModal from '@/components/modules/approvals/detail/OvertimeApproveWithChangesModal';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import PerDiemSettlementDetail from '@/components/modules/approvals/detail/PerDiemSettlementDetail';
@@ -61,6 +62,7 @@ import {
   useReturnApprovalTier,
 } from '@/lib/query/approvals';
 import { usePerDiemRequest, useSetApprovedPerDiemRate } from '@/lib/query/per-diem';
+import { useOvertimeSheet } from '@/lib/query/overtime';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
@@ -303,6 +305,7 @@ export default function ApprovalDetailPageContent({
   const resolveConditionMutation = useResolveApprovalCondition(requestId);
 
   const [actionModal, setActionModal] = useState<ActionModalKind>(null);
+  const [approveWithChangesOpen, setApproveWithChangesOpen] = useState(false);
   const [resubmitOpen, setResubmitOpen] = useState(false);
   const [note, setNote] = useState('');
   const [conditionText, setConditionText] = useState('');
@@ -318,6 +321,7 @@ export default function ApprovalDetailPageContent({
     Boolean(_earlyRequest) &&
     resolveCategoryCode(_earlyRequest!) === 'OVERTIME_APPLICATION';
   const _overtimeSourceId = _isOvertime ? (_earlyRequest?.sourceId ?? '') : '';
+  const overtimeSheetQuery = useOvertimeSheet(_overtimeSourceId);
 
   useEffect(() => {
     if (
@@ -545,8 +549,19 @@ export default function ApprovalDetailPageContent({
     }
   }
 
-  const decisionMenuItems: MenuProps['items'] = useMemo(
-    () => [
+  const isReportsToTier = Boolean(
+    currentTier &&
+      (((currentTier.resolver ?? '').toUpperCase() === 'REPORTS_TO') ||
+        (currentTier.label ?? '').trim().toLowerCase() === 'reports to'),
+  );
+  const canApproveOtWithChanges =
+    _isOvertime &&
+    isActiveApprover &&
+    isReportsToTier &&
+    !overtimeSheetQuery.data?.payrollLocked;
+
+  const decisionMenuItems: MenuProps['items'] = useMemo(() => {
+    const items: MenuProps['items'] = [
       {
         key: 'approve',
         icon: <CheckOutlined />,
@@ -554,6 +569,17 @@ export default function ApprovalDetailPageContent({
         disabled: actionsDisabled,
         onClick: () => setActionModal('approve'),
       },
+    ];
+    if (canApproveOtWithChanges) {
+      items.push({
+        key: 'approveWithChanges',
+        icon: <EditOutlined />,
+        label: t('pages.hr.overtime.approveWithChanges'),
+        disabled: actionsDisabled,
+        onClick: () => setApproveWithChangesOpen(true),
+      });
+    }
+    items.push(
       {
         key: 'conditional',
         icon: <WarningOutlined />,
@@ -577,9 +603,9 @@ export default function ApprovalDetailPageContent({
         disabled: actionsDisabled,
         onClick: () => setActionModal('reject'),
       },
-    ],
-    [actionsDisabled, t],
-  );
+    );
+    return items;
+  }, [actionsDisabled, canApproveOtWithChanges, t]);
 
   if (detailQuery.isLoading && !request) {
     return (
@@ -1136,6 +1162,16 @@ export default function ApprovalDetailPageContent({
           ) : null}
         </div>
       </ConfirmDialog>
+
+      {_isOvertime && currentTier ? (
+        <OvertimeApproveWithChangesModal
+          open={approveWithChangesOpen}
+          onClose={() => setApproveWithChangesOpen(false)}
+          requestId={requestId}
+          tierId={currentTier.id}
+          sheet={overtimeSheetQuery.data}
+        />
+      ) : null}
     </div>
   );
 }

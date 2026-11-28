@@ -25,7 +25,9 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { JwtAuthGuard } from '../../../../shared/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  AddApprovalCommentDto,
   AddConditionDto,
+  ApproveWithChangesDto,
   ListRequestsDto,
   SubmitRequestDto,
   ReturnRejectTierActionDto,
@@ -178,6 +180,38 @@ export class ApprovalRequestsController {
       dto?.note,
       { onBehalf: dto?.onBehalf === true },
     );
+  }
+
+  @Post(':id/tiers/:tierId/approve-with-changes')
+  @ApiOperation({
+    summary:
+      'OT only: Reports-to approver edits entries then approves the tier (no chain restart)',
+  })
+  approveWithChanges(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('tierId') tierId: string,
+    @Body() dto: ApproveWithChangesDto,
+  ): Promise<unknown> {
+    return this.approvalsService.approveWithChanges(
+      id,
+      tierId,
+      user.userId,
+      companyId,
+      dto,
+    );
+  }
+
+  @Post(':id/comments')
+  @ApiOperation({ summary: 'Add a comment on an approval request' })
+  addComment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: AddApprovalCommentDto,
+  ): Promise<unknown> {
+    return this.approvalsService.addComment(id, companyId, user.userId, dto);
   }
 
   @Post(':id/tiers/:tierId/reject')

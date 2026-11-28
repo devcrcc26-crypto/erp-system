@@ -70,8 +70,20 @@ import { PAYROLL_LOCKED_MESSAGE } from '../utils/overtime-entry-guards.util';
 import {
   buildOvertimeApprovedSnapshot,
   buildOvertimeEditDiff,
+  enrichEditDiffWithApproverAdjustment,
+  entryHoursIncreased,
+  parseOvertimeApproverAdjustment,
   parseOvertimeApprovedSnapshot,
+  snapshotOvertimeEntry,
+  summarizeOvertimeEntry,
+  type OvertimeApproverAdjustment,
+  type OvertimeApproverAdjustmentChange,
+  type OvertimeEntrySnapshot,
 } from '../utils/overtime-edit-snapshot.util';
+import type {
+  ApproveWithChangesDto,
+  ApproveWithChangesEntryDto,
+} from '../../../approvals/application/dtos/approval.dtos';
 import {
   END_OF_DAY_HHMM,
   END_OF_DAY_MINUTES,
@@ -416,18 +428,28 @@ export class OvertimeService
       row.year,
     );
     const snapshot = parseOvertimeApprovedSnapshot(row.lastApprovedSnapshot);
-    const editDiff = buildOvertimeEditDiff(
+    const baseEditDiff = buildOvertimeEditDiff(
       snapshot,
       Array.isArray(row.entries) ? row.entries : [],
+    );
+    const approverAdjustment = parseOvertimeApproverAdjustment(
+      row.approverAdjustment,
+    );
+    const editDiff = enrichEditDiffWithApproverAdjustment(
+      baseEditDiff,
+      approverAdjustment,
     );
     const canEditEntries =
       MUTABLE_STATUSES.includes(row.status) && !payrollLocked;
     const hasEntryEdits = (editDiff?.entryChanges?.length ?? 0) > 0;
+    const editedByApprover = Boolean(approverAdjustment?.changes.length);
     return {
       ...mapped,
       payrollLocked,
       canEditEntries,
-      editedAfterApproval: hasEntryEdits,
+      editedAfterApproval: hasEntryEdits && !editedByApprover,
+      editedByApprover,
+      approverAdjustment,
       editDiff,
       ...(options?.restartedApproval ? { restartedApproval: true } : {}),
     };
@@ -945,6 +967,391 @@ export class OvertimeService
     });
 
     return this.getSheet(sheetId, companyId, userId, { restartedApproval: restarted });
+  }
+
+  /**
+   * Applies Reports-to approver entry edits without restarting approval.
+   * Caller must approve the tier after this returns.
+   */
+  async applyApproverChanges(
+    sheetId: string,
+    companyId: string,
+    approverUserId: string,
+    dto: ApproveWithChangesDto,
+  ): Promise<{
+    adjustment: OvertimeApproverAdjustment;
+    timelineNote: string;
+    previousTotalHours: number;
+    newTotalHours: number;
+  }> {
+    const sheet = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
+      include: {
+        entries: { include: { claimedByRun: { select: { runNumber: true } } } },
+      },
+    });
+    if (!sheet) {
+      throw new NotFoundException('Overtime sheet not found');
+    }
+    if (
+      sheet.status !== OvertimeSheetStatus.SUBMITTED &&
+      sheet.status !== OvertimeSheetStatus.IN_REVIEW
+    ) {
+      throw new BadRequestException(
+        'Only a submitted overtime sheet can be approved with changes',
+      );
+    }
+    await this.assertPayrollNotLocked(companyId, sheet.month, sheet.year);
+
+    const existingById = new Map(sheet.entries.map((e) => [e.id, e]));
+    const removedIds = new Set((dto.removedEntries ?? []).map((r) => r.id));
+    for (const removed of dto.removedEntries ?? []) {
+      if (!existingById.has(removed.id)) {
+        throw new NotFoundException(`Overtime entry not found: ${removed.id}`);
+      }
+    }
+
+    const desiredIds = new Set(
+      dto.entries.filter((e) => e.id).map((e) => e.id as string),
+    );
+    for (const entry of sheet.entries) {
+      if (!desiredIds.has(entry.id) && !removedIds.has(entry.id)) {
+        throw new BadRequestException(
+          'Every existing entry must be kept in entries or listed in removedEntries with a reason',
+        );
+      }
+    }
+
+    const previousTotalHours = this.sumEntryHours(sheet.entries);
+    const beforeSnapshots = new Map<string, OvertimeEntrySnapshot>();
+    for (const entry of sheet.entries) {
+      beforeSnapshots.set(entry.id, snapshotOvertimeEntry(entry));
+    }
+
+    const baselineSnapshot = buildOvertimeApprovedSnapshot(sheet.entries);
+    const changeRows: OvertimeApproverAdjustmentChange[] = [];
+    const now = new Date();
+
+    // Validate every desired entry before writing.
+    type PreparedEntry = {
+      id: string;
+      isNew: boolean;
+      dto: ApproveWithChangesEntryDto;
+      date: Date;
+      startTime: Date;
+      endTime: Date;
+      endsAtEndOfDay: boolean;
+      isOvernight: boolean;
+      classified: ClassifiedOvertimeEntry;
+      reason: string;
+    };
+    const prepared: PreparedEntry[] = [];
+
+    for (const entryDto of dto.entries) {
+      const reason = entryDto.reason?.trim() ?? '';
+      const isNew = !entryDto.id;
+      if (!isNew) {
+        const existing = existingById.get(entryDto.id as string);
+        if (!existing) {
+          throw new NotFoundException(
+            `Overtime entry not found: ${entryDto.id}`,
+          );
+        }
+        if (removedIds.has(entryDto.id as string)) {
+          throw new BadRequestException(
+            'An entry cannot be both updated and removed',
+          );
+        }
+        this.assertEntryNotClaimed(existing);
+      }
+
+      const date = this.parseDateOnly(entryDto.date);
+      this.assertEntryInSheetMonth(date, sheet.month, sheet.year, {
+        allowFutureDates: false,
+      });
+      const isOvernight = false;
+      const endsAtEndOfDay = this.isEndOfDayTime(
+        entryDto.endTime,
+        entryDto.startTime,
+      );
+      const classifiedEnd = this.classifiedEndTime(
+        entryDto.endTime,
+        endsAtEndOfDay,
+      );
+      const startTime = this.parseTimeOfDay(entryDto.startTime);
+      const endTime = this.parseTimeOfDay(
+        endsAtEndOfDay ? '00:00' : entryDto.endTime,
+      );
+      const classified = await this.overtimeEntryService.classifyEntry(
+        sheet.employeeId,
+        companyId,
+        date,
+        entryDto.startTime,
+        classifiedEnd,
+        { isOvernight },
+      );
+      this.assertClassifiedHasOvertimeHours(
+        classified,
+        entryDto.startTime,
+        classifiedEnd,
+        isOvernight,
+      );
+
+      prepared.push({
+        id: entryDto.id ?? randomUUID(),
+        isNew,
+        dto: entryDto,
+        date,
+        startTime,
+        endTime,
+        endsAtEndOfDay,
+        isOvernight,
+        classified,
+        reason,
+      });
+    }
+
+    // Overlap check against the final set of periods (same calendar day).
+    for (let i = 0; i < prepared.length; i += 1) {
+      const a = prepared[i];
+      const aStart = this.timeToMinutes(a.startTime);
+      const aEnd = this.resolveEndMinutes(
+        a.endTime,
+        a.endsAtEndOfDay,
+        a.isOvernight,
+        aStart,
+      );
+      for (let j = i + 1; j < prepared.length; j += 1) {
+        const b = prepared[j];
+        if (this.formatDateOnly(a.date) !== this.formatDateOnly(b.date)) {
+          continue;
+        }
+        const bStart = this.timeToMinutes(b.startTime);
+        const bEnd = this.resolveEndMinutes(
+          b.endTime,
+          b.endsAtEndOfDay,
+          b.isOvernight,
+          bStart,
+        );
+        if (aStart < bEnd && aEnd > bStart) {
+          throw new ConflictException(
+            `Overlapping overtime entry on ${this.formatDateOnly(a.date)} ` +
+              `(${a.dto.startTime}–${a.endsAtEndOfDay ? END_OF_DAY_HHMM : a.dto.endTime})`,
+          );
+        }
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const removed of dto.removedEntries ?? []) {
+        const existing = existingById.get(removed.id);
+        if (!existing) {
+          continue;
+        }
+        const removedReason = removed.reason.trim();
+        if (removedReason.length < 5) {
+          throw new BadRequestException(
+            'Enter a reason so the submitter knows what to change.',
+          );
+        }
+        this.assertEntryNotClaimed(existing);
+        const before = beforeSnapshots.get(removed.id)!;
+        changeRows.push({
+          entryId: removed.id,
+          kind: 'removed',
+          reason: removedReason,
+          increased: false,
+          before: summarizeOvertimeEntry(before),
+          after: null,
+        });
+        await tx.overtimeEntry.delete({ where: { id: removed.id } });
+      }
+
+      for (const row of prepared) {
+        const before = row.isNew
+          ? null
+          : (beforeSnapshots.get(row.id) ?? null);
+        const afterSnap: OvertimeEntrySnapshot = {
+          id: row.id,
+          date: this.formatDateOnly(row.date),
+          startTime: row.dto.startTime,
+          endTime: row.endsAtEndOfDay ? END_OF_DAY_HHMM : row.dto.endTime,
+          endsAtEndOfDay: row.endsAtEndOfDay,
+          isHoliday: row.classified.isHoliday,
+          isOvernight: row.isOvernight,
+          regularHours: row.classified.regularHours,
+          nightHours: row.classified.nightHours,
+          weekendHours: row.classified.weekendHours,
+          holidayHours: row.classified.holidayHours,
+          totalHours: row.classified.totalHours,
+          taskDescription: row.dto.taskDescription.trim(),
+        };
+
+        let kind: 'added' | 'updated' | null = row.isNew ? 'added' : null;
+        if (!row.isNew && before) {
+          const same =
+            before.date === afterSnap.date &&
+            before.startTime === afterSnap.startTime &&
+            before.endTime === afterSnap.endTime &&
+            before.taskDescription.trim() === afterSnap.taskDescription.trim();
+          if (!same) {
+            kind = 'updated';
+          }
+        }
+
+        if (row.isNew) {
+          await tx.overtimeEntry.create({
+            data: {
+              id: row.id,
+              sheetId: sheet.id,
+              date: row.date,
+              startTime: row.startTime,
+              endTime: row.endTime,
+              isHoliday: row.classified.isHoliday,
+              isOvernight: row.isOvernight,
+              regularHours: new Prisma.Decimal(row.classified.regularHours),
+              nightHours: new Prisma.Decimal(row.classified.nightHours),
+              weekendHours: new Prisma.Decimal(row.classified.weekendHours),
+              holidayHours: new Prisma.Decimal(row.classified.holidayHours),
+              taskDescription: row.dto.taskDescription.trim(),
+              attendanceWarning: row.classified.attendanceWarning,
+              siteAssignmentId: row.classified.siteAssignmentId,
+              siteWithinScheduleHours: new Prisma.Decimal(
+                row.classified.siteWithinScheduleHours,
+              ),
+              siteReviewFlag: null,
+              siteReviewFlaggedAt: null,
+            },
+          });
+          await this.persistEndsAtEndOfDay(tx, row.id, row.endsAtEndOfDay);
+        } else if (kind === 'updated') {
+          await tx.overtimeEntry.update({
+            where: { id: row.id },
+            data: {
+              date: row.date,
+              startTime: row.startTime,
+              endTime: row.endTime,
+              isHoliday: row.classified.isHoliday,
+              isOvernight: row.isOvernight,
+              regularHours: new Prisma.Decimal(row.classified.regularHours),
+              nightHours: new Prisma.Decimal(row.classified.nightHours),
+              weekendHours: new Prisma.Decimal(row.classified.weekendHours),
+              holidayHours: new Prisma.Decimal(row.classified.holidayHours),
+              taskDescription: row.dto.taskDescription.trim(),
+              attendanceWarning: row.classified.attendanceWarning,
+              siteAssignmentId: row.classified.siteAssignmentId,
+              siteWithinScheduleHours: new Prisma.Decimal(
+                row.classified.siteWithinScheduleHours,
+              ),
+              siteReviewFlag: null,
+              siteReviewFlaggedAt: null,
+            },
+          });
+          await this.persistEndsAtEndOfDay(tx, row.id, row.endsAtEndOfDay);
+        }
+
+        if (kind) {
+          if (row.reason.length < 5) {
+            throw new BadRequestException(
+              'Enter a reason so the submitter knows what to change.',
+            );
+          }
+          changeRows.push({
+            entryId: row.id,
+            kind,
+            reason: row.reason,
+            increased: entryHoursIncreased(before, afterSnap),
+            before: before ? summarizeOvertimeEntry(before) : null,
+            after: summarizeOvertimeEntry(afterSnap),
+          });
+        }
+      }
+
+      if (changeRows.length === 0) {
+        throw new BadRequestException(
+          'Approve with changes requires at least one entry change',
+        );
+      }
+
+      await this.recalculateSheetTotals(sheet.id, tx);
+
+      const refreshed = await tx.overtimeEntry.findMany({
+        where: { sheetId: sheet.id },
+      });
+      const newTotalHours = this.sumEntryHours(refreshed);
+
+      const adjustment: OvertimeApproverAdjustment = {
+        adjustedBy: approverUserId,
+        adjustedAt: now.toISOString(),
+        overallNote: dto.note?.trim() || null,
+        previousTotalHours,
+        newTotalHours,
+        changes: changeRows,
+      };
+
+      await tx.overtimeSheet.update({
+        where: { id: sheet.id },
+        data: {
+          lastApprovedSnapshot:
+            baselineSnapshot as unknown as Prisma.InputJsonValue,
+          approverAdjustment: adjustment as unknown as Prisma.InputJsonValue,
+          updatedBy: approverUserId,
+        },
+      });
+    });
+
+    const refreshedSheet = await this.prisma.overtimeSheet.findFirst({
+      where: { id: sheet.id },
+      include: { entries: true },
+    });
+    const newTotalHours = this.sumEntryHours(refreshedSheet?.entries ?? []);
+    const adjustment = parseOvertimeApproverAdjustment(
+      refreshedSheet?.approverAdjustment,
+    );
+    if (!adjustment) {
+      throw new BadRequestException('Failed to persist approver adjustment');
+    }
+
+    const timelineLines = adjustment.changes.map((c) => {
+      const label =
+        c.kind === 'added'
+          ? 'Added'
+          : c.kind === 'removed'
+            ? 'Removed'
+            : 'Updated';
+      return `${label} ${c.after?.date ?? c.before?.date ?? ''}: ${c.reason}`;
+    });
+    const timelineNote = [
+      `Approved with changes by approver (${previousTotalHours}h → ${newTotalHours}h)`,
+      ...timelineLines,
+    ].join('\n');
+
+    return {
+      adjustment,
+      timelineNote,
+      previousTotalHours,
+      newTotalHours,
+    };
+  }
+
+  private sumEntryHours(
+    entries: Array<{
+      regularHours: unknown;
+      nightHours: unknown;
+      weekendHours: unknown;
+      holidayHours: unknown;
+    }>,
+  ): number {
+    const total = entries.reduce(
+      (sum, e) =>
+        sum +
+        Number(e.regularHours) +
+        Number(e.nightHours) +
+        Number(e.weekendHours) +
+        Number(e.holidayHours),
+      0,
+    );
+    return Math.round(total * 100) / 100;
   }
 
   /**

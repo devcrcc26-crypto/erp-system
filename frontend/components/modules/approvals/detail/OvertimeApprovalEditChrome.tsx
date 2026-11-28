@@ -16,15 +16,19 @@ export function OvertimeEditedBadge({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const sheetQuery = useOvertimeSheet(sheetId);
-  const edited =
-    sheetQuery.data?.editedAfterApproval ||
-    sheetQuery.data?.editDiff?.editedAfterApproval;
-  if (!edited) {
+  const sheet = sheetQuery.data;
+  const editedByApprover =
+    sheet?.editedByApprover || sheet?.editDiff?.editedByApprover;
+  const editedAfterApproval =
+    sheet?.editedAfterApproval || sheet?.editDiff?.editedAfterApproval;
+  if (!editedByApprover && !editedAfterApproval) {
     return null;
   }
   return (
     <Tag color="orange" className="!m-0 rounded-lg">
-      {t('pages.hr.overtime.editedBadge')}
+      {editedByApprover
+        ? t('pages.hr.overtime.editedByApproverBadge')
+        : t('pages.hr.overtime.editedBadge')}
     </Tag>
   );
 }

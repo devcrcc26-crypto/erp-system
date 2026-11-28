@@ -123,6 +123,8 @@ function formatActionLabel(
         : t('pages.approvals.history.rejected');
     case 'RESUBMIT':
       return t('pages.approvals.history.resubmitted');
+    case 'APPROVE_WITH_CHANGES':
+      return t('pages.approvals.history.approvedWithChanges');
     case 'CONDITION_RESPONSE':
       return t('pages.approvals.history.conditionResponse');
     case 'CANCELLED':

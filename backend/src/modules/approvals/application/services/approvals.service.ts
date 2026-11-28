@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
@@ -52,9 +53,12 @@ import {
 import { LeaveBalanceService } from '../../../leave/application/services/leave-balance.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
+  AddApprovalCommentDto,
+  ApproveWithChangesDto,
   ListRequestsDto,
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
+import { OvertimeService } from '../../../overtime/application/services/overtime.service';
 import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import {
@@ -102,6 +106,7 @@ export const RESPONSE_TYPE_RESUBMIT = 'RESUBMIT';
 export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
 export const RESPONSE_TYPE_RETURNED = 'RETURNED';
 export const RESPONSE_TYPE_CANCELLED = 'CANCELLED';
+export const RESPONSE_TYPE_APPROVE_WITH_CHANGES = 'APPROVE_WITH_CHANGES';
 
 /** Shared Return / Reject reason requirement (all approval categories). */
 export const DECISION_REASON_REQUIRED_MESSAGE =
@@ -234,6 +239,8 @@ export class ApprovalsService {
     private readonly leaveBalanceService: LeaveBalanceService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
+    @Optional()
+    private readonly moduleRef?: ModuleRef,
     @Optional()
     private readonly audit?: AuditService,
   ) {}
@@ -1331,6 +1338,149 @@ export class ApprovalsService {
     }
 
     return this.getRequest(request.id, request.companyId, userId);
+  }
+
+  /**
+   * Reports-to (tier 1) approver edits OT entries then approves the tier.
+   * Does not restart the approval chain.
+   */
+  async approveWithChanges(
+    requestId: string,
+    tierId: string,
+    userId: string,
+    companyId: string,
+    dto: ApproveWithChangesDto,
+  ): Promise<unknown> {
+    const { tier, request } = await this.loadTierForAction(
+      requestId,
+      tierId,
+      userId,
+    );
+    this.assertPendingWorkflow(request.status);
+    this.assertCurrentTier(request.currentTier, tier.tierOrder);
+
+    if (tier.approverId !== userId) {
+      throw new ForbiddenException(
+        'Only the assigned Reports to approver can approve with changes',
+      );
+    }
+
+    const isReportsTo =
+      (tier.resolver ?? '').toUpperCase() === 'REPORTS_TO' ||
+      (tier.label ?? '').trim().toLowerCase() === 'reports to';
+    if (!isReportsTo) {
+      throw new ForbiddenException(
+        'Approve with changes is only available on the Reports to tier',
+      );
+    }
+
+    const requestRow = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: request.id, companyId }),
+      include: {
+        category: { select: { code: true } },
+        overtimeSheet: { select: { id: true } },
+      },
+    });
+    if (!requestRow?.overtimeSheet?.id) {
+      throw new BadRequestException(
+        'Approve with changes is only supported for overtime sheets',
+      );
+    }
+    if (requestRow.category?.code !== 'OVERTIME_APPLICATION') {
+      throw new BadRequestException(
+        'Approve with changes is only supported for overtime sheets',
+      );
+    }
+
+    const unresolved = this.parseConditions(tier.conditions).filter(
+      (c) => !c.resolved,
+    );
+    if (unresolved.length > 0) {
+      throw new BadRequestException(
+        'All conditions must be resolved before taking action on this tier',
+      );
+    }
+
+    // Lazy resolve: OvertimeModule is Global; avoids circular constructor DI.
+    if (!this.moduleRef) {
+      throw new BadRequestException(
+        'Approve with changes is unavailable in this runtime',
+      );
+    }
+    const overtimeService = this.moduleRef.get(OvertimeService, {
+      strict: false,
+    });
+
+    const applied = await overtimeService.applyApproverChanges(
+      requestRow.overtimeSheet.id,
+      companyId,
+      userId,
+      dto,
+    );
+
+    await this.prisma.approvalResponse.create({
+      data: {
+        id: randomUUID(),
+        requestId: request.id,
+        responseType: RESPONSE_TYPE_APPROVE_WITH_CHANGES,
+        note: applied.timelineNote,
+        respondedBy: userId,
+      },
+    });
+
+    const result = await this.approveTier(
+      requestId,
+      tierId,
+      userId,
+      dto.note?.trim() || applied.timelineNote.split('\n')[0],
+    );
+
+    if (request.requestedBy !== userId) {
+      await this.notifySafe(companyId, userId, {
+        recipientId: request.requestedBy,
+        eventType: 'approval.approved_with_changes',
+        subject: `Your overtime sheet was approved with changes – ${request.requestNumber}`,
+        body:
+          `Your overtime hours were adjusted from ${applied.previousTotalHours}h to ${applied.newTotalHours}h. ` +
+          'Open the request to review the changes.',
+        link: `/approvals/${request.id}`,
+        variables: {
+          requestId: request.id,
+          requestNumber: request.requestNumber,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Requester (or any viewer of the request) posts a comment on the approval.
+   */
+  async addComment(
+    requestId: string,
+    companyId: string,
+    userId: string,
+    dto: AddApprovalCommentDto,
+  ): Promise<unknown> {
+    const text = dto.commentText.trim();
+    if (!text) {
+      throw new BadRequestException('Comment text is required');
+    }
+
+    // Ensures the caller can view the request (throws if not).
+    await this.getRequest(requestId, companyId, userId);
+
+    await this.prisma.approvalComment.create({
+      data: {
+        id: randomUUID(),
+        requestId,
+        commentBy: userId,
+        commentText: text,
+      },
+    });
+
+    return this.getRequest(requestId, companyId, userId);
   }
 
   /**
@@ -2736,6 +2886,7 @@ export class ApprovalsService {
       id: string;
       tierOrder: number;
       label: string;
+      resolver: string | null;
       approverId: string;
       decision: ApprovalTierDecision;
       comment: string | null;
@@ -2819,6 +2970,7 @@ export class ApprovalsService {
         id: tier.id,
         tierOrder: tier.tierOrder,
         label: tier.label,
+        resolver: tier.resolver ?? null,
         approverId: tier.approverId,
         decision: tier.decision,
         comment: tier.comment,

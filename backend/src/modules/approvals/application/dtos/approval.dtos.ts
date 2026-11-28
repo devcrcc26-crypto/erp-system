@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ApprovalRequestStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -11,10 +12,12 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
@@ -99,6 +102,98 @@ export class AddConditionDto {
   @MinLength(1)
   @MaxLength(2000)
   text!: string;
+}
+
+export class AddApprovalCommentDto {
+  @ApiProperty({ minLength: 1, maxLength: 4000 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  commentText!: string;
+}
+
+/** One entry in an Approve-with-changes payload (existing id optional for adds). */
+export class ApproveWithChangesEntryDto {
+  @ApiPropertyOptional({
+    description: 'Existing entry id. Omit when adding a new entry.',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  id?: string;
+
+  @ApiProperty({ example: '2026-08-01' })
+  @IsDateString()
+  date!: string;
+
+  @ApiProperty({ example: '18:00' })
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'startTime must be HH:mm' })
+  startTime!: string;
+
+  @ApiProperty({ example: '21:00' })
+  @IsString()
+  @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/, {
+    message: 'endTime must be HH:mm or 24:00',
+  })
+  endTime!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4000)
+  taskDescription!: string;
+
+  @ApiPropertyOptional({
+    minLength: 5,
+    description: 'Required when this entry is new or changed vs the sheet',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
+export class ApproveWithChangesRemovedEntryDto {
+  @ApiProperty()
+  @IsEntityUuid()
+  id!: string;
+
+  @ApiProperty({ minLength: 5 })
+  @IsString()
+  @MinLength(5, {
+    message: 'Enter a reason so the submitter knows what to change.',
+  })
+  @MaxLength(2000)
+  reason!: string;
+}
+
+/** Reports-to approver edits OT entries then approves tier 1. */
+export class ApproveWithChangesDto {
+  @ApiPropertyOptional({ description: 'Optional overall note on the tier' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+
+  @ApiProperty({
+    type: [ApproveWithChangesEntryDto],
+    description: 'Desired final set of entries (adds + updates)',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ApproveWithChangesEntryDto)
+  entries!: ApproveWithChangesEntryDto[];
+
+  @ApiPropertyOptional({
+    type: [ApproveWithChangesRemovedEntryDto],
+    description: 'Entries to remove (each requires a reason)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ApproveWithChangesRemovedEntryDto)
+  removedEntries?: ApproveWithChangesRemovedEntryDto[];
 }
 
 function toStatusArray(value: unknown): ApprovalRequestStatus[] | undefined {

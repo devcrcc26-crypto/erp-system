@@ -99,8 +99,12 @@ export interface OvertimeEntryDiffSummary {
 
 export interface OvertimeEditDiff {
   editedAfterApproval: boolean;
+  /** Tier-1 Reports-to adjusted entries while approving. */
+  editedByApprover?: boolean;
   reasonOnly: boolean;
   summaryLines: OvertimeEditDiffLine[];
+  /** e.g. "Approver changed hours from 8 to 10 (+2)" */
+  approverHoursSummary?: string | null;
   entryChanges?: Array<{
     entryId: string;
     /** Entry date for grouping when multiple entries changed. */
@@ -114,6 +118,24 @@ export interface OvertimeEditDiff {
     after?: OvertimeEntryDiffSummary | null;
     added?: boolean;
     removed?: boolean;
+    increasedByApprover?: boolean;
+    reason?: string;
+  }>;
+}
+
+export interface OvertimeApproverAdjustment {
+  adjustedBy: string;
+  adjustedAt: string;
+  overallNote: string | null;
+  previousTotalHours: number;
+  newTotalHours: number;
+  changes: Array<{
+    entryId: string;
+    kind: 'added' | 'removed' | 'updated';
+    reason: string;
+    increased: boolean;
+    before: OvertimeEntryDiffSummary | null;
+    after: OvertimeEntryDiffSummary | null;
   }>;
 }
 
@@ -152,6 +174,10 @@ export interface OvertimeSheetDetail extends OvertimeSheetListItem {
   canEditEntries?: boolean;
   /** Sheet was previously approved and later edited (pending re-approval). */
   editedAfterApproval?: boolean;
+  /** Reports-to adjusted entries during approve-with-changes. */
+  editedByApprover?: boolean;
+  /** Durable approver adjustment payload when present. */
+  approverAdjustment?: OvertimeApproverAdjustment | null;
   /** Diff vs last approved snapshot for approver UI. */
   editDiff?: OvertimeEditDiff | null;
   /** Set on mutation responses when approval was restarted. */

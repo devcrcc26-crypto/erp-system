@@ -37,6 +37,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import OvertimeEditDiffBanner from '@/components/modules/approvals/detail/OvertimeEditDiffBanner';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
+import OvertimeApproverAdjustmentComment from '@/components/modules/hr/overtime/OvertimeApproverAdjustmentComment';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
 import {
   groupOvertimeEntriesByDate,
@@ -771,6 +772,11 @@ export default function OvertimeSheetDetailPageContent({
                   {t('pages.hr.overtime.resubmittedBadge')}
                 </span>
               ) : null}
+              {sheet.editedByApprover || sheet.editDiff?.editedByApprover ? (
+                <span className="rounded-lg bg-[#FEF0E6] px-2 py-0.5 text-[12px] font-medium text-[#D4610A]">
+                  {t('pages.hr.overtime.editedByApproverBadge')}
+                </span>
+              ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
               <h2 className="erp-users-name erp-employee-hero-name m-0">
@@ -794,8 +800,16 @@ export default function OvertimeSheetDetailPageContent({
         />
       ) : null}
 
-      {sheet.editDiff?.editedAfterApproval ? (
+      {sheet.editDiff?.editedAfterApproval ||
+      sheet.editDiff?.editedByApprover ? (
         <OvertimeEditDiffBanner editDiff={sheet.editDiff} />
+      ) : null}
+
+      {(sheet.editedByApprover || sheet.editDiff?.editedByApprover) &&
+      sheet.approvalRequestId ? (
+        <OvertimeApproverAdjustmentComment
+          approvalRequestId={sheet.approvalRequestId}
+        />
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">

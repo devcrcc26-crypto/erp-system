@@ -169,7 +169,31 @@ export interface ApprovalRequestDetail extends ApprovalRequestListItem {
   attachmentFolder?: { id: string; name: string; path: string } | null;
 }
 
-export type ApprovalResponseType = 'RESUBMIT' | 'CONDITION_RESPONSE';
+export type ApprovalResponseType =
+  | 'RESUBMIT'
+  | 'CONDITION_RESPONSE'
+  | 'APPROVE_WITH_CHANGES'
+  | 'RETURNED'
+  | 'CANCELLED';
+
+export interface ApproveWithChangesEntryPayload {
+  id?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  taskDescription: string;
+  reason?: string;
+}
+
+export interface ApproveWithChangesPayload {
+  note?: string;
+  entries: ApproveWithChangesEntryPayload[];
+  removedEntries?: Array<{ id: string; reason: string }>;
+}
+
+export interface AddApprovalCommentPayload {
+  commentText: string;
+}
 
 export interface ApprovalResponseDocument {
   id: string;

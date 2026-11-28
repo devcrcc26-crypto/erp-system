@@ -51,6 +51,29 @@ export type OvertimeEntryEditChange = {
   after: OvertimeEntryDiffSummary | null;
   added?: boolean;
   removed?: boolean;
+  /** Set when a Reports-to approver increased hours on this entry. */
+  increasedByApprover?: boolean;
+  /** Per-change reason from Approve with changes. */
+  reason?: string | null;
+};
+
+export type OvertimeApproverAdjustmentChange = {
+  entryId: string;
+  kind: 'added' | 'removed' | 'updated';
+  reason: string;
+  increased: boolean;
+  before: OvertimeEntryDiffSummary | null;
+  after: OvertimeEntryDiffSummary | null;
+};
+
+/** Durable meta when a Reports-to approver approved with entry edits. */
+export type OvertimeApproverAdjustment = {
+  adjustedBy: string;
+  adjustedAt: string;
+  overallNote?: string | null;
+  previousTotalHours: number;
+  newTotalHours: number;
+  changes: OvertimeApproverAdjustmentChange[];
 };
 
 export type OvertimeEditDiff = {
@@ -58,6 +81,10 @@ export type OvertimeEditDiff = {
   reasonOnly: boolean;
   entryChanges: OvertimeEntryEditChange[];
   summaryLines: Array<{ label: string; from: string; to: string }>;
+  /** Present when a Reports-to approver adjusted entries before approving. */
+  editedByApprover?: boolean;
+  /** Human summary e.g. Approver changed hours from 8 to 10 (+2). */
+  approverHoursSummary?: string | null;
 };
 
 type RawEntryLike = {
@@ -230,6 +257,18 @@ export function parseOvertimeApprovedSnapshot(
 
 function entryToSnapshot(entry: RawEntryLike): OvertimeEntrySnapshot {
   return buildOvertimeApprovedSnapshot([entry]).entries[0];
+}
+
+/** Public wrapper for building one entry snapshot (approver-adjust flows). */
+export function snapshotOvertimeEntry(entry: RawEntryLike): OvertimeEntrySnapshot {
+  return entryToSnapshot(entry);
+}
+
+/** Public wrapper for Previously/Now summary rows. */
+export function summarizeOvertimeEntry(
+  entry: OvertimeEntrySnapshot,
+): OvertimeEntryDiffSummary {
+  return toEntrySummary(entry);
 }
 
 function diffOneEntry(
@@ -409,4 +448,139 @@ export function buildOvertimeEditDiff(
     entryChanges,
     summaryLines,
   };
+}
+
+/**
+ * Merges durable approver-adjustment meta into an edit diff for HR / employee UI.
+ */
+export function enrichEditDiffWithApproverAdjustment(
+  diff: OvertimeEditDiff | null,
+  adjustment: OvertimeApproverAdjustment | null,
+): OvertimeEditDiff | null {
+  if (!adjustment || adjustment.changes.length === 0) {
+    return diff;
+  }
+
+  const previous = adjustment.previousTotalHours;
+  const next = adjustment.newTotalHours;
+  const delta = Math.round((next - previous) * 100) / 100;
+  const deltaLabel =
+    delta > 0 ? `(+${delta})` : delta < 0 ? `(${delta})` : '(0)';
+  const approverHoursSummary = `Approver changed hours from ${previous} to ${next} ${deltaLabel}`;
+
+  const reasonByEntryId = new Map(
+    adjustment.changes.map((c) => [c.entryId, c] as const),
+  );
+
+  if (!diff || diff.entryChanges.length === 0) {
+    const entryChanges: OvertimeEntryEditChange[] = adjustment.changes.map(
+      (c) => ({
+        entryId: c.entryId,
+        entryDate: c.after?.date ?? c.before?.date ?? '',
+        changes: [],
+        before: c.before,
+        after: c.after,
+        added: c.kind === 'added',
+        removed: c.kind === 'removed',
+        increasedByApprover: c.increased,
+        reason: c.reason,
+      }),
+    );
+    return {
+      editedAfterApproval: false,
+      editedByApprover: true,
+      reasonOnly: false,
+      entryChanges,
+      summaryLines: entryChanges.map((row) => ({
+        label: row.added
+          ? `Added · ${row.entryDate}`
+          : row.removed
+            ? `Removed · ${row.entryDate}`
+            : `Updated · ${row.entryDate}`,
+        from: row.before ? formatEntryWhole(row.before) : '—',
+        to: row.after ? formatEntryWhole(row.after) : '—',
+      })),
+      approverHoursSummary,
+    };
+  }
+
+  return {
+    ...diff,
+    editedByApprover: true,
+    approverHoursSummary,
+    entryChanges: diff.entryChanges.map((row) => {
+      const meta = reasonByEntryId.get(row.entryId);
+      return {
+        ...row,
+        increasedByApprover: meta?.increased ?? row.increasedByApprover,
+        reason: meta?.reason ?? row.reason,
+      };
+    }),
+  };
+}
+
+/**
+ * Parses durable approverAdjustment JSON from the sheet.
+ */
+export function parseOvertimeApproverAdjustment(
+  value: unknown,
+): OvertimeApproverAdjustment | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.changes) || typeof record.adjustedBy !== 'string') {
+    return null;
+  }
+  const changes: OvertimeApproverAdjustmentChange[] = [];
+  for (const raw of record.changes) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      continue;
+    }
+    const c = raw as Record<string, unknown>;
+    if (typeof c.entryId !== 'string' || typeof c.reason !== 'string') {
+      continue;
+    }
+    const kind = c.kind;
+    if (kind !== 'added' && kind !== 'removed' && kind !== 'updated') {
+      continue;
+    }
+    changes.push({
+      entryId: c.entryId,
+      kind,
+      reason: c.reason,
+      increased: Boolean(c.increased),
+      before: (c.before as OvertimeEntryDiffSummary | null) ?? null,
+      after: (c.after as OvertimeEntryDiffSummary | null) ?? null,
+    });
+  }
+  return {
+    adjustedBy: record.adjustedBy,
+    adjustedAt:
+      typeof record.adjustedAt === 'string'
+        ? record.adjustedAt
+        : new Date(0).toISOString(),
+    overallNote:
+      typeof record.overallNote === 'string' ? record.overallNote : null,
+    previousTotalHours: toHours(record.previousTotalHours),
+    newTotalHours: toHours(record.newTotalHours),
+    changes,
+  };
+}
+
+/** Hours delta: true when after has more total hours than before (or added). */
+export function entryHoursIncreased(
+  before: OvertimeEntrySnapshot | null,
+  after: OvertimeEntrySnapshot | null,
+): boolean {
+  if (!before && after) {
+    return after.totalHours > 0;
+  }
+  if (before && !after) {
+    return false;
+  }
+  if (!before || !after) {
+    return false;
+  }
+  return after.totalHours > before.totalHours;
 }

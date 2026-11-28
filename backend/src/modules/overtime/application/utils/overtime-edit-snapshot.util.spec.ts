@@ -3,7 +3,10 @@ import {
   buildOvertimeApprovedSnapshot,
   buildOvertimeEditDiff,
   describeOtType,
+  enrichEditDiffWithApproverAdjustment,
+  entryHoursIncreased,
   parseOvertimeApprovedSnapshot,
+  type OvertimeApproverAdjustment,
 } from './overtime-edit-snapshot.util';
 
 describe('overtime-edit-snapshot.util', () => {
@@ -129,5 +132,101 @@ describe('overtime-edit-snapshot.util', () => {
     const parsed = parseOvertimeApprovedSnapshot(snapshot);
     expect(parsed?.entries[0]?.id).toBe('entry-1');
     expect(parsed?.entries[0]?.totalHours).toBe(3);
+  });
+
+  it('enrichEditDiffWithApproverAdjustment adds increase flags and hours summary', () => {
+    const adjustment: OvertimeApproverAdjustment = {
+      adjustedBy: 'approver-1',
+      adjustedAt: '2026-11-28T10:00:00.000Z',
+      overallNote: 'Adjusted for site hours',
+      previousTotalHours: 3,
+      newTotalHours: 5,
+      changes: [
+        {
+          entryId: 'entry-1',
+          kind: 'updated',
+          reason: 'Extended evening pour',
+          increased: true,
+          before: {
+            date: '2026-10-15',
+            otType: 'Normal (1.5×)',
+            startTime: '18:00',
+            endTime: '21:00',
+            hours: '3h',
+            reason: 'Pour concrete',
+          },
+          after: {
+            date: '2026-10-15',
+            otType: 'Normal (1.5×)',
+            startTime: '18:00',
+            endTime: '23:00',
+            hours: '5h',
+            reason: 'Pour concrete',
+          },
+        },
+      ],
+    };
+    const enriched = enrichEditDiffWithApproverAdjustment(null, adjustment);
+    expect(enriched?.editedByApprover).toBe(true);
+    expect(enriched?.editedAfterApproval).toBe(false);
+    expect(enriched?.approverHoursSummary).toBe(
+      'Approver changed hours from 3 to 5 (+2)',
+    );
+    expect(enriched?.entryChanges[0]?.increasedByApprover).toBe(true);
+    expect(enriched?.entryChanges[0]?.reason).toBe('Extended evening pour');
+  });
+
+  it('entryHoursIncreased is true when hours go up or entry is added', () => {
+    expect(
+      entryHoursIncreased(null, {
+        id: 'e1',
+        date: '2026-10-15',
+        startTime: '18:00',
+        endTime: '20:00',
+        endsAtEndOfDay: false,
+        isHoliday: false,
+        isOvernight: false,
+        regularHours: 2,
+        nightHours: 0,
+        weekendHours: 0,
+        holidayHours: 0,
+        totalHours: 2,
+        taskDescription: 'x',
+      }),
+    ).toBe(true);
+    expect(
+      entryHoursIncreased(
+        {
+          id: 'e1',
+          date: '2026-10-15',
+          startTime: '18:00',
+          endTime: '21:00',
+          endsAtEndOfDay: false,
+          isHoliday: false,
+          isOvernight: false,
+          regularHours: 3,
+          nightHours: 0,
+          weekendHours: 0,
+          holidayHours: 0,
+          totalHours: 3,
+          taskDescription: 'x',
+        },
+        {
+          id: 'e1',
+          date: '2026-10-15',
+          startTime: '18:00',
+          endTime: '20:00',
+          endsAtEndOfDay: false,
+          isHoliday: false,
+          isOvernight: false,
+          regularHours: 2,
+          nightHours: 0,
+          weekendHours: 0,
+          holidayHours: 0,
+          totalHours: 2,
+          taskDescription: 'x',
+        },
+      ),
+    ).toBe(false);
   });
 });

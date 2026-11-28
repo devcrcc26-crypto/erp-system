@@ -13,11 +13,13 @@ type DiffTableRow = {
   kind: 'added' | 'removed' | 'updated';
   before: OvertimeEntryDiffSummary | null;
   after: OvertimeEntryDiffSummary | null;
+  increasedByApprover?: boolean;
+  reason?: string;
 };
 
 /**
- * Approver-facing table of OT entries changed since last approval.
- * Shows each entry as a whole (previous vs current), not field-by-field.
+ * Approver-facing table of OT entries changed since last approval,
+ * or adjusted by the Reports-to approver during approve-with-changes.
  */
 export default function OvertimeEditDiffBanner({
   editDiff,
@@ -26,7 +28,9 @@ export default function OvertimeEditDiffBanner({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
-  if (!editDiff?.editedAfterApproval) {
+  const showEmployeeEdit = Boolean(editDiff?.editedAfterApproval);
+  const showApproverEdit = Boolean(editDiff?.editedByApprover);
+  if (!editDiff || (!showEmployeeEdit && !showApproverEdit)) {
     return null;
   }
 
@@ -37,28 +41,29 @@ export default function OvertimeEditDiffBanner({
       title: t('pages.hr.overtime.editDiffChange'),
       dataIndex: 'kind',
       key: 'kind',
-      width: 120,
-      render: (kind: DiffTableRow['kind']) => {
-        if (kind === 'added') {
-          return (
-            <Tag color="success" className="!m-0">
+      width: 160,
+      render: (kind: DiffTableRow['kind'], row) => (
+        <div className="flex flex-col gap-1">
+          {kind === 'added' ? (
+            <Tag color="success" className="!m-0 w-fit">
               {t('pages.hr.overtime.editDiffKindAdded')}
             </Tag>
-          );
-        }
-        if (kind === 'removed') {
-          return (
-            <Tag color="error" className="!m-0">
+          ) : kind === 'removed' ? (
+            <Tag color="error" className="!m-0 w-fit">
               {t('pages.hr.overtime.editDiffKindRemoved')}
             </Tag>
-          );
-        }
-        return (
-          <Tag color="warning" className="!m-0">
-            {t('pages.hr.overtime.editDiffKindUpdated')}
-          </Tag>
-        );
-      },
+          ) : (
+            <Tag color="warning" className="!m-0 w-fit">
+              {t('pages.hr.overtime.editDiffKindUpdated')}
+            </Tag>
+          )}
+          {row.increasedByApprover ? (
+            <Tag color="orange" className="!m-0 w-fit">
+              {t('pages.hr.overtime.increasedByApprover')}
+            </Tag>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('pages.hr.overtime.editDiffPrevious'),
@@ -78,6 +83,7 @@ export default function OvertimeEditDiffBanner({
           muted={!after}
           strike={row.kind === 'removed'}
           emptyLabel={t('pages.hr.overtime.editDiffEmpty')}
+          reason={row.reason}
         />
       ),
     },
@@ -89,12 +95,21 @@ export default function OvertimeEditDiffBanner({
       role="status"
     >
       <p className="m-0 mb-1 font-semibold text-[#9A3412]">
-        {t('pages.hr.overtime.editDiffTitle')}
+        {showApproverEdit
+          ? t('pages.hr.overtime.editDiffTitleByApprover')
+          : t('pages.hr.overtime.editDiffTitle')}
       </p>
+      {editDiff.approverHoursSummary ? (
+        <p className="m-0 mb-2 text-[12px] font-medium text-[#9A3412]">
+          {editDiff.approverHoursSummary}
+        </p>
+      ) : null}
       <p className="m-0 mb-3 text-[12px] text-[var(--color-text-secondary)]">
-        {editDiff.reasonOnly
-          ? t('pages.hr.overtime.editDiffReasonOnlyExact')
-          : t('pages.hr.overtime.editDiffSubtitle')}
+        {showApproverEdit
+          ? t('pages.hr.overtime.editDiffSubtitleByApprover')
+          : editDiff.reasonOnly
+            ? t('pages.hr.overtime.editDiffReasonOnlyExact')
+            : t('pages.hr.overtime.editDiffSubtitle')}
       </p>
       {rows.length > 0 ? (
         <Table<DiffTableRow>
@@ -120,11 +135,13 @@ function EntryWhole({
   muted = false,
   strike = false,
   emptyLabel,
+  reason,
 }: {
   summary: OvertimeEntryDiffSummary | null;
   muted?: boolean;
   strike?: boolean;
   emptyLabel: string;
+  reason?: string;
 }): React.ReactNode {
   if (!summary) {
     return (
@@ -153,6 +170,11 @@ function EntryWhole({
         {summary.hours}
       </p>
       <p className="m-0 break-words whitespace-pre-wrap">{summary.reason}</p>
+      {reason ? (
+        <p className="m-0 break-words text-[12px] text-[#9A3412] whitespace-pre-wrap">
+          {reason}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -165,6 +187,8 @@ function buildTableRows(editDiff: OvertimeEditDiff): DiffTableRow[] {
       kind: entry.added ? 'added' : entry.removed ? 'removed' : 'updated',
       before: entry.before ?? null,
       after: entry.after ?? null,
+      increasedByApprover: entry.increasedByApprover,
+      reason: entry.reason,
     }));
   }
 

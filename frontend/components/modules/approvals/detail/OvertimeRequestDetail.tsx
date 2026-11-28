@@ -252,7 +252,14 @@ export default function OvertimeRequestDetail({
       ) : null}
 
       {sheet.editDiff?.editedAfterApproval ? (
-        <OvertimeEditDiffBanner editDiff={sheet.editDiff} />
+        <OvertimeEditDiffBanner
+          editDiff={
+            sheet.editDiff?.editedAfterApproval ||
+            sheet.editDiff?.editedByApprover
+              ? sheet.editDiff
+              : null
+          }
+        />
       ) : null}
 
       {unregisteredHolidayDates.length > 0 ? (

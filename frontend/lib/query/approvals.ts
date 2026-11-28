@@ -13,10 +13,12 @@ import {
   apiPostForm,
 } from '@/lib/api/client';
 import type {
+  AddApprovalCommentPayload,
   AddConditionPayload,
   ApprovalCategorySummary,
   ApprovalRequestDetail,
   ApprovalRequestListItem,
+  ApproveWithChangesPayload,
   ListApprovalRequestsParams,
   SubmitApprovalRequestPayload,
   TierActionPayload,
@@ -24,6 +26,7 @@ import type {
 import type { PaginationMeta } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 import { attendanceKeys } from '@/lib/query/attendance';
+import { overtimeKeys } from '@/lib/query/overtime';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -211,6 +214,39 @@ export function useApproveApprovalTier(requestId: string) {
       apiPost<ApprovalRequestDetail>(
         `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/approve`,
         payload ?? {},
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+export function useApproveApprovalTierWithChanges(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      payload,
+    }: {
+      tierId: string;
+      payload: ApproveWithChangesPayload;
+    }) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/approve-with-changes`,
+        payload,
+      ),
+    onSuccess: () => {
+      invalidateApprovalQueries(queryClient, requestId);
+      void queryClient.invalidateQueries({ queryKey: overtimeKeys.all });
+    },
+  });
+}
+
+export function useAddApprovalComment(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AddApprovalCommentPayload) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/comments`,
+        payload,
       ),
     onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
   });
