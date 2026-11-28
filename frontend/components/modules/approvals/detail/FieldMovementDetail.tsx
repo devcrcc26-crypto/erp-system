@@ -115,14 +115,6 @@ export default function FieldMovementDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      {canCancel ? (
-        <div className="flex justify-end">
-          <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-            {t('hr.buttons.cancelRequest')}
-          </Button>
-        </div>
-      ) : null}
-
       {onBehalfCreatorName ? (
         <ErpNotice
           tone="info"
@@ -152,7 +144,16 @@ export default function FieldMovementDetail({
         ]}
       />
 
-      <SectionCard title={`Entries (${log.entries?.length ?? 0} days)`}>
+      <SectionCard
+        title={`Entries (${log.entries?.length ?? 0} days)`}
+        action={
+          canCancel ? (
+            <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+              {t('hr.buttons.cancelRequest')}
+            </Button>
+          ) : null
+        }
+      >
         <div className="erp-drawer-list">
           {Object.entries(entryGroups).map(([key, entries]) => {
             const [reasonKey, destination] = key.split('||');

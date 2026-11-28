@@ -231,34 +231,33 @@ export default function LeaveRequestDetail({
     }
   }
 
+  const requestCardActions =
+    (canEdit || canCancel) && !editing ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canCancel ? (
+          <Button
+            size="small"
+            danger
+            icon={<StopOutlined />}
+            onClick={() => setConfirmCancel(true)}
+          >
+            {t('hr.buttons.cancelRequest')}
+          </Button>
+        ) : null}
+        {canEdit ? (
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={startEditing}
+          >
+            {t('pages.approvals.edit.button')}
+          </Button>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div className="erp-leave-v2 flex flex-col gap-3">
-      {(canEdit || canCancel) && !editing ? (
-        <div className="flex justify-end gap-2">
-          {canCancel ? (
-            <Button
-              size="small"
-              danger
-              icon={<StopOutlined />}
-              onClick={() => setConfirmCancel(true)}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.cancelRequest')}
-            </Button>
-          ) : null}
-          {canEdit ? (
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={startEditing}
-              style={{ borderRadius: 0 }}
-            >
-              {t('pages.approvals.edit.button')}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
       <ConfirmDialog
         open={confirmCancel}
         title={t('hr.dialog.cancelLeaveTitle')}
@@ -316,7 +315,11 @@ export default function LeaveRequestDetail({
         </SectionCard>
       ) : (
         <>
-          <SectionCard title="Request Details" bodyClassName="px-3 py-4 sm:px-5">
+          <SectionCard
+            title="Request Details"
+            bodyClassName="px-3 py-4 sm:px-5"
+            action={requestCardActions}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <MetaItem label="Employee">
                 {formatLeaveEmployeeName(leave.employee)}
