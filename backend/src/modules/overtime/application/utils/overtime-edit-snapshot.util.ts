@@ -373,7 +373,7 @@ export function buildOvertimeEditDiff(
 
   if (entryChanges.length === 0) {
     return {
-      editedAfterApproval: true,
+      editedAfterApproval: false,
       reasonOnly: false,
       entryChanges: [],
       summaryLines: [],

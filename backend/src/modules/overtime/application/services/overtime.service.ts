@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
+  ApprovalTierDecision,
   FolderContextType,
   OvertimeSheetStatus,
   PayrollRunStatus,
@@ -421,11 +422,12 @@ export class OvertimeService
     );
     const canEditEntries =
       MUTABLE_STATUSES.includes(row.status) && !payrollLocked;
+    const hasEntryEdits = (editDiff?.entryChanges?.length ?? 0) > 0;
     return {
       ...mapped,
       payrollLocked,
       canEditEntries,
-      editedAfterApproval: Boolean(snapshot) && row.status !== OvertimeSheetStatus.APPROVED,
+      editedAfterApproval: hasEntryEdits,
       editDiff,
       ...(options?.restartedApproval ? { restartedApproval: true } : {}),
     };
@@ -1003,7 +1005,9 @@ export class OvertimeService
       unregisteredHolidayDates,
     };
 
-    // RETURNED sheets reopen the existing approval chain instead of creating a new one
+    // RETURNED sheets reopen the existing approval chain instead of creating a new one.
+    // Entry changes since return → restart from tier 1 (earlier approvals cleared).
+    // Attachment-only / no entry changes → resume at the tier that returned.
     if (
       sheet.status === OvertimeSheetStatus.RETURNED &&
       sheet.approvalRequestId
@@ -1012,13 +1016,32 @@ export class OvertimeService
         sheet.approvalRequestId,
         overtimeFormData,
       );
-      await this.approvalsService.resubmitRequest(
-        sheet.approvalRequestId,
-        companyId,
-        userId,
-        undefined,
-        [],
-      );
+
+      const snapshot = parseOvertimeApprovedSnapshot(sheet.lastApprovedSnapshot);
+      const editDiff = buildOvertimeEditDiff(snapshot, sheet.entries);
+      const entriesChanged = (editDiff?.entryChanges?.length ?? 0) > 0;
+
+      if (entriesChanged) {
+        await this.approvalsService.restartChainAfterEdit(
+          sheet.approvalRequestId,
+          companyId,
+          userId,
+          'Resubmitted with changes – restarted from first approver',
+          { restartFromFirst: true },
+        );
+      } else {
+        const resumeLabel = await this.resolveReturnedTierLabel(
+          sheet.approvalRequestId,
+          companyId,
+        );
+        await this.approvalsService.resubmitRequest(
+          sheet.approvalRequestId,
+          companyId,
+          userId,
+          `Resubmitted without changes – resumed at ${resumeLabel}`,
+          [],
+        );
+      }
       return this.getSheet(sheetId, companyId, userId);
     }
 
@@ -1256,8 +1279,10 @@ export class OvertimeService
       nextStatus = OvertimeSheetStatus.RETURNED;
     }
 
+    // APPROVED: baseline for edit-after-approval diffs.
+    // RETURNED: baseline so resubmit can detect entry changes vs attachment-only.
     const snapshot =
-      decision === 'APPROVED'
+      decision === 'APPROVED' || decision === 'RETURNED'
         ? buildOvertimeApprovedSnapshot(row.entries, now)
         : undefined;
 
@@ -1319,6 +1344,29 @@ export class OvertimeService
         ),
       },
     });
+  }
+
+  /**
+   * Label of the highest RETURNED tier on an approval request (fallback: first tier).
+   */
+  private async resolveReturnedTierLabel(
+    approvalRequestId: string,
+    companyId: string,
+  ): Promise<string> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: approvalRequestId, companyId }),
+      select: {
+        tiers: {
+          orderBy: { tierOrder: 'asc' },
+          select: { tierOrder: true, label: true, decision: true },
+        },
+      },
+    });
+    const tiers = request?.tiers ?? [];
+    const returned = [...tiers]
+      .filter((tier) => tier.decision === ApprovalTierDecision.RETURNED)
+      .sort((a, b) => b.tierOrder - a.tierOrder);
+    return returned[0]?.label ?? tiers[0]?.label ?? 'approver';
   }
 
   /**

@@ -42,6 +42,13 @@ describe('overtime-edit-snapshot.util', () => {
     expect(buildOvertimeEditDiff(null, [baseEntry])).toBeNull();
   });
 
+  it('buildOvertimeEditDiff reports no edits when entries match the snapshot', () => {
+    const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
+    const diff = buildOvertimeEditDiff(snapshot, [baseEntry]);
+    expect(diff?.editedAfterApproval).toBe(false);
+    expect(diff?.entryChanges).toEqual([]);
+  });
+
   it('buildOvertimeEditDiff includes whole previous and current entries', () => {
     const snapshot = buildOvertimeApprovedSnapshot([baseEntry]);
     const after = {

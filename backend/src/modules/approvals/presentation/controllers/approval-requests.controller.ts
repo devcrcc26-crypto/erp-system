@@ -28,6 +28,7 @@ import {
   AddConditionDto,
   ListRequestsDto,
   SubmitRequestDto,
+  ReturnRejectTierActionDto,
   TierActionDto,
 } from '../../application/dtos/approval.dtos';
 import { ApprovalsService } from '../../application/services/approvals.service';
@@ -185,13 +186,13 @@ export class ApprovalRequestsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('tierId') tierId: string,
-    @Body() dto: TierActionDto,
+    @Body() dto: ReturnRejectTierActionDto,
   ): Promise<unknown> {
     return this.approvalsService.rejectTier(
       id,
       tierId,
       user.userId,
-      dto?.note,
+      dto.note,
     );
   }
 
@@ -201,14 +202,14 @@ export class ApprovalRequestsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('tierId') tierId: string,
-    @Body() dto: TierActionDto,
+    @Body() dto: ReturnRejectTierActionDto,
   ): Promise<unknown> {
     return this.approvalsService.returnTier(
       id,
       tierId,
       user.userId,
-      dto?.note,
-      { onBehalf: dto?.onBehalf === true },
+      dto.note,
+      { onBehalf: dto.onBehalf === true },
     );
   }
 

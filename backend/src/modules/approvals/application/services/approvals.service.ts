@@ -103,6 +103,11 @@ export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
 export const RESPONSE_TYPE_RETURNED = 'RETURNED';
 export const RESPONSE_TYPE_CANCELLED = 'CANCELLED';
 
+/** Shared Return / Reject reason requirement (all approval categories). */
+export const DECISION_REASON_REQUIRED_MESSAGE =
+  'Enter a reason so the submitter knows what to change.';
+export const DECISION_REASON_MIN_LENGTH = 5;
+
 type UploadedFile = {
   originalname: string;
   mimetype: string;
@@ -1438,6 +1443,8 @@ export class ApprovalsService {
       );
     }
 
+    const decisionNote = this.requireDecisionReason(note);
+
     const now = new Date();
     await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -1445,7 +1452,7 @@ export class ApprovalsService {
           where: { id: tier.id },
           data: {
             decision: ApprovalTierDecision.REJECTED,
-            comment: note ?? null,
+            comment: decisionNote,
             decidedAt: now,
           },
         });
@@ -1471,9 +1478,7 @@ export class ApprovalsService {
         recipientId: request.requestedBy,
         eventType: APPROVAL_REJECTED_EVENT,
         subject: `Rejected - ${request.requestNumber}`,
-        body:
-          note?.trim() ||
-          `Your approval request ${request.requestNumber} was rejected.`,
+        body: decisionNote,
         link: `/approvals/${request.id}`,
         variables: {
           requestId: request.id,
@@ -1528,13 +1533,15 @@ export class ApprovalsService {
       );
     }
 
+    const decisionNote = this.requireDecisionReason(note);
+
     await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
         await tx.approvalTier.update({
           where: { id: tier.id },
           data: {
             decision: ApprovalTierDecision.RETURNED,
-            comment: note ?? null,
+            comment: decisionNote,
             decidedAt: new Date(),
             ...(actingOnBehalf
               ? { actingApproverId: userId, onBehalfOfApproverId: tier.approverId }
@@ -1554,7 +1561,7 @@ export class ApprovalsService {
             id: randomUUID(),
             requestId: request.id,
             responseType: RESPONSE_TYPE_RETURNED,
-            note: note?.trim() || null,
+            note: decisionNote,
             respondedBy: userId,
           },
         });
@@ -1571,9 +1578,7 @@ export class ApprovalsService {
       recipientId: request.requestedBy,
       eventType: APPROVAL_RETURNED_EVENT,
       subject: `Approval returned - ${request.requestNumber}`,
-      body:
-        note?.trim() ||
-        `Your approval request ${request.requestNumber} was returned for revision.`,
+      body: decisionNote,
       link: `/approvals/${request.id}`,
       variables: {
         requestId: request.id,
@@ -2087,12 +2092,18 @@ export class ApprovalsService {
    * Restarts the approval chain after the requester edits a submitted/approved
    * source record (e.g. overtime). Prior tier decisions are cleared but kept in
    * response history via a RESUBMIT response. Notifies the first approver.
+   *
+   * @param options.restartFromFirst When true, always clear every tier and
+   *   resume at tier 1 (used when a returned OT sheet is resubmitted with
+   *   entry changes). When false/omitted, a mid-chain RETURN still resumes at
+   *   the returned tier for non-entry edit restarts.
    */
   async restartChainAfterEdit(
     requestId: string,
     companyId: string,
     userId: string,
     note?: string,
+    options?: { restartFromFirst?: boolean },
   ): Promise<void> {
     const request = await this.prisma.approvalRequest.findFirst({
       where: activeOnly({ id: requestId, companyId }),
@@ -2127,26 +2138,34 @@ export class ApprovalsService {
       throw new BadRequestException('Approval chain has no tiers');
     }
 
+    const restartFromFirst = options?.restartFromFirst === true;
     // If the sheet was returned mid-chain, resume at that tier; otherwise
     // restart from the beginning (edit of an in-flight/approved sheet).
+    // Entry-changed OT resubmits force tier 1 so earlier approvals no longer count.
     const returnedTiers = request.tiers
       .filter((tier) => tier.decision === ApprovalTierDecision.RETURNED)
       .sort((a, b) => b.tierOrder - a.tierOrder);
-    const resumeTier = returnedTiers[0] ?? request.tiers[0];
-    const resumeOnly = Boolean(returnedTiers[0]);
+    const resumeTier = restartFromFirst
+      ? request.tiers[0]
+      : (returnedTiers[0] ?? request.tiers[0]);
+    const resumeOnly = !restartFromFirst && Boolean(returnedTiers[0]);
 
     const responseId = randomUUID();
+    const timelineNote =
+      note?.trim() ||
+      (restartFromFirst
+        ? 'Resubmitted with changes – restarted from first approver'
+        : resumeOnly
+          ? 'Request edited and resubmitted after return'
+          : 'Request edited by employee — approval chain restarted');
+
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.approvalResponse.create({
         data: {
           id: responseId,
           requestId: request.id,
           responseType: RESPONSE_TYPE_RESUBMIT,
-          note:
-            note?.trim() ||
-            (resumeOnly
-              ? 'Request edited and resubmitted after return'
-              : 'Request edited by employee — approval chain restarted'),
+          note: timelineNote,
           respondedBy: userId,
         },
       });
@@ -2836,6 +2855,18 @@ export class ApprovalsService {
         `Tier ${tierOrder} is not the current active tier (${currentTier})`,
       );
     }
+  }
+
+  /**
+   * Return and Reject require a reason of at least
+   * {@link DECISION_REASON_MIN_LENGTH} characters.
+   */
+  private requireDecisionReason(note: string | undefined): string {
+    const trimmed = note?.trim() ?? '';
+    if (trimmed.length < DECISION_REASON_MIN_LENGTH) {
+      throw new BadRequestException(DECISION_REASON_REQUIRED_MESSAGE);
+    }
+    return trimmed;
   }
 
   private parseConditions(raw: Prisma.JsonValue): TierCondition[] {

@@ -70,6 +70,29 @@ export class TierActionDto {
   onBehalf?: boolean;
 }
 
+/** Return / Reject require a reason so the submitter knows what to change. */
+export class ReturnRejectTierActionDto {
+  @ApiProperty({
+    minLength: 5,
+    maxLength: 2000,
+    description: 'Required reason for the submitter (min 5 characters)',
+  })
+  @IsString()
+  @MinLength(5, {
+    message: 'Enter a reason so the submitter knows what to change.',
+  })
+  @MaxLength(2000)
+  note!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Return only: full-access roles act on the current tier on behalf of its assigned approver. Not accepted for reject.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  onBehalf?: boolean;
+}
+
 export class AddConditionDto {
   @ApiProperty()
   @IsString()

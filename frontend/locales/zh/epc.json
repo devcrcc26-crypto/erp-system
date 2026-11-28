@@ -564,6 +564,7 @@
         "rejectFailed": "拒绝申请失败",
         "rejectNoteLabel": "拒绝原因",
         "rejectNotePlaceholder": "拒绝原因",
+        "decisionReasonRequired": "请填写原因，以便提交人知道需要修改什么。",
         "resolveSuccess": "条件已标记为已解决",
         "resolveFailed": "解决条件失败"
       },
@@ -6918,7 +6919,7 @@
       "cancelApprovedLeaveTitle": "取消已批准的请假？",
       "cancelApprovedLeaveDesc": "这将取消已批准的请假并恢复余额。确定继续吗？",
       "submitOvertimeSheetTitle": "提交加班表？",
-      "submitOvertimeSheetDesc": "这将启动审批流程。在表单被退回之前，您将无法编辑记录。",
+      "submitOvertimeSheetDesc": "这将启动审批流程。如果您之后修改任何记录，表单将重新送审。",
       "cancelOvertimeSheetTitle": "取消加班表？",
       "cancelOvertimeSheetDesc": "这将取消加班表及所有关联的审批申请。",
       "deleteOvertimeEntryTitle": "删除记录？",

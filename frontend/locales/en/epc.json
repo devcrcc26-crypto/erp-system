@@ -564,6 +564,7 @@
         "rejectFailed": "Failed to reject request",
         "rejectNoteLabel": "Rejection reason",
         "rejectNotePlaceholder": "Rejection reason",
+        "decisionReasonRequired": "Enter a reason so the submitter knows what to change.",
         "resolveSuccess": "Condition marked resolved",
         "resolveFailed": "Failed to resolve condition"
       },
@@ -6919,7 +6920,7 @@
       "cancelApprovedLeaveTitle": "Cancel approved leave?",
       "cancelApprovedLeaveDesc": "This will cancel an approved leave and restore the balance. Are you sure?",
       "submitOvertimeSheetTitle": "Submit overtime sheet?",
-      "submitOvertimeSheetDesc": "This will start the approval workflow. You will not be able to edit entries until the sheet is returned.",
+      "submitOvertimeSheetDesc": "This will start the approval workflow. If you change any entries later, the sheet will be sent for approval again.",
       "cancelOvertimeSheetTitle": "Cancel overtime sheet?",
       "cancelOvertimeSheetDesc": "This cancels the sheet and any linked approval request.",
       "deleteOvertimeEntryTitle": "Delete entry?",

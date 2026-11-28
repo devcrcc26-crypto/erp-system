@@ -77,7 +77,7 @@ You record overtime on one sheet per month. You add an entry each time you work 
 
 1. Open your sheet. It must have at least one entry.
 2. Click **Submit Sheet**.
-3. In **Submit overtime sheet?**, confirm.
+3. In **Submit overtime sheet?**, confirm. The dialog says the sheet will be sent for approval again if you change any entries later.
 
 
 > **After you submit:** Your sheet has been sent for approval and its status is **Submitted**. You will receive a notification when it is approved or returned. You do not need to do anything else unless it is returned to you.
@@ -145,7 +145,7 @@ If your sheet is returned, you receive the notification **Approval returned**. O
    - On the same request page, click **Edit** at the top, or **Update** on the sheet summary.
    - Or go to **My Profile** → **Overtime**, click **View all**, and click the sheet.
 4. Change the entries as asked and click **Save**.
-5. Click **Submit Sheet** and confirm. The sheet goes back through the approval chain from the beginning.
+5. Click **Submit Sheet** and confirm. If you changed any entries, approval restarts from the first approver (they see what changed). If you only added attachments or made no entry changes, it goes back to the approver who returned it.
 
 > **Note:** Overtime has no **Resubmit** button in **Approvals**. Submitting the sheet again is how a returned sheet is resubmitted, because it also updates the sheet totals.
 

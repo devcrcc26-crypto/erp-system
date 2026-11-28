@@ -193,9 +193,18 @@ export default function PayrollRunAdjustmentsTab({
   }
 
   function openReceipt(item: PayrollReconciliation): void {
-    receiptForm.resetFields();
-    receiptForm.setFieldsValue({ amount: item.remaining > 0 ? item.remaining : null, receivedOn: dayjs() });
+    // Form mounts only after the modal opens (destroyOnHidden). Prefill in
+    // afterOpenChange — setFieldsValue here hits an unconnected form instance.
     setReceiving(item);
+  }
+
+  function fillReceiptForm(item: PayrollReconciliation): void {
+    receiptForm.setFieldsValue({
+      amount: item.remaining > 0 ? item.remaining : null,
+      receivedOn: dayjs(),
+      reference: undefined,
+      note: undefined,
+    });
   }
 
   async function recordReceipt(): Promise<void> {
@@ -217,9 +226,11 @@ export default function PayrollRunAdjustmentsTab({
       setReceiving(null);
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        return;
+        // Keep the modal open so the field errors stay visible.
+        throw error;
       }
       notifyApiError(error, t(`${REC}.recordReceipt`), messageApi, t);
+      throw error;
     }
   }
 
@@ -319,7 +330,7 @@ export default function PayrollRunAdjustmentsTab({
           {item.status === 'WAIVED' && item.waivedReason ? (
             <p className="erp-payroll-muted-note">{item.waivedReason}</p>
           ) : null}
-          {item.receipts.map((receipt) => (
+          {(item.receipts ?? []).map((receipt) => (
             <p key={receipt.id} className="erp-payroll-muted-note">
               {t(`${REC}.receiptLine`, {
                 amount: formatPayrollMoney(receipt.amount, { emptyZero: false }),
@@ -682,10 +693,15 @@ export default function PayrollRunAdjustmentsTab({
         open={receiving !== null}
         title={t(`${REC}.receiptTitle`)}
         onCancel={() => setReceiving(null)}
-        onOk={() => void recordReceipt()}
+        onOk={() => recordReceipt()}
         okText={t(`${REC}.recordReceipt`)}
         confirmLoading={receiptMutation.isPending}
         destroyOnHidden
+        afterOpenChange={(open) => {
+          if (open && receiving) {
+            fillReceiptForm(receiving);
+          }
+        }}
         className="erp-payroll-modal"
       >
         <p className="erp-payroll-modal-hint">{t(`${REC}.receiptHint`)}</p>

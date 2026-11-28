@@ -470,13 +470,26 @@ export default function ApprovalDetailPageContent({
     }
   }
 
+  const decisionReasonValid = note.trim().length >= 5;
+  const needsDecisionReason =
+    actionModal === 'return' ||
+    actionModal === 'returnOnBehalf' ||
+    actionModal === 'reject';
+  const decisionReasonError = needsDecisionReason && !decisionReasonValid
+    ? t('pages.approvals.dialog.decisionReasonRequired')
+    : null;
+
   async function handleReturn(onBehalf = false): Promise<void> {
     if (!currentTier) return;
+    if (!decisionReasonValid) {
+      messageApi.warning(t('pages.approvals.dialog.decisionReasonRequired'));
+      return;
+    }
     try {
       await returnMutation.mutateAsync({
         tierId: currentTier.id,
         payload: {
-          ...(note.trim() ? { note: note.trim() } : {}),
+          note: note.trim(),
           ...(onBehalf ? { onBehalf: true } : {}),
         },
       });
@@ -493,10 +506,14 @@ export default function ApprovalDetailPageContent({
 
   async function handleReject(): Promise<void> {
     if (!currentTier) return;
+    if (!decisionReasonValid) {
+      messageApi.warning(t('pages.approvals.dialog.decisionReasonRequired'));
+      return;
+    }
     try {
       await rejectMutation.mutateAsync({
         tierId: currentTier.id,
-        payload: note.trim() ? { note: note.trim() } : undefined,
+        payload: { note: note.trim() },
       });
       messageApi.success(t('pages.approvals.dialog.rejectSuccess'));
       closeModal();
@@ -1027,6 +1044,7 @@ export default function ApprovalDetailPageContent({
         description={t('pages.approvals.dialog.returnDescription')}
         confirmLabel={t('pages.approvals.dialog.returnConfirm')}
         confirmLoading={actionLoading}
+        confirmDisabled={!decisionReasonValid}
         onCancel={closeModal}
         onConfirm={() => void handleReturn()}
       >
@@ -1035,11 +1053,17 @@ export default function ApprovalDetailPageContent({
             {t('pages.approvals.dialog.returnNoteLabel')}
           </p>
           <Input.TextArea
+            status={decisionReasonError ? 'error' : undefined}
             autoSize={{ minRows: 4, maxRows: 10 }}
             placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
+          {decisionReasonError ? (
+            <p className="erp-confirm-dialog-field-error m-0 mt-1 text-[12px] text-[var(--color-error,#cf1322)]">
+              {decisionReasonError}
+            </p>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -1057,6 +1081,7 @@ export default function ApprovalDetailPageContent({
         })}
         confirmLabel={t('pages.approvals.dialog.returnOnBehalfConfirm')}
         confirmLoading={actionLoading}
+        confirmDisabled={!decisionReasonValid}
         onCancel={closeModal}
         onConfirm={() => void handleReturn(true)}
       >
@@ -1065,11 +1090,17 @@ export default function ApprovalDetailPageContent({
             {t('pages.approvals.dialog.returnNoteLabel')}
           </p>
           <Input.TextArea
+            status={decisionReasonError ? 'error' : undefined}
             autoSize={{ minRows: 4, maxRows: 10 }}
             placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
+          {decisionReasonError ? (
+            <p className="erp-confirm-dialog-field-error m-0 mt-1 text-[12px] text-[var(--color-error,#cf1322)]">
+              {decisionReasonError}
+            </p>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -1083,6 +1114,7 @@ export default function ApprovalDetailPageContent({
         description={t('pages.approvals.dialog.rejectDescription')}
         confirmLabel={t('pages.approvals.dialog.rejectConfirm')}
         confirmLoading={actionLoading}
+        confirmDisabled={!decisionReasonValid}
         onCancel={closeModal}
         onConfirm={() => void handleReject()}
       >
@@ -1091,11 +1123,17 @@ export default function ApprovalDetailPageContent({
             {t('pages.approvals.dialog.rejectNoteLabel')}
           </p>
           <Input.TextArea
+            status={decisionReasonError ? 'error' : undefined}
             autoSize={{ minRows: 4, maxRows: 10 }}
             placeholder={t('pages.approvals.dialog.rejectNotePlaceholder')}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
+          {decisionReasonError ? (
+            <p className="erp-confirm-dialog-field-error m-0 mt-1 text-[12px] text-[var(--color-error,#cf1322)]">
+              {decisionReasonError}
+            </p>
+          ) : null}
         </div>
       </ConfirmDialog>
     </div>
