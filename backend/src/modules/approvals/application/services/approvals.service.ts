@@ -58,7 +58,6 @@ import {
   ListRequestsDto,
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
-import { OvertimeService } from '../../../overtime/application/services/overtime.service';
 import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import {
@@ -1401,12 +1400,16 @@ export class ApprovalsService {
       );
     }
 
-    // Lazy resolve: OvertimeModule is Global; avoids circular constructor DI.
+    // Dynamic import + ModuleRef: avoids ApprovalsService↔OvertimeService
+    // circular value import (which left ApprovalsService undefined for Attendance).
     if (!this.moduleRef) {
       throw new BadRequestException(
         'Approve with changes is unavailable in this runtime',
       );
     }
+    const { OvertimeService } = await import(
+      '../../../overtime/application/services/overtime.service'
+    );
     const overtimeService = this.moduleRef.get(OvertimeService, {
       strict: false,
     });
