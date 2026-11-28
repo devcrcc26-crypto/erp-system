@@ -161,6 +161,12 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can edit Human Resources records (hr.edit)' })
   canEditHr!: boolean;
 
+  @ApiProperty({
+    description:
+      'Can view contract compensation on lists and exports (contracts.view_salary)',
+  })
+  canViewContractSalary!: boolean;
+
   @ApiProperty({ description: 'Can view leave requests (leave.view)' })
   canViewLeave!: boolean;
 

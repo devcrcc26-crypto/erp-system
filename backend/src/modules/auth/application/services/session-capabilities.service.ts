@@ -10,7 +10,10 @@ import { isSystemAdministrator, isTrueSystemAdministrator } from '../../../../sh
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { hasDirectReports } from '../../../../shared/org/team-scope.util';
-import { PAYROLL_OVERSIGHT_MODULE } from '../../../../shared/permissions/permission.types';
+import {
+  CONTRACT_SALARY_MODULE,
+  PAYROLL_OVERSIGHT_MODULE,
+} from '../../../../shared/permissions/permission.types';
 import {
   CapabilitiesDto,
   EpcCapabilitiesDto,
@@ -89,6 +92,7 @@ export class SessionCapabilitiesService {
       'purchase-request',
       'payroll',
       PAYROLL_OVERSIGHT_MODULE,
+      CONTRACT_SALARY_MODULE,
       'announcements',
       'schedule',
       'engineering_documents',
@@ -138,6 +142,8 @@ export class SessionCapabilitiesService {
       canViewAuditLogs: audit.canView,
       canViewHr: hr.canView,
       canEditHr: hr.canEdit,
+      canViewContractSalary:
+        permissionMap[CONTRACT_SALARY_MODULE]?.canView === true,
       canViewLeave: leave.canView,
       canCreateLeave: leave.canCreate,
       canViewOvertime: overtime.canView,

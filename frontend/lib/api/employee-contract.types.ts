@@ -30,6 +30,12 @@ export interface EmployeeContractDocument {
   fileSizeBytes: number;
 }
 
+export interface EmployeeContractSalaryOverride {
+  amount: number;
+  /** ISO date the override takes effect. */
+  effectiveFrom: string;
+}
+
 export interface EmployeeContractListItem {
   id: string;
   companyId: string;
@@ -49,6 +55,13 @@ export interface EmployeeContractListItem {
   transportationAllowance?: string | number | null;
   monthlyBonus?: string | number | null;
   monthlyNetBonus?: string | number | null;
+  /**
+   * Basic + transport + bonus + net bonus. Like the other pay fields it is
+   * omitted by the API unless the user holds contracts.view_salary.
+   */
+  packageTotal?: number | null;
+  /** Salary override in force today; omitted without contracts.view_salary. */
+  activeSalaryOverride?: EmployeeContractSalaryOverride | null;
   probationEndDate?: string | null;
   governedBy?: string | null;
   lastWarnedAt?: string | null;

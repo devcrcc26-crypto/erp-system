@@ -180,6 +180,11 @@ const PERMISSION_DEFINITIONS: Array<{
     action: 'edit',
     description: 'Update, terminate and delete employee contracts',
   },
+  {
+    module: 'contracts',
+    action: 'view',
+    description: 'View employee contract salaries (contracts.view_salary)',
+  },
 
   { module: 'flight', action: 'view', description: 'View flight applications' },
   { module: 'flight', action: 'create', description: 'Submit and cancel flight applications' },
@@ -727,6 +732,7 @@ function projectAdministratorPermissionFlags(
     module === 'leave' ||
     module === 'overtime' ||
     module === 'employee-contract' ||
+    module === 'contracts' ||
     module === 'payroll' ||
     module === 'announcements'
   ) {
@@ -1381,6 +1387,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'contracts', flags: viewOnlyFlags() },
     { roleName: 'HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'HR Manager', module: 'approvals', flags: hrManagerFlags() },
@@ -1423,6 +1430,7 @@ async function main(): Promise<void> {
       module: 'employee-contract',
       flags: localHrManagerFlags(),
     },
+    { roleName: 'Local HR Manager', module: 'contracts', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
     // Approvals inbox: view only — Local never approves leave/OT/etc. workflows
@@ -1524,6 +1532,7 @@ async function main(): Promise<void> {
       module: 'per-diem',
       flags: viewOnlyFlags(),
     },
+    { roleName: 'General Manager', module: 'contracts', flags: viewOnlyFlags() },
     {
       roleName: 'General Manager',
       module: 'approvals',
@@ -2299,6 +2308,27 @@ async function main(): Promise<void> {
         canApprove: false,
         canExport: true,
       });
+    }
+  }
+
+  // Contract compensation (contracts.view_salary): HR managers + execs only.
+  const contractSalaryView = permissions.find(
+    (permission) =>
+      permission.module === 'contracts' && permission.action === 'view',
+  );
+  if (contractSalaryView) {
+    for (const roleName of [
+      'HR Manager',
+      'Local HR Manager',
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, contractSalaryView.id, viewOnlyFlags());
     }
   }
 

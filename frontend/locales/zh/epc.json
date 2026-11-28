@@ -5895,6 +5895,13 @@
       "contractNumber": "合同编号",
       "contractType": "合同类型",
       "signedAt": "签署日期",
+      "basicSalary": "基本工资",
+      "contractPackageLine": "薪酬总额：{{amount}}",
+      "contractOverrideBadge": "调整：自 {{date}} 起 {{amount}}",
+      "contractOverrideTooltip": "自 {{date}} 起生效的工资调整：{{amount}}",
+      "contractShowAmounts": "显示金额",
+      "contractHideAmounts": "隐藏金额",
+      "contractSignedOn": "签署日期：{{date}}",
       "asset": "资产",
       "notes": "备注",
       "paid": "已支付"

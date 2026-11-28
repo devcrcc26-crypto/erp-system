@@ -40,3 +40,9 @@ export const ACTION_TO_FLAG: Record<PermissionAction, keyof PermissionFlags> = {
  * `payroll.view`, which every employee holds for their own payslips.
  */
 export const PAYROLL_OVERSIGHT_MODULE = 'payroll-oversight';
+
+/**
+ * View contract compensation on lists and exports (`contracts.view_salary`).
+ * Separate module so it is not merged into employee-contract.view.
+ */
+export const CONTRACT_SALARY_MODULE = 'contracts';

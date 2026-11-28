@@ -521,8 +521,10 @@ export default function PayrollRunDetailPageContent({
     const sum = (pick: (e: PayrollEntryDetail) => number) =>
       filteredEntries.reduce((acc, e) => acc + pick(e), 0);
     return {
+      monthlyBonus: sum((e) => parsePayrollMoney(e.monthlyBonus)),
       gross: sum((e) => parsePayrollMoney(e.grossIncome)),
       pension: sum((e) => parsePayrollMoney(e.pensionEmployee)),
+      pensionEmployer: sum((e) => parsePayrollMoney(e.pensionEmployer)),
       tax: sum((e) => parsePayrollMoney(e.incomeTax)),
       adjustments: sum(entryAdjustmentsTotal),
       net: sum((e) => parsePayrollMoney(e.netPay)),
@@ -1018,6 +1020,19 @@ export default function PayrollRunDetailPageContent({
     ],
   );
 
+  // Integer scroll width = sum of leaf widths so header / body / footer share
+  // one colgroup (fractional max-content widths drift between the three tables).
+  const entriesScrollX = useMemo((): number => {
+    const leafWidth = (cols: ColumnsType<PayrollEntryDetail>): number =>
+      cols.reduce((sum, col) => {
+        if (col.children && col.children.length > 0) {
+          return sum + leafWidth(col.children);
+        }
+        return sum + (typeof col.width === 'number' ? col.width : 0);
+      }, 0);
+    return leafWidth(columns);
+  }, [columns]);
+
   function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
     const payslipId =
       showPayslipColumn && entry.payslip?.generatedAt ? entry.payslip.id : null;
@@ -1106,10 +1121,14 @@ export default function PayrollRunDetailPageContent({
     );
   }
 
-  /** Footer cells in leaf-column order (employee, days, earnings, tax, pay, ...). */
+  /**
+   * Footer cells in the same leaf order as `columns` so header / body / totals
+   * share one colgroup. Blank cells keep paid-days, periods, flag, and actions
+   * aligned without inventing totals for them.
+   */
   function summaryCells(totals: NonNullable<typeof totalsRow>): Array<{
     content?: React.ReactNode;
-    align?: 'right';
+    align?: 'right' | 'center';
     className?: string;
   }> {
     const money = (value: number): { content: React.ReactNode; align: 'right' } => ({
@@ -1125,8 +1144,11 @@ export default function PayrollRunDetailPageContent({
       ),
       align: 'right',
     });
+    const blank = (): { content?: React.ReactNode } => ({});
     return [
       { content: <strong>{t('hr.payroll.entry.totals')}</strong> },
+      blank(), // paid days
+      blank(), // contract periods
       ...(isCorrectionRun
         ? [
             money(totals.original),
@@ -1134,15 +1156,17 @@ export default function PayrollRunDetailPageContent({
             { ...signedMoney(totals.delta), className: 'erp-payroll-col-net' },
           ]
         : [
-            money(totals.gross),
+            money(totals.monthlyBonus),
+            { ...money(totals.gross), className: 'erp-payroll-col-gross' },
             money(totals.pension),
+            money(totals.pensionEmployer),
             money(totals.tax),
             signedMoney(totals.adjustments),
             { ...money(totals.net), className: 'erp-payroll-col-net' },
           ]),
-      {},
-      ...(showPayslipColumn ? [{}] : []),
-      {},
+      blank(), // flag
+      ...(showPayslipColumn ? [blank()] : []),
+      blank(), // details
     ];
   }
 
@@ -2454,8 +2478,10 @@ export default function PayrollRunDetailPageContent({
                       size="small"
                       columns={columns}
                       dataSource={filteredEntries}
-                      // Fixed x wider than the columns yields fractional widths; the header copies rounded ones and drifts.
-                      scroll={{ x: 'max-content', y: 'max(320px, calc(100dvh - 300px))' }}
+                      scroll={{
+                        x: entriesScrollX,
+                        y: 'max(320px, calc(100dvh - 300px))',
+                      }}
                       className="erp-payroll-entries-table"
                       rowClassName={(row) =>
                         [

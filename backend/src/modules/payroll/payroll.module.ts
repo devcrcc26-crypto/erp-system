@@ -47,6 +47,7 @@ import { PayrollAdjustmentService } from './application/services/payroll-adjustm
     PayrollBankLetterService,
     PayrollExcelExportService,
     PayrollPayslipService,
+    EffectiveSalaryService,
   ],
 })
 export class PayrollModule {}

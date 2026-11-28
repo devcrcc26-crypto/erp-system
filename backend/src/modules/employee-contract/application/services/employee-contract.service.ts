@@ -42,6 +42,8 @@ import {
 import type { IStorageService } from "@/shared/storage/storage.interface";
 import { buildPrismaPagination, PaginatedResult, buildPaginatedResult } from "@/shared/utils/pagination.util";
 import { PayrollCalculationService } from "@/modules/payroll/application/services/payroll-calculation.service";
+import { EffectiveSalaryService } from "@/modules/payroll/application/services/effective-salary.service";
+import { CONTRACT_SALARY_MODULE } from "@/shared/permissions/permission.types";
 import {
   LeaveLedgerService,
   type RenewalLeavePreview,
@@ -159,6 +161,7 @@ export class EmployeeContractService {
         private readonly prisma: PrismaService,
         private readonly permissionService: PermissionService,
         private readonly payrollCalc: PayrollCalculationService,
+        private readonly effectiveSalary: EffectiveSalaryService,
         @Inject(STORAGE_SERVICE)
         private readonly storage: IStorageService,
         private readonly leaveLedger: LeaveLedgerService,
@@ -481,7 +484,7 @@ export class EmployeeContractService {
         userId: string,
     ){
         const where = await this.buildListWhere(filters, companyId, userId, false);
-        return this.fetchPaginatedContracts(filters, where);
+        return this.fetchPaginatedContracts(filters, where, companyId, userId);
     }
       /** Lists contracts for the current user only. */
     async listMyContracts(
@@ -490,7 +493,7 @@ export class EmployeeContractService {
         userId: string,
     ): Promise<PaginatedResult<unknown>> {
         const where = await this.buildListWhere(filters, companyId, userId, true);
-        return this.fetchPaginatedContracts(filters, where);
+        return this.fetchPaginatedContracts(filters, where, companyId, userId);
     }
 
     async getContract(
@@ -1064,10 +1067,18 @@ export class EmployeeContractService {
     private async fetchPaginatedContracts(
         filters: ListEmployeeContractsDto,
         where: Prisma.EmployeeContractWhereInput,
+        companyId: string,
+        userId: string,
     ): Promise<PaginatedResult<unknown>>{
         const page = filters.page ?? 1;
         const limit = filters.limit ?? 20;
         const {skip, take} = buildPrismaPagination(page, limit);
+        const canViewSalary = await this.permissionService.hasPermission(
+            userId,
+            companyId,
+            CONTRACT_SALARY_MODULE,
+            'view',
+        );
     
         const [rows, total] = await Promise.all([
             this.prisma.employeeContract.findMany({
@@ -1081,22 +1092,102 @@ export class EmployeeContractService {
             }),
             this.prisma.employeeContract.count({where}),
         ]);
+
+        const today = todayInAddisUtc();
+        const overrides = canViewSalary
+            ? await this.effectiveSalary.findSalaryOverridesForEmployees(
+                companyId,
+                [...new Set(rows.map((row) => row.employeeId))],
+                today,
+              )
+            : new Map<string, { amount: number; effectiveFrom: Date }>();
+
+        // Current contract per employee = covering today, latest startDate wins.
+        const currentContractIdByEmployee = new Map<string, string>();
+        if (canViewSalary) {
+            for (const row of rows) {
+                if (!this.contractCoversDate(row, today)) {
+                    continue;
+                }
+                const existingId = currentContractIdByEmployee.get(row.employeeId);
+                if (!existingId) {
+                    currentContractIdByEmployee.set(row.employeeId, row.id);
+                    continue;
+                }
+                const existing = rows.find((candidate) => candidate.id === existingId);
+                if (
+                    existing &&
+                    row.startDate.getTime() > existing.startDate.getTime()
+                ) {
+                    currentContractIdByEmployee.set(row.employeeId, row.id);
+                }
+            }
+        }
+
         return buildPaginatedResult(
-            rows.map((row) =>
-              this.toContractResponse(row as unknown as Record<string, unknown>),
-            ),
+            rows.map((row) => {
+                const response = this.toContractResponse(
+                    row as unknown as Record<string, unknown>,
+                    { includeSalary: canViewSalary },
+                );
+                if (!canViewSalary) {
+                    return response;
+                }
+                const basic = this.asMoney(response.basicSalary);
+                const transport = this.asMoney(response.transportationAllowance);
+                const bonus = this.asMoney(response.monthlyBonus);
+                const netBonus = this.asMoney(response.monthlyNetBonus);
+                response.packageTotal =
+                    Math.round((basic + transport + bonus + netBonus) * 100) / 100;
+                const isCurrent =
+                    currentContractIdByEmployee.get(row.employeeId) === row.id;
+                const override = isCurrent
+                    ? overrides.get(row.employeeId) ?? null
+                    : null;
+                response.activeSalaryOverride = override
+                    ? {
+                          amount: override.amount,
+                          effectiveFrom: toDateOnly(override.effectiveFrom),
+                      }
+                    : null;
+                return response;
+            }),
             total,
             page,
             limit,
         );
     }
 
+    private contractCoversDate(
+        row: { startDate: Date; endDate: Date | null },
+        date: Date,
+    ): boolean {
+        if (row.startDate.getTime() > date.getTime()) {
+            return false;
+        }
+        if (row.endDate && row.endDate.getTime() < date.getTime()) {
+            return false;
+        }
+        return true;
+    }
+
+    private asMoney(value: unknown): number {
+        if (value == null || value === '') {
+            return 0;
+        }
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    }
+
     /**
      * Serializes contract rows for the API (date-only strings, numeric pay fields).
+     * List callers pass includeSalary=false to omit compensation entirely.
      */
     private toContractResponse<T extends Record<string, unknown>>(
         contract: T,
+        options: { includeSalary?: boolean } = {},
     ): Record<string, unknown> {
+        const includeSalary = options.includeSalary !== false;
         const decimalFields = [
             'basicSalary',
             'transportationAllowance',
@@ -1124,6 +1215,10 @@ export class EmployeeContractService {
         }
 
         for (const field of decimalFields) {
+            if (!includeSalary) {
+                delete result[field];
+                continue;
+            }
             const value = result[field];
             if (value == null) {
                 result[field] = null;
@@ -1140,6 +1235,11 @@ export class EmployeeContractService {
             ) {
                 result[field] = Number(value);
             }
+        }
+
+        if (!includeSalary) {
+            delete result.packageTotal;
+            delete result.activeSalaryOverride;
         }
 
         if (result.createdAt instanceof Date) {

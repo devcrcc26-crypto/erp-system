@@ -673,6 +673,22 @@
   box-shadow: 0 -6px 10px -8px rgba(16, 24, 40, 0.18);
 }
 
+/*
+ * Sticky header / body / footer each paint their own table. Fixed layout from
+ * the shared colgroup keeps money columns lined up across all three.
+ */
+.erp-payroll-entries-table .ant-table-header table,
+.erp-payroll-entries-table .ant-table-body table,
+.erp-payroll-entries-table .ant-table-summary table {
+  table-layout: fixed !important;
+}
+
+.erp-payroll-entries-table .ant-table-header table col,
+.erp-payroll-entries-table .ant-table-body table col,
+.erp-payroll-entries-table .ant-table-summary table col {
+  min-width: 0;
+}
+
 .erp-payroll-employee-name {
   margin: 0;
   color: var(--pr-strong);

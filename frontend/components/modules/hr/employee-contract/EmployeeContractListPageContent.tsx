@@ -4,7 +4,7 @@ import '@/components/modules/users/employees-v2.css';
 import './contracts-v2.css';
 import { accent } from '@/lib/theme/accent';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -13,6 +13,7 @@ import {
   Input,
   Select,
   Spin,
+  Tag,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -21,6 +22,8 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   FileTextOutlined,
   MoreOutlined,
   ReloadOutlined,
@@ -28,6 +31,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { SortOrder } from 'antd/es/table/interface';
 import { useRouter } from 'next/navigation';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -35,7 +39,11 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr, useCanViewTeam } from '@/hooks/use-auth-capabilities';
+import {
+  useCanViewContractSalary,
+  useCanViewHr,
+  useCanViewTeam,
+} from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -53,6 +61,8 @@ import {
   useMyEmployeeContractsAll,
 } from '@/lib/query/employee-contract';
 import { useUsersDirectory } from '@/lib/query/users';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   EMPLOYEE_CONTRACT_TYPE_OPTIONS,
   employeeContractStatusVariant,
@@ -85,6 +95,66 @@ const STAT_ACCENT = {
 // contracts-v2.css. No LIST_PAGE_V2: its !important utilities would override it.
 const PAGE_ROOT =
   'erp-pro-list-page erp-users-page erp-contract-page erp-employees-v2 erp-contracts-v2 erp-hr-travel-v2';
+
+const MASKED_AMOUNT = '••••';
+const SHOW_SALARY_STORAGE_PREFIX = 'erp.contracts.showSalary.';
+/** Contracts that no longer pay out: amounts render muted. */
+const INACTIVE_CONTRACT_STATUSES: ReadonlySet<EmployeeContractListItem['status']> =
+  new Set(['SUPERSEDED', 'TERMINATED', 'EXPIRED']);
+
+function readStoredShowSalary(userId: string): boolean {
+  try {
+    return (
+      window.localStorage.getItem(`${SHOW_SALARY_STORAGE_PREFIX}${userId}`) ===
+      '1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredShowSalary(userId: string, show: boolean): void {
+  try {
+    window.localStorage.setItem(
+      `${SHOW_SALARY_STORAGE_PREFIX}${userId}`,
+      show ? '1' : '0',
+    );
+  } catch {
+    // Storage can be blocked (private mode, quota); the toggle still works
+    // for this session.
+  }
+}
+
+/** Basic salary as a number, or null when absent (omitted by the API). */
+function basicSalaryValue(row: EmployeeContractListItem): number | null {
+  if (row.basicSalary == null || row.basicSalary === '') {
+    return null;
+  }
+  const value = Number(row.basicSalary);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Sorts by basic salary; contracts without a figure always go last. */
+function sortByBasicSalary(
+  rows: EmployeeContractListItem[],
+  order: Exclude<SortOrder, null>,
+): EmployeeContractListItem[] {
+  const direction = order === 'ascend' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const left = basicSalaryValue(a);
+    const right = basicSalaryValue(b);
+    if (left === null && right === null) {
+      return 0;
+    }
+    if (left === null) {
+      return 1;
+    }
+    if (right === null) {
+      return -1;
+    }
+    return direction * (left - right);
+  });
+}
 
 function ContractStat({
   label,
@@ -135,6 +205,10 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   const canViewHr = useCanViewHr();
   // Supervisors read (never change) their reports' contracts.
   const canViewTeam = useCanViewTeam();
+  const canViewContractSalary = useCanViewContractSalary();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const [showSalary, setShowSalary] = useState(false);
+  const [salarySortOrder, setSalarySortOrder] = useState<SortOrder>(null);
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const deleteMutation = useDeleteEmployeeContractRecord();
   const importPreview = useEmployeeContractImportPreview();
@@ -154,6 +228,26 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   >();
   const [deletingContract, setDeletingContract] =
     useState<EmployeeContractListItem | null>(null);
+
+  // Amounts default to masked; the choice is remembered per user. Read after
+  // mount so server and client render the same markup.
+  useEffect(() => {
+    if (!canViewContractSalary || !currentUserId) {
+      setShowSalary(false);
+      return;
+    }
+    setShowSalary(readStoredShowSalary(currentUserId));
+  }, [canViewContractSalary, currentUserId]);
+
+  const toggleShowSalary = useCallback((): void => {
+    setShowSalary((current) => {
+      const next = !current;
+      if (currentUserId) {
+        writeStoredShowSalary(currentUserId, next);
+      }
+      return next;
+    });
+  }, [currentUserId]);
 
   const contractTypeOptions = useMemo(
     () =>
@@ -236,6 +330,11 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
       employeeId: canViewTeam ? employeeId : undefined,
       endWindow,
     });
+    // A chosen salary sort wins; it is applied before pagination so it orders
+    // the whole filtered list, not just the visible page.
+    if (canViewContractSalary && salarySortOrder) {
+      return sortByBasicSalary(rows, salarySortOrder);
+    }
     if (!endWindow) {
       return rows;
     }
@@ -245,7 +344,17 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     return [...rows].sort(
       (a, b) => direction * (a.endDate ?? '').localeCompare(b.endDate ?? ''),
     );
-  }, [allRows, appliedSearch, statusMode, contractType, employeeId, canViewTeam, endWindow]);
+  }, [
+    allRows,
+    appliedSearch,
+    statusMode,
+    contractType,
+    employeeId,
+    canViewTeam,
+    endWindow,
+    canViewContractSalary,
+    salarySortOrder,
+  ]);
 
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
@@ -374,26 +483,109 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('hr.table.signedAt'),
-        dataIndex: 'signedAt',
-        key: 'signedAt',
-        width: 120,
-        responsive: ['lg'],
-        render: (value: string) => (
-          <span className="erp-users-cell-sub">{formatProjectDate(value)}</span>
-        ),
-      },
-      {
         title: t('hr.table.startDate'),
         dataIndex: 'startDate',
         key: 'startDate',
         width: 120,
-        render: (value: string) => (
-          <span className="erp-users-cell-strong">
-            {formatProjectDate(value)}
-          </span>
+        render: (value: string, row: EmployeeContractListItem) => (
+          <Tooltip
+            title={t('hr.table.contractSignedOn', {
+              date: formatProjectDate(row.signedAt),
+            })}
+          >
+            <span className="erp-users-cell-strong">
+              {formatProjectDate(value)}
+            </span>
+          </Tooltip>
         ),
       },
+      ...(canViewContractSalary
+        ? [
+            {
+              title: (
+                <span className="inline-flex items-center gap-1">
+                  {t('hr.table.basicSalary')}
+                  <Tooltip
+                    title={
+                      showSalary
+                        ? t('hr.table.contractHideAmounts')
+                        : t('hr.table.contractShowAmounts')
+                    }
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={
+                        showSalary ? <EyeOutlined /> : <EyeInvisibleOutlined />
+                      }
+                      aria-label={
+                        showSalary
+                          ? t('hr.table.contractHideAmounts')
+                          : t('hr.table.contractShowAmounts')
+                      }
+                      aria-pressed={showSalary}
+                      onClick={(event) => {
+                        // Keep the click from also toggling the column sort.
+                        event.stopPropagation();
+                        toggleShowSalary();
+                      }}
+                    />
+                  </Tooltip>
+                </span>
+              ),
+              key: 'basicSalary',
+              width: 210,
+              sorter: true,
+              sortOrder: salarySortOrder,
+              showSorterTooltip: false,
+              render: (_: unknown, row: EmployeeContractListItem) => {
+                const amount = basicSalaryValue(row);
+                if (amount === null) {
+                  return <span className="erp-users-cell-sub">-</span>;
+                }
+                const currency = row.currency ?? 'ETB';
+                const display = (value: number): string =>
+                  showSalary
+                    ? formatCurrencyAmount(value, currency)
+                    : MASKED_AMOUNT;
+                const muted = INACTIVE_CONTRACT_STATUSES.has(row.status);
+                const override = row.activeSalaryOverride;
+                const overrideLabel = override
+                  ? t('hr.table.contractOverrideBadge', {
+                      amount: display(override.amount),
+                      date: formatProjectDate(override.effectiveFrom),
+                    })
+                  : null;
+                return (
+                  <div className="min-w-0">
+                    <p
+                      className={`m-0 ${muted ? 'erp-users-cell-sub' : 'erp-users-cell-strong'}`}
+                    >
+                      {display(amount)}
+                    </p>
+                    {row.packageTotal != null ? (
+                      <p className="erp-users-cell-sub m-0 mt-0.5 text-xs">
+                        {t('hr.table.contractPackageLine', {
+                          amount: display(row.packageTotal),
+                        })}
+                      </p>
+                    ) : null}
+                    {overrideLabel ? (
+                      <Tooltip title={overrideLabel}>
+                        <Tag
+                          bordered={false}
+                          className="erp-users-cell-sub !mt-1 !me-0 max-w-full truncate !text-xs"
+                        >
+                          {overrideLabel}
+                        </Tag>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                );
+              },
+            } satisfies ColumnsType<EmployeeContractListItem>[number],
+          ]
+        : []),
       {
         title: t('hr.table.endDate'),
         dataIndex: 'endDate',
@@ -451,7 +643,15 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           ]
         : []),
     ],
-    [canViewHr, canViewTeam, t],
+    [
+      canViewHr,
+      canViewTeam,
+      canViewContractSalary,
+      showSalary,
+      salarySortOrder,
+      toggleShowSalary,
+      t,
+    ],
   );
 
   const hasFilters =
@@ -531,7 +731,9 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
                   label: undefined,
                   filePrefix: 'employee-contracts',
                   disabled: filtered.length === 0,
-                  buildSheets: () => buildEmployeeContractExportSheets(filtered),
+                  buildSheets: () => buildEmployeeContractExportSheets(filtered, {
+                      includeSalary: canViewContractSalary,
+                    }),
                 },
               ]}
               onImport={canViewHr ? () => setImportOpen(true) : undefined}
@@ -674,7 +876,16 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
             size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={{ x: isCompact ? 640 : 980 }}
+            scroll={{ x: isCompact ? 640 : canViewContractSalary ? 1100 : 980 }}
+            onChange={(_pagination, _filters, sorter, extra) => {
+              if (extra.action !== 'sort') {
+                return;
+              }
+              // Sorting is client-side (see `filtered`); only one column sorts.
+              const active = Array.isArray(sorter) ? sorter[0] : sorter;
+              setSalarySortOrder(active?.order ?? null);
+              resetPage();
+            }}
             onRow={(row) => ({
               onClick: () => router.push(`/hr/employee-contract/${row.id}`),
               className: 'cursor-pointer',

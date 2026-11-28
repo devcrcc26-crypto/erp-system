@@ -787,6 +787,8 @@ export interface AuthCapabilities {
   canViewAuditLogs: boolean;
   canViewHr: boolean;
   canEditHr: boolean;
+  /** contracts.view_salary — contract compensation on lists and exports. */
+  canViewContractSalary: boolean;
   canViewLeave: boolean;
   canCreateLeave: boolean;
   canViewOvertime: boolean;
@@ -865,6 +867,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewAuditLogs: false,
   canViewHr: false,
   canEditHr: false,
+  canViewContractSalary: false,
   canViewLeave: false,
   canCreateLeave: false,
   canViewOvertime: false,

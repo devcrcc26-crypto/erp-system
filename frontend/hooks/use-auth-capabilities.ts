@@ -19,6 +19,14 @@ export function useCanViewHr(): boolean {
 }
 
 /**
+ * True when the session can see contract compensation on lists/exports
+ * (contracts.view_salary).
+ */
+export function useCanViewContractSalary(): boolean {
+  return useAuthStore((state) => state.capabilities.canViewContractSalary);
+}
+
+/**
  * True for HR, or for a supervisor (anyone with direct reports). Team lists
  * then show the reports' records too; the backend scopes them to the
  * viewer's reporting chain.

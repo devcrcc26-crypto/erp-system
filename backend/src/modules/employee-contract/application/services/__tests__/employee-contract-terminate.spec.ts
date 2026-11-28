@@ -36,6 +36,7 @@ function makeService(contract: {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
   );
   jest.spyOn(service, 'getContract').mockResolvedValue({} as never);
   return { service, prisma };

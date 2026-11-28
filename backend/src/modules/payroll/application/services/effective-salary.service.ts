@@ -56,6 +56,18 @@ export class EffectiveSalaryService {
     userId: string,
     date: Date,
   ): Promise<number | null> {
+    const details = await this.findSalaryOverrideDetails(companyId, userId, date);
+    return details?.amount ?? null;
+  }
+
+  /**
+   * Override amount and the date it took effect, for contract list badges.
+   */
+  async findSalaryOverrideDetails(
+    companyId: string,
+    userId: string,
+    date: Date,
+  ): Promise<{ amount: number; effectiveFrom: Date } | null> {
     const row = await this.prisma.positionHistory.findFirst({
       where: {
         companyId,
@@ -66,9 +78,49 @@ export class EffectiveSalaryService {
         OR: [{ effectiveTo: null }, { effectiveTo: { gt: date } }],
       },
       orderBy: { effectiveFrom: 'desc' },
-      select: { salaryOverride: true },
+      select: { salaryOverride: true, effectiveFrom: true },
     });
-    return this.toNumber(row?.salaryOverride);
+    const amount = this.toNumber(row?.salaryOverride);
+    if (amount == null || !row) {
+      return null;
+    }
+    return { amount, effectiveFrom: row.effectiveFrom };
+  }
+
+  /**
+   * Batch override details for many employees on one date (contract list).
+   */
+  async findSalaryOverridesForEmployees(
+    companyId: string,
+    userIds: string[],
+    date: Date,
+  ): Promise<Map<string, { amount: number; effectiveFrom: Date }>> {
+    const result = new Map<string, { amount: number; effectiveFrom: Date }>();
+    if (userIds.length === 0) {
+      return result;
+    }
+    const rows = await this.prisma.positionHistory.findMany({
+      where: {
+        companyId,
+        userId: { in: userIds },
+        deletedAt: null,
+        salaryOverride: { not: null },
+        effectiveFrom: { lte: date },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gt: date } }],
+      },
+      orderBy: { effectiveFrom: 'desc' },
+      select: { userId: true, salaryOverride: true, effectiveFrom: true },
+    });
+    for (const row of rows) {
+      if (result.has(row.userId)) {
+        continue;
+      }
+      const amount = this.toNumber(row.salaryOverride);
+      if (amount != null) {
+        result.set(row.userId, { amount, effectiveFrom: row.effectiveFrom });
+      }
+    }
+    return result;
   }
 
   private toNumber(

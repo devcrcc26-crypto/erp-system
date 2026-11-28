@@ -5897,6 +5897,13 @@
       "contractNumber": "Contract #",
       "contractType": "Type",
       "signedAt": "Signed",
+      "basicSalary": "Basic salary",
+      "contractPackageLine": "Package: {{amount}}",
+      "contractOverrideBadge": "Override: {{amount}} from {{date}}",
+      "contractOverrideTooltip": "Salary override of {{amount}} effective {{date}}",
+      "contractShowAmounts": "Show amounts",
+      "contractHideAmounts": "Hide amounts",
+      "contractSignedOn": "Signed: {{date}}",
       "asset": "Asset",
       "notes": "Notes"
     },

@@ -16,6 +16,7 @@ export const PROJECT_ADMIN_EXCLUDED_MODULES = new Set([
   'leave',
   'overtime',
   'employee-contract',
+  'contracts',
   'flight',
   'business-trip',
   // Publishing company news is HR / System Administrator only.

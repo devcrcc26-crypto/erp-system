@@ -23,6 +23,7 @@ function buildService(leaveLedger: {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
     leaveLedger as unknown as LeaveLedgerService,
   );
 }
@@ -52,6 +53,7 @@ describe('EmployeeContractService.getMyActiveContract', () => {
   };
   const service = new EmployeeContractService(
     prisma as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,
@@ -225,6 +227,7 @@ describe('EmployeeContractService convert to freelancer', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
       { onContractActivated: jest.fn(), recomputeContractEntries: jest.fn() } as never,
     );
     const internals = service as unknown as Record<string, unknown>;
@@ -263,6 +266,7 @@ describe('EmployeeContractService convert to freelancer', () => {
     };
     const service = new EmployeeContractService(
       prisma as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -325,6 +329,7 @@ describe('EmployeeContractService.nextContractNumber', () => {
     };
     const service = new EmployeeContractService(
       prisma as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
